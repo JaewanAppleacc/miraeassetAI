@@ -4,6 +4,35 @@
 대화 중 새로 떠오른 아이디어보다 이 문서와 버전이 명시된 JSON Schema, 계약 테스트를
 우선한다.
 
+## 0. Current collaboration model (2026-08-10 override)
+
+현재는 A·B·C가 파이프라인 단계를 나누는 방식이 아니다. 두 작업자가 동일한 공식
+입력과 외부 평가 경계 위에서 각자 End-to-End Candidate를 독립 구현한다. 이 저장소는
+작업자 1의 Candidate다.
+
+두 Candidate 사이에서 반드시 공통인 것은 다음 최소 범위다.
+
+```text
+A 공식 DocumentIR snapshot·doc/node ID·source locator
+GET /answer 외부 API와 최종 응답 필드
+Gold·chain-safe split·Harness·Metric·Usage lifecycle
+동일 평가 시점의 corpus/Gold revision과 외부 자원 상한
+대회 규정과 근거·계산·timeout·유효 JSON 안전 조건
+```
+
+그 밖의 `domain/` Schema, Structured Query, Fact Store, Policy Guard, Runtime Host,
+Question IR, Route, 청킹·검색·DB 구성은 작업자 1 Candidate 내부 계약이다. Claude Code는
+이를 구현·확장할 수 있으며 다른 작업자의 동의가 필요하지 않다. 단, version bump,
+계약 테스트, 마이그레이션과 Codex 검수를 거쳐야 한다.
+
+작업자 2는 이 저장소의 Pydantic/JavaScript 모델, ValidationAuthority, SharedServices,
+Fact Store 또는 Route를 복제할 의무가 없다. 반대로 작업자 2의 내부 구현에 맞추기 위해
+이 저장소를 선제적으로 수정하지 않는다. 두 Candidate는 외부 평가 결과가 나온 뒤에만
+Candidate 또는 호환 가능한 컴포넌트 단위로 채택·통합한다.
+
+이 절과 아래 내용이 충돌하면 이 절을 우선한다. 아래의 A/B/C 공통 트랙과 Flow A/B/C
+표현은 작업자 1 내부 이력 및 설계 참고로만 읽는다.
+
 ## 1. Architecture status
 
 ```text
@@ -18,8 +47,9 @@ v1.1의 핵심 경계는 다음과 같다.
 - Agent 내부 오케스트레이션 순서와 도구 사용 방식은 `AgentFlow` 플러그인에서 실험할
   수 있다.
 - 각 Flow는 별도 Agent 제품이 아니다. 동일 Runtime Host와 Shared Services를 사용한다.
-- 문서만 수정해 Architecture를 변경하지 않는다. 계약 변경에는 schema version bump,
-  계약 테스트, 3인 합의가 필요하다.
+- 문서만 수정해 Architecture를 변경하지 않는다. 작업자 1 내부 계약 변경에는 schema
+  version bump와 계약 테스트가 필요하다. 두 Candidate의 공식 입력·API·평가 경계를
+  바꾸는 경우에만 양 작업자 합의가 필요하다.
 
 ## 2. Project goal
 
@@ -371,7 +401,7 @@ Tie-breaker
 paired 평가한다. 질문 유형별 상위 Dispatcher는 반복 가능한 DEV_TUNE 증거가 있을 때만
 도입한다. 탈락 Flow는 비교 실험과 기술제안서 근거로 보존한다.
 
-## 13. Team roles and priority
+## 13. Legacy team roles and current priority
 
 ```text
 A common track
@@ -392,6 +422,10 @@ C common track
 
 공통 역할과 Flow 역할은 branch/worktree, artifact namespace와 실행 manifest에서 분리한다.
 공통 트랙이 Flow 개인 작업보다 우선한다.
+
+위 역할표는 과거 단계 분담 기록이다. 현재 작업자 1의 우선순위는 자신의 E2E Candidate가
+A 공식 입력에서 Seed API를 통과하게 만드는 것이다. 작업자 2의 내부 구현과 일정은 이
+저장소의 blocker가 아니다.
 
 ## 14. Current implementation status
 
@@ -555,4 +589,5 @@ git diff --check
 5. FinalResponse·ExecutionTrace·latency 로그
 ```
 
-Flow B·C는 Flow A Seed E2E와 공통 트랙 Gate 통과 후 시작한다.
+작업자 1은 위 순서로 진행한다. 작업자 2의 Candidate 착수 여부는 이 저장소의 작업
+순서나 완료 조건에 포함하지 않는다.
