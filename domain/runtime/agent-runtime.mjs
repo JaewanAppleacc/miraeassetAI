@@ -108,6 +108,8 @@
  * @typedef {Object} SharedContext
  * @property {string} [corpus_snapshot_id]
  * @property {string} [fact_coverage_snapshot_id]
+ * @property {string} [chunking_config_id]   pinned for Retriever request/context snapshot-triple checks; see retriever-store.mjs
+ * @property {string} [index_snapshot_id]    pinned for Retriever request/context snapshot-triple checks; see retriever-store.mjs
  * @property {string} [as_of_date]
  */
 
@@ -118,7 +120,7 @@
  * @property {{explain: function(Object): Object}} hcxClient
  * @property {{serialize: function(Object): Object}} serializer
  * @property {ReturnType<typeof createExecutionBudget>} executionBudget
- * @property {{retrieve: function(Object): Object}} [retriever]
+ * @property {{retrieve: function(Object): Promise<Object>}} retriever   fail-closed by default; see retriever-store.mjs
  * @property {{query: function(Object): Promise<Object>}} structuredStore   fail-closed by default; see structured-store.mjs
  */
 
@@ -151,6 +153,7 @@ import { EXECUTION_ROUTES, VALUE_STATUSES } from "../contracts.mjs";
 import { CITATION_CODES, createCitationValidator, createDocumentStore, createEvidenceStore } from "./citation-validator.mjs";
 import { createFactProvenanceValidator, createFactStore, FACT_STORE_CODES } from "./fact-store.mjs";
 import { createPolicyGuard, POLICY_GUARD_CODES, POLICY_GUARD_SAFE_ANSWERS } from "./policy-guard.mjs";
+import { createRetrieverStore, RETRIEVER_CODES } from "./retriever-store.mjs";
 import { createBudgetedStructuredStore, createStructuredStore } from "./structured-store.mjs";
 
 export class RejectedInputError extends Error {
@@ -193,7 +196,8 @@ function fail(code, message) {
 //      (Validator, Calculator, HcxClient, PolicyGuard, and the AgentFlow
 //      shape check). This is REJECTION_CODES: the union of this module's
 //      own local codes plus every *_CODES array imported from a sibling
-//      runtime module (CITATION_CODES, FACT_STORE_CODES, POLICY_GUARD_CODES).
+//      runtime module (CITATION_CODES, FACT_STORE_CODES, POLICY_GUARD_CODES,
+//      RETRIEVER_CODES).
 //   2. ExecutionTrace.fallback_reason — runAgentFlow's own classification
 //      of what it caught, not a RejectedInputError code by itself:
 //      `REJECTED_INPUT:<service>:<code>` (code is always a member of
@@ -234,7 +238,7 @@ export const LOCAL_REJECTION_CODES = Object.freeze([
 ]);
 
 export const REJECTION_CODES = Object.freeze([
-  ...new Set([...LOCAL_REJECTION_CODES, ...CITATION_CODES, ...FACT_STORE_CODES, ...POLICY_GUARD_CODES]),
+  ...new Set([...LOCAL_REJECTION_CODES, ...CITATION_CODES, ...FACT_STORE_CODES, ...POLICY_GUARD_CODES, ...RETRIEVER_CODES]),
 ]);
 
 function toMessage(f) {
@@ -1091,6 +1095,24 @@ export function createBudgetedRetriever(retriever, budget) {
   };
 }
 
+// Turns retriever-store.mjs's { ok, result } / { ok: false, code, message }
+// into the same thrown-RejectedInputError convention every other
+// SharedServices boundary uses — the same relationship createValidator has
+// to citation-validator.mjs/fact-store.mjs's own {ok,code} results.
+// retriever-store.mjs does not import RejectedInputError itself, to avoid
+// a circular import with this module.
+function createRetrieverService(retrieverStore) {
+  return {
+    async retrieve(request) {
+      const resolution = await retrieverStore.resolve(request);
+      if (!resolution.ok) {
+        throw new RejectedInputError("Retriever", [fail(resolution.code, resolution.message)]);
+      }
+      return resolution.result;
+    },
+  };
+}
+
 export function createSharedServices(
   budgetLimits,
   {
@@ -1122,8 +1144,15 @@ export function createSharedServices(
     // header comment: a safety check must never become skippable just
     // because the execution budget ran out elsewhere.
     policyGuard: createPolicyGuard(),
+    // Always present, fail-closed via RETRIEVER_UNAVAILABLE with no
+    // adapter wired — same as validator/calculator/structuredStore, and
+    // unlike the previous `if (retriever) ...` shape where a Flow calling
+    // services.retriever with no adapter supplied got a raw TypeError
+    // instead of a recorded, safe rejection. There is no way to reach a
+    // Retriever adapter through createSharedServices without going through
+    // retriever-store.mjs's request/result boundary first.
+    retriever: createBudgetedRetriever(createRetrieverService(createRetrieverStore(retriever ?? null, context)), budget),
   };
-  if (retriever) services.retriever = createBudgetedRetriever(retriever, budget);
 
   // Instrument every SharedServices boundary method AFTER budgeting is
   // applied, so a budget-exceeded attempt (thrown before the raw client is
@@ -1163,11 +1192,9 @@ export function createSharedServices(
     checkQuestion: wrapPolicyGuardCheck(recorder, "checkQuestion", services.policyGuard.checkQuestion),
     checkAnswer: wrapPolicyGuardCheck(recorder, "checkAnswer", services.policyGuard.checkAnswer),
   };
-  if (services.retriever) {
-    services.retriever = {
-      retrieve: wrapMaybeAsync(recorder, "Retriever", "retrieve", "tool", services.retriever.retrieve),
-    };
-  }
+  services.retriever = {
+    retrieve: wrapMaybeAsync(recorder, "Retriever", "retrieve", "tool", services.retriever.retrieve),
+  };
 
   // Deliberately NOT attached as services.trace — see TRACE_RECORDERS above.
   TRACE_RECORDERS.set(services, recorder);

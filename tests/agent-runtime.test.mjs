@@ -15,6 +15,7 @@ import {
   createValidationAuthority,
   createValidator,
   inspectServiceTrace,
+  REJECTION_CODES,
   RejectedInputError,
   runAgentFlow,
   validateCalculationRequest,
@@ -22,9 +23,70 @@ import {
 import { createCitationValidator, createDocumentStore, createEvidenceStore } from "../domain/runtime/citation-validator.mjs";
 import { createFactProvenanceValidator, createFactStore } from "../domain/runtime/fact-store.mjs";
 import { POLICY_GUARD_SAFE_ANSWERS } from "../domain/runtime/policy-guard.mjs";
+import { RETRIEVER_CODES } from "../domain/runtime/retriever-store.mjs";
 
 const AS_OF = "2026-08-10";
 const CONTEXT = { as_of_date: AS_OF, corpus_snapshot_id: "snap_1", fact_coverage_snapshot_id: "cov_1" };
+
+// A SharedContext carrying the corpus/chunking/index snapshot triple
+// retriever-store.mjs pins a RetrieverRequest against — see
+// tests/retriever-store.test.mjs for the boundary's own unit tests; these
+// fixtures exist here only so agent-runtime.test.mjs's Retriever-based
+// instrumentation-mechanics tests (sequence, pending, unhandledRejection)
+// can construct a schema-valid request/result instead of the old bare
+// `{ query: "q" }` placeholder that predates retriever-store.mjs.
+const RETRIEVAL_CONTEXT = Object.freeze({
+  corpus_snapshot_id: "corpus_retrieval_1",
+  chunking_config_id: "chunking_retrieval_1",
+  index_snapshot_id: "index_retrieval_1",
+});
+
+function retrievalMetadataFilters(overrides = {}) {
+  return {
+    corp_codes: [],
+    document_ids: [],
+    doc_groups: [],
+    doc_subtypes: [],
+    base_years: [],
+    base_months: [],
+    receipt_date_from: null,
+    receipt_date_to: null,
+    is_correction: null,
+    retrieval_eligible: true,
+    ...overrides,
+  };
+}
+
+function retrievalRequest(overrides = {}) {
+  return {
+    schema_version: "0.1.0",
+    query_id: "query_test_1",
+    question: "테스트 질문",
+    corpus_snapshot_id: RETRIEVAL_CONTEXT.corpus_snapshot_id,
+    chunking_config_id: RETRIEVAL_CONTEXT.chunking_config_id,
+    index_snapshot_id: RETRIEVAL_CONTEXT.index_snapshot_id,
+    metadata_filters: retrievalMetadataFilters(),
+    top_k: 5,
+    retrieval_method: "BM25",
+    ...overrides,
+  };
+}
+
+function retrievalResult(request, overrides = {}) {
+  return {
+    schema_version: "0.2.0",
+    query_id: request.query_id,
+    retrieval_method: request.retrieval_method,
+    corpus_snapshot_id: request.corpus_snapshot_id,
+    chunking_config_id: request.chunking_config_id,
+    index_snapshot_id: request.index_snapshot_id,
+    applied_filters: request.metadata_filters,
+    top_k: request.top_k,
+    latency_ms: 5,
+    results: [],
+    ...overrides,
+  };
+}
 
 function fact(overrides = {}) {
   return {
@@ -1332,9 +1394,10 @@ test("runAgentFlow still returns the calls recorded before an arbitrary thrown e
 });
 
 test("createSharedServices instruments Retriever calls too", async () => {
-  const retriever = { retrieve: () => ({ results: [] }) };
-  const services = createSharedServices(BUDGET_LIMITS, { context: {}, retriever });
-  services.retriever.retrieve({ query: "q" });
+  const request = retrievalRequest();
+  const retriever = { retrieve: () => retrievalResult(request) };
+  const services = createSharedServices(BUDGET_LIMITS, { context: RETRIEVAL_CONTEXT, retriever });
+  await services.retriever.retrieve(request);
   const entries = inspectServiceTrace(services).tool_calls.filter((c) => c.service === "Retriever");
   assert.equal(entries.length, 1);
   assert.equal(entries[0].method, "retrieve");
@@ -1363,11 +1426,12 @@ test("inspectServiceTrace returns null for something that isn't a real SharedSer
 // hand out a mutable reference into the recorder's real state. -----------
 
 test("mutating a PENDING entry obtained from inspectServiceTrace does not corrupt the recorder's internal state", async () => {
+  const request = retrievalRequest();
   let releasePending;
   const retriever = { retrieve: () => new Promise((resolve) => { releasePending = resolve; }) };
-  const services = createSharedServices(BUDGET_LIMITS, { context: {}, retriever });
+  const services = createSharedServices(BUDGET_LIMITS, { context: RETRIEVAL_CONTEXT, retriever });
 
-  const callPromise = services.retriever.retrieve({ query: "q" }); // fired, not yet settled
+  const callPromise = services.retriever.retrieve(request); // fired, not yet settled
   const whilePending = inspectServiceTrace(services);
   const pendingEntry = whilePending.tool_calls.find((c) => c.service === "Retriever");
   assert.ok(pendingEntry);
@@ -1381,7 +1445,7 @@ test("mutating a PENDING entry obtained from inspectServiceTrace does not corrup
     // frozen copies throw in strict mode instead — either way the attempt must not stick
   }
 
-  releasePending({ results: [] });
+  releasePending(retrievalResult(request));
   await callPromise;
 
   const afterSettle = inspectServiceTrace(services);
@@ -1392,9 +1456,10 @@ test("mutating a PENDING entry obtained from inspectServiceTrace does not corrup
 });
 
 test("mutating a SETTLED entry obtained from inspectServiceTrace does not corrupt the recorder's internal state", async () => {
-  const retriever = { retrieve: () => ({ results: [] }) }; // settles synchronously
-  const services = createSharedServices(BUDGET_LIMITS, { context: {}, retriever });
-  services.retriever.retrieve({ query: "q" });
+  const request = retrievalRequest();
+  const retriever = { retrieve: () => retrievalResult(request) }; // settles synchronously
+  const services = createSharedServices(BUDGET_LIMITS, { context: RETRIEVAL_CONTEXT, retriever });
+  await services.retriever.retrieve(request);
 
   const first = inspectServiceTrace(services);
   const entry = first.tool_calls.find((c) => c.service === "Retriever");
@@ -1656,6 +1721,7 @@ test("selected_evidence entries are bare evidence_id strings — the quoted text
 // but later REJECTS must be recorded as a failure, not ok:true. ------------
 
 test("a Retriever that returns a Promise which later rejects is recorded as a failed call, not ok:true", async () => {
+  const request = retrievalRequest();
   const retriever = {
     retrieve: () =>
       new Promise((resolve, reject) => {
@@ -1666,30 +1732,34 @@ test("a Retriever that returns a Promise which later rejects is recorded as a fa
     id: "flow_async_retriever_failure",
     async run(input, context, services) {
       try {
-        await services.retriever.retrieve({ query: "q" });
+        await services.retriever.retrieve(request);
       } catch {
         // swallowed — the point is what the Runtime recorded, not what the Flow saw
       }
       return { final_response: { question: "q", answer: "a" } };
     },
   };
-  const outcome = await runAgentFlow(flow, { question: "q" }, {}, BUDGET_LIMITS, { retriever });
+  const outcome = await runAgentFlow(flow, { question: "q" }, RETRIEVAL_CONTEXT, BUDGET_LIMITS, { retriever });
   const entry = outcome.execution_trace.tool_calls.find((c) => c.service === "Retriever");
   assert.ok(entry);
   assert.equal(entry.ok, false);
-  assert.equal(entry.error_code, "INTERNAL_ERROR");
+  // the raw adapter's own thrown Error is caught and reclassified by
+  // retriever-store.mjs as a genuine adapter failure, not the generic
+  // catch-all INTERNAL_ERROR.
+  assert.equal(entry.error_code, "RETRIEVER_ADAPTER_ERROR");
 });
 
 test("a Retriever that returns a Promise which resolves is still recorded as a successful call", async () => {
-  const retriever = { retrieve: () => new Promise((resolve) => setTimeout(() => resolve({ results: [] }), 5)) };
+  const request = retrievalRequest();
+  const retriever = { retrieve: () => new Promise((resolve) => setTimeout(() => resolve(retrievalResult(request)), 5)) };
   const flow = {
     id: "flow_async_retriever_success",
     async run(input, context, services) {
-      await services.retriever.retrieve({ query: "q" });
+      await services.retriever.retrieve(request);
       return { final_response: { question: "q", answer: "a" } };
     },
   };
-  const outcome = await runAgentFlow(flow, { question: "q" }, {}, BUDGET_LIMITS, { retriever });
+  const outcome = await runAgentFlow(flow, { question: "q" }, RETRIEVAL_CONTEXT, BUDGET_LIMITS, { retriever });
   const entry = outcome.execution_trace.tool_calls.find((c) => c.service === "Retriever");
   assert.ok(entry);
   assert.equal(entry.ok, true);
@@ -1698,24 +1768,30 @@ test("a Retriever that returns a Promise which resolves is still recorded as a s
 
 // --- sequence is assigned at call START, not completion --------------------
 
-test("sequence reflects call START order even when an earlier-started call finishes later than a later-started one", async () => {
-  const retriever = {
+function slowFastRetriever() {
+  return {
     retrieve: (request) =>
       new Promise((resolve) => {
-        const delayMs = request.query === "slow-first" ? 40 : 5;
-        setTimeout(() => resolve({ results: [] }), delayMs);
+        const delayMs = request.query_id === "query_slow_first" ? 40 : 5;
+        setTimeout(() => resolve(retrievalResult(request)), delayMs);
       }),
   };
+}
+
+test("sequence reflects call START order even when an earlier-started call finishes later than a later-started one", async () => {
+  const retriever = slowFastRetriever();
+  const slowFirst = retrievalRequest({ query_id: "query_slow_first" });
+  const fastSecond = retrievalRequest({ query_id: "query_fast_second" });
   const flow = {
     id: "flow_parallel_start_order",
     async run(input, context, services) {
-      const startedFirst = services.retriever.retrieve({ query: "slow-first" }); // starts first, finishes LAST
-      const startedSecond = services.retriever.retrieve({ query: "fast-second" }); // starts second, finishes FIRST
+      const startedFirst = services.retriever.retrieve(slowFirst); // starts first, finishes LAST
+      const startedSecond = services.retriever.retrieve(fastSecond); // starts second, finishes FIRST
       await Promise.all([startedFirst, startedSecond]);
       return { final_response: { question: "q", answer: "a" } };
     },
   };
-  const outcome = await runAgentFlow(flow, { question: "q" }, {}, BUDGET_LIMITS, { retriever });
+  const outcome = await runAgentFlow(flow, { question: "q" }, RETRIEVAL_CONTEXT, BUDGET_LIMITS, { retriever });
   const entries = outcome.execution_trace.tool_calls.filter((c) => c.service === "Retriever");
   assert.equal(entries.length, 2);
   // entries are snapshot-sorted by sequence ascending; if sequence were
@@ -1730,23 +1806,19 @@ test("sequence reflects call START order even when an earlier-started call finis
 });
 
 test("execution_trace.operations is returned sorted by sequence, mixing services that settle out of order", async () => {
-  const retriever = {
-    retrieve: (request) =>
-      new Promise((resolve) => {
-        const delayMs = request.query === "slow-first" ? 40 : 5;
-        setTimeout(() => resolve({ results: [] }), delayMs);
-      }),
-  };
+  const retriever = slowFastRetriever();
+  const slowFirst = retrievalRequest({ query_id: "query_slow_first" });
+  const fastSecond = retrievalRequest({ query_id: "query_fast_second" });
   const flow = {
     id: "flow_operations_sort_order",
     async run(input, context, services) {
-      const startedFirst = services.retriever.retrieve({ query: "slow-first" });
-      const startedSecond = services.retriever.retrieve({ query: "fast-second" });
+      const startedFirst = services.retriever.retrieve(slowFirst);
+      const startedSecond = services.retriever.retrieve(fastSecond);
       await Promise.all([startedFirst, startedSecond]);
       return { final_response: { question: "q", answer: "a" } };
     },
   };
-  const outcome = await runAgentFlow(flow, { question: "q" }, {}, BUDGET_LIMITS, { retriever });
+  const outcome = await runAgentFlow(flow, { question: "q" }, RETRIEVAL_CONTEXT, BUDGET_LIMITS, { retriever });
   const sequences = outcome.execution_trace.operations.map((op) => op.sequence);
   assert.deepEqual(sequences, [...sequences].sort((a, b) => a - b));
 });
@@ -1831,21 +1903,24 @@ test("runAgentFlow does not hang waiting for an abandoned pending call that neve
 });
 
 test("a Flow that properly awaits every call (even concurrently, via Promise.all) is not flagged as unawaited", async () => {
-  const retriever = { retrieve: (request) => delayedResolve({ results: [], query: request.query }, 5) };
+  const requestA = retrievalRequest({ query_id: "query_a" });
+  const requestB = retrievalRequest({ query_id: "query_b" });
+  const retriever = { retrieve: (request) => delayedResolve(retrievalResult(request), 5) };
   const flow = {
     id: "flow_properly_awaited_concurrent",
     async run(input, context, services) {
-      await Promise.all([services.retriever.retrieve({ query: "a" }), services.retriever.retrieve({ query: "b" })]);
+      await Promise.all([services.retriever.retrieve(requestA), services.retriever.retrieve(requestB)]);
       return { final_response: { question: "q", answer: "a" } };
     },
   };
-  const outcome = await runAgentFlow(flow, { question: "q" }, {}, BUDGET_LIMITS, { retriever });
+  const outcome = await runAgentFlow(flow, { question: "q" }, RETRIEVAL_CONTEXT, BUDGET_LIMITS, { retriever });
   assert.equal(outcome.execution_trace.fallback_reason, null);
   assert.equal(outcome.execution_trace.tool_calls.filter((c) => c.service === "Retriever").length, 2);
   assert.ok(outcome.execution_trace.tool_calls.every((c) => c.pending !== true));
 });
 
 test("late settlement of an abandoned call after runAgentFlow already returned does not mutate the already-returned trace", async () => {
+  const request = retrievalRequest();
   let releasePending;
   const retriever = {
     retrieve: () => new Promise((resolve) => { releasePending = resolve; }),
@@ -1853,13 +1928,13 @@ test("late settlement of an abandoned call after runAgentFlow already returned d
   const flow = {
     id: "flow_late_settlement",
     async run(input, context, services) {
-      services.retriever.retrieve({ query: "q" });
+      services.retriever.retrieve(request);
       return { final_response: { question: "q", answer: "a" } };
     },
   };
-  const outcome = await runAgentFlow(flow, { question: "q" }, {}, BUDGET_LIMITS, { retriever });
+  const outcome = await runAgentFlow(flow, { question: "q" }, RETRIEVAL_CONTEXT, BUDGET_LIMITS, { retriever });
   const before = JSON.parse(JSON.stringify(outcome.execution_trace));
-  releasePending({ results: [] });
+  releasePending(retrievalResult(request));
   await new Promise((resolve) => setTimeout(resolve, 20)); // let the abandoned .then() fire, if it's going to
   assert.deepEqual(outcome.execution_trace, before, "the already-returned trace must not change after the fact");
 });
@@ -1936,27 +2011,33 @@ test("a Flow that stashes services and calls them after runAgentFlow returns is 
 // independent of the request already having been rejected. -------------
 
 test("an awaited failing SharedServices call still rejects the CALLER with the real, unaltered error", async () => {
+  const request = retrievalRequest();
   const retriever = { retrieve: () => new Promise((_, reject) => setTimeout(() => reject(new Error("boom")), 5)) };
   let caught;
   const flow = {
     id: "flow_awaits_failure",
     async run(input, context, services) {
       try {
-        await services.retriever.retrieve({ query: "q" });
+        await services.retriever.retrieve(request);
       } catch (error) {
         caught = error;
       }
       return { final_response: { question: "q", answer: "a" } };
     },
   };
-  const outcome = await runAgentFlow(flow, { question: "q" }, {}, BUDGET_LIMITS, { retriever });
-  assert.ok(caught instanceof Error, "the no-op bookkeeping handler must not swallow or replace the real error");
-  assert.equal(caught.message, "boom");
+  const outcome = await runAgentFlow(flow, { question: "q" }, RETRIEVAL_CONTEXT, BUDGET_LIMITS, { retriever });
+  // retriever-store.mjs's own RETRIEVER_ADAPTER_ERROR wrapping is the "real"
+  // error here (a deliberate, intentional transformation, not the noop
+  // bookkeeping handler swallowing/replacing anything) — the point of this
+  // test is that it IS this specific error, not success, not a generic
+  // catch-all, and not silently dropped.
+  assert.ok(caught instanceof RejectedInputError, "the no-op bookkeeping handler must not swallow or replace the real error");
+  assert.equal(caught.code, "RETRIEVER_ADAPTER_ERROR");
   // the Flow handled its own failure, so the request itself succeeded normally
   assert.equal(outcome.execution_trace.fallback_reason, null);
   const entry = outcome.execution_trace.tool_calls.find((c) => c.service === "Retriever");
   assert.equal(entry.ok, false);
-  assert.equal(entry.error_code, "INTERNAL_ERROR");
+  assert.equal(entry.error_code, "RETRIEVER_ADAPTER_ERROR");
 });
 
 test("an unawaited call that will eventually REJECT (not just resolve) is still classified as UNAWAITED_SERVICE_CALL", async () => {
@@ -2032,4 +2113,65 @@ test("post-finalize service calls are still blocked as RUNTIME_CONTEXT_CLOSED af
     () => stashedServices.validator.validateFacts([fact()]),
     (error) => error instanceof RejectedInputError && error.code === "RUNTIME_CONTEXT_CLOSED",
   );
+});
+
+// --- Retriever common Runtime boundary (retriever-store.mjs), wired
+// through createSharedServices — this is NOT retrieval strategy
+// implementation, only the common request/result safety boundary every
+// BM25/Dense/RRF strategy must pass through identically. See
+// tests/retriever-store.test.mjs for the boundary's own unit tests; these
+// integration tests confirm it is actually reachable ONLY through
+// createSharedServices/runAgentFlow, fail-closed by default, and that its
+// codes join the shared Failure Registry and get recorded in
+// ExecutionTrace like every other SharedServices boundary. -------------
+
+test("createSharedServices always wires a fail-closed services.retriever, even with no retriever adapter supplied (previously it was simply absent, a raw TypeError waiting to happen)", async () => {
+  const services = createSharedServices(BUDGET_LIMITS, { context: RETRIEVAL_CONTEXT });
+  assert.ok(services.retriever, "services.retriever must always be present");
+  await assert.rejects(
+    () => services.retriever.retrieve(retrievalRequest()),
+    (error) => error instanceof RejectedInputError && error.code === "RETRIEVER_UNAVAILABLE",
+  );
+});
+
+test("runAgentFlow records a fail-closed RETRIEVER_UNAVAILABLE rejection in ExecutionTrace when a Flow calls Retriever with no adapter wired", async () => {
+  const flow = {
+    id: "flow_no_retriever_adapter",
+    async run(input, context, services) {
+      try {
+        await services.retriever.retrieve(retrievalRequest());
+      } catch {
+        // swallowed — the point is what the Runtime recorded
+      }
+      return { final_response: { question: "q", answer: "a" } };
+    },
+  };
+  const outcome = await runAgentFlow(flow, { question: "q" }, RETRIEVAL_CONTEXT, BUDGET_LIMITS); // no retriever adapter
+  const entry = outcome.execution_trace.tool_calls.find((c) => c.service === "Retriever");
+  assert.ok(entry);
+  assert.equal(entry.ok, false);
+  assert.equal(entry.error_code, "RETRIEVER_UNAVAILABLE");
+});
+
+test("runAgentFlow rejects a retrieval request whose snapshot triple disagrees with the run's SharedContext, before any adapter could be reached", async () => {
+  const adapter = { retrieve: () => { throw new Error("must never be called"); } };
+  const flow = {
+    id: "flow_bad_snapshot_retrieval",
+    async run(input, context, services) {
+      try {
+        await services.retriever.retrieve(retrievalRequest({ index_snapshot_id: "index_wrong_snapshot" }));
+        return { final_response: { question: "q", answer: "unexpected success" } };
+      } catch (error) {
+        return { final_response: { question: "q", answer: error.code } };
+      }
+    },
+  };
+  const outcome = await runAgentFlow(flow, { question: "q" }, RETRIEVAL_CONTEXT, BUDGET_LIMITS, { retriever: adapter });
+  assert.equal(outcome.final_response.answer, "RETRIEVER_SNAPSHOT_MISMATCH");
+});
+
+test("RETRIEVER_CODES are part of the shared Failure Registry (REJECTION_CODES)", () => {
+  for (const code of RETRIEVER_CODES) {
+    assert.ok(REJECTION_CODES.includes(code), code);
+  }
 });
