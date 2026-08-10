@@ -1,0 +1,21 @@
+{
+  "schema_version": "0.2.0",
+  "usage_event_id": "eval_usage_0123456789abcdef01234567",
+  "assignment_id": "author_0123456789abcdef01234567",
+  "question_id": "question_contract_amount_00126362",
+  "run_id": "run_dev_check_2026_08_10_01",
+  "usage_kind": "CHECKPOINT",
+  "executed_split": "DEV_CHECK",
+  "run_purpose": "CRITICAL_REGRESSION_CHECK",
+  "run_outcome": "SUCCESS",
+  "used_at": "2026-08-10T09:00:00Z",
+  "assigned_split_at_use": "DEV_CHECK",
+  "split_lock_status_at_use": "LOCKED_BY_CHAIN",
+  "holdout_lifecycle_status_at_use": "SEALED",
+  "chain_ids_at_use": ["chain_00126362_contract_amount_2025q1"],
+  "git_commit": "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678",
+  "configuration_sha256": "8d121b8a9ca873380164256bcb3ad52c8f3f8746d1194342272822dceaaae8c5",
+  "notes": null,
+  "previous_log_hash": null,
+  "event_hash": "a47006b7b043be85d31f3672a683c2b0358b2c1105d33bfb50d993d634f2887a"
+}

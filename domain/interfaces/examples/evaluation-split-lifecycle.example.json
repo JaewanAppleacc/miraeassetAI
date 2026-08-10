@@ -1,0 +1,9 @@
+{
+  "schema_version": "0.1.0",
+  "assignment_id": "author_0123456789abcdef01234567",
+  "assigned_split": "DEV_CHECK",
+  "split_lock_status": "LOCKED_BY_CHAIN",
+  "holdout_lifecycle_status": "SEALED",
+  "updated_at": "2026-08-10T09:00:00Z",
+  "last_usage_event_id": null
+}

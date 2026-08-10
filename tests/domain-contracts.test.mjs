@@ -12,6 +12,7 @@ import {
   VALUE_CERTAINTIES,
   validateEvaluationGoldV02,
   validateEvaluationRecord,
+  validateEvaluationSplitLifecycle,
   validateExperimentRun,
   validateFactCoverageSnapshot,
   validateEvaluationUsageEvent,
@@ -152,24 +153,176 @@ test("gold documents and chains cannot leak even when group IDs differ", () => {
   assert.ok(errors.some((error) => error.includes("gold chain")));
 });
 
+const EVENT_HASH_EXAMPLE = "a".repeat(64);
+
 test("provisional assignments are sandbox-only", () => {
   const base = {
     usage_kind: "TUNING",
     executed_split: "DEV_TUNE",
+    run_purpose: "FLOW_SELECTION",
+    run_outcome: "SUCCESS",
+    assigned_split_at_use: "DEV_TUNE",
     split_lock_status_at_use: "PROVISIONAL_UNTIL_CHAIN_CLOSURE",
+    holdout_lifecycle_status_at_use: "SEALED",
     chain_ids_at_use: [],
+    previous_log_hash: null,
+    event_hash: EVENT_HASH_EXAMPLE,
   };
   assert.ok(validateEvaluationUsageEvent(base).some((error) => error.includes("provisional")));
   assert.deepEqual(validateEvaluationUsageEvent({
     ...base,
     usage_kind: "SANDBOX",
     executed_split: "SANDBOX",
+    run_purpose: "SANDBOX_EXPLORATION",
   }), []);
   assert.deepEqual(validateEvaluationUsageEvent({
     ...base,
     split_lock_status_at_use: "LOCKED_BY_CHAIN",
     chain_ids_at_use: ["chain_001"],
   }), []);
+});
+
+test("validateEvaluationUsageEvent rejects a run_purpose that does not match executed_split", () => {
+  const base = {
+    usage_kind: "CHECKPOINT",
+    executed_split: "DEV_CHECK",
+    run_purpose: "FLOW_SELECTION", // belongs to DEV_TUNE, not DEV_CHECK
+    run_outcome: "SUCCESS",
+    assigned_split_at_use: "DEV_CHECK",
+    split_lock_status_at_use: "LOCKED_BY_CHAIN",
+    holdout_lifecycle_status_at_use: "SEALED",
+    chain_ids_at_use: [],
+    previous_log_hash: null,
+    event_hash: EVENT_HASH_EXAMPLE,
+  };
+  assert.ok(validateEvaluationUsageEvent(base).some((error) => error.includes("run_purpose")));
+});
+
+test("validateEvaluationUsageEvent rejects an invalid run_outcome and malformed hash fields", () => {
+  const base = {
+    usage_kind: "CHECKPOINT",
+    executed_split: "DEV_CHECK",
+    run_purpose: "CRITICAL_REGRESSION_CHECK",
+    run_outcome: "MAYBE",
+    assigned_split_at_use: "DEV_CHECK",
+    split_lock_status_at_use: "LOCKED_BY_CHAIN",
+    holdout_lifecycle_status_at_use: "SEALED",
+    chain_ids_at_use: [],
+    previous_log_hash: "not-a-hash",
+    event_hash: "too-short",
+  };
+  const errors = validateEvaluationUsageEvent(base);
+  assert.ok(errors.some((error) => error.includes("run_outcome")));
+  assert.ok(errors.some((error) => error.includes("previous_log_hash")));
+  assert.ok(errors.some((error) => error.includes("event_hash")));
+});
+
+test("validateEvaluationUsageEvent rejects invalid assigned_split_at_use and holdout_lifecycle_status_at_use", () => {
+  const base = {
+    usage_kind: "CHECKPOINT",
+    executed_split: "DEV_CHECK",
+    run_purpose: "CRITICAL_REGRESSION_CHECK",
+    run_outcome: "SUCCESS",
+    assigned_split_at_use: "DEV_CHECK",
+    split_lock_status_at_use: "LOCKED_BY_CHAIN",
+    holdout_lifecycle_status_at_use: "SEALED",
+    chain_ids_at_use: [],
+    previous_log_hash: null,
+    event_hash: EVENT_HASH_EXAMPLE,
+  };
+  assert.deepEqual(validateEvaluationUsageEvent(base), []);
+  assert.ok(validateEvaluationUsageEvent({ ...base, assigned_split_at_use: "SANDBOX" })
+    .some((error) => error.includes("assigned_split_at_use")));
+  assert.ok(validateEvaluationUsageEvent({ ...base, holdout_lifecycle_status_at_use: "NOT_A_STATUS" })
+    .some((error) => error.includes("holdout_lifecycle_status_at_use")));
+});
+
+test("validateEvaluationUsageEvent rejects an official executed_split that disagrees with its own assigned_split_at_use audit field", () => {
+  const base = {
+    usage_kind: "CHECKPOINT",
+    executed_split: "DEV_CHECK",
+    run_purpose: "CRITICAL_REGRESSION_CHECK",
+    run_outcome: "SUCCESS",
+    assigned_split_at_use: "DEV_CHECK",
+    split_lock_status_at_use: "LOCKED_BY_CHAIN",
+    holdout_lifecycle_status_at_use: "SEALED",
+    chain_ids_at_use: [],
+    previous_log_hash: null,
+    event_hash: EVENT_HASH_EXAMPLE,
+  };
+  assert.deepEqual(validateEvaluationUsageEvent(base), []);
+  // executed_split says DEV_CHECK but the audit field claims HOLDOUT — an
+  // internally contradictory event that never went through canUseSplit's
+  // runtime gate (e.g. a hand-edited or externally merged record).
+  const errors = validateEvaluationUsageEvent({ ...base, assigned_split_at_use: "HOLDOUT" });
+  assert.ok(errors.some((error) => error.includes("assigned_split_at_use must equal executed_split")));
+});
+
+test("validateEvaluationUsageEvent rejects a FINAL_HOLDOUT_EVALUATION event whose holdout_lifecycle_status_at_use is not OPENED", () => {
+  const base = {
+    usage_kind: "FINAL_HOLDOUT",
+    executed_split: "HOLDOUT",
+    run_purpose: "FINAL_HOLDOUT_EVALUATION",
+    run_outcome: "SUCCESS",
+    assigned_split_at_use: "HOLDOUT",
+    split_lock_status_at_use: "LOCKED_BY_CHAIN",
+    holdout_lifecycle_status_at_use: "OPENED",
+    chain_ids_at_use: [],
+    previous_log_hash: null,
+    event_hash: EVENT_HASH_EXAMPLE,
+  };
+  assert.deepEqual(validateEvaluationUsageEvent(base), []);
+  for (const wrongStatus of ["SEALED", "CONSUMED", "DIAGNOSTIC_ONLY"]) {
+    const errors = validateEvaluationUsageEvent({ ...base, holdout_lifecycle_status_at_use: wrongStatus });
+    assert.ok(
+      errors.some((error) => error.includes("FINAL_HOLDOUT_EVALUATION event requires holdout_lifecycle_status_at_use=OPENED")),
+      wrongStatus,
+    );
+  }
+});
+
+test("validateEvaluationUsageEvent rejects a DIAGNOSTIC_ONLY event whose holdout_lifecycle_status_at_use is not DIAGNOSTIC_ONLY", () => {
+  const base = {
+    usage_kind: "FINAL_HOLDOUT",
+    executed_split: "HOLDOUT",
+    run_purpose: "DIAGNOSTIC_ONLY",
+    run_outcome: "SUCCESS",
+    assigned_split_at_use: "HOLDOUT",
+    split_lock_status_at_use: "LOCKED_BY_CHAIN",
+    holdout_lifecycle_status_at_use: "DIAGNOSTIC_ONLY",
+    chain_ids_at_use: [],
+    previous_log_hash: null,
+    event_hash: EVENT_HASH_EXAMPLE,
+  };
+  assert.deepEqual(validateEvaluationUsageEvent(base), []);
+  for (const wrongStatus of ["SEALED", "OPENED", "CONSUMED"]) {
+    const errors = validateEvaluationUsageEvent({ ...base, holdout_lifecycle_status_at_use: wrongStatus });
+    assert.ok(
+      errors.some((error) => error.includes("DIAGNOSTIC_ONLY event requires holdout_lifecycle_status_at_use=DIAGNOSTIC_ONLY")),
+      wrongStatus,
+    );
+  }
+});
+
+test("validateEvaluationSplitLifecycle checks assigned_split, split_lock_status, and holdout_lifecycle_status as independent fields", () => {
+  const valid = {
+    schema_version: "0.1.0",
+    assignment_id: "author_0123456789abcdef01234567",
+    assigned_split: "DEV_CHECK",
+    split_lock_status: "LOCKED_BY_CHAIN",
+    holdout_lifecycle_status: "SEALED",
+    updated_at: "2026-08-10T09:00:00Z",
+  };
+  assert.deepEqual(validateEvaluationSplitLifecycle(valid), []);
+  assert.ok(validateEvaluationSplitLifecycle({ ...valid, assigned_split: "NOT_A_SPLIT" })
+    .some((error) => error.includes("assigned_split")));
+  assert.ok(validateEvaluationSplitLifecycle({ ...valid, split_lock_status: "NOT_A_STATUS" })
+    .some((error) => error.includes("split_lock_status")));
+  assert.ok(validateEvaluationSplitLifecycle({ ...valid, holdout_lifecycle_status: "NOT_A_STATUS" })
+    .some((error) => error.includes("holdout_lifecycle_status")));
+  // the two axes are independent — a locked assignment can still be SEALED, and
+  // an OPENED holdout can still be PROVISIONAL (already covered above by not
+  // rejecting `valid`, since LOCKED_BY_CHAIN + SEALED is a legitimate combination)
 });
 
 test("Gold v0.2 locks required fact slots and validates conditional routes", () => {

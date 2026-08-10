@@ -44,6 +44,42 @@ export const EVALUATION_SPLITS = Object.freeze([
   "HOLDOUT",
 ]);
 
+// Assignment split placement lock — whether a Gold question's split
+// membership is still provisional (pending chain closure review) or
+// locked. See evaluation-split-lifecycle.schema.json: this is one of TWO
+// independent axes, deliberately not merged with HOLDOUT_LIFECYCLE_STATUSES.
+export const SPLIT_LOCK_STATUSES = Object.freeze([
+  "PROVISIONAL_UNTIL_CHAIN_CLOSURE",
+  "LOCKED_BY_CHAIN",
+  "LOCKED_BY_COVERAGE",
+]);
+
+// The OTHER independent axis: only meaningful once executed_split=HOLDOUT.
+// A strictly linear forward lifecycle (see domain/runtime/
+// evaluation-usage-ledger.mjs's transitionHoldoutLifecycle for the allowed
+// transition graph and domain/evaluation/README.md's late-chain-discovery
+// rules for why a HOLDOUT question can need a diagnostic re-run after its
+// first real (CONSUMED) use).
+export const HOLDOUT_LIFECYCLE_STATUSES = Object.freeze([
+  "SEALED",
+  "OPENED",
+  "CONSUMED",
+  "DIAGNOSTIC_ONLY",
+]);
+
+// A closed vocabulary (not free text) so "does this run have a documented
+// purpose" is a structural, schema-enforceable fact — each value maps to a
+// specific decision rule in CLAUDE.md sections 11-12.
+export const RUN_PURPOSES = Object.freeze([
+  "SANDBOX_EXPLORATION",
+  "FLOW_SELECTION",
+  "CRITICAL_REGRESSION_CHECK",
+  "FINAL_HOLDOUT_EVALUATION",
+  "DIAGNOSTIC_ONLY",
+]);
+
+export const RUN_OUTCOMES = Object.freeze(["SUCCESS", "FAILURE"]);
+
 export const ANSWERABILITY_STATES = Object.freeze([
   "SUPPORTED",
   "NOT_FOUND",
@@ -604,26 +640,42 @@ export function findEvaluationLeakage(records) {
   return errors;
 }
 
+export const USAGE_KIND_TO_SPLIT = Object.freeze({
+  SANDBOX: "SANDBOX",
+  TUNING: "DEV_TUNE",
+  CHECKPOINT: "DEV_CHECK",
+  FINAL_HOLDOUT: "HOLDOUT",
+});
+
+// Many-to-one on purpose: FINAL_HOLDOUT_EVALUATION (the one independent
+// final run) and DIAGNOSTIC_ONLY (a post-CONSUMED bug-fix re-check) are
+// both legitimate reasons to execute against HOLDOUT, gated differently by
+// holdout_lifecycle_status — see domain/runtime/evaluation-usage-ledger.mjs.
+// Exported so canUseSplit's PRE-execution check uses this exact same
+// mapping — never a second, driftable copy of the same rule.
+export const RUN_PURPOSE_TO_SPLITS = Object.freeze({
+  SANDBOX_EXPLORATION: ["SANDBOX"],
+  FLOW_SELECTION: ["DEV_TUNE"],
+  CRITICAL_REGRESSION_CHECK: ["DEV_CHECK"],
+  FINAL_HOLDOUT_EVALUATION: ["HOLDOUT"],
+  DIAGNOSTIC_ONLY: ["HOLDOUT"],
+});
+
+const SHA256_HEX = /^[0-9a-f]{64}$/;
+
 export function validateEvaluationUsageEvent(record) {
   const errors = [];
   const allowedKinds = ["SANDBOX", "TUNING", "CHECKPOINT", "FINAL_HOLDOUT"];
   const allowedSplits = ["SANDBOX", "DEV_TUNE", "DEV_CHECK", "HOLDOUT"];
-  const allowedLocks = [
-    "PROVISIONAL_UNTIL_CHAIN_CLOSURE",
-    "LOCKED_BY_CHAIN",
-    "LOCKED_BY_COVERAGE",
-  ];
-  const kindToSplit = {
-    SANDBOX: "SANDBOX",
-    TUNING: "DEV_TUNE",
-    CHECKPOINT: "DEV_CHECK",
-    FINAL_HOLDOUT: "HOLDOUT",
-  };
   if (!record || typeof record !== "object" || Array.isArray(record)) return ["record must be an object"];
   if (!allowedKinds.includes(record.usage_kind)) errors.push("invalid usage_kind");
   if (!allowedSplits.includes(record.executed_split)) errors.push("invalid executed_split");
-  if (!allowedLocks.includes(record.split_lock_status_at_use)) errors.push("invalid split_lock_status_at_use");
-  if (kindToSplit[record.usage_kind] && kindToSplit[record.usage_kind] !== record.executed_split) {
+  if (!SPLIT_LOCK_STATUSES.includes(record.split_lock_status_at_use)) errors.push("invalid split_lock_status_at_use");
+  if (!EVALUATION_SPLITS.includes(record.assigned_split_at_use)) errors.push("invalid assigned_split_at_use");
+  if (!HOLDOUT_LIFECYCLE_STATUSES.includes(record.holdout_lifecycle_status_at_use)) {
+    errors.push("invalid holdout_lifecycle_status_at_use");
+  }
+  if (USAGE_KIND_TO_SPLIT[record.usage_kind] && USAGE_KIND_TO_SPLIT[record.usage_kind] !== record.executed_split) {
     errors.push("usage_kind does not match executed_split");
   }
   if (
@@ -633,6 +685,57 @@ export function validateEvaluationUsageEvent(record) {
     errors.push("provisional assignments cannot be used in an official split");
   }
   if (!Array.isArray(record.chain_ids_at_use)) errors.push("chain_ids_at_use must be an array");
+
+  // An OFFICIAL (non-SANDBOX) execution's own audit copy of its assigned
+  // split must equal the split it actually ran under — a directly
+  // constructed or externally merged event claiming executed_split=HOLDOUT
+  // while assigned_split_at_use=DEV_CHECK (or vice versa) never went
+  // through canUseSplit's runtime gate and must be rejected here too, not
+  // only by that gate.
+  if (record.executed_split !== "SANDBOX" && record.assigned_split_at_use !== record.executed_split) {
+    errors.push("assigned_split_at_use must equal executed_split for an official (non-SANDBOX) execution");
+  }
+
+  if (!RUN_PURPOSES.includes(record.run_purpose)) {
+    errors.push("invalid run_purpose");
+  } else {
+    if (!RUN_PURPOSE_TO_SPLITS[record.run_purpose].includes(record.executed_split)) {
+      errors.push(`run_purpose ${record.run_purpose} cannot be used with executed_split ${record.executed_split}`);
+    }
+    // A FINAL_HOLDOUT_EVALUATION event whose own audit field disagrees
+    // with "this ran while OPENED" (or a DIAGNOSTIC_ONLY event that
+    // disagrees with "this ran while DIAGNOSTIC_ONLY") is internally
+    // contradictory regardless of how it entered the ledger.
+    if (record.run_purpose === "FINAL_HOLDOUT_EVALUATION" && record.holdout_lifecycle_status_at_use !== "OPENED") {
+      errors.push("a FINAL_HOLDOUT_EVALUATION event requires holdout_lifecycle_status_at_use=OPENED");
+    }
+    if (record.run_purpose === "DIAGNOSTIC_ONLY" && record.holdout_lifecycle_status_at_use !== "DIAGNOSTIC_ONLY") {
+      errors.push("a DIAGNOSTIC_ONLY event requires holdout_lifecycle_status_at_use=DIAGNOSTIC_ONLY");
+    }
+  }
+  if (!RUN_OUTCOMES.includes(record.run_outcome)) errors.push("invalid run_outcome");
+  if (record.previous_log_hash !== null && !SHA256_HEX.test(record.previous_log_hash ?? "")) {
+    errors.push("previous_log_hash must be null or a sha256 hex string");
+  }
+  if (!SHA256_HEX.test(record.event_hash ?? "")) errors.push("event_hash must be a sha256 hex string");
+
+  return errors;
+}
+
+// The current lifecycle state of one assignment along its two independent
+// axes (see SPLIT_LOCK_STATUSES / HOLDOUT_LIFECYCLE_STATUSES) — shape and
+// enum-membership only. Transition legality (which state a record may
+// legally move FROM/TO) is domain/runtime/evaluation-usage-ledger.mjs's
+// job, not this per-record shape check's.
+export function validateEvaluationSplitLifecycle(record) {
+  const errors = [];
+  if (!record || typeof record !== "object" || Array.isArray(record)) return ["record must be an object"];
+  if (record.schema_version !== "0.1.0") errors.push("schema_version must be 0.1.0");
+  requireString(record, "assignment_id", errors);
+  if (!EVALUATION_SPLITS.includes(record.assigned_split)) errors.push("invalid assigned_split");
+  if (!SPLIT_LOCK_STATUSES.includes(record.split_lock_status)) errors.push("invalid split_lock_status");
+  if (!HOLDOUT_LIFECYCLE_STATUSES.includes(record.holdout_lifecycle_status)) errors.push("invalid holdout_lifecycle_status");
+  requireString(record, "updated_at", errors);
   return errors;
 }
 

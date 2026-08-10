@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://disclosure-analyst.local/schema/evaluation-split-lifecycle.v0.1.json",
+  "title": "C-owned Evaluation Split Lifecycle State",
+  "description": "Current lifecycle state for one evaluation assignment, tracked on two INDEPENDENT axes — split_lock_status (whether this assignment's split placement is provisional or locked) and holdout_lifecycle_status (a separate axis that only matters once executed_split=HOLDOUT: has this HOLDOUT question ever actually been used as an independent final run). These are deliberately not merged into one enum: an assignment can be LOCKED_BY_CHAIN while its holdout_lifecycle_status is still SEALED (locked in place, but never yet run), and the two axes have different transition rules (see domain/runtime/evaluation-usage-ledger.mjs).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "assignment_id",
+    "assigned_split",
+    "split_lock_status",
+    "holdout_lifecycle_status",
+    "updated_at"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.1.0" },
+    "assignment_id": { "type": "string", "pattern": "^author_[0-9a-f]{24}$" },
+    "assigned_split": {
+      "enum": ["DEV_TUNE", "DEV_CHECK", "HOLDOUT"],
+      "description": "The split this assignment is authored/grouped for (domain/evaluation/README.md's group-then-assign rule), fixed independent of split_lock_status — a question is assigned to exactly one split from the moment its evaluation_group_id is formed, whether or not chain closure has locked it yet. An OFFICIAL (non-SANDBOX) execution is only permitted when executed_split equals this value — see canUseSplit in domain/runtime/evaluation-usage-ledger.mjs."
+    },
+    "split_lock_status": {
+      "enum": ["PROVISIONAL_UNTIL_CHAIN_CLOSURE", "LOCKED_BY_CHAIN", "LOCKED_BY_COVERAGE"],
+      "description": "Allowed forward transitions only: PROVISIONAL_UNTIL_CHAIN_CLOSURE -> LOCKED_BY_CHAIN, PROVISIONAL_UNTIL_CHAIN_CLOSURE -> LOCKED_BY_COVERAGE. Once locked, terminal — no transition out, in either direction, including between the two locked states."
+    },
+    "holdout_lifecycle_status": {
+      "enum": ["SEALED", "OPENED", "CONSUMED", "DIAGNOSTIC_ONLY"],
+      "description": "Only meaningful once this assignment's split is HOLDOUT; a strictly linear forward chain: SEALED -> OPENED -> CONSUMED -> DIAGNOSTIC_ONLY. No backward transition and no skipping a stage (SEALED -> CONSUMED is rejected, as is CONSUMED -> OPENED)."
+    },
+    "updated_at": { "type": "string", "format": "date-time" },
+    "last_usage_event_id": {
+      "type": ["string", "null"],
+      "pattern": "^eval_usage_[0-9a-f]{24}$",
+      "description": "The usage event (see evaluation-usage-event.schema.json) that most recently drove a lifecycle transition for this assignment, or null if this assignment has never been used yet."
+    }
+  }
+}

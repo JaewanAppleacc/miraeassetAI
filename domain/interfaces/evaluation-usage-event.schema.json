@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://disclosure-analyst.local/schema/evaluation-usage-event.v0.1.json",
+  "$id": "https://disclosure-analyst.local/schema/evaluation-usage-event.v0.2.json",
   "title": "C-owned Evaluation Usage Event",
   "type": "object",
   "additionalProperties": false,
@@ -11,23 +11,55 @@
     "run_id",
     "usage_kind",
     "executed_split",
+    "run_purpose",
+    "run_outcome",
     "used_at",
+    "assigned_split_at_use",
     "split_lock_status_at_use",
-    "chain_ids_at_use"
+    "holdout_lifecycle_status_at_use",
+    "chain_ids_at_use",
+    "previous_log_hash",
+    "event_hash"
   ],
   "properties": {
-    "schema_version": { "const": "0.1.0" },
+    "schema_version": { "const": "0.2.0" },
     "usage_event_id": { "type": "string", "pattern": "^eval_usage_[0-9a-f]{24}$" },
     "assignment_id": { "type": "string", "pattern": "^author_[0-9a-f]{24}$" },
     "question_id": { "type": ["string", "null"] },
     "run_id": { "type": "string", "minLength": 1 },
     "usage_kind": { "enum": ["SANDBOX", "TUNING", "CHECKPOINT", "FINAL_HOLDOUT"] },
     "executed_split": { "enum": ["SANDBOX", "DEV_TUNE", "DEV_CHECK", "HOLDOUT"] },
+    "run_purpose": {
+      "enum": ["SANDBOX_EXPLORATION", "FLOW_SELECTION", "CRITICAL_REGRESSION_CHECK", "FINAL_HOLDOUT_EVALUATION", "DIAGNOSTIC_ONLY"],
+      "description": "A closed vocabulary, not free text: each value is tied to a documented decision rule (CLAUDE.md section 11-12), so 'a run_purpose exists' is a structural fact the schema can enforce, not a trust-the-caller string."
+    },
+    "run_outcome": {
+      "enum": ["SUCCESS", "FAILURE"],
+      "description": "Whether this specific run actually completed and produced a usable comparison signal. POLICY (see domain/runtime/evaluation-usage-ledger.mjs): a DISTINCT run_id consumes the DEV_CHECK/HOLDOUT run budget regardless of SUCCESS or FAILURE — the current minimal implementation treats every recorded official execution attempt as data exposure, since there is no separate exposure_started/attempt state to distinguish 'crashed before touching data' from 'crashed after'. FAILURE is recorded for audit completeness, not to grant a free retry against the same budget."
+    },
     "used_at": { "type": "string", "format": "date-time" },
+    "assigned_split_at_use": {
+      "enum": ["DEV_TUNE", "DEV_CHECK", "HOLDOUT"],
+      "description": "Audit copy of the assignment's evaluation-split-lifecycle.schema.json assigned_split at the moment this event was appended — lets a later auditor confirm executed_split was actually consistent with the assignment's pinned split (or, for a SANDBOX execution, see what it was ultimately pinned to) without needing to replay lifecycle history."
+    },
     "split_lock_status_at_use": { "enum": ["PROVISIONAL_UNTIL_CHAIN_CLOSURE", "LOCKED_BY_CHAIN", "LOCKED_BY_COVERAGE"] },
+    "holdout_lifecycle_status_at_use": {
+      "enum": ["SEALED", "OPENED", "CONSUMED", "DIAGNOSTIC_ONLY"],
+      "description": "Audit copy of holdout_lifecycle_status at the moment this event was appended. Present on every event (not just HOLDOUT-executed ones) for a uniform, unconditional schema shape; for a non-HOLDOUT-assigned item this is simply whatever the (unused) default lifecycle state was."
+    },
     "chain_ids_at_use": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
     "git_commit": { "type": ["string", "null"] },
     "configuration_sha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
-    "notes": { "type": ["string", "null"] }
+    "notes": { "type": ["string", "null"] },
+    "previous_log_hash": {
+      "type": ["string", "null"],
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "The event_hash of the immediately preceding event in this ledger, or null only for the very first (genesis) event. Forms a simple linear hash chain — see domain/runtime/evaluation-usage-ledger.mjs's KNOWN LIMITATION note on what this chain can and cannot detect."
+    },
+    "event_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "SHA-256 of this event's own canonical JSON content (every other field, including previous_log_hash) with event_hash itself excluded from what's hashed."
+    }
   }
 }

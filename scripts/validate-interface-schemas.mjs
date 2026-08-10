@@ -41,6 +41,14 @@ const pairs = [
     "domain/interfaces/structured-result.schema.json",
     "domain/interfaces/examples/structured-result.example.json",
   ],
+  [
+    "domain/interfaces/evaluation-usage-event.schema.json",
+    "domain/interfaces/examples/evaluation-usage-event.example.json",
+  ],
+  [
+    "domain/interfaces/evaluation-split-lifecycle.schema.json",
+    "domain/interfaces/examples/evaluation-split-lifecycle.example.json",
+  ],
 ];
 
 const ajv = new Ajv2020({ allErrors: true, strict: true, allowUnionTypes: true });

@@ -17,8 +17,25 @@ import { REJECTION_CODES } from "../domain/runtime/agent-runtime.mjs";
 
 const RUNTIME_DIR = fileURLToPath(new URL("../domain/runtime/", import.meta.url));
 
+// Modules whose *_CODES exports are a deliberately SEPARATE registry, not
+// part of the RejectedInputError/SharedServices/ExecutionTrace system this
+// file guards. Excluding a module here must be justified per-entry — the
+// default assumption is that a domain/runtime/*.mjs module's *_CODES DOES
+// belong in REJECTION_CODES, and this list should stay short.
+const NON_REJECTION_CODE_MODULES = Object.freeze({
+  "evaluation-usage-ledger.mjs":
+    "the Evaluation Usage Ledger's canUseSplit/appendUsageEvent return { ok, code } " +
+    "directly to their OWN caller (a Harness/evaluation-owner script) — these codes " +
+    "are never thrown as RejectedInputError, never pass through runAgentFlow, and " +
+    "never appear in ExecutionTrace.fallback_reason. Merging them into REJECTION_CODES " +
+    "would misrepresent them as SharedServices request-boundary codes, contradicting " +
+    "this file's own 3-tier architecture doc comment in agent-runtime.mjs.",
+});
+
 async function discoverCodeSources() {
-  const files = readdirSync(RUNTIME_DIR).filter((name) => name.endsWith(".mjs"));
+  const files = readdirSync(RUNTIME_DIR).filter(
+    (name) => name.endsWith(".mjs") && !(name in NON_REJECTION_CODE_MODULES),
+  );
   const sources = [];
   for (const file of files) {
     const moduleUrl = pathToFileURL(`${RUNTIME_DIR}${file}`).href;
@@ -109,6 +126,22 @@ test("REJECTION_CODES is exactly the union of every discovered *_CODES source ar
 
   assert.deepEqual(missingFromRejectionCodes, [], "a source module's code(s) never made it into REJECTION_CODES");
   assert.deepEqual(extraInRejectionCodes, [], "REJECTION_CODES contains code(s) no discovered source module declares");
+});
+
+test("excluded modules' codes do not accidentally collide with REJECTION_CODES (the exclusion must stay a genuinely separate namespace)", async () => {
+  for (const file of Object.keys(NON_REJECTION_CODE_MODULES)) {
+    const moduleUrl = pathToFileURL(`${RUNTIME_DIR}${file}`).href;
+    const exported = await import(moduleUrl);
+    for (const [name, value] of Object.entries(exported)) {
+      if (!name.endsWith("_CODES") || !Array.isArray(value)) continue;
+      for (const code of value) {
+        assert.ok(
+          !REJECTION_CODES.includes(code),
+          `${file}:${name}'s "${code}" collides with REJECTION_CODES — either it belongs in the shared registry after all, or it needs a distinct name`,
+        );
+      }
+    }
+  }
 });
 
 test("REJECTION_CODES is a non-empty array of non-empty strings", () => {
