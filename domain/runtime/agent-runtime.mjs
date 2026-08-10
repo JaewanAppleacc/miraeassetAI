@@ -769,9 +769,13 @@ function classifyFailure(error) {
   return "INTERNAL_ERROR";
 }
 
-export async function runAgentFlow(flow, input, context, budgetLimits) {
+// `serviceAdapters` (structuredStoreAdapter/documentStoreAdapter/
+// evidenceStoreAdapter/retriever) is optional and passes straight through
+// to createSharedServices — omit it and every store fails closed, same as
+// calling createSharedServices with no adapters at all.
+export async function runAgentFlow(flow, input, context, budgetLimits, serviceAdapters = {}) {
   const budget = createExecutionBudget(budgetLimits);
-  const services = createSharedServices(budgetLimits, { context, budget });
+  const services = createSharedServices(budgetLimits, { ...serviceAdapters, context, budget });
 
   let finalResponseCandidate = {};
   let traceExtras = {};

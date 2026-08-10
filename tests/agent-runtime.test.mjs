@@ -807,6 +807,50 @@ test("runAgentFlow always reports non-negative latency", async () => {
   assert.ok(outcome.execution_trace.latency_ms >= 0);
 });
 
+test("runAgentFlow passes serviceAdapters through to createSharedServices — supplied store adapters are actually reached and used", async () => {
+  const bundle = evidenceBundle();
+  let documentStoreCalled = false;
+  const documentStoreAdapter = {
+    getDocument: async (documentId) => {
+      documentStoreCalled = true;
+      return {
+        document_id: documentId,
+        corpus_snapshot_id: CONTEXT.corpus_snapshot_id,
+        blocks: [{ block_id: "b1", file_id: bundle.file_id, source_locator: bundle.source_locator, text: `여기에 ${bundle.quoted_text}이 있다.` }],
+      };
+    },
+  };
+  const evidenceStoreAdapter = {
+    getEvidence: async () => ({ corpus_snapshot_id: CONTEXT.corpus_snapshot_id, record: { ...bundle, verification_status: "VERIFIED" } }),
+  };
+  const flow = {
+    id: "flow_with_adapters",
+    async run(input, context, services) {
+      const proof = await services.validator.validateEvidence(bundle);
+      return { final_response: { question: "q", answer: proof.answerability } };
+    },
+  };
+  const outcome = await runAgentFlow(flow, { question: "q" }, CONTEXT, BUDGET_LIMITS, { documentStoreAdapter, evidenceStoreAdapter });
+  assert.equal(documentStoreCalled, true);
+  assert.equal(outcome.final_response.answer, "SUPPORTED");
+  assert.equal(outcome.execution_trace.fallback_reason, null);
+});
+
+test("runAgentFlow omitting serviceAdapters still fails every store closed, same as before", async () => {
+  const flow = {
+    id: "flow_no_adapters",
+    async run(input, context, services) {
+      await assert.rejects(
+        () => services.validator.validateEvidence(evidenceBundle()),
+        (error) => error instanceof RejectedInputError && error.code === "EVIDENCE_STORE_UNAVAILABLE",
+      );
+      return { final_response: {} };
+    },
+  };
+  const outcome = await runAgentFlow(flow, { question: "q" }, {}, BUDGET_LIMITS);
+  assert.equal(outcome.execution_trace.fallback_reason, null); // the flow caught its own rejection and returned normally
+});
+
 test("runAgentFlow threads context.as_of_date into the Validator so a Flow cannot pick a favorable date", async () => {
   const flow = {
     id: "flow_dater",
