@@ -110,6 +110,7 @@
  * @property {{serialize: function(Object): Object}} serializer
  * @property {ReturnType<typeof createExecutionBudget>} executionBudget
  * @property {{retrieve: function(Object): Object}} [retriever]
+ * @property {{query: function(Object): Promise<Object>}} structuredStore   fail-closed by default; see structured-store.mjs
  */
 
 /**
@@ -138,6 +139,7 @@
 
 import { createHash, randomUUID } from "node:crypto";
 import { EXECUTION_ROUTES, VALUE_STATUSES } from "../contracts.mjs";
+import { createBudgetedStructuredStore, createStructuredStore } from "./structured-store.mjs";
 
 export class RejectedInputError extends Error {
   constructor(service, failures) {
@@ -694,7 +696,10 @@ export function createBudgetedRetriever(retriever, budget) {
   };
 }
 
-export function createSharedServices(budgetLimits, { context = {}, retriever, budget: providedBudget, now } = {}) {
+export function createSharedServices(
+  budgetLimits,
+  { context = {}, retriever, structuredStoreAdapter, budget: providedBudget, now } = {},
+) {
   const budget = providedBudget ?? createExecutionBudget({ ...budgetLimits, now });
   const authority = createValidationAuthority(context, now ? { now } : {});
   const services = {
@@ -703,6 +708,7 @@ export function createSharedServices(budgetLimits, { context = {}, retriever, bu
     hcxClient: createBudgetedHcxClient(createHcxClient(authority), budget),
     serializer: createSerializer(),
     executionBudget: budget,
+    structuredStore: createBudgetedStructuredStore(createStructuredStore(structuredStoreAdapter ?? null, context), budget),
   };
   if (retriever) services.retriever = createBudgetedRetriever(retriever, budget);
   return services;

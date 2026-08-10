@@ -355,6 +355,27 @@ test("two createSharedServices calls with identical context mint unusable-across
   );
 });
 
+test("createSharedServices wires a fail-closed structuredStore by default", async () => {
+  const services = createSharedServices({ maxHcxCalls: 5, maxRetrievals: 5, maxToolCalls: 5, timeoutMs: 10_000 }, { context: CONTEXT });
+  const result = await services.structuredStore.query({
+    schema_version: "0.2.0",
+    query_id: "query_x",
+    execution_scope: "OFFICIAL",
+    corpus_snapshot_id: CONTEXT.corpus_snapshot_id,
+    fact_coverage_snapshot_id: CONTEXT.fact_coverage_snapshot_id,
+    targets: ["FACT"],
+    corp_codes: [],
+    predicates: { metric_codes: [], event_types: [], relation_types: [], document_ids: [], fact_ids: [], event_ids: [], relation_ids: [], evidence_ids: [] },
+    period_filter: { start: null, end: null, period_types: [] },
+    scope_filter: [],
+    verification_statuses: ["VERIFIED"],
+    as_of_date: AS_OF,
+    limit: 10,
+  });
+  assert.equal(result.status, "ERROR");
+  assert.deepEqual(result.error_codes, ["STORE_UNAVAILABLE"]);
+});
+
 // --- Serializer is actually JSON-safe, not just shape-shaped --------------
 
 test("Serializer breaks circular references instead of throwing", () => {

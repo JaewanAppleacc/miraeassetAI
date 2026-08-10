@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://disclosure-analyst.local/schema/structured-result.v0.1.json",
-  "title": "Structured Result v0.1",
+  "$id": "https://disclosure-analyst.local/schema/structured-result.v0.2.json",
+  "title": "Structured Result v0.2",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -10,7 +10,7 @@
     "applied_verification_statuses", "latency_ms", "records"
   ],
   "properties": {
-    "schema_version": { "const": "0.1.0" },
+    "schema_version": { "const": "0.2.0" },
     "query_id": { "type": "string", "pattern": "^query_[a-z0-9_.-]+$" },
     "execution_scope": { "enum": ["OFFICIAL", "SANDBOX"] },
     "corpus_snapshot_id": { "type": "string", "minLength": 1 },
@@ -57,6 +57,33 @@
               ]
             }
           }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "status": { "const": "OK" } }, "required": ["status"] },
+      "then": {
+        "properties": {
+          "error_codes": { "type": "array", "maxItems": 0 },
+          "records": { "type": "array", "minItems": 1 }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "status": { "const": "NOT_FOUND" } }, "required": ["status"] },
+      "then": {
+        "properties": {
+          "error_codes": { "type": "array", "maxItems": 0 },
+          "records": { "type": "array", "maxItems": 0 }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "status": { "const": "ERROR" } }, "required": ["status"] },
+      "then": {
+        "properties": {
+          "error_codes": { "type": "array", "minItems": 1 },
+          "records": { "type": "array", "maxItems": 0 }
         }
       }
     }

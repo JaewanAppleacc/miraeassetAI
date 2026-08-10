@@ -12,7 +12,7 @@
     "build": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext build",
     "start": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext start",
     "test": "npm run build && node --test tests/rendered-html.test.mjs",
-    "test:domain": "node --test tests/domain-contracts.test.mjs tests/a-document-ir-adapter.test.mjs tests/exchange-contract-facts.test.mjs tests/chunker.test.mjs tests/relation-review-recommendations.test.mjs tests/agent-runtime.test.mjs",
+    "test:domain": "node --test tests/domain-contracts.test.mjs tests/a-document-ir-adapter.test.mjs tests/exchange-contract-facts.test.mjs tests/chunker.test.mjs tests/relation-review-recommendations.test.mjs tests/agent-runtime.test.mjs tests/structured-store.test.mjs",
     "domain:audit": "node scripts/audit-domain-data.mjs",
     "domain:seed": "node scripts/build-domain-seed.mjs",
     "domain:eval-queue": "node scripts/build-evaluation-authoring-queue.mjs",
@@ -41,6 +41,8 @@
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
     "drizzle-orm": "0.45.2",
     "next": "16.2.6",
     "react": "19.2.6",
@@ -55,8 +57,6 @@
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "6.0.2",
     "@vitejs/plugin-rsc": "0.5.26",
-    "ajv": "^8.20.0",
-    "ajv-formats": "^3.0.1",
     "drizzle-kit": "0.31.10",
     "eslint": "9.39.4",
     "eslint-config-next": "16.2.6",
