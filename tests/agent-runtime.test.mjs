@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import test from "node:test";
 import {
   BudgetExceededError,
@@ -17,6 +18,7 @@ import {
   runAgentFlow,
   validateCalculationRequest,
 } from "../domain/runtime/agent-runtime.mjs";
+import { createCitationValidator, createDocumentStore, createEvidenceStore } from "../domain/runtime/citation-validator.mjs";
 
 const AS_OF = "2026-08-10";
 const CONTEXT = { as_of_date: AS_OF, corpus_snapshot_id: "snap_1", fact_coverage_snapshot_id: "cov_1" };
@@ -32,21 +34,83 @@ function fact(overrides = {}) {
   };
 }
 
+function sha256Hex(text) {
+  return createHash("sha256").update(text, "utf8").digest("hex");
+}
+
+// Field names mirror semantic-bundle.schema.json's Evidence $def. There is
+// deliberately no verification_status field — a Flow cannot declare it; it
+// is looked up from the (stubbed) EvidenceStore by evidence_id instead. See
+// newCitationValidator below. quote_sha256 auto-derives to the real
+// SHA256(quoted_text) unless explicitly overridden (including to a
+// deliberately wrong value), so fixtures stay internally consistent.
 function evidenceBundle(overrides = {}) {
-  return {
+  const fields = {
+    evidence_id: "evidence_000000000000000000000001",
     document_id: "doc_1",
+    file_id: "file_000000000000000000000001",
     source_locator: "section.1.para.2",
-    evidence_span: { start: 0, end: 10 },
+    quoted_text: "근거 문장",
     fact_ids: ["fact_1"],
     scope: "CONSOLIDATED",
     period: "2025Q4",
     value_status: "DISCLOSED",
     ...overrides,
   };
+  if (!("quote_sha256" in overrides)) fields.quote_sha256 = sha256Hex(fields.quoted_text);
+  return fields;
 }
 
 function newAuthority(context = CONTEXT) {
   return createValidationAuthority(context);
+}
+
+// A CitationValidator whose DocumentStore and EvidenceStore are both
+// stubbed to genuinely confirm exactly the given bundle(s) — each bundle's
+// own claimed document_id/file_id/source_locator/quoted_text/quote_sha256
+// is registered as a real VERIFIED EvidenceStore record, and the
+// DocumentStore is given a matching block so the raw citation check also
+// passes. Tests in this file exercise proof mechanics (forgery, replay,
+// budgets), not citation-matching precision — that's
+// tests/citation-validator.test.mjs's job — so this stub trusts whatever
+// bundle(s) it's told to register; it does not independently invent data.
+function newCitationValidator(...bundles) {
+  const registered = bundles.length > 0 ? bundles : [evidenceBundle()];
+  const records = new Map(
+    registered.map((bundle) => [
+      bundle.evidence_id,
+      {
+        evidence_id: bundle.evidence_id,
+        document_id: bundle.document_id,
+        file_id: bundle.file_id,
+        source_locator: bundle.source_locator,
+        quoted_text: bundle.quoted_text,
+        quote_sha256: bundle.quote_sha256,
+        verification_status: "VERIFIED",
+      },
+    ]),
+  );
+  const documentAdapter = {
+    getDocument: async (documentId) => ({
+      document_id: documentId,
+      corpus_snapshot_id: CONTEXT.corpus_snapshot_id,
+      blocks: registered
+        .filter((bundle) => bundle.document_id === documentId)
+        .map((bundle, index) => ({
+          block_id: `block_${index}`,
+          file_id: bundle.file_id,
+          source_locator: bundle.source_locator,
+          text: `여기에 ${bundle.quoted_text}이 있다.`,
+        })),
+    }),
+  };
+  const evidenceAdapter = {
+    getEvidence: async (evidenceId) => {
+      const record = records.get(evidenceId);
+      return record ? { corpus_snapshot_id: CONTEXT.corpus_snapshot_id, record } : null;
+    },
+  };
+  return createCitationValidator(createDocumentStore(documentAdapter, CONTEXT), createEvidenceStore(evidenceAdapter, CONTEXT));
 }
 
 function validatedInputs(overrides = {}, authority = newAuthority()) {
@@ -99,20 +163,99 @@ test("validateFacts derives version_valid from as_of_date vs valid_from/valid_to
   assert.equal(current.version_valid, true);
 });
 
-test("validateEvidence issues a frozen, approved, content-bound EVIDENCE proof", () => {
+test("validateEvidence issues a frozen, approved, content-bound EVIDENCE proof once citation is confirmed", async () => {
   const authority = newAuthority();
   const bundle = evidenceBundle();
-  const proof = createValidator(authority).validateEvidence(bundle);
+  const proof = await createValidator(authority, newCitationValidator()).validateEvidence(bundle);
   assert.ok(authority.isApproved(proof));
   assert.equal(proof.proof_type, "EVIDENCE");
   assert.equal(proof.answerability, "SUPPORTED");
 });
 
-test("validateEvidence rejects a bundle missing required fields", () => {
-  const validator = createValidator(newAuthority());
-  assert.throws(
+test("validateEvidence rejects a bundle missing required fields", async () => {
+  const validator = createValidator(newAuthority(), newCitationValidator());
+  await assert.rejects(
     () => validator.validateEvidence({ document_id: "doc_1" }),
     (error) => error instanceof RejectedInputError && error.code === "INVALID_SHAPE",
+  );
+});
+
+test("validateEvidence rejects outright a bundle that supplies verification_status at all — it is not a silently-ignored field", async () => {
+  const validator = createValidator(newAuthority(), newCitationValidator());
+  await assert.rejects(
+    () => validator.validateEvidence({ ...evidenceBundle(), verification_status: "VERIFIED" }),
+    (error) => error instanceof RejectedInputError && error.code === "INVALID_SHAPE",
+  );
+});
+
+test("validateEvidence rejects a Flow's evidence when the EvidenceStore's real record is CANDIDATE — only the store's own record counts", async () => {
+  // The bundle itself makes no verification_status claim at all (it
+  // can't). Prove the store's honest CANDIDATE record still blocks it,
+  // even though the citation itself resolves perfectly.
+  const bundle = evidenceBundle();
+  const documentAdapter = {
+    getDocument: async (documentId) => ({
+      document_id: documentId,
+      corpus_snapshot_id: CONTEXT.corpus_snapshot_id,
+      blocks: [{ block_id: "b1", file_id: bundle.file_id, source_locator: bundle.source_locator, text: `여기에 ${bundle.quoted_text}이 있다.` }],
+    }),
+  };
+  const evidenceAdapter = {
+    getEvidence: async () => ({
+      corpus_snapshot_id: CONTEXT.corpus_snapshot_id,
+      record: {
+        evidence_id: bundle.evidence_id,
+        document_id: bundle.document_id,
+        file_id: bundle.file_id,
+        source_locator: bundle.source_locator,
+        quoted_text: bundle.quoted_text,
+        quote_sha256: bundle.quote_sha256,
+        verification_status: "CANDIDATE", // the real, honest state of this record
+      },
+    }),
+  };
+  const citationValidator = createCitationValidator(
+    createDocumentStore(documentAdapter, CONTEXT),
+    createEvidenceStore(evidenceAdapter, CONTEXT),
+  );
+  const validator = createValidator(newAuthority(), citationValidator);
+  await assert.rejects(
+    () => validator.validateEvidence(bundle),
+    (error) => error instanceof RejectedInputError && error.code === "UNVERIFIED_DATA_FORBIDDEN",
+  );
+});
+
+test("validateEvidence fails closed with EVIDENCE_STORE_UNAVAILABLE when no CitationValidator is wired", async () => {
+  const validator = createValidator(newAuthority()); // no citationValidator argument -> fully fail-closed default
+  await assert.rejects(
+    () => validator.validateEvidence(evidenceBundle()),
+    (error) => error instanceof RejectedInputError && error.code === "EVIDENCE_STORE_UNAVAILABLE",
+  );
+});
+
+test("validateEvidence rejects a citation that does not resolve in the real corpus text, it cannot bypass the raw citation check", async () => {
+  const bundle = evidenceBundle({ quoted_text: "이 문장은 원문에 없다" });
+  // EvidenceStore honestly agrees with the request (so the human-review
+  // check alone would pass) — but the underlying DocumentIR text doesn't
+  // actually contain it.
+  const documentAdapter = {
+    getDocument: async (documentId) => ({
+      document_id: documentId,
+      corpus_snapshot_id: CONTEXT.corpus_snapshot_id,
+      blocks: [{ block_id: "b1", file_id: bundle.file_id, source_locator: bundle.source_locator, text: "이 문단은 전혀 다른 내용이다." }],
+    }),
+  };
+  const evidenceAdapter = {
+    getEvidence: async () => ({ corpus_snapshot_id: CONTEXT.corpus_snapshot_id, record: { ...bundle, verification_status: "VERIFIED" } }),
+  };
+  const citationValidator = createCitationValidator(
+    createDocumentStore(documentAdapter, CONTEXT),
+    createEvidenceStore(evidenceAdapter, CONTEXT),
+  );
+  const validator = createValidator(newAuthority(), citationValidator);
+  await assert.rejects(
+    () => validator.validateEvidence(bundle),
+    (error) => error instanceof RejectedInputError && error.code === "QUOTE_MISMATCH",
   );
 });
 
@@ -243,17 +386,18 @@ test("HcxClient rejects a hand-built object impersonating a ValidationResult", (
   );
 });
 
-test("HcxClient accepts a proof-bound EXPLAIN request from the same authority", () => {
+test("HcxClient accepts a proof-bound EXPLAIN request once the evidence's citation is confirmed", async () => {
   const authority = newAuthority();
   const bundle = evidenceBundle();
-  const validation = createValidator(authority).validateEvidence(bundle);
+  const validation = await createValidator(authority, newCitationValidator()).validateEvidence(bundle);
   const response = createHcxClient(authority).explain({ type: "EXPLAIN", evidenceBundle: bundle, validation });
   assert.equal(response.accepted, true);
 });
 
-test("HcxClient rejects a proof issued for a different EvidenceBundle (no replay)", () => {
+test("HcxClient rejects a proof issued for a different EvidenceBundle (no replay)", async () => {
   const authority = newAuthority();
-  const validation = createValidator(authority).validateEvidence(evidenceBundle({ document_id: "doc_real" }));
+  const realBundle = evidenceBundle({ document_id: "doc_real" });
+  const validation = await createValidator(authority, newCitationValidator(realBundle)).validateEvidence(realBundle);
   const fabricated = evidenceBundle({ document_id: "doc_fabricated" });
   assert.throws(
     () => createHcxClient(authority).explain({ type: "EXPLAIN", evidenceBundle: fabricated, validation }),
@@ -261,13 +405,53 @@ test("HcxClient rejects a proof issued for a different EvidenceBundle (no replay
   );
 });
 
-test("HcxClient rejects a proof from a different ValidationAuthority sharing identical context", () => {
+test("HcxClient rejects a proof issued for one locator of a document reused against a different locator of the SAME document (different Evidence, no reuse)", async () => {
+  const authority = newAuthority();
+  const bundleA = evidenceBundle({
+    evidence_id: "evidence_00000000000000000000000a",
+    source_locator: "section.1.para.1",
+    quoted_text: "첫 번째 문단",
+  });
+  const bundleB = evidenceBundle({
+    evidence_id: "evidence_00000000000000000000000b",
+    source_locator: "section.1.para.2",
+    quoted_text: "두 번째 문단",
+  });
+  const validator = createValidator(authority, newCitationValidator(bundleA, bundleB));
+  const proofForA = await validator.validateEvidence(bundleA);
+  assert.throws(
+    () => createHcxClient(authority).explain({ type: "EXPLAIN", evidenceBundle: bundleB, validation: proofForA }),
+    (error) => error instanceof RejectedInputError && error.code === "PROOF_SUBJECT_MISMATCH",
+  );
+});
+
+test("HcxClient rejects a proof from a different ValidationAuthority sharing identical context", async () => {
   const authorityA = newAuthority(CONTEXT);
   const authorityB = newAuthority(CONTEXT);
   const bundle = evidenceBundle();
-  const proofFromA = createValidator(authorityA).validateEvidence(bundle);
+  const proofFromA = await createValidator(authorityA, newCitationValidator()).validateEvidence(bundle);
   assert.throws(
     () => createHcxClient(authorityB).explain({ type: "EXPLAIN", evidenceBundle: bundle, validation: proofFromA }),
+    (error) => error instanceof RejectedInputError && error.code === "UNTRUSTED_VALIDATION",
+  );
+});
+
+test("HcxClient still rejects a Flow's self-built 'confirmed' proof even with a real CitationValidator wired (Validator cannot be bypassed)", () => {
+  const authority = newAuthority();
+  createValidator(authority, newCitationValidator()); // a real, working Validator exists in this scope
+  const bundle = evidenceBundle();
+  const selfIssued = {
+    proof_type: "EVIDENCE",
+    subject_hash: "whatever-the-flow-computes",
+    validation_scope_id: authority.validationScopeId,
+    evidence_supported: true,
+    version_valid: true,
+    dimension_comparison: "CONSISTENT",
+    conflict_status: "NONE",
+    answerability: "SUPPORTED",
+  };
+  assert.throws(
+    () => createHcxClient(authority).explain({ type: "EXPLAIN", evidenceBundle: bundle, validation: selfIssued }),
     (error) => error instanceof RejectedInputError && error.code === "UNTRUSTED_VALIDATION",
   );
 });
@@ -374,6 +558,52 @@ test("createSharedServices wires a fail-closed structuredStore by default", asyn
   });
   assert.equal(result.status, "ERROR");
   assert.deepEqual(result.error_codes, ["STORE_UNAVAILABLE"]);
+});
+
+test("createSharedServices wires a fail-closed validator.validateEvidence by default (no store adapters)", async () => {
+  const services = createSharedServices({ maxHcxCalls: 5, maxRetrievals: 5, maxToolCalls: 5, timeoutMs: 10_000 }, { context: CONTEXT });
+  await assert.rejects(
+    () => services.validator.validateEvidence(evidenceBundle()),
+    (error) => error instanceof RejectedInputError && error.code === "EVIDENCE_STORE_UNAVAILABLE",
+  );
+});
+
+test("createSharedServices still fails closed with only a documentStoreAdapter (no evidenceStoreAdapter — human review still required)", async () => {
+  const documentAdapter = {
+    getDocument: async (documentId) => ({
+      document_id: documentId,
+      corpus_snapshot_id: CONTEXT.corpus_snapshot_id,
+      blocks: [{ block_id: "b1", file_id: "file_000000000000000000000001", source_locator: "section.1.para.2", text: "여기에 근거 문장이 있다." }],
+    }),
+  };
+  const services = createSharedServices(
+    { maxHcxCalls: 5, maxRetrievals: 5, maxToolCalls: 5, timeoutMs: 10_000 },
+    { context: CONTEXT, documentStoreAdapter: documentAdapter },
+  );
+  await assert.rejects(
+    () => services.validator.validateEvidence(evidenceBundle()),
+    (error) => error instanceof RejectedInputError && error.code === "EVIDENCE_STORE_UNAVAILABLE",
+  );
+});
+
+test("createSharedServices wires a working validator.validateEvidence once BOTH documentStoreAdapter and evidenceStoreAdapter are supplied", async () => {
+  const bundle = evidenceBundle();
+  const documentAdapter = {
+    getDocument: async (documentId) => ({
+      document_id: documentId,
+      corpus_snapshot_id: CONTEXT.corpus_snapshot_id,
+      blocks: [{ block_id: "b1", file_id: bundle.file_id, source_locator: bundle.source_locator, text: `여기에 ${bundle.quoted_text}이 있다.` }],
+    }),
+  };
+  const evidenceAdapter = {
+    getEvidence: async () => ({ corpus_snapshot_id: CONTEXT.corpus_snapshot_id, record: { ...bundle, verification_status: "VERIFIED" } }),
+  };
+  const services = createSharedServices(
+    { maxHcxCalls: 5, maxRetrievals: 5, maxToolCalls: 5, timeoutMs: 10_000 },
+    { context: CONTEXT, documentStoreAdapter: documentAdapter, evidenceStoreAdapter: evidenceAdapter },
+  );
+  const proof = await services.validator.validateEvidence(bundle);
+  assert.equal(proof.answerability, "SUPPORTED");
 });
 
 // --- Serializer is actually JSON-safe, not just shape-shaped --------------
@@ -487,6 +717,21 @@ test("runAgentFlow rejects a Flow that tries to smuggle a forged proof into the 
   const outcome = await runAgentFlow(flow, { question: "q" }, {}, BUDGET_LIMITS);
   assert.equal(outcome.final_response.think_trace.execution_mode, "EARLY_EXIT");
   assert.match(outcome.execution_trace.fallback_reason, /^REJECTED_INPUT:Calculator/);
+});
+
+test("runAgentFlow safely rejects a Flow that tries to explain unverified evidence (no EvidenceStore/DocumentStore wired) and still returns valid JSON", async () => {
+  const flow = {
+    id: "flow_ungrounded",
+    async run(input, context, services) {
+      const proof = await services.validator.validateEvidence(evidenceBundle());
+      services.hcxClient.explain({ type: "EXPLAIN", evidenceBundle: evidenceBundle(), validation: proof });
+      return { final_response: {} };
+    },
+  };
+  const outcome = await runAgentFlow(flow, { question: "q" }, {}, BUDGET_LIMITS);
+  assert.equal(outcome.final_response.think_trace.execution_mode, "EARLY_EXIT");
+  assert.match(outcome.execution_trace.fallback_reason, /^REJECTED_INPUT:Validator:EVIDENCE_STORE_UNAVAILABLE/);
+  assert.doesNotThrow(() => JSON.stringify(outcome.final_response));
 });
 
 test("runAgentFlow rejects a Flow that reuses a real proof against a different fact_id (proof theft)", async () => {

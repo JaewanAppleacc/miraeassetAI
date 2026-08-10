@@ -74,10 +74,19 @@
  */
 
 /**
+ * EvidenceBundle field names mirror domain/interfaces/semantic-bundle.schema.json's
+ * Evidence $def (evidence_id/document_id/file_id/source_locator/quoted_text/
+ * quote_sha256) rather than a separate runtime-only shape. Deliberately absent:
+ * verification_status. A Flow cannot declare it — CitationValidator looks it up
+ * from the trusted EvidenceStore by evidence_id and rejects anything not VERIFIED
+ * (see createValidator/citation-validator.mjs).
  * @typedef {Object} EvidenceBundle
+ * @property {string} evidence_id       pattern ^evidence_[0-9a-f]{24}$, looked up in EvidenceStore
  * @property {string} document_id
+ * @property {string} file_id
  * @property {string} source_locator
- * @property {Object} evidence_span
+ * @property {string} quoted_text       must match the EvidenceStore record and resolve in the real corpus text
+ * @property {string} quote_sha256      must match the EvidenceStore record's quote_sha256
  * @property {string[]} [fact_ids]
  * @property {string[]} [event_ids]
  * @property {string[]} [relation_ids]
@@ -104,7 +113,7 @@
 
 /**
  * @typedef {Object} SharedServices
- * @property {{validateEvidence: function(EvidenceBundle): ValidationResult, validateFacts: function(CalculationInput[]): ValidationResult}} validator
+ * @property {{validateEvidence: function(EvidenceBundle): Promise<ValidationResult>, validateFacts: function(CalculationInput[]): ValidationResult}} validator
  * @property {{calculate: function(CalculationRequest): CalculationResult}} calculator
  * @property {{explain: function(Object): Object}} hcxClient
  * @property {{serialize: function(Object): Object}} serializer
@@ -139,6 +148,7 @@
 
 import { createHash, randomUUID } from "node:crypto";
 import { EXECUTION_ROUTES, VALUE_STATUSES } from "../contracts.mjs";
+import { CITATION_CODES, createCitationValidator, createDocumentStore, createEvidenceStore } from "./citation-validator.mjs";
 import { createBudgetedStructuredStore, createStructuredStore } from "./structured-store.mjs";
 
 export class RejectedInputError extends Error {
@@ -167,16 +177,21 @@ function fail(code, message) {
   return { code, message };
 }
 
+// Merged with CITATION_CODES (citation-validator.mjs) so the failure
+// taxonomy has one registry, not two that can silently drift apart.
 export const REJECTION_CODES = Object.freeze([
-  "INVALID_SHAPE",
-  "INVALID_ARITY",
-  "DIVISION_BY_ZERO",
-  "NON_FINITE_INPUT",
-  "UNIT_MISMATCH",
-  "SCOPE_MISMATCH",
-  "UNTRUSTED_VALIDATION",
-  "PROOF_SUBJECT_MISMATCH",
-  "UNSUPPORTED_ANSWERABILITY",
+  ...new Set([
+    "INVALID_SHAPE",
+    "INVALID_ARITY",
+    "DIVISION_BY_ZERO",
+    "NON_FINITE_INPUT",
+    "UNIT_MISMATCH",
+    "SCOPE_MISMATCH",
+    "UNTRUSTED_VALIDATION",
+    "PROOF_SUBJECT_MISMATCH",
+    "UNSUPPORTED_ANSWERABILITY",
+    ...CITATION_CODES,
+  ]),
 ]);
 
 function toMessage(f) {
@@ -344,13 +359,10 @@ function deriveFactsValidation(inputs, referenceDate) {
 function validateEvidenceBundleShape(bundle) {
   if (!bundle || typeof bundle !== "object") return [fail("INVALID_SHAPE", "EvidenceBundle must be an object")];
   const errors = [];
-  for (const field of ["document_id", "source_locator", "scope", "period"]) {
+  for (const field of ["evidence_id", "document_id", "file_id", "source_locator", "quoted_text", "quote_sha256", "scope", "period"]) {
     if (typeof bundle[field] !== "string" || bundle[field] === "") {
       errors.push(fail("INVALID_SHAPE", `${field} is required`));
     }
-  }
-  if (!bundle.evidence_span || typeof bundle.evidence_span !== "object") {
-    errors.push(fail("INVALID_SHAPE", "evidence_span is required"));
   }
   const hasIds = ["fact_ids", "event_ids", "relation_ids"].some(
     (key) => Array.isArray(bundle[key]) && bundle[key].length > 0,
@@ -359,13 +371,20 @@ function validateEvidenceBundleShape(bundle) {
   if (!VALUE_STATUSES.includes(bundle.value_status)) {
     errors.push(fail("INVALID_SHAPE", `value_status must be one of ${VALUE_STATUSES.join(", ")}`));
   }
+  // A Flow does not get to declare verification_status — it comes only
+  // from the trusted EvidenceStore, looked up by evidence_id. Silently
+  // ignoring the field would let a confused/malicious caller believe it
+  // did something; reject the request outright instead.
+  if ("verification_status" in bundle) {
+    errors.push(fail("INVALID_SHAPE", "verification_status must not be supplied by the caller"));
+  }
   return errors;
 }
 
 function deriveEvidenceValidation(bundle, referenceDate) {
   const versionValid = isCurrentlyEffective(bundle, referenceDate);
   return {
-    evidence_supported: true, // shape already required document_id/source_locator/evidence_span/ids
+    evidence_supported: true, // reached only once the citation has been confirmed against the real corpus
     version_valid: versionValid,
     dimension_comparison: "CONSISTENT",
     // cross-document conflict detection needs the shared Fact Store; not
@@ -375,12 +394,27 @@ function deriveEvidenceValidation(bundle, referenceDate) {
   };
 }
 
-export function createValidator(authority) {
+// `citationValidator` is optional so callers that only ever use
+// validateFacts (no evidence path) don't need to construct one. When
+// omitted, a fully fail-closed one (no DocumentStore, no EvidenceStore
+// adapter) is used instead — validateEvidence never falls back to
+// trusting the bundle's own claims, and there is no
+// self-declared-verification_status escape hatch: that field does not
+// even exist on EvidenceBundle anymore. Only the trusted EvidenceStore,
+// looked up by evidence_id, decides VERIFIED/CANDIDATE/REJECTED/PARSE_BLOCKED.
+export function createValidator(
+  authority,
+  citationValidator = createCitationValidator(createDocumentStore(null), createEvidenceStore(null)),
+) {
   if (!authority) throw new TypeError("createValidator requires a ValidationAuthority");
   return {
-    validateEvidence(evidenceBundle) {
+    async validateEvidence(evidenceBundle) {
       const errors = validateEvidenceBundleShape(evidenceBundle);
       if (errors.length > 0) throw new RejectedInputError("Validator", errors);
+      const citation = await citationValidator.check(evidenceBundle);
+      if (!citation.ok) {
+        throw new RejectedInputError("Validator", [fail(citation.code, "citation could not be verified against the corpus")]);
+      }
       return authority.issue("EVIDENCE", evidenceBundle, deriveEvidenceValidation(evidenceBundle, authority.referenceDate));
     },
     validateFacts(inputs) {
@@ -673,7 +707,7 @@ export function createBudgetedCalculator(calculator, budget) {
 
 export function createBudgetedValidator(validator, budget) {
   return {
-    validateEvidence(evidenceBundle) {
+    async validateEvidence(evidenceBundle) {
       budget.recordToolCall();
       budget.checkTimeout();
       return validator.validateEvidence(evidenceBundle);
@@ -698,12 +732,16 @@ export function createBudgetedRetriever(retriever, budget) {
 
 export function createSharedServices(
   budgetLimits,
-  { context = {}, retriever, structuredStoreAdapter, budget: providedBudget, now } = {},
+  { context = {}, retriever, structuredStoreAdapter, documentStoreAdapter, evidenceStoreAdapter, budget: providedBudget, now } = {},
 ) {
   const budget = providedBudget ?? createExecutionBudget({ ...budgetLimits, now });
   const authority = createValidationAuthority(context, now ? { now } : {});
+  const citationValidator = createCitationValidator(
+    createDocumentStore(documentStoreAdapter ?? null, context),
+    createEvidenceStore(evidenceStoreAdapter ?? null, context),
+  );
   const services = {
-    validator: createBudgetedValidator(createValidator(authority), budget),
+    validator: createBudgetedValidator(createValidator(authority, citationValidator), budget),
     calculator: createBudgetedCalculator(createCalculator(authority), budget),
     hcxClient: createBudgetedHcxClient(createHcxClient(authority), budget),
     serializer: createSerializer(),
