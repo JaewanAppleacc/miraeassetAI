@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://disclosure-analyst.local/schema/structured-query.v0.1.json",
+  "title": "Structured Query v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "query_id", "execution_scope", "corpus_snapshot_id",
+    "fact_coverage_snapshot_id", "targets", "corp_codes", "predicates",
+    "period_filter", "scope_filter", "verification_statuses", "as_of_date", "limit"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.1.0" },
+    "query_id": { "type": "string", "pattern": "^query_[a-z0-9_.-]+$" },
+    "execution_scope": { "enum": ["OFFICIAL", "SANDBOX"] },
+    "corpus_snapshot_id": { "type": "string", "minLength": 1 },
+    "fact_coverage_snapshot_id": { "type": ["string", "null"] },
+    "targets": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "enum": ["FACT", "EVENT", "RELATION", "EVIDENCE"] }
+    },
+    "corp_codes": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[0-9]{8}$" }
+    },
+    "predicates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "metric_codes", "event_types", "relation_types", "document_ids",
+        "fact_ids", "event_ids", "relation_ids", "evidence_ids"
+      ],
+      "properties": {
+        "metric_codes": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]+$" } },
+        "event_types": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]+$" } },
+        "relation_types": { "type": "array", "uniqueItems": true, "items": { "enum": ["AMENDS", "TERMINATES", "CONFIRMS", "SAME_EVENT_AS"] } },
+        "document_ids": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/documentId" } },
+        "fact_ids": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^fact_[0-9a-f]{24}$" } },
+        "event_ids": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^event_[0-9a-f]{24}$" } },
+        "relation_ids": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "evidence_ids": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^evidence_[0-9a-f]{24}$" } }
+      }
+    },
+    "period_filter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start", "end", "period_types"],
+      "properties": {
+        "start": { "type": ["string", "null"], "format": "date" },
+        "end": { "type": ["string", "null"], "format": "date" },
+        "period_types": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "enum": ["POINT_IN_TIME", "QUARTER", "CUMULATIVE", "ANNUAL", "EVENT_PERIOD", "UNKNOWN"] }
+        }
+      }
+    },
+    "scope_filter": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "enum": ["CONSOLIDATED", "SEPARATE", "COMPANY", "SUBSIDIARY", "UNKNOWN"] }
+    },
+    "verification_statuses": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "enum": ["CANDIDATE", "VERIFIED", "REJECTED", "PARSE_BLOCKED"] }
+    },
+    "as_of_date": { "type": "string", "format": "date" },
+    "limit": { "type": "integer", "minimum": 1, "maximum": 1000 }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "execution_scope": { "const": "OFFICIAL" } }, "required": ["execution_scope"] },
+      "then": {
+        "properties": {
+          "verification_statuses": { "const": ["VERIFIED"] }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "documentId": {
+      "type": "string",
+      "pattern": "^(periodic|major|exchange|holding)_[0-9]{14}$"
+    }
+  }
+}

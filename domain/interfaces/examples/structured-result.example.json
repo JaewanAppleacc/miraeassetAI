@@ -1,0 +1,28 @@
+{
+  "schema_version": "0.1.0",
+  "query_id": "query_contract_amount_00126362",
+  "execution_scope": "OFFICIAL",
+  "corpus_snapshot_id": "corpus_04750795e1a2d5c3",
+  "fact_coverage_snapshot_id": "fact_coverage_example_v1",
+  "query_snapshot_id": "structured_query_example_v1",
+  "status": "OK",
+  "error_codes": [],
+  "applied_verification_statuses": ["VERIFIED"],
+  "latency_ms": 1.25,
+  "records": [
+    {
+      "record_type": "FACT",
+      "record_id": "fact_0123456789abcdef01234567",
+      "verification_status": "VERIFIED",
+      "known_at": "2025-03-14T00:00:00Z",
+      "source_document_ids": ["exchange_20250314800002"],
+      "evidence_ids": ["evidence_0123456789abcdef01234567"],
+      "payload": {
+        "metric_code": "CONTRACT_AMOUNT",
+        "normalized_value": 1000000000,
+        "unit": "KRW",
+        "scope": "COMPANY"
+      }
+    }
+  ]
+}

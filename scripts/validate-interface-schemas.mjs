@@ -33,6 +33,14 @@ const pairs = [
     "domain/relations/relation-review-recommendation.schema.json",
     "domain/relations/examples/relation-review-recommendation.example.json",
   ],
+  [
+    "domain/interfaces/structured-query.schema.json",
+    "domain/interfaces/examples/structured-query.example.json",
+  ],
+  [
+    "domain/interfaces/structured-result.schema.json",
+    "domain/interfaces/examples/structured-result.example.json",
+  ],
 ];
 
 const ajv = new Ajv2020({ allErrors: true, strict: true, allowUnionTypes: true });
@@ -61,6 +69,34 @@ for (const [schemaPath, dataPath] of pairs) {
       errors: [{ message: "top-level additionalProperties gate did not reject an unknown field" }],
     });
   }
+}
+
+const structuredQuery = JSON.parse(
+  readFileSync("domain/interfaces/examples/structured-query.example.json", "utf8"),
+);
+const structuredQueryValidator = validators.get("domain/interfaces/structured-query.schema.json");
+const unverifiedOfficialQuery = structuredClone(structuredQuery);
+unverifiedOfficialQuery.verification_statuses = ["CANDIDATE"];
+if (structuredQueryValidator(unverifiedOfficialQuery)) {
+  failures.push({
+    schema: "domain/interfaces/structured-query.schema.json",
+    data: "generated OFFICIAL query requesting CANDIDATE data",
+    errors: [{ message: "OFFICIAL StructuredQuery accepted non-VERIFIED data" }],
+  });
+}
+
+const structuredResult = JSON.parse(
+  readFileSync("domain/interfaces/examples/structured-result.example.json", "utf8"),
+);
+const structuredResultValidator = validators.get("domain/interfaces/structured-result.schema.json");
+const unverifiedOfficialResult = structuredClone(structuredResult);
+unverifiedOfficialResult.records[0].verification_status = "CANDIDATE";
+if (structuredResultValidator(unverifiedOfficialResult)) {
+  failures.push({
+    schema: "domain/interfaces/structured-result.schema.json",
+    data: "generated OFFICIAL result containing CANDIDATE data",
+    errors: [{ message: "OFFICIAL StructuredResult exposed non-VERIFIED data" }],
+  });
 }
 
 if (failures.length > 0) {

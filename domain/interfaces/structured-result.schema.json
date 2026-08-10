@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://disclosure-analyst.local/schema/structured-result.v0.1.json",
+  "title": "Structured Result v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "query_id", "execution_scope", "corpus_snapshot_id",
+    "fact_coverage_snapshot_id", "query_snapshot_id", "status", "error_codes",
+    "applied_verification_statuses", "latency_ms", "records"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.1.0" },
+    "query_id": { "type": "string", "pattern": "^query_[a-z0-9_.-]+$" },
+    "execution_scope": { "enum": ["OFFICIAL", "SANDBOX"] },
+    "corpus_snapshot_id": { "type": "string", "minLength": 1 },
+    "fact_coverage_snapshot_id": { "type": ["string", "null"] },
+    "query_snapshot_id": { "type": "string", "minLength": 1 },
+    "status": { "enum": ["OK", "NOT_FOUND", "PARTIAL", "PARSE_BLOCKED", "ERROR"] },
+    "error_codes": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "INVALID_QUERY", "SNAPSHOT_MISMATCH", "UNVERIFIED_DATA_FORBIDDEN",
+          "STORE_UNAVAILABLE", "TIMEOUT", "INTERNAL_ERROR"
+        ]
+      }
+    },
+    "applied_verification_statuses": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "enum": ["CANDIDATE", "VERIFIED", "REJECTED", "PARSE_BLOCKED"] }
+    },
+    "latency_ms": { "type": "number", "minimum": 0 },
+    "records": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/record" }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "execution_scope": { "const": "OFFICIAL" } }, "required": ["execution_scope"] },
+      "then": {
+        "properties": {
+          "applied_verification_statuses": { "const": ["VERIFIED"] },
+          "records": {
+            "type": "array",
+            "items": {
+              "allOf": [
+                { "$ref": "#/$defs/record" },
+                {
+                  "type": "object",
+                  "properties": { "verification_status": { "const": "VERIFIED" } }
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "documentId": {
+      "type": "string",
+      "pattern": "^(periodic|major|exchange|holding)_[0-9]{14}$"
+    },
+    "record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_type", "record_id", "verification_status", "known_at",
+        "source_document_ids", "evidence_ids", "payload"
+      ],
+      "properties": {
+        "record_type": { "enum": ["FACT", "EVENT", "RELATION", "EVIDENCE"] },
+        "record_id": { "type": "string", "minLength": 1 },
+        "verification_status": { "enum": ["CANDIDATE", "VERIFIED", "REJECTED", "PARSE_BLOCKED"] },
+        "known_at": { "type": "string", "format": "date-time" },
+        "source_document_ids": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/documentId" } },
+        "evidence_ids": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^evidence_[0-9a-f]{24}$" } },
+        "payload": { "type": "object" }
+      }
+    }
+  }
+}

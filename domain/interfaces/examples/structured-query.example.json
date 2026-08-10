@@ -1,0 +1,28 @@
+{
+  "schema_version": "0.1.0",
+  "query_id": "query_contract_amount_00126362",
+  "execution_scope": "OFFICIAL",
+  "corpus_snapshot_id": "corpus_04750795e1a2d5c3",
+  "fact_coverage_snapshot_id": "fact_coverage_example_v1",
+  "targets": ["FACT", "EVIDENCE"],
+  "corp_codes": ["00126362"],
+  "predicates": {
+    "metric_codes": ["CONTRACT_AMOUNT"],
+    "event_types": [],
+    "relation_types": [],
+    "document_ids": [],
+    "fact_ids": [],
+    "event_ids": [],
+    "relation_ids": [],
+    "evidence_ids": []
+  },
+  "period_filter": {
+    "start": null,
+    "end": "2025-03-14",
+    "period_types": ["EVENT_PERIOD"]
+  },
+  "scope_filter": ["COMPANY"],
+  "verification_statuses": ["VERIFIED"],
+  "as_of_date": "2025-03-14",
+  "limit": 20
+}
