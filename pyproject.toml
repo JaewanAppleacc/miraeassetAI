@@ -1,0 +1,8 @@
+[project]
+name = "disclosure-analyst"
+version = "0.1.0"
+description = "Grounded disclosure QA agent for the Mirae Asset AI Festival"
+requires-python = ">=3.12,<3.13"
+
+[tool.disclosure-analyst]
+python-version = "3.12"

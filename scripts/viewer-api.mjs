@@ -3,9 +3,7 @@ import { open, readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
 const PORT = Number(process.env.DISCLOSURE_VIEWER_PORT || 4318);
-const CORPUS_ROOT =
-  process.env.DISCLOSURE_CORPUS_ROOT ||
-  "/Users/jaewan/Downloads/3.공시/corpus";
+const CORPUS_ROOT = process.env.DISCLOSURE_CORPUS_ROOT || path.resolve(process.cwd(), "corpus");
 const RAW_ROOT = path.join(CORPUS_ROOT, "raw");
 const GROUPS = [
   { id: "exchange", label: "거래소공시" },

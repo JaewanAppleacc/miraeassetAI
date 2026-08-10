@@ -78,9 +78,9 @@ export function DisclosureViewer() {
     fetch(`${API_BASE}/api/index`)
       .then(async (response) => {
         if (!response.ok) throw new Error("문서 목록을 불러오지 못했습니다.");
-        return response.json();
+        return (await response.json()) as CorpusIndex;
       })
-      .then((data: CorpusIndex) => setIndex(data))
+      .then((data) => setIndex(data))
       .catch(() =>
         setLoadError(
           "로컬 문서 서버에 연결할 수 없습니다. 터미널에서 npm run viewer를 실행해 주세요.",

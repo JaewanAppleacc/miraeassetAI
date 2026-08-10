@@ -1,5 +1,7 @@
 # DART Corpus Viewer
 
+공시 Agent 전체 설계·진행 상태·Claude Code 인수인계는 `CLAUDE.md`를 먼저 확인합니다.
+
 미래에셋증권 AI Festival 제공 공시 코퍼스를 원본 변경 없이 열람하는
 로컬 뷰어입니다.
 

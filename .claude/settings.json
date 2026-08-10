@@ -1,0 +1,28 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npm run verify:contracts || { status=$?; echo 'Contract verification failed after file edit. Fix the failure before continuing.' >&2; exit 2; }",
+            "timeout": 120
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npm run verify:contracts || { status=$?; echo 'Contract verification is red. Completion is blocked until schema, domain tests, and typecheck pass.' >&2; exit 2; }",
+            "timeout": 120
+          }
+        ]
+      }
+    ]
+  }
+}
