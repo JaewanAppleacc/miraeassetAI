@@ -149,6 +149,8 @@
 import { createHash, randomUUID } from "node:crypto";
 import { EXECUTION_ROUTES, VALUE_STATUSES } from "../contracts.mjs";
 import { CITATION_CODES, createCitationValidator, createDocumentStore, createEvidenceStore } from "./citation-validator.mjs";
+import { createFactProvenanceValidator, createFactStore, FACT_STORE_CODES } from "./fact-store.mjs";
+import { createPolicyGuard, POLICY_GUARD_CODES, POLICY_GUARD_SAFE_ANSWERS } from "./policy-guard.mjs";
 import { createBudgetedStructuredStore, createStructuredStore } from "./structured-store.mjs";
 
 export class RejectedInputError extends Error {
@@ -177,21 +179,60 @@ function fail(code, message) {
   return { code, message };
 }
 
-// Merged with CITATION_CODES (citation-validator.mjs) so the failure
-// taxonomy has one registry, not two that can silently drift apart.
+// --- Failure code registry and response policy -----------------------
+//
+// Three intentionally separate registries exist, at three different
+// layers. A code name (e.g. SNAPSHOT_MISMATCH, UNVERIFIED_DATA_FORBIDDEN)
+// may legitimately appear in more than one when it denotes the same
+// concept in a different subsystem — that is reuse, not collision, and
+// this file is the one place that assembles (1) below so a new local code
+// array added anywhere can never silently fail to join it (see
+// tests/failure-registry.test.mjs).
+//
+//   1. RejectedInputError.code — thrown by every SharedServices boundary
+//      (Validator, Calculator, HcxClient, PolicyGuard, and the AgentFlow
+//      shape check). This is REJECTION_CODES: the union of this module's
+//      own local codes plus every *_CODES array imported from a sibling
+//      runtime module (CITATION_CODES, FACT_STORE_CODES, POLICY_GUARD_CODES).
+//   2. ExecutionTrace.fallback_reason — runAgentFlow's own classification
+//      of what it caught, not a RejectedInputError code by itself:
+//      `REJECTED_INPUT:<service>:<code>` (code is always a member of
+//      REJECTION_CODES), `BUDGET_EXCEEDED:<budgetName>`, the literal
+//      string `INTERNAL_ERROR` for anything else, or `null` on success.
+//      See classifyFailure.
+//   3. StructuredResult.error_codes — a separate JSON-Schema-enforced
+//      enum for the OFFICIAL StructuredQuery/StructuredResult API
+//      response (domain/interfaces/structured-result.schema.json), not a
+//      thrown exception at all. It deliberately reuses some of the same
+//      names (SNAPSHOT_MISMATCH, UNVERIFIED_DATA_FORBIDDEN,
+//      INTERNAL_ERROR) for the same meaning, scoped to that response.
+//
+// Every rejection in (1), however it started, is caught exactly once — by
+// runAgentFlow's own try/catch — and turned into (2) plus a Serializer-
+// produced, schema-valid FinalResponse. No SharedServices boundary ever
+// assembles its own safe-JSON fallback; there is one such place.
+//
+// tests/failure-registry.test.mjs enforces this by actually scanning
+// domain/runtime/*.mjs for every exported `*_CODES` array (this module's
+// own LOCAL_REJECTION_CODES included) rather than re-importing a
+// hand-picked list — a new sibling module's *_CODES export is found by
+// that directory scan whether or not anyone remembers to merge it in
+// below, so a forgotten `...NEW_CODES` here shows up as a real test
+// failure instead of silently missing REJECTION_CODES.
+export const LOCAL_REJECTION_CODES = Object.freeze([
+  "INVALID_SHAPE",
+  "INVALID_ARITY",
+  "DIVISION_BY_ZERO",
+  "NON_FINITE_INPUT",
+  "UNIT_MISMATCH",
+  "SCOPE_MISMATCH",
+  "UNTRUSTED_VALIDATION",
+  "PROOF_SUBJECT_MISMATCH",
+  "UNSUPPORTED_ANSWERABILITY",
+]);
+
 export const REJECTION_CODES = Object.freeze([
-  ...new Set([
-    "INVALID_SHAPE",
-    "INVALID_ARITY",
-    "DIVISION_BY_ZERO",
-    "NON_FINITE_INPUT",
-    "UNIT_MISMATCH",
-    "SCOPE_MISMATCH",
-    "UNTRUSTED_VALIDATION",
-    "PROOF_SUBJECT_MISMATCH",
-    "UNSUPPORTED_ANSWERABILITY",
-    ...CITATION_CODES,
-  ]),
+  ...new Set([...LOCAL_REJECTION_CODES, ...CITATION_CODES, ...FACT_STORE_CODES, ...POLICY_GUARD_CODES]),
 ]);
 
 function toMessage(f) {
@@ -336,6 +377,13 @@ function validateFactSetShape(inputs) {
     if (!VALUE_STATUSES.includes(input.value_status)) {
       errors.push(fail("INVALID_SHAPE", `${label}: value_status must be one of ${VALUE_STATUSES.join(", ")}`));
     }
+    // A Flow does not get to declare verification_status — it comes only
+    // from the trusted FactStore, looked up by fact_id. Same rule as
+    // EvidenceBundle: silently ignoring the field would let a confused or
+    // malicious caller believe it did something.
+    if ("verification_status" in input) {
+      errors.push(fail("INVALID_SHAPE", `${label}: verification_status must not be supplied by the caller`));
+    }
     return errors;
   });
 }
@@ -394,17 +442,19 @@ function deriveEvidenceValidation(bundle, referenceDate) {
   };
 }
 
-// `citationValidator` is optional so callers that only ever use
-// validateFacts (no evidence path) don't need to construct one. When
-// omitted, a fully fail-closed one (no DocumentStore, no EvidenceStore
-// adapter) is used instead — validateEvidence never falls back to
-// trusting the bundle's own claims, and there is no
-// self-declared-verification_status escape hatch: that field does not
-// even exist on EvidenceBundle anymore. Only the trusted EvidenceStore,
-// looked up by evidence_id, decides VERIFIED/CANDIDATE/REJECTED/PARSE_BLOCKED.
+// `citationValidator`/`factProvenanceValidator` are optional so a caller
+// that only ever uses one of validateEvidence/validateFacts doesn't need
+// to construct both. When omitted, a fully fail-closed one (no
+// DocumentStore/EvidenceStore/FactStore adapter) is used instead — neither
+// method ever falls back to trusting the request's own claims, and
+// neither EvidenceBundle nor CalculationInput even has a
+// verification_status field a Flow could self-declare. Only the trusted
+// EvidenceStore (by evidence_id) or FactStore (by fact_id) decides
+// VERIFIED/CANDIDATE/REJECTED/PARSE_BLOCKED.
 export function createValidator(
   authority,
   citationValidator = createCitationValidator(createDocumentStore(null), createEvidenceStore(null)),
+  factProvenanceValidator = createFactProvenanceValidator(createFactStore(null)),
 ) {
   if (!authority) throw new TypeError("createValidator requires a ValidationAuthority");
   return {
@@ -417,9 +467,13 @@ export function createValidator(
       }
       return authority.issue("EVIDENCE", evidenceBundle, deriveEvidenceValidation(evidenceBundle, authority.referenceDate));
     },
-    validateFacts(inputs) {
+    async validateFacts(inputs) {
       const errors = validateFactSetShape(inputs);
       if (errors.length > 0) throw new RejectedInputError("Validator", errors);
+      const provenance = await factProvenanceValidator.check(inputs);
+      if (!provenance.ok) {
+        throw new RejectedInputError("Validator", [fail(provenance.code, "fact could not be verified against the corpus")]);
+      }
       return authority.issue("FACTS", inputs, deriveFactsValidation(inputs, authority.referenceDate));
     },
   };
@@ -712,7 +766,7 @@ export function createBudgetedValidator(validator, budget) {
       budget.checkTimeout();
       return validator.validateEvidence(evidenceBundle);
     },
-    validateFacts(inputs) {
+    async validateFacts(inputs) {
       budget.recordToolCall();
       budget.checkTimeout();
       return validator.validateFacts(inputs);
@@ -732,7 +786,16 @@ export function createBudgetedRetriever(retriever, budget) {
 
 export function createSharedServices(
   budgetLimits,
-  { context = {}, retriever, structuredStoreAdapter, documentStoreAdapter, evidenceStoreAdapter, budget: providedBudget, now } = {},
+  {
+    context = {},
+    retriever,
+    structuredStoreAdapter,
+    documentStoreAdapter,
+    evidenceStoreAdapter,
+    factStoreAdapter,
+    budget: providedBudget,
+    now,
+  } = {},
 ) {
   const budget = providedBudget ?? createExecutionBudget({ ...budgetLimits, now });
   const authority = createValidationAuthority(context, now ? { now } : {});
@@ -740,13 +803,18 @@ export function createSharedServices(
     createDocumentStore(documentStoreAdapter ?? null, context),
     createEvidenceStore(evidenceStoreAdapter ?? null, context),
   );
+  const factProvenanceValidator = createFactProvenanceValidator(createFactStore(factStoreAdapter ?? null, context));
   const services = {
-    validator: createBudgetedValidator(createValidator(authority, citationValidator), budget),
+    validator: createBudgetedValidator(createValidator(authority, citationValidator, factProvenanceValidator), budget),
     calculator: createBudgetedCalculator(createCalculator(authority), budget),
     hcxClient: createBudgetedHcxClient(createHcxClient(authority), budget),
     serializer: createSerializer(),
     executionBudget: budget,
     structuredStore: createBudgetedStructuredStore(createStructuredStore(structuredStoreAdapter ?? null, context), budget),
+    // Deliberately NOT wrapped in createBudgetedXxx — see policy-guard.mjs's
+    // header comment: a safety check must never become skippable just
+    // because the execution budget ran out elsewhere.
+    policyGuard: createPolicyGuard(),
   };
   if (retriever) services.retriever = createBudgetedRetriever(retriever, budget);
   return services;
@@ -769,6 +837,14 @@ function classifyFailure(error) {
   return "INTERNAL_ERROR";
 }
 
+// The internal Policy Guard code is recorded ONLY via ExecutionTrace.fallback_reason
+// (see classifyFailure) — this is the one place the user-facing `answer` text is
+// derived from a policy code, and it always resolves to a fixed external template,
+// never the raw code name or an internal message string.
+function policySafeAnswer(code) {
+  return POLICY_GUARD_SAFE_ANSWERS[code] ?? "요청을 처리할 수 없습니다.";
+}
+
 // `serviceAdapters` (structuredStoreAdapter/documentStoreAdapter/
 // evidenceStoreAdapter/retriever) is optional and passes straight through
 // to createSharedServices — omit it and every store fails closed, same as
@@ -782,11 +858,39 @@ export async function runAgentFlow(flow, input, context, budgetLimits, serviceAd
   let fallbackReason = null;
 
   try {
-    const outcome = await flow.run(input, context, services);
-    const shapeErrors = validateAgentOutcomeShape(outcome);
-    if (shapeErrors.length > 0) throw new RejectedInputError("AgentFlow", shapeErrors);
-    finalResponseCandidate = outcome.final_response;
-    traceExtras = outcome.execution_trace && typeof outcome.execution_trace === "object" ? outcome.execution_trace : {};
+    if (typeof input?.question !== "string") {
+      throw new RejectedInputError("AgentFlow", [fail("INVALID_SHAPE", "input.question must be a string")]);
+    }
+
+    const questionCheck = services.policyGuard.checkQuestion(input.question);
+    if (!questionCheck.ok) {
+      // Policy Guard rejected the question itself — the Flow never runs.
+      // This is a code-driven safe rewrite, not the generic catch-all
+      // fallback: the internal code goes only into fallback_reason below,
+      // the user sees a fixed, code-specific template.
+      fallbackReason = `REJECTED_INPUT:PolicyGuard:${questionCheck.code}`;
+      finalResponseCandidate = { question: input.question, answer: policySafeAnswer(questionCheck.code) };
+    } else {
+      const outcome = await flow.run(input, context, services);
+      const shapeErrors = validateAgentOutcomeShape(outcome);
+      if (shapeErrors.length > 0) throw new RejectedInputError("AgentFlow", shapeErrors);
+
+      traceExtras = outcome.execution_trace && typeof outcome.execution_trace === "object" ? outcome.execution_trace : {};
+
+      const answerCheck = services.policyGuard.checkAnswer(outcome.final_response.answer);
+      if (!answerCheck.ok) {
+        // The Flow itself succeeded — evidence/facts may well be SUPPORTED.
+        // Only the wording is unsafe, so this rewrites just `answer` and
+        // keeps everything else the Flow produced (execution_mode,
+        // retrieved_context, think_trace.validation, ...) instead of
+        // collapsing the whole response into the generic EARLY_EXIT
+        // fallback used for real failures.
+        fallbackReason = `REJECTED_INPUT:PolicyGuard:${answerCheck.code}`;
+        finalResponseCandidate = { ...outcome.final_response, answer: policySafeAnswer(answerCheck.code) };
+      } else {
+        finalResponseCandidate = outcome.final_response;
+      }
+    }
   } catch (error) {
     fallbackReason = classifyFailure(error);
     finalResponseCandidate = { question: typeof input?.question === "string" ? input.question : "" };
