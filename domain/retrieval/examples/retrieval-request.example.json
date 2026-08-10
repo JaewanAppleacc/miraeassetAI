@@ -1,0 +1,22 @@
+{
+  "schema_version": "0.1.0",
+  "query_id": "query_exchange_contract_amount_01",
+  "question": "LS ELECTRIC의 정정 공시 이후 계약금액은 얼마인가?",
+  "corpus_snapshot_id": "corpus_04750795e1a2d5c3",
+  "chunking_config_id": "doctype-hier-parent-child-table-dual.v0.2.0",
+  "index_snapshot_id": "index_bm25_sample_v0_1",
+  "metadata_filters": {
+    "corp_codes": ["00105855"],
+    "document_ids": [],
+    "doc_groups": ["exchange"],
+    "doc_subtypes": ["단일판매공급계약체결"],
+    "base_years": [],
+    "base_months": [],
+    "receipt_date_from": "2023-01-01",
+    "receipt_date_to": "2023-12-31",
+    "is_correction": true,
+    "retrieval_eligible": true
+  },
+  "top_k": 10,
+  "retrieval_method": "BM25"
+}

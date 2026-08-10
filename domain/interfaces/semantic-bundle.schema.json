@@ -1,0 +1,164 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://disclosure-analyst.local/schema/semantic-bundle.v0.2.json",
+  "title": "B to C Semantic Bundle v0.2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "corpus_snapshot_id", "producer",
+    "facts", "events", "relations", "evidence"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.2.0" },
+    "corpus_snapshot_id": { "type": "string", "minLength": 1 },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version", "created_at"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 },
+        "created_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "facts": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/fact" }
+    },
+    "events": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/event" }
+    },
+    "relations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/relation" }
+    },
+    "evidence": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/evidence" }
+    }
+  },
+  "$defs": {
+    "verificationStatus": {
+      "enum": ["CANDIDATE", "VERIFIED", "REJECTED", "PARSE_BLOCKED"]
+    },
+    "extractionMethod": {
+      "enum": ["MANIFEST", "DETERMINISTIC", "RULE", "MODEL", "HUMAN_VERIFIED"]
+    },
+    "documentId": {
+      "type": "string",
+      "pattern": "^(periodic|major|exchange|holding)_[0-9]{14}$"
+    },
+    "fact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fact_id", "corp_code", "event_id", "source_document_id", "metric_code",
+        "raw_label", "value_type", "value_status", "value_certainty",
+        "raw_value_text", "raw_unit_text", "normalized_value", "unit", "currency",
+        "scale", "scope", "period_type", "period_start", "period_end", "as_of_date",
+        "known_at", "valid_from", "valid_to", "withheld_until", "extraction_method",
+        "confidence", "verification_status", "evidence_ids", "attributes"
+      ],
+      "properties": {
+        "fact_id": { "type": "string", "pattern": "^fact_[0-9a-f]{24}$" },
+        "corp_code": { "type": "string", "pattern": "^[0-9]{8}$" },
+        "event_id": { "type": ["string", "null"] },
+        "source_document_id": { "$ref": "#/$defs/documentId" },
+        "metric_code": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]+$" },
+        "raw_label": { "type": ["string", "null"] },
+        "value_type": { "enum": ["NUMERIC", "TEXT", "DATE", "BOOLEAN"] },
+        "value_status": { "enum": ["DISCLOSED", "WITHHELD", "NOT_APPLICABLE", "MISSING"] },
+        "value_certainty": { "enum": ["CONFIRMED", "PLANNED", "PROVISIONAL", "NOT_RELEVANT"] },
+        "raw_value_text": { "type": "string", "minLength": 1 },
+        "raw_unit_text": { "type": ["string", "null"] },
+        "normalized_value": { "type": ["number", "string", "boolean", "null"] },
+        "unit": { "type": ["string", "null"] },
+        "currency": { "type": ["string", "null"], "pattern": "^[A-Z]{3}$" },
+        "scale": { "type": ["number", "null"] },
+        "scope": { "enum": ["CONSOLIDATED", "SEPARATE", "COMPANY", "SUBSIDIARY", "UNKNOWN"] },
+        "period_type": { "enum": ["POINT_IN_TIME", "QUARTER", "CUMULATIVE", "ANNUAL", "EVENT_PERIOD", "UNKNOWN"] },
+        "period_start": { "type": ["string", "null"], "format": "date" },
+        "period_end": { "type": ["string", "null"], "format": "date" },
+        "as_of_date": { "type": ["string", "null"], "format": "date" },
+        "known_at": { "type": "string", "format": "date-time" },
+        "valid_from": { "type": ["string", "null"], "format": "date-time" },
+        "valid_to": { "type": ["string", "null"], "format": "date-time" },
+        "withheld_until": { "type": ["string", "null"], "format": "date" },
+        "extraction_method": { "$ref": "#/$defs/extractionMethod" },
+        "confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "verification_status": { "$ref": "#/$defs/verificationStatus" },
+        "evidence_ids": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "attributes": { "type": "object" }
+      }
+    },
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "event_id", "chain_id", "corp_code", "event_type", "event_status",
+        "anchor_document_id", "event_date", "known_at", "valid_from", "valid_to",
+        "verification_status", "evidence_ids", "attributes"
+      ],
+      "properties": {
+        "event_id": { "type": "string", "pattern": "^event_[0-9a-f]{24}$" },
+        "chain_id": { "type": "string", "pattern": "^chain_[0-9a-f]{24}$" },
+        "corp_code": { "type": "string", "pattern": "^[0-9]{8}$" },
+        "event_type": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]+$" },
+        "event_status": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]+$" },
+        "anchor_document_id": { "$ref": "#/$defs/documentId" },
+        "event_date": { "type": ["string", "null"], "format": "date" },
+        "known_at": { "type": "string", "format": "date-time" },
+        "valid_from": { "type": ["string", "null"], "format": "date-time" },
+        "valid_to": { "type": ["string", "null"], "format": "date-time" },
+        "verification_status": { "$ref": "#/$defs/verificationStatus" },
+        "evidence_ids": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "attributes": { "type": "object" }
+      }
+    },
+    "relation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "relation_id", "source_document_id", "target_document_id", "event_id",
+        "relation_type", "known_at", "extraction_method", "confidence",
+        "evidence_id", "verification_status", "attributes"
+      ],
+      "properties": {
+        "relation_id": { "type": "string", "minLength": 1 },
+        "source_document_id": { "$ref": "#/$defs/documentId" },
+        "target_document_id": { "$ref": "#/$defs/documentId" },
+        "event_id": { "type": ["string", "null"] },
+        "relation_type": { "enum": ["AMENDS", "TERMINATES", "CONFIRMS", "SAME_EVENT_AS"] },
+        "known_at": { "type": "string", "format": "date-time" },
+        "extraction_method": { "$ref": "#/$defs/extractionMethod" },
+        "confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "evidence_id": { "type": ["string", "null"] },
+        "verification_status": { "$ref": "#/$defs/verificationStatus" },
+        "attributes": { "type": "object" }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence_id", "document_id", "file_id", "chunk_id", "source_locator",
+        "quoted_text", "quote_sha256", "extraction_method", "confidence",
+        "verification_status", "metadata"
+      ],
+      "properties": {
+        "evidence_id": { "type": "string", "pattern": "^evidence_[0-9a-f]{24}$" },
+        "document_id": { "$ref": "#/$defs/documentId" },
+        "file_id": { "type": "string", "pattern": "^file_[0-9a-f]{24}$" },
+        "chunk_id": { "type": ["string", "null"] },
+        "source_locator": { "type": "string", "minLength": 1 },
+        "quoted_text": { "type": ["string", "null"] },
+        "quote_sha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
+        "extraction_method": { "$ref": "#/$defs/extractionMethod" },
+        "confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "verification_status": { "$ref": "#/$defs/verificationStatus" },
+        "metadata": { "type": "object" }
+      }
+    }
+  }
+}

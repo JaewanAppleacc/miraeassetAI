@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://disclosure-analyst.local/schema/experiment-run.v0.2.json",
+  "title": "C-owned Reproducible Experiment Run",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "run_id", "experiment_round_id", "corpus_snapshot_id",
+    "parser_version", "chunking_config_id", "embedding_model_id", "index_snapshot_id",
+    "gold_revision", "fact_coverage_snapshot_id", "started_at", "configuration"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.2.0" },
+    "run_id": { "type": "string", "minLength": 1 },
+    "experiment_round_id": { "type": "string", "minLength": 1 },
+    "corpus_snapshot_id": { "type": "string", "minLength": 1 },
+    "parser_version": { "type": "string", "minLength": 1 },
+    "chunking_config_id": { "type": "string", "minLength": 1 },
+    "embedding_model_id": { "type": "string", "minLength": 1 },
+    "index_snapshot_id": { "type": "string", "minLength": 1 },
+    "gold_revision": { "type": "string", "minLength": 1 },
+    "fact_coverage_snapshot_id": { "type": "string", "pattern": "^fact_coverage_snapshot_[0-9a-f]{24}$" },
+    "started_at": { "type": "string", "format": "date-time" },
+    "completed_at": { "type": ["string", "null"], "format": "date-time" },
+    "configuration": { "type": "object" },
+    "metrics": { "type": ["object", "null"] }
+  }
+}

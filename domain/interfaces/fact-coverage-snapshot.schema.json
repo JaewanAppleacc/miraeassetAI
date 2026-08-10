@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://disclosure-analyst.local/schema/fact-coverage-snapshot.v0.1.json",
+  "title": "B to C Verified Fact Coverage Snapshot",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "fact_coverage_snapshot_id", "corpus_snapshot_id",
+    "semantic_bundle_schema_version", "producer_version", "created_at", "slots"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.1.0" },
+    "fact_coverage_snapshot_id": { "type": "string", "pattern": "^fact_coverage_snapshot_[0-9a-f]{24}$" },
+    "corpus_snapshot_id": { "type": "string", "minLength": 1 },
+    "semantic_bundle_schema_version": { "type": "string", "minLength": 1 },
+    "producer_version": { "type": "string", "minLength": 1 },
+    "created_at": { "type": "string", "format": "date-time" },
+    "slots": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "slot_key", "corp_code", "metric_code", "coverage_state",
+          "verification_status", "fact_ids", "evidence_ids"
+        ],
+        "properties": {
+          "slot_key": { "type": "string", "minLength": 1 },
+          "corp_code": { "type": "string", "pattern": "^[0-9]{8}$" },
+          "metric_code": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]+$" },
+          "period_key": { "type": ["string", "null"] },
+          "scope": { "type": ["string", "null"] },
+          "coverage_state": {
+            "enum": [
+              "ALL_REQUIRED_FACT_SLOTS_VERIFIED", "FACT_SLOT_VERIFIED_WITHHELD",
+              "FACT_SLOT_VERIFIED_NOT_APPLICABLE", "PARTIAL_STRUCTURED_FACT_COVERAGE",
+              "NO_STRUCTURED_FACT_COVERAGE", "ZERO_DOCUMENT_IN_CORPUS", "PARSE_BLOCKED",
+              "OUT_OF_SCOPE", "CONFLICTING_VERIFIED_FACTS"
+            ]
+          },
+          "verification_status": { "const": "VERIFIED" },
+          "fact_ids": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+          "evidence_ids": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+          "reason_code": { "type": ["string", "null"] }
+        }
+      }
+    }
+  }
+}

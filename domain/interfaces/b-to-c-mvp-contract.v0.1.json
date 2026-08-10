@@ -1,0 +1,51 @@
+{
+  "contract_version": "0.1.0",
+  "effective_date": "2026-08-04",
+  "latest_role_assignment": {
+    "A": ["CORPUS_SNAPSHOT", "DOCUMENT_IR", "PARSE_AUDIT"],
+    "B": ["METADATA_ID", "FACT", "EVENT", "CORRECTION_CHAIN", "EVALUATION_GOLD_REVIEW"],
+    "C": ["ARTIFACT_LOADER", "EXPERIMENT_RUNNER", "RETRIEVAL", "METRICS", "CACHE_REPRODUCIBILITY"]
+  },
+  "supersedes_legacy_role_documents": true,
+  "mvp_scope": {
+    "fact_store": {
+      "included": true,
+      "priority": ["EXCHANGE_CONTRACT", "TERMINATION", "CORE_FINANCIAL_METRICS"],
+      "non_priority_fallback": "RETRIEVAL"
+    },
+    "event_and_correction_chain": {
+      "included": true,
+      "relation_types": ["AMENDS", "TERMINATES", "CONFIRMS", "SAME_EVENT_AS"]
+    },
+    "evaluation_gold": {
+      "owner": "B",
+      "requires_independent_second_reviewer": true,
+      "runner_owner": "C"
+    }
+  },
+  "artifact_status": {
+    "schema_draft": {
+      "status": "READY",
+      "available_on": "2026-08-04"
+    },
+    "representative_candidate_sample": {
+      "status": "READY",
+      "available_on": "2026-08-04"
+    },
+    "full_exchange_contract_candidate_artifact": {
+      "status": "READY_LOCAL",
+      "available_on": "2026-08-04",
+      "document_count": 1126,
+      "fact_count": 8873
+    },
+    "verified_semantic_artifact": {
+      "status": "BLOCKED_BY_HUMAN_REVIEW",
+      "delivery_condition": "RELATION_CHAIN_CLOSURE_AND_TWO_PERSON_REVIEW"
+    },
+    "final_gold_artifact": {
+      "status": "BLOCKED_BY_HUMAN_REVIEW_AND_C_RUNNER",
+      "delivery_condition": "CHAIN_SAFE_SPLIT_LOCK_AND_TWO_PERSON_REVIEW"
+    }
+  },
+  "runtime_rule": "Only verification_status=VERIFIED may enter official structured reasoning or scoring. CANDIDATE is loader and sandbox material only."
+}

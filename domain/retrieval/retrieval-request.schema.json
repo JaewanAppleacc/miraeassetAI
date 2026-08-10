@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://disclosure-analyst.local/schema/retrieval-request.v0.1.json",
+  "title": "Retrieval Request v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "query_id", "question", "corpus_snapshot_id",
+    "chunking_config_id", "index_snapshot_id", "metadata_filters", "top_k",
+    "retrieval_method"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.1.0" },
+    "query_id": { "type": "string", "pattern": "^query_[a-z0-9_.-]+$" },
+    "question": { "type": "string", "minLength": 1 },
+    "corpus_snapshot_id": { "type": "string", "minLength": 1 },
+    "chunking_config_id": { "type": "string", "minLength": 1 },
+    "index_snapshot_id": { "type": "string", "minLength": 1 },
+    "metadata_filters": { "$ref": "#/$defs/metadataFilters" },
+    "top_k": { "type": "integer", "minimum": 1, "maximum": 100 },
+    "retrieval_method": { "enum": ["BM25", "DENSE", "HYBRID_RRF", "HYBRID_RRF_RERANKER"] }
+  },
+  "$defs": {
+    "metadataFilters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "corp_codes", "document_ids", "doc_groups", "doc_subtypes", "base_years",
+        "base_months", "receipt_date_from", "receipt_date_to", "is_correction",
+        "retrieval_eligible"
+      ],
+      "properties": {
+        "corp_codes": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[0-9]{8}$" } },
+        "document_ids": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+        "doc_groups": { "type": "array", "uniqueItems": true, "items": { "enum": ["periodic", "major", "exchange", "holding"] } },
+        "doc_subtypes": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+        "base_years": { "type": "array", "uniqueItems": true, "items": { "type": "integer" } },
+        "base_months": { "type": "array", "uniqueItems": true, "items": { "type": "integer", "minimum": 1, "maximum": 12 } },
+        "receipt_date_from": { "type": ["string", "null"], "format": "date" },
+        "receipt_date_to": { "type": ["string", "null"], "format": "date" },
+        "is_correction": { "type": ["boolean", "null"] },
+        "retrieval_eligible": { "const": true }
+      }
+    }
+  }
+}

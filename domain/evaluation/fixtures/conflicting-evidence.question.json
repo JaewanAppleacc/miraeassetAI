@@ -1,0 +1,61 @@
+{
+  "schema_version": "0.2.0",
+  "question_id": "fixture_conflicting_evidence_001",
+  "evaluation_group_id": "fixture_only_not_gold",
+  "split": "DEV_TUNE",
+  "question": "동일 조건의 검수된 매출액 Fact가 충돌할 때 어떻게 답해야 하는가?",
+  "question_type": "ANSWERABILITY",
+  "difficulty": "HARD",
+  "answer_mode": "CLOSED",
+  "doc_groups": ["periodic"],
+  "corp_codes": ["00126362"],
+  "as_of_date": "2026-03-31",
+  "expected_answerability": "CONFLICTING_EVIDENCE",
+  "gold_document_ids": ["periodic_20260310002954"],
+  "expected_fact_ids": [],
+  "expected_event_ids": [],
+  "required_evidence_slots": [],
+  "expected_answer": {
+    "status": "CONFLICTING_EVIDENCE",
+    "value": null,
+    "unit": null,
+    "reason_code": "UNRESOLVED_VERIFIED_FACT_CONFLICT"
+  },
+  "authored_against": {
+    "corpus_snapshot_id": "fixture_snapshot",
+    "manifest_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "parser_name": "fixture-parser",
+    "parser_version": "0.1.0",
+    "document_ir_schema_version": "0.1.0",
+    "semantic_bundle_schema_version": "0.2.0",
+    "gold_revision": "fixture-r1"
+  },
+  "expected_execution": {
+    "applicable_fact_coverage_states": ["CONFLICTING_VERIFIED_FACTS"],
+    "required_fact_slots": [
+      {
+        "slot_name": "revenue",
+        "metric_code": "REVENUE"
+      }
+    ],
+    "required_fact_slots_sha256": "faccf5422f891a5ff9afe9ecb130497496c9c21b46d41f8ceaf418d1e9fa8cf5",
+    "required_fact_slots_lock_status": "GOLD_LOCKED",
+    "route_policy": [
+      {
+        "when": "CONFLICTING_VERIFIED_FACTS",
+        "preferred_route": "EARLY_EXIT",
+        "allowed_routes": ["EARLY_EXIT"],
+        "required_operations": ["report_conflicting_evidence"],
+        "forbidden_operations": ["select_fact_without_resolution", "calculate"],
+        "expected_answerability": "CONFLICTING_EVIDENCE"
+      }
+    ]
+  },
+  "scoring_spec": {
+    "comparator": "EXACT",
+    "tolerance": null,
+    "unit": null,
+    "rounding": null
+  },
+  "tags": ["conflicting_evidence", "validator_fixture", "not_gold"]
+}

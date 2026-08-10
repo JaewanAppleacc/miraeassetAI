@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://disclosure-analyst.local/schema/termination-review-packet.v0.1.json",
+  "title": "TERMINATES Review Packet v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "review_packet_id", "corpus_snapshot_id", "source_document",
+    "recommended_target_document", "identity_score", "field_comparison",
+    "explicit_termination_evidence", "target_amends_dependency", "machine_status",
+    "review_status", "review"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.1.0" },
+    "review_packet_id": { "type": "string", "pattern": "^termination_review_[0-9a-f]{24}$" },
+    "corpus_snapshot_id": { "type": "string", "minLength": 1 },
+    "source_document": { "$ref": "#/$defs/documentRef" },
+    "recommended_target_document": { "$ref": "#/$defs/documentRef" },
+    "identity_score": { "type": "number", "minimum": 0, "maximum": 1 },
+    "field_comparison": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["metric_code", "matched", "source_fact", "target_fact"],
+        "properties": {
+          "metric_code": { "type": "string", "minLength": 1 },
+          "matched": { "type": ["boolean", "null"] },
+          "source_fact": { "$ref": "#/$defs/factRef" },
+          "target_fact": { "$ref": "#/$defs/factRef" }
+        }
+      }
+    },
+    "explicit_termination_evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/evidenceRef" }
+    },
+    "target_amends_dependency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required", "relation_candidate_id", "review_status", "candidate_target_document_ids"],
+      "properties": {
+        "required": { "type": "boolean" },
+        "relation_candidate_id": { "type": ["string", "null"] },
+        "review_status": { "type": ["string", "null"] },
+        "candidate_target_document_ids": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "machine_status": { "enum": ["READY_FOR_HUMAN_REVIEW", "BLOCKED_UNTIL_TARGET_AMENDS_CHAIN_CLOSURE"] },
+    "review_status": { "const": "PENDING" },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reviewer_id", "reviewed_at", "outcome", "notes"],
+      "properties": {
+        "reviewer_id": { "type": ["string", "null"] },
+        "reviewed_at": { "type": ["string", "null"], "format": "date-time" },
+        "outcome": { "type": ["string", "null"], "enum": ["ACCEPTED", "REJECTED", "TARGET_OUTSIDE_CORPUS", "PARSE_BLOCKED", null] },
+        "notes": { "type": ["string", "null"] }
+      }
+    }
+  },
+  "$defs": {
+    "documentRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["document_id", "corp_code", "report_name", "receipt_date", "is_correction"],
+      "properties": {
+        "document_id": { "type": "string" },
+        "corp_code": { "type": "string", "pattern": "^[0-9]{8}$" },
+        "report_name": { "type": "string" },
+        "receipt_date": { "type": "string", "format": "date" },
+        "is_correction": { "type": "boolean" }
+      }
+    },
+    "factRef": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["fact_id", "value_status", "raw_value_text", "normalized_value", "evidence_ids"],
+      "properties": {
+        "fact_id": { "type": "string" },
+        "value_status": { "type": "string" },
+        "raw_value_text": { "type": ["string", "null"] },
+        "normalized_value": {},
+        "evidence_ids": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "evidenceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evidence_id", "document_id", "source_locator", "quoted_text"],
+      "properties": {
+        "evidence_id": { "type": "string" },
+        "document_id": { "type": "string" },
+        "source_locator": { "type": "string" },
+        "quoted_text": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

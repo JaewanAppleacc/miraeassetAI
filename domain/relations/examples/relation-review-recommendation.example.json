@@ -1,0 +1,64 @@
+{
+  "schema_version": "0.1.0",
+  "review_packet_id": "relation_review_aaaaaaaaaaaaaaaaaaaaaaaa",
+  "corpus_snapshot_id": "corpus_04750795e1a2d5c3",
+  "relation_candidate_id": "relation_candidate_example",
+  "relation_type": "AMENDS",
+  "source_document": {
+    "document_id": "exchange_20250731800028",
+    "corp_code": "00126380",
+    "doc_group": "exchange",
+    "report_name": "[기재정정]단일판매ㆍ공급계약체결",
+    "receipt_date": "2025-07-31",
+    "is_correction": true
+  },
+  "source_parse": {
+    "state": "PRESENT",
+    "reason_code": "PARSE_SUCCESS_WITH_WARNINGS",
+    "warning_codes": ["encoding_declaration_mismatch"]
+  },
+  "recommended_target_document": {
+    "document_id": "exchange_20250728800035",
+    "corp_code": "00126380",
+    "doc_group": "exchange",
+    "report_name": "단일판매ㆍ공급계약체결",
+    "receipt_date": "2025-07-28",
+    "is_correction": false
+  },
+  "candidate_count": 1,
+  "candidate_summaries": [{
+    "target_document": {
+      "document_id": "exchange_20250728800035",
+      "corp_code": "00126380",
+      "doc_group": "exchange",
+      "report_name": "단일판매ㆍ공급계약체결",
+      "receipt_date": "2025-07-28",
+      "is_correction": false
+    },
+    "candidate_score": 1,
+    "identity_score": null,
+    "matching_field_count": null,
+    "contradiction_count": null,
+    "reasons": ["explicit_referenced_receipt_date", "same_corp_code", "same_report_family"],
+    "field_matches": {}
+  }],
+  "evidence": [{
+    "evidence_id": "review_evidence_bbbbbbbbbbbbbbbbbbbbbbbb",
+    "kind": "REFERENCE_DATE",
+    "document_id": "exchange_20250731800028",
+    "source_locator": "exchange_20250731800028/20250731800028.xml#node=1;row=1",
+    "quoted_text": "2. 정정관련 공시서류제출일 | 2025-07-28 | 2025-07-28"
+  }],
+  "recommendation_basis": ["EXPLICIT_REFERENCE_UNIQUE_MATCH"],
+  "machine_status": "READY_FOR_HUMAN_REVIEW",
+  "human_action": "명시 공시명·공시일과 추천 대상 문서를 대조하고 ACCEPTED 여부를 기록하세요.",
+  "review_status": "PENDING_HUMAN_REVIEW",
+  "review": {
+    "reviewer_id": null,
+    "reviewed_at": null,
+    "outcome": null,
+    "target_document_id": null,
+    "evidence_ids": [],
+    "notes": null
+  }
+}

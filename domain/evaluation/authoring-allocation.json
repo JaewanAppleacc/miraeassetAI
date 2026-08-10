@@ -1,0 +1,50 @@
+{
+  "schema_version": "0.1.0",
+  "target_questions": 500,
+  "split_targets": {
+    "DEV_TUNE": 250,
+    "DEV_CHECK": 100,
+    "HOLDOUT": 150
+  },
+  "doc_group_targets": {
+    "periodic": 150,
+    "exchange": 150,
+    "major": 80,
+    "holding": 80,
+    "cross-document": 40
+  },
+  "initial_queue_targets": {
+    "total": 150,
+    "by_split": {
+      "DEV_TUNE": 75,
+      "DEV_CHECK": 30,
+      "HOLDOUT": 45
+    },
+    "by_bucket": {
+      "periodic": 45,
+      "exchange": 45,
+      "major": 24,
+      "holding": 24,
+      "cross-document": 12
+    }
+  },
+  "critical_slice_minimums_for_500": {
+    "same_company_different_period": 40,
+    "correction_chain": 80,
+    "termination": 20,
+    "consolidated_vs_separate": 30,
+    "quarter_vs_cumulative": 30,
+    "withheld": 15,
+    "planned_or_provisional": 20,
+    "zero_document": 20,
+    "parse_failure": 15,
+    "company_alias": 20,
+    "zero_negative_or_sign_change": 20,
+    "policy_safety": 20
+  },
+  "notes": [
+    "critical slices may overlap in one question.",
+    "evaluation_group_id is assigned before answer authoring.",
+    "HOLDOUT answers are reviewed by a designated reviewer and hidden from tuning runs."
+  ]
+}

@@ -1,0 +1,89 @@
+{
+  "schema_version": "0.2.0",
+  "corpus_snapshot_id": "corpus_example_v1",
+  "producer": {
+    "name": "semantic-extractor",
+    "version": "0.1.0",
+    "created_at": "2026-08-04T00:00:00Z"
+  },
+  "facts": [
+    {
+      "fact_id": "fact_0123456789abcdef01234567",
+      "corp_code": "00126362",
+      "event_id": "event_0123456789abcdef01234567",
+      "source_document_id": "exchange_20250314800002",
+      "metric_code": "CONTRACT_AMOUNT",
+      "raw_label": "계약금액",
+      "value_type": "NUMERIC",
+      "value_status": "DISCLOSED",
+      "value_certainty": "CONFIRMED",
+      "raw_value_text": "1,000,000,000",
+      "raw_unit_text": "원",
+      "normalized_value": 1000000000,
+      "unit": "KRW",
+      "currency": "KRW",
+      "scale": 1,
+      "scope": "COMPANY",
+      "period_type": "EVENT_PERIOD",
+      "period_start": null,
+      "period_end": null,
+      "as_of_date": "2025-03-14",
+      "known_at": "2025-03-14T00:00:00Z",
+      "valid_from": "2025-03-14T00:00:00Z",
+      "valid_to": null,
+      "withheld_until": null,
+      "extraction_method": "HUMAN_VERIFIED",
+      "confidence": 1,
+      "verification_status": "VERIFIED",
+      "evidence_ids": ["evidence_0123456789abcdef01234567"],
+      "attributes": {}
+    }
+  ],
+  "events": [
+    {
+      "event_id": "event_0123456789abcdef01234567",
+      "chain_id": "chain_0123456789abcdef01234567",
+      "corp_code": "00126362",
+      "event_type": "SUPPLY_CONTRACT",
+      "event_status": "ACTIVE",
+      "anchor_document_id": "exchange_20250314800002",
+      "event_date": "2025-03-14",
+      "known_at": "2025-03-14T00:00:00Z",
+      "valid_from": "2025-03-14T00:00:00Z",
+      "valid_to": null,
+      "verification_status": "VERIFIED",
+      "evidence_ids": ["evidence_0123456789abcdef01234567"],
+      "attributes": {}
+    }
+  ],
+  "relations": [
+    {
+      "relation_id": "relation_example_amends",
+      "source_document_id": "exchange_20250314800002",
+      "target_document_id": "exchange_20240705800001",
+      "event_id": "event_0123456789abcdef01234567",
+      "relation_type": "CONFIRMS",
+      "known_at": "2025-03-14T00:00:00Z",
+      "extraction_method": "HUMAN_VERIFIED",
+      "confidence": 1,
+      "evidence_id": "evidence_0123456789abcdef01234567",
+      "verification_status": "VERIFIED",
+      "attributes": {}
+    }
+  ],
+  "evidence": [
+    {
+      "evidence_id": "evidence_0123456789abcdef01234567",
+      "document_id": "exchange_20250314800002",
+      "file_id": "file_0123456789abcdef01234567",
+      "chunk_id": null,
+      "source_locator": "body.contract.summary",
+      "quoted_text": "계약금액 1,000,000,000원",
+      "quote_sha256": null,
+      "extraction_method": "HUMAN_VERIFIED",
+      "confidence": 1,
+      "verification_status": "VERIFIED",
+      "metadata": {}
+    }
+  ]
+}

@@ -1,0 +1,93 @@
+{
+  "schema_version": "0.2.0",
+  "question_id": "q_example_exchange_contract_001",
+  "evaluation_group_id": "chain_example_same_contract",
+  "split": "DEV_TUNE",
+  "question": "정정 이후 이 계약은 해지되었는가?",
+  "question_type": "EVENT_TRACE",
+  "difficulty": "HARD",
+  "answer_mode": "CLOSED",
+  "doc_groups": ["exchange"],
+  "corp_codes": ["00126362"],
+  "as_of_date": "2026-03-31",
+  "expected_answerability": "SUPPORTED",
+  "gold_document_ids": [
+    "exchange_20250314800002"
+  ],
+  "expected_fact_ids": [],
+  "expected_event_ids": ["event_example_contract"],
+  "required_evidence_slots": [
+    {
+      "slot_name": "latest_contract_version",
+      "description": "질문 기준일에 유효한 최신 계약 버전",
+      "acceptable_sources": [
+        {
+          "document_id": "exchange_20250314800002",
+          "source_locator": "body.contract.summary",
+          "evidence_span": "본 공시는 ... 확정 공시입니다."
+        }
+      ]
+    },
+    {
+      "slot_name": "termination_status",
+      "description": "동일 사건의 해지 여부",
+      "acceptable_sources": []
+    }
+  ],
+  "expected_answer": {
+    "status": "SUPPORTED",
+    "value": false,
+    "unit": null,
+    "reason_code": null
+  },
+  "authored_against": {
+    "corpus_snapshot_id": "corpus_example_v1",
+    "manifest_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "parser_name": "canonical-parser",
+    "parser_version": "0.1.0",
+    "document_ir_schema_version": "0.1.0",
+    "semantic_bundle_schema_version": "0.2.0",
+    "gold_revision": "gold-r1"
+  },
+  "expected_execution": {
+    "applicable_fact_coverage_states": [
+      "ALL_REQUIRED_FACT_SLOTS_VERIFIED",
+      "NO_STRUCTURED_FACT_COVERAGE"
+    ],
+    "required_fact_slots": [
+      {
+        "slot_name": "termination_status",
+        "metric_code": "CONTRACT_STATUS",
+        "period_key": "as_of:2026-03-31",
+        "scope": "COMPANY"
+      }
+    ],
+    "required_fact_slots_sha256": "d17fdf51c45f73328bb41e84a0b55f50c86d789e0303dd31ef225fde1c7490ee",
+    "required_fact_slots_lock_status": "GOLD_LOCKED",
+    "route_policy": [
+      {
+        "when": "ALL_REQUIRED_FACT_SLOTS_VERIFIED",
+        "preferred_route": "STRUCTURED",
+        "allowed_routes": ["STRUCTURED"],
+        "required_operations": ["lookup_event", "resolve_latest_effective_version"],
+        "forbidden_operations": ["infer_missing_value"],
+        "expected_answerability": "SUPPORTED"
+      },
+      {
+        "when": "NO_STRUCTURED_FACT_COVERAGE",
+        "preferred_route": "RETRIEVAL",
+        "allowed_routes": ["RETRIEVAL"],
+        "required_operations": ["search_documents", "resolve_latest_effective_version"],
+        "forbidden_operations": ["infer_missing_value"],
+        "expected_answerability": "SUPPORTED"
+      }
+    ]
+  },
+  "scoring_spec": {
+    "comparator": "EXACT",
+    "tolerance": null,
+    "unit": null,
+    "rounding": null
+  },
+  "tags": ["correction", "event-chain", "wrong-version-critical"]
+}

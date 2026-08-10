@@ -1,0 +1,212 @@
+{
+  "schema_version": "0.1.0",
+  "status": "DRAFT_FOR_PARSER_MAPPING",
+  "principles": {
+    "unknown_metric_policy": "GENERIC_FACT_WITH_RAW_LABEL",
+    "numeric_storage": "원문값, 원문단위, 정규화값을 모두 보존한다.",
+    "scope_policy": "연결/별도/회사/종속회사를 UNKNOWN으로 합치지 않는다.",
+    "period_policy": "시점/분기/누계/연간/사건기간을 분리한다.",
+    "version_policy": "정정 전 값은 덮어쓰지 않고 별도 version Fact로 보존한다.",
+    "evidence_policy": "모든 Fact는 최소 하나의 source locator를 가져야 VERIFIED가 될 수 있다."
+  },
+  "metrics": [
+    {
+      "metric_code": "REVENUE",
+      "metric_name_ko": "매출액",
+      "doc_groups": ["periodic"],
+      "value_type": "NUMERIC",
+      "canonical_unit": "KRW",
+      "required_dimensions": ["scope", "period_type", "period_start", "period_end", "currency", "scale"],
+      "source_label_aliases": ["매출액", "수익(매출액)", "영업수익", "보험영업수익"]
+    },
+    {
+      "metric_code": "OPERATING_PROFIT",
+      "metric_name_ko": "영업이익",
+      "doc_groups": ["periodic"],
+      "value_type": "NUMERIC",
+      "canonical_unit": "KRW",
+      "required_dimensions": ["scope", "period_type", "period_start", "period_end", "currency", "scale"],
+      "source_label_aliases": ["영업이익", "영업이익(손실)", "영업손익"]
+    },
+    {
+      "metric_code": "NET_INCOME",
+      "metric_name_ko": "당기순이익",
+      "doc_groups": ["periodic"],
+      "value_type": "NUMERIC",
+      "canonical_unit": "KRW",
+      "required_dimensions": ["scope", "period_type", "period_start", "period_end", "currency", "scale"],
+      "source_label_aliases": ["당기순이익", "당기순이익(손실)", "분기순이익", "반기순이익"]
+    },
+    {
+      "metric_code": "TOTAL_ASSETS",
+      "metric_name_ko": "자산총계",
+      "doc_groups": ["periodic"],
+      "value_type": "NUMERIC",
+      "canonical_unit": "KRW",
+      "required_dimensions": ["scope", "period_type", "as_of_date", "currency", "scale"],
+      "source_label_aliases": ["자산총계", "자산 총계"]
+    },
+    {
+      "metric_code": "TOTAL_LIABILITIES",
+      "metric_name_ko": "부채총계",
+      "doc_groups": ["periodic"],
+      "value_type": "NUMERIC",
+      "canonical_unit": "KRW",
+      "required_dimensions": ["scope", "period_type", "as_of_date", "currency", "scale"],
+      "source_label_aliases": ["부채총계", "부채 총계"]
+    },
+    {
+      "metric_code": "TOTAL_EQUITY",
+      "metric_name_ko": "자본총계",
+      "doc_groups": ["periodic"],
+      "value_type": "NUMERIC",
+      "canonical_unit": "KRW",
+      "required_dimensions": ["scope", "period_type", "as_of_date", "currency", "scale"],
+      "source_label_aliases": ["자본총계", "자본 총계"]
+    },
+    {
+      "metric_code": "OPERATING_CASH_FLOW",
+      "metric_name_ko": "영업활동현금흐름",
+      "doc_groups": ["periodic"],
+      "value_type": "NUMERIC",
+      "canonical_unit": "KRW",
+      "required_dimensions": ["scope", "period_type", "period_start", "period_end", "currency", "scale"],
+      "source_label_aliases": ["영업활동현금흐름", "영업활동으로 인한 현금흐름"]
+    },
+    {
+      "metric_code": "CONTRACT_NAME",
+      "metric_name_ko": "계약명",
+      "doc_groups": ["exchange"],
+      "doc_subtypes": ["단일판매공급계약체결", "단일판매공급계약해지"],
+      "value_type": "TEXT",
+      "required_dimensions": ["event_id", "version"],
+      "source_label_aliases": ["계약내용", "계약명", "판매ㆍ공급계약 내용"]
+    },
+    {
+      "metric_code": "CONTRACT_COUNTERPARTY",
+      "metric_name_ko": "계약상대방",
+      "doc_groups": ["exchange"],
+      "doc_subtypes": ["단일판매공급계약체결", "단일판매공급계약해지"],
+      "value_type": "TEXT",
+      "required_dimensions": ["event_id", "version", "value_status"],
+      "source_label_aliases": ["계약상대", "계약상대방"]
+    },
+    {
+      "metric_code": "CONTRACT_AMOUNT",
+      "metric_name_ko": "계약금액",
+      "doc_groups": ["exchange"],
+      "doc_subtypes": ["단일판매공급계약체결", "단일판매공급계약해지"],
+      "value_type": "NUMERIC",
+      "canonical_unit": "KRW",
+      "required_dimensions": ["event_id", "currency", "scale", "version", "value_status", "value_certainty"],
+      "source_label_aliases": ["계약금액", "계약금액(원)", "해지금액"]
+    },
+    {
+      "metric_code": "CONTRACT_SALES_RATIO",
+      "metric_name_ko": "최근 매출액 대비 계약금액 비율",
+      "doc_groups": ["exchange"],
+      "doc_subtypes": ["단일판매공급계약체결", "단일판매공급계약해지"],
+      "value_type": "NUMERIC",
+      "canonical_unit": "PERCENT",
+      "required_dimensions": ["event_id", "version"],
+      "source_label_aliases": ["최근매출액대비", "매출액대비", "최근 매출액 대비"]
+    },
+    {
+      "metric_code": "CONTRACT_START_DATE",
+      "metric_name_ko": "계약 시작일",
+      "doc_groups": ["exchange"],
+      "doc_subtypes": ["단일판매공급계약체결", "단일판매공급계약해지"],
+      "value_type": "DATE",
+      "required_dimensions": ["event_id", "version", "value_status"],
+      "source_label_aliases": ["계약기간 시작일", "시작일"]
+    },
+    {
+      "metric_code": "CONTRACT_END_DATE",
+      "metric_name_ko": "계약 종료일",
+      "doc_groups": ["exchange"],
+      "doc_subtypes": ["단일판매공급계약체결", "단일판매공급계약해지"],
+      "value_type": "DATE",
+      "required_dimensions": ["event_id", "version", "value_status"],
+      "source_label_aliases": ["계약기간 종료일", "종료일"]
+    },
+    {
+      "metric_code": "INVESTMENT_AMOUNT",
+      "metric_name_ko": "투자금액",
+      "doc_groups": ["exchange", "major"],
+      "doc_subtypes": ["신규시설투자등"],
+      "value_type": "NUMERIC",
+      "canonical_unit": "KRW",
+      "required_dimensions": ["event_id", "currency", "scale", "version", "value_certainty"],
+      "source_label_aliases": ["투자금액", "시설투자금액", "투자예정금액"]
+    },
+    {
+      "metric_code": "INVESTMENT_EQUITY_RATIO",
+      "metric_name_ko": "자기자본 대비 투자금액 비율",
+      "doc_groups": ["exchange", "major"],
+      "doc_subtypes": ["신규시설투자등"],
+      "value_type": "NUMERIC",
+      "canonical_unit": "PERCENT",
+      "required_dimensions": ["event_id", "version"],
+      "source_label_aliases": ["자기자본대비", "자기자본 대비"]
+    },
+    {
+      "metric_code": "INVESTMENT_PURPOSE",
+      "metric_name_ko": "투자목적",
+      "doc_groups": ["exchange", "major"],
+      "doc_subtypes": ["신규시설투자등"],
+      "value_type": "TEXT",
+      "required_dimensions": ["event_id", "version"],
+      "source_label_aliases": ["투자목적", "투자 목적"]
+    },
+    {
+      "metric_code": "WITHHELD_REASON",
+      "metric_name_ko": "공시유보사유",
+      "doc_groups": ["exchange", "major"],
+      "value_type": "TEXT",
+      "required_dimensions": ["event_id", "value_status", "version"],
+      "source_label_aliases": ["유보사유", "공시유보사유"]
+    },
+    {
+      "metric_code": "WITHHELD_UNTIL",
+      "metric_name_ko": "공시유보기한",
+      "doc_groups": ["exchange", "major"],
+      "value_type": "DATE",
+      "required_dimensions": ["event_id", "value_status", "version"],
+      "source_label_aliases": ["유보기한", "공시유보기한"]
+    },
+    {
+      "metric_code": "HOLDING_SHARES",
+      "metric_name_ko": "보유주식수",
+      "doc_groups": ["holding"],
+      "value_type": "NUMERIC",
+      "canonical_unit": "SHARES",
+      "required_dimensions": ["reporter", "as_of_date", "version", "before_after"],
+      "source_label_aliases": ["보유주식등의 수", "보유주식수", "주식등의 수"]
+    },
+    {
+      "metric_code": "HOLDING_RATIO",
+      "metric_name_ko": "보유비율",
+      "doc_groups": ["holding"],
+      "value_type": "NUMERIC",
+      "canonical_unit": "PERCENT",
+      "required_dimensions": ["reporter", "as_of_date", "version", "before_after"],
+      "source_label_aliases": ["보유비율", "주식등의 비율"]
+    },
+    {
+      "metric_code": "HOLDING_PURPOSE",
+      "metric_name_ko": "보유목적",
+      "doc_groups": ["holding"],
+      "value_type": "TEXT",
+      "required_dimensions": ["reporter", "as_of_date", "version"],
+      "source_label_aliases": ["보유목적", "보유 목적"]
+    },
+    {
+      "metric_code": "EVENT_STATUS",
+      "metric_name_ko": "사건상태",
+      "doc_groups": ["major", "exchange"],
+      "value_type": "TEXT",
+      "required_dimensions": ["event_id", "known_at", "version"],
+      "source_label_aliases": ["진행상황", "결정내용", "주요내용", "기타 투자판단과 관련한 중요사항"]
+    }
+  ]
+}

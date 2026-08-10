@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://disclosure-analyst.local/schema/evaluation-usage-event.v0.1.json",
+  "title": "C-owned Evaluation Usage Event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "usage_event_id",
+    "assignment_id",
+    "run_id",
+    "usage_kind",
+    "executed_split",
+    "used_at",
+    "split_lock_status_at_use",
+    "chain_ids_at_use"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.1.0" },
+    "usage_event_id": { "type": "string", "pattern": "^eval_usage_[0-9a-f]{24}$" },
+    "assignment_id": { "type": "string", "pattern": "^author_[0-9a-f]{24}$" },
+    "question_id": { "type": ["string", "null"] },
+    "run_id": { "type": "string", "minLength": 1 },
+    "usage_kind": { "enum": ["SANDBOX", "TUNING", "CHECKPOINT", "FINAL_HOLDOUT"] },
+    "executed_split": { "enum": ["SANDBOX", "DEV_TUNE", "DEV_CHECK", "HOLDOUT"] },
+    "used_at": { "type": "string", "format": "date-time" },
+    "split_lock_status_at_use": { "enum": ["PROVISIONAL_UNTIL_CHAIN_CLOSURE", "LOCKED_BY_CHAIN", "LOCKED_BY_COVERAGE"] },
+    "chain_ids_at_use": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "git_commit": { "type": ["string", "null"] },
+    "configuration_sha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
+    "notes": { "type": ["string", "null"] }
+  }
+}

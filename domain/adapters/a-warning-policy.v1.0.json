@@ -1,0 +1,41 @@
+{
+  "policy_version": "1.0.0",
+  "source_parser_version": "1.0.0",
+  "warnings": {
+    "unknown_section_depth": {
+      "classification": "STRUCTURE_UNCERTAINTY",
+      "source_text_loss": false,
+      "downstream_effect": "section_hierarchy와 section_path의 정확도가 낮을 수 있음",
+      "retrieval_policy": "ALLOW_WITH_WARNING",
+      "fact_policy": "ALLOW_IF_EVIDENCE_DOES_NOT_DEPEND_ON_SECTION_DEPTH"
+    },
+    "table_merged_cell_ignored": {
+      "classification": "INFORMATIONAL_MISNAMED",
+      "source_text_loss": false,
+      "downstream_effect": "rowspan/colspan 셀은 normalized_rows에 확장되며 raw_rows도 보존됨",
+      "retrieval_policy": "ALLOW",
+      "fact_policy": "ALLOW_WITH_RAW_ROW_TRACE"
+    },
+    "table_shape_mismatch": {
+      "classification": "TABLE_ALIGNMENT_UNCERTAINTY",
+      "source_text_loss": false,
+      "downstream_effect": "raw_rows는 보존되지만 직사각형 표 해석 시 열 정렬이 어긋날 수 있음",
+      "retrieval_policy": "ALLOW_WITH_WARNING",
+      "fact_policy": "REQUIRE_HEADER_VALUE_ALIGNMENT_VALIDATION"
+    },
+    "table_metadata_uncertain": {
+      "classification": "METADATA_UNCERTAINTY",
+      "source_text_loss": false,
+      "downstream_effect": "표 제목·단위·기간 metadata가 null일 수 있음",
+      "retrieval_policy": "ALLOW_WITH_WARNING",
+      "fact_policy": "REQUIRE_EXPLICIT_SCOPE_PERIOD_UNIT_EVIDENCE"
+    },
+    "parse_failed": {
+      "classification": "CONTENT_LOSS_RISK",
+      "source_text_loss": true,
+      "downstream_effect": "fallback 또는 빈 DocumentIR이 발생할 수 있음",
+      "retrieval_policy": "DENY_IF_EMPTY_OR_FALLBACK",
+      "fact_policy": "DENY_AUTOMATIC_PROMOTION"
+    }
+  }
+}

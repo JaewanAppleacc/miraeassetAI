@@ -1,0 +1,19 @@
+{
+  "schema_version": "0.1.0",
+  "index_snapshot_id": "index_bm25_sample_v0_1",
+  "corpus_snapshot_id": "corpus_04750795e1a2d5c3",
+  "chunking_config_id": "doctype-hier-parent-child-table-dual.v0.2.0",
+  "created_at": "2026-08-04T00:00:00Z",
+  "components": [
+    {
+      "component_role": "LEXICAL",
+      "backend": "tantivy",
+      "backend_version": "0.22.0",
+      "index_hash": "d970d20274b475a886398ce1cff956ffbf73f1dd070178b965d9ce6ee4d65f5f",
+      "embedding_model_id": null,
+      "embedding_dimension": null,
+      "normalization": null
+    }
+  ],
+  "hybrid_combination": null
+}

@@ -1,0 +1,27 @@
+{
+  "policy_version": "0.1.0",
+  "status": "EXPERIMENTAL_GATE",
+  "baseline_chunking_config_id": "fixed-token-512-o64.v0.1.0",
+  "rules": {
+    "evidence_coverage_required": 1.0,
+    "primary_retrieval_chunk_ratio_review_threshold": 3.0,
+    "retrieval_quality_adoption_threshold_absolute_percentage_points": 2.0,
+    "identical_embed_text_policy": "REUSE_EMBEDDING_VECTOR_BUT_KEEP_EACH_CHUNK_AND_SOURCE_LOCATOR",
+    "raw_text_duplicate_policy": "MEASURE_ONLY; DO_NOT_MERGE_WHEN_CONTEXT_OR_PARENT_DIFFERS",
+    "cross_document_duplicate_policy": "PRESERVE_UNTIL_VERSION_AND_EVENT_RELATIONS_ARE_RESOLVED",
+    "repeated_section_policy": "MARK_AND_APPLY_SCORE_PENALTY_ONLY_AFTER_RETRIEVAL_ABLATION",
+    "fallback_policy": "NEVER_INDEX",
+    "context_only_parent_policy": "STORE_FOR_EXPANSION_BUT_DO_NOT_INDEX"
+  },
+  "required_report_dimensions": [
+    "strategy",
+    "document",
+    "corp_code",
+    "doc_group",
+    "chunk_type",
+    "retrieval_eligible",
+    "token_budget",
+    "exact_duplicate_rate",
+    "canonical_duplicate_rate"
+  ]
+}

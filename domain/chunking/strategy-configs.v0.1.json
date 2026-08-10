@@ -1,0 +1,67 @@
+{
+  "schema_version": "0.1.0",
+  "status": "EXPERIMENTAL_BASELINE",
+  "tokenizer": {
+    "name": "unicode-word-punct",
+    "version": "1.0.0",
+    "definition": "Unicode letter/number runs or one non-whitespace punctuation character; offsets are preserved."
+  },
+  "common": {
+    "raw_text_policy": "source-faithful text or deterministic table linearization",
+    "embed_text_policy": "company/report/section/chunk-type prefix plus raw_text",
+    "fallback_policy": "emit audit sample with retrieval_eligible=false and fact_eligible=false",
+    "table_linearization": "cells joined by ' | '; rows joined by newline",
+    "dedup_policy": "content_sha256 first; repeated-section policy is measured before full embedding"
+  },
+  "strategies": [
+    {
+      "chunking_config_id": "fixed-token-512-o64.v0.1.0",
+      "strategy_name": "fixed-token",
+      "strategy_version": "0.1.0",
+      "role": "BASELINE",
+      "max_tokens": 512,
+      "overlap_tokens": 64,
+      "long_paragraph_policy": "token window split",
+      "long_table_policy": "linearize rows, then apply the same token windows",
+      "section_context": "not injected into raw_text; metadata only",
+      "table_metadata": "source spans and metadata only"
+    },
+    {
+      "chunking_config_id": "section-aware-flat-512-o64.v0.1.0",
+      "strategy_name": "section-aware-flat",
+      "strategy_version": "0.1.0",
+      "role": "COMPARATOR",
+      "max_tokens": 512,
+      "overlap_tokens": 64,
+      "long_paragraph_policy": "token window split inside a section",
+      "long_table_policy": "row-preserving section windows; an overlong row is token-split",
+      "section_context": "section path included in embed_text",
+      "table_metadata": "section path, table node ID, row/column spans"
+    },
+    {
+      "chunking_config_id": "doctype-hier-parent-child-table-dual.v0.2.0",
+      "strategy_name": "document-type-hierarchical-parent-child",
+      "strategy_version": "0.2.0",
+      "role": "PRIMARY",
+      "parent_max_tokens": 1024,
+      "parent_max_source_segments": 50,
+      "child_max_tokens": 384,
+      "child_overlap_tokens": 48,
+      "paragraph_group_max_nodes": 4,
+      "table_row_child_max_tokens": 256,
+      "table_row_child_max_rows": 8,
+      "long_paragraph_policy": "paragraph groups first; overlong paragraph is token-split",
+      "long_table_policy": "TABLE_WHOLE parent windows plus row-preserving TABLE_ROW children; overlong row is token-split",
+      "section_context": "section/event parent title included in embed_text",
+      "table_metadata": "caption/unit/period/scope hints plus row/column source spans",
+      "auxiliary_table_row_policy": "unit/date/navigation-only rows are stored under TABLE_WHOLE but are not indexed independently",
+      "document_type_policies": {
+        "periodic": "section parent -> paragraph child; table whole parent -> table row child",
+        "major": "event/item parent -> paragraph or field-group child; table dual representation",
+        "exchange": "contract/investment event parent -> field-group child; table dual representation",
+        "holding": "reporter/holding-status parent -> holding-row child; table dual representation"
+      },
+      "conditional_extension": "repeated-section penalty is applied only after duplicate-budget measurement"
+    }
+  ]
+}
