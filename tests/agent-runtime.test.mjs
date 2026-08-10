@@ -14,6 +14,7 @@ import {
   createSharedServices,
   createValidationAuthority,
   createValidator,
+  inspectServiceTrace,
   RejectedInputError,
   runAgentFlow,
   validateCalculationRequest,
@@ -1159,4 +1160,876 @@ test("Policy Guard never consumes execution budget — it is not gated by maxToo
   const outcome = await runAgentFlow(PASSING_FLOW, { question: "계약금액이 얼마인가요?" }, {}, zeroBudget);
   assert.equal(outcome.execution_trace.fallback_reason, null);
   assert.equal(outcome.final_response.answer, "계약금액은 22,764,764,160,000원으로 공시되었습니다.");
+});
+
+// --- ExecutionTrace auto-instrumentation: the Runtime records real
+// SharedServices calls itself; a Flow's own execution_trace claims about
+// operations/tool_calls/hcx_calls are never trusted or merged in. -------
+
+test("runAgentFlow records a real, successful Calculator call in tool_calls — not whatever the Flow claims", async () => {
+  const inputs = [fact()];
+  const flow = {
+    id: "flow_calc",
+    async run(input, context, services) {
+      const validation = await services.validator.validateFacts(inputs);
+      const result = services.calculator.calculate({ formula: "SUM", inputs, validation });
+      return {
+        final_response: { question: "q", answer: String(result.result) },
+        // a hostile/buggy Flow claiming a tool call that never happened
+        execution_trace: { tool_calls: [{ service: "FakeService", ok: true }], hcx_calls: [{ fake: true }] },
+      };
+    },
+  };
+  const outcome = await runAgentFlow(flow, { question: "q" }, CONTEXT, BUDGET_LIMITS, {
+    factStoreAdapter: factStoreAdapterFor(...inputs),
+  });
+  const services = outcome.execution_trace.tool_calls.map((c) => c.service);
+  assert.ok(services.includes("Validator"), JSON.stringify(outcome.execution_trace.tool_calls));
+  assert.ok(services.includes("Calculator"), JSON.stringify(outcome.execution_trace.tool_calls));
+  assert.ok(!services.includes("FakeService"), "the Flow's fabricated tool_calls entry must not survive");
+  assert.deepEqual(outcome.execution_trace.hcx_calls, [], "the Flow's fabricated hcx_calls entry must not survive");
+
+  const calculatorEntry = outcome.execution_trace.tool_calls.find((c) => c.service === "Calculator");
+  assert.equal(calculatorEntry.method, "calculate");
+  assert.equal(calculatorEntry.ok, true);
+  assert.equal(calculatorEntry.error_code, null);
+  assert.equal(typeof calculatorEntry.latency_ms, "number");
+  assert.ok(calculatorEntry.latency_ms >= 0);
+  assert.equal(typeof calculatorEntry.started_at, "string");
+  assert.doesNotThrow(() => new Date(calculatorEntry.started_at).toISOString());
+});
+
+test("runAgentFlow records call order via monotonically increasing sequence numbers", async () => {
+  const inputs = [fact()];
+  const flow = {
+    id: "flow_ordered",
+    async run(input, context, services) {
+      const validation = await services.validator.validateFacts(inputs);
+      services.calculator.calculate({ formula: "SUM", inputs, validation });
+      return { final_response: { question: "q", answer: "a" } };
+    },
+  };
+  const outcome = await runAgentFlow(flow, { question: "q" }, CONTEXT, BUDGET_LIMITS, {
+    factStoreAdapter: factStoreAdapterFor(...inputs),
+  });
+  const sequences = outcome.execution_trace.operations.map((op) => op.sequence);
+  assert.deepEqual(sequences, [...sequences].sort((a, b) => a - b));
+  assert.equal(new Set(sequences).size, sequences.length);
+  const validatorIndex = outcome.execution_trace.operations.findIndex((op) => op.service === "Validator");
+  const calculatorIndex = outcome.execution_trace.operations.findIndex((op) => op.service === "Calculator");
+  assert.ok(validatorIndex >= 0 && calculatorIndex >= 0 && validatorIndex < calculatorIndex);
+});
+
+test("runAgentFlow records a REJECTED service call the Flow never self-reported (RejectedInputError from Calculator)", async () => {
+  const flow = {
+    id: "flow_evil_recorded",
+    async run(input, context, services) {
+      try {
+        services.calculator.calculate({
+          formula: "SUM",
+          inputs: [fact()],
+          validation: {
+            proof_type: "FACTS",
+            subject_hash: "not-real",
+            evidence_supported: true,
+            conflict_status: "NONE",
+            answerability: "SUPPORTED",
+          },
+        });
+      } catch {
+        // Flow swallows its own error and reports a clean trace anyway.
+      }
+      return { final_response: { question: "q", answer: "a" }, execution_trace: { tool_calls: [] } };
+    },
+  };
+  const outcome = await runAgentFlow(flow, { question: "q" }, {}, BUDGET_LIMITS);
+  const calculatorEntry = outcome.execution_trace.tool_calls.find((c) => c.service === "Calculator");
+  assert.ok(calculatorEntry, "the rejected Calculator call must still be recorded even though the Flow swallowed it");
+  assert.equal(calculatorEntry.ok, false);
+  assert.equal(calculatorEntry.error_code, "UNTRUSTED_VALIDATION");
+});
+
+test("runAgentFlow records a budget-exceeded call attempt, not just the real service calls that fit under budget", async () => {
+  const tightBudget = { maxHcxCalls: 5, maxRetrievals: 5, maxToolCalls: 1, timeoutMs: 10_000 };
+  const inputs = [fact()];
+  const flow = {
+    id: "flow_budget_recorded",
+    async run(input, context, services) {
+      await services.validator.validateFacts(inputs); // consumes the only tool call
+      try {
+        services.calculator.calculate({ formula: "SUM", inputs, validation: {} }); // must be denied by budget
+      } catch {
+        // swallowed — the Flow does not self-report this either
+      }
+      return { final_response: { question: "q", answer: "a" } };
+    },
+  };
+  const outcome = await runAgentFlow(flow, { question: "q" }, CONTEXT, tightBudget, {
+    factStoreAdapter: factStoreAdapterFor(...inputs),
+  });
+  const calculatorEntry = outcome.execution_trace.tool_calls.find((c) => c.service === "Calculator");
+  assert.ok(calculatorEntry);
+  assert.equal(calculatorEntry.ok, false);
+  assert.equal(calculatorEntry.error_code, "BUDGET_EXCEEDED:maxToolCalls");
+});
+
+test("runAgentFlow records Policy Guard check results in operations, without leaking the checked text", async () => {
+  const secretQuestion = "이 종목을 지금 매수해도 될까요? SECRET_MARKER_ABC";
+  const outcome = await runAgentFlow(PASSING_FLOW, { question: secretQuestion }, {}, BUDGET_LIMITS);
+  const policyEntries = outcome.execution_trace.operations.filter((op) => op.service === "PolicyGuard");
+  assert.ok(policyEntries.some((op) => op.method === "checkQuestion"));
+  assert.equal(policyEntries.find((op) => op.method === "checkQuestion").ok, true);
+  const serialized = JSON.stringify(outcome.execution_trace);
+  assert.ok(!serialized.includes("SECRET_MARKER_ABC"), "the raw checked question text must never appear in the trace");
+});
+
+test("runAgentFlow records a rejected Policy Guard answer check with its code, still without leaking the drafted text", async () => {
+  const flow = {
+    id: "flow_advice_recorded",
+    async run() {
+      return { final_response: { question: "q", answer: "이 종목을 지금 매수하세요. SECRET_DRAFT_XYZ" } };
+    },
+  };
+  const outcome = await runAgentFlow(flow, { question: "q" }, {}, BUDGET_LIMITS);
+  const answerCheck = outcome.execution_trace.operations.find(
+    (op) => op.service === "PolicyGuard" && op.method === "checkAnswer",
+  );
+  assert.ok(answerCheck);
+  assert.equal(answerCheck.ok, false);
+  assert.equal(answerCheck.error_code, "POLICY_INVESTMENT_ADVICE_FORBIDDEN");
+  const serialized = JSON.stringify(outcome.execution_trace);
+  assert.ok(!serialized.includes("SECRET_DRAFT_XYZ"), "the raw drafted answer text must never appear in the trace");
+});
+
+test("runAgentFlow records the AgentFlow-level rejection when input.question is not a string", async () => {
+  const outcome = await runAgentFlow(PASSING_FLOW, { question: 42 }, {}, BUDGET_LIMITS);
+  const entry = outcome.execution_trace.operations.find((op) => op.service === "AgentFlow");
+  assert.ok(entry);
+  assert.equal(entry.ok, false);
+  assert.equal(entry.error_code, "INVALID_SHAPE");
+});
+
+test("runAgentFlow records the AgentFlow-level rejection when the Flow returns a malformed AgentOutcome", async () => {
+  const flow = { id: "flow_malformed", async run() { return null; } };
+  const outcome = await runAgentFlow(flow, { question: "q" }, {}, BUDGET_LIMITS);
+  const entry = outcome.execution_trace.operations.find((op) => op.service === "AgentFlow");
+  assert.ok(entry);
+  assert.equal(entry.ok, false);
+  assert.equal(entry.error_code, "INVALID_SHAPE");
+});
+
+test("runAgentFlow still returns the calls recorded before an arbitrary thrown error, instead of wiping the trace", async () => {
+  const flow = {
+    id: "flow_throws_after_calling",
+    async run(input, context, services) {
+      services.hcxClient.explain({ type: "EARLY_EXIT", reason: "x" });
+      throw new Error("boom");
+    },
+  };
+  const outcome = await runAgentFlow(flow, { question: "q" }, {}, BUDGET_LIMITS);
+  assert.equal(outcome.execution_trace.fallback_reason, "INTERNAL_ERROR");
+  assert.ok(outcome.execution_trace.hcx_calls.some((c) => c.service === "HcxClient" && c.ok === true));
+});
+
+test("createSharedServices instruments Retriever calls too", async () => {
+  const retriever = { retrieve: () => ({ results: [] }) };
+  const services = createSharedServices(BUDGET_LIMITS, { context: {}, retriever });
+  services.retriever.retrieve({ query: "q" });
+  const entries = inspectServiceTrace(services).tool_calls.filter((c) => c.service === "Retriever");
+  assert.equal(entries.length, 1);
+  assert.equal(entries[0].method, "retrieve");
+  assert.equal(entries[0].ok, true);
+});
+
+test("inspectServiceTrace returns defensive copies — mutating the returned arrays does not corrupt the recorder", () => {
+  const services = createSharedServices(BUDGET_LIMITS, { context: {} });
+  const first = inspectServiceTrace(services);
+  first.operations.push({ fake: true });
+  first.tool_calls.push({ fake: true });
+  const second = inspectServiceTrace(services);
+  assert.deepEqual(second.operations, []);
+  assert.deepEqual(second.tool_calls, []);
+});
+
+test("inspectServiceTrace returns null for something that isn't a real SharedServices object", () => {
+  assert.equal(inspectServiceTrace({}), null);
+  assert.equal(inspectServiceTrace(null), null);
+  assert.equal(inspectServiceTrace(undefined), null);
+});
+
+// --- inspectServiceTrace entries are copies, not live references — this
+// matters most for PENDING entries, which are not frozen internally until
+// they settle, so a snapshot taken while a call is still in flight must not
+// hand out a mutable reference into the recorder's real state. -----------
+
+test("mutating a PENDING entry obtained from inspectServiceTrace does not corrupt the recorder's internal state", async () => {
+  let releasePending;
+  const retriever = { retrieve: () => new Promise((resolve) => { releasePending = resolve; }) };
+  const services = createSharedServices(BUDGET_LIMITS, { context: {}, retriever });
+
+  const callPromise = services.retriever.retrieve({ query: "q" }); // fired, not yet settled
+  const whilePending = inspectServiceTrace(services);
+  const pendingEntry = whilePending.tool_calls.find((c) => c.service === "Retriever");
+  assert.ok(pendingEntry);
+  assert.equal(pendingEntry.pending, true);
+
+  // attack: try to corrupt the entry handed out by the snapshot
+  try {
+    pendingEntry.service = "FORGED";
+    pendingEntry.ok = true;
+  } catch {
+    // frozen copies throw in strict mode instead — either way the attempt must not stick
+  }
+
+  releasePending({ results: [] });
+  await callPromise;
+
+  const afterSettle = inspectServiceTrace(services);
+  const realEntry = afterSettle.tool_calls.find((c) => c.sequence === pendingEntry.sequence);
+  assert.equal(realEntry.service, "Retriever", "the recorder's real entry must be unaffected by mutating a snapshot copy");
+  assert.equal(realEntry.ok, true);
+  assert.equal(realEntry.pending, false);
+});
+
+test("mutating a SETTLED entry obtained from inspectServiceTrace does not corrupt the recorder's internal state", async () => {
+  const retriever = { retrieve: () => ({ results: [] }) }; // settles synchronously
+  const services = createSharedServices(BUDGET_LIMITS, { context: {}, retriever });
+  services.retriever.retrieve({ query: "q" });
+
+  const first = inspectServiceTrace(services);
+  const entry = first.tool_calls.find((c) => c.service === "Retriever");
+  assert.equal(entry.pending, false);
+  try {
+    entry.service = "FORGED";
+    entry.ok = false;
+    entry.error_code = "FORGED_CODE";
+  } catch {
+    // may throw since it's frozen — either way must not stick
+  }
+
+  const second = inspectServiceTrace(services);
+  const realEntry = second.tool_calls.find((c) => c.sequence === entry.sequence);
+  assert.equal(realEntry.service, "Retriever");
+  assert.equal(realEntry.ok, true);
+  assert.equal(realEntry.error_code, null);
+});
+
+test("mutating the array or an entry from one inspectServiceTrace() call does not affect a later call, for operations too", async () => {
+  const retriever = { retrieve: () => ({ results: [] }) };
+  const services = createSharedServices(BUDGET_LIMITS, { context: {}, retriever });
+  services.retriever.retrieve({ query: "q" });
+
+  const snapshot1 = inspectServiceTrace(services);
+  snapshot1.operations.push({ fake: true });
+  const entry = snapshot1.operations.find((op) => op.service === "Retriever");
+  try {
+    entry.service = "FORGED";
+  } catch {
+    // ignore
+  }
+
+  const snapshot2 = inspectServiceTrace(services);
+  assert.ok(!snapshot2.operations.some((op) => op.service === "FORGED"));
+  assert.ok(snapshot2.operations.some((op) => op.service === "Retriever"));
+});
+
+// --- trust boundary: a Flow cannot reach the TraceRecorder's write side ---
+
+test("services.trace does not exist on the SharedServices object a Flow receives", async () => {
+  let sawTrace;
+  const flow = {
+    id: "flow_checks_no_trace",
+    async run(input, context, services) {
+      sawTrace = services.trace;
+      return { final_response: { question: "q", answer: "a" } };
+    },
+  };
+  await runAgentFlow(flow, { question: "q" }, {}, BUDGET_LIMITS);
+  assert.equal(sawTrace, undefined);
+});
+
+test("no record()-capable function is reachable anywhere in the SharedServices object graph a Flow receives", async () => {
+  let foundRecordFunction = false;
+  const flow = {
+    id: "flow_hostile_reflection",
+    async run(input, context, services) {
+      const visit = (value, seen) => {
+        if (!value || typeof value !== "object" || seen.has(value)) return;
+        seen.add(value);
+        for (const [key, entry] of Object.entries(value)) {
+          if (key === "record" && typeof entry === "function") {
+            foundRecordFunction = true;
+            try {
+              entry({ service: "Hostile", method: "inject", ok: true, sequence: -1 });
+            } catch {
+              // even if callable, it must not be reachable in the first place
+            }
+          }
+          if (entry && typeof entry === "object") visit(entry, seen);
+        }
+      };
+      visit(services, new Set());
+      return { final_response: { question: "q", answer: "a" } };
+    },
+  };
+  const outcome = await runAgentFlow(flow, { question: "q" }, {}, BUDGET_LIMITS);
+  assert.equal(foundRecordFunction, false, "a Flow must never be able to reach a record() function via reflection");
+  assert.ok(!outcome.execution_trace.operations.some((op) => op.service === "Hostile"));
+});
+
+// --- selected_evidence is the INTERSECTION of (a) what the Flow claims via
+// outcome.execution_trace.selected_evidence and (b) evidence_ids that were
+// ACTUALLY verified (ok:true validateEvidence) this request. Verified is
+// not the same as selected: the Flow narrows a verified set down to what
+// it actually used, but can never expand beyond what was verified. -------
+
+function documentStoreAdapterFor(bundle) {
+  return {
+    getDocument: async (documentId) => ({
+      document_id: documentId,
+      corpus_snapshot_id: CONTEXT.corpus_snapshot_id,
+      blocks: [{ block_id: "b1", file_id: bundle.file_id, source_locator: bundle.source_locator, text: `여기에 ${bundle.quoted_text}이 있다.` }],
+    }),
+  };
+}
+
+function evidenceStoreAdapterFor(...bundles) {
+  const byId = new Map(bundles.map((bundle) => [bundle.evidence_id, bundle]));
+  return {
+    getEvidence: async (evidenceId) => {
+      const bundle = byId.get(evidenceId);
+      return bundle ? { corpus_snapshot_id: CONTEXT.corpus_snapshot_id, record: { ...bundle, verification_status: "VERIFIED" } } : null;
+    },
+  };
+}
+
+// Every fixture bundle needs its own registered document block, so route
+// getDocument by document_id across all bundles sharing this adapter.
+function multiDocumentStoreAdapterFor(...bundles) {
+  return {
+    getDocument: async (documentId) => ({
+      document_id: documentId,
+      corpus_snapshot_id: CONTEXT.corpus_snapshot_id,
+      blocks: bundles
+        .filter((bundle) => bundle.document_id === documentId)
+        .map((bundle, index) => ({
+          block_id: `b${index}`,
+          file_id: bundle.file_id,
+          source_locator: bundle.source_locator,
+          text: `여기에 ${bundle.quoted_text}이 있다.`,
+        })),
+    }),
+  };
+}
+
+test("Evidence 3개를 검증하고 Flow가 그중 1개만 selected_evidence로 제출하면 최종 결과는 그 1개뿐이다", async () => {
+  const bundleA = evidenceBundle({ evidence_id: "evidence_aaaaaaaaaaaaaaaaaaaaaaaa", document_id: "doc_a", quoted_text: "A", quote_sha256: sha256Hex("A") });
+  const bundleB = evidenceBundle({ evidence_id: "evidence_bbbbbbbbbbbbbbbbbbbbbbbb", document_id: "doc_b", quoted_text: "B", quote_sha256: sha256Hex("B") });
+  const bundleC = evidenceBundle({ evidence_id: "evidence_cccccccccccccccccccccccc", document_id: "doc_c", quoted_text: "C", quote_sha256: sha256Hex("C") });
+  const flow = {
+    id: "flow_three_verified_one_selected",
+    async run(input, context, services) {
+      await services.validator.validateEvidence(bundleA);
+      await services.validator.validateEvidence(bundleB);
+      await services.validator.validateEvidence(bundleC);
+      return {
+        final_response: { question: "q", answer: "a" },
+        execution_trace: { selected_evidence: [bundleB.evidence_id] },
+      };
+    },
+  };
+  const outcome = await runAgentFlow(flow, { question: "q" }, CONTEXT, BUDGET_LIMITS, {
+    documentStoreAdapter: multiDocumentStoreAdapterFor(bundleA, bundleB, bundleC),
+    evidenceStoreAdapter: evidenceStoreAdapterFor(bundleA, bundleB, bundleC),
+  });
+  assert.deepEqual(outcome.execution_trace.selected_evidence, [bundleB.evidence_id]);
+});
+
+test("검증되지 않은 evidence_id를 Flow가 selected_evidence로 제출하면 교집합에서 제외된다", async () => {
+  const bundle = evidenceBundle();
+  const flow = {
+    id: "flow_claims_unverified",
+    async run(input, context, services) {
+      await services.validator.validateEvidence(bundle);
+      return {
+        final_response: { question: "q", answer: "a" },
+        execution_trace: { selected_evidence: [bundle.evidence_id, "evidence_never_validated00000000"] },
+      };
+    },
+  };
+  const outcome = await runAgentFlow(flow, { question: "q" }, CONTEXT, BUDGET_LIMITS, {
+    documentStoreAdapter: documentStoreAdapterFor(bundle),
+    evidenceStoreAdapter: evidenceStoreAdapterFor(bundle),
+  });
+  assert.deepEqual(outcome.execution_trace.selected_evidence, [bundle.evidence_id]);
+});
+
+test("검증에 실패한 evidence_id를 Flow가 selected_evidence로 claim해도 제외된다", async () => {
+  const flow = {
+    id: "flow_claims_failed_verification",
+    async run(input, context, services) {
+      const bundle = evidenceBundle({ evidence_id: "evidence_will_fail_0000000000000" });
+      try {
+        await services.validator.validateEvidence(bundle); // no store adapters wired -> fails closed
+      } catch {
+        // the Flow swallows its own rejected attempt but still claims it
+      }
+      return {
+        final_response: { question: "q", answer: "a" },
+        execution_trace: { selected_evidence: ["evidence_will_fail_0000000000000"] },
+      };
+    },
+  };
+  const outcome = await runAgentFlow(flow, { question: "q" }, CONTEXT, BUDGET_LIMITS);
+  assert.deepEqual(outcome.execution_trace.selected_evidence, []);
+});
+
+test("중복 selected_evidence 제출은 최종 결과에서 1개로 합쳐진다", async () => {
+  const bundle = evidenceBundle();
+  const flow = {
+    id: "flow_duplicate_selection",
+    async run(input, context, services) {
+      await services.validator.validateEvidence(bundle);
+      return {
+        final_response: { question: "q", answer: "a" },
+        execution_trace: { selected_evidence: [bundle.evidence_id, bundle.evidence_id, bundle.evidence_id] },
+      };
+    },
+  };
+  const outcome = await runAgentFlow(flow, { question: "q" }, CONTEXT, BUDGET_LIMITS, {
+    documentStoreAdapter: documentStoreAdapterFor(bundle),
+    evidenceStoreAdapter: evidenceStoreAdapterFor(bundle),
+  });
+  assert.deepEqual(outcome.execution_trace.selected_evidence, [bundle.evidence_id]);
+});
+
+test("Flow가 operations/tool_calls/hcx_calls를 위조해도 selected_evidence 교집합 계산과 무관하게 계속 무시된다", async () => {
+  const bundle = evidenceBundle();
+  const flow = {
+    id: "flow_forges_everything_else",
+    async run(input, context, services) {
+      await services.validator.validateEvidence(bundle);
+      return {
+        final_response: { question: "q", answer: "a" },
+        execution_trace: {
+          selected_evidence: [bundle.evidence_id],
+          operations: [{ service: "Fake", ok: true }],
+          tool_calls: [{ service: "Fake", ok: true }],
+          hcx_calls: [{ service: "Fake", ok: true }],
+        },
+      };
+    },
+  };
+  const outcome = await runAgentFlow(flow, { question: "q" }, CONTEXT, BUDGET_LIMITS, {
+    documentStoreAdapter: documentStoreAdapterFor(bundle),
+    evidenceStoreAdapter: evidenceStoreAdapterFor(bundle),
+  });
+  assert.deepEqual(outcome.execution_trace.selected_evidence, [bundle.evidence_id]);
+  for (const array of [outcome.execution_trace.operations, outcome.execution_trace.tool_calls, outcome.execution_trace.hcx_calls]) {
+    assert.ok(!array.some((entry) => entry.service === "Fake"));
+  }
+});
+
+test("selected_evidence entries are bare evidence_id strings — the quoted text never leaks into the trace", async () => {
+  const bundle = evidenceBundle({ quoted_text: "SECRET_QUOTE_MARKER_123", quote_sha256: sha256Hex("SECRET_QUOTE_MARKER_123") });
+  const flow = {
+    id: "flow_quote_privacy",
+    async run(input, context, services) {
+      await services.validator.validateEvidence(bundle);
+      return {
+        final_response: { question: "q", answer: "a" },
+        execution_trace: { selected_evidence: [bundle.evidence_id] },
+      };
+    },
+  };
+  const outcome = await runAgentFlow(flow, { question: "q" }, CONTEXT, BUDGET_LIMITS, {
+    documentStoreAdapter: documentStoreAdapterFor(bundle),
+    evidenceStoreAdapter: evidenceStoreAdapterFor(bundle),
+  });
+  assert.deepEqual(outcome.execution_trace.selected_evidence, [bundle.evidence_id]);
+  assert.ok(outcome.execution_trace.selected_evidence.every((id) => typeof id === "string"));
+  const serialized = JSON.stringify(outcome.execution_trace);
+  assert.ok(!serialized.includes("SECRET_QUOTE_MARKER_123"), "quoted text must never appear anywhere in the trace");
+});
+
+// --- async-aware instrumentation: a Promise that resolves synchronously
+// but later REJECTS must be recorded as a failure, not ok:true. ------------
+
+test("a Retriever that returns a Promise which later rejects is recorded as a failed call, not ok:true", async () => {
+  const retriever = {
+    retrieve: () =>
+      new Promise((resolve, reject) => {
+        setTimeout(() => reject(new Error("upstream retrieval failed")), 5);
+      }),
+  };
+  const flow = {
+    id: "flow_async_retriever_failure",
+    async run(input, context, services) {
+      try {
+        await services.retriever.retrieve({ query: "q" });
+      } catch {
+        // swallowed — the point is what the Runtime recorded, not what the Flow saw
+      }
+      return { final_response: { question: "q", answer: "a" } };
+    },
+  };
+  const outcome = await runAgentFlow(flow, { question: "q" }, {}, BUDGET_LIMITS, { retriever });
+  const entry = outcome.execution_trace.tool_calls.find((c) => c.service === "Retriever");
+  assert.ok(entry);
+  assert.equal(entry.ok, false);
+  assert.equal(entry.error_code, "INTERNAL_ERROR");
+});
+
+test("a Retriever that returns a Promise which resolves is still recorded as a successful call", async () => {
+  const retriever = { retrieve: () => new Promise((resolve) => setTimeout(() => resolve({ results: [] }), 5)) };
+  const flow = {
+    id: "flow_async_retriever_success",
+    async run(input, context, services) {
+      await services.retriever.retrieve({ query: "q" });
+      return { final_response: { question: "q", answer: "a" } };
+    },
+  };
+  const outcome = await runAgentFlow(flow, { question: "q" }, {}, BUDGET_LIMITS, { retriever });
+  const entry = outcome.execution_trace.tool_calls.find((c) => c.service === "Retriever");
+  assert.ok(entry);
+  assert.equal(entry.ok, true);
+  assert.equal(entry.error_code, null);
+});
+
+// --- sequence is assigned at call START, not completion --------------------
+
+test("sequence reflects call START order even when an earlier-started call finishes later than a later-started one", async () => {
+  const retriever = {
+    retrieve: (request) =>
+      new Promise((resolve) => {
+        const delayMs = request.query === "slow-first" ? 40 : 5;
+        setTimeout(() => resolve({ results: [] }), delayMs);
+      }),
+  };
+  const flow = {
+    id: "flow_parallel_start_order",
+    async run(input, context, services) {
+      const startedFirst = services.retriever.retrieve({ query: "slow-first" }); // starts first, finishes LAST
+      const startedSecond = services.retriever.retrieve({ query: "fast-second" }); // starts second, finishes FIRST
+      await Promise.all([startedFirst, startedSecond]);
+      return { final_response: { question: "q", answer: "a" } };
+    },
+  };
+  const outcome = await runAgentFlow(flow, { question: "q" }, {}, BUDGET_LIMITS, { retriever });
+  const entries = outcome.execution_trace.tool_calls.filter((c) => c.service === "Retriever");
+  assert.equal(entries.length, 2);
+  // entries are snapshot-sorted by sequence ascending; if sequence were
+  // (bug) assigned at completion time, the fast call would sort first
+  // instead — so the slower call's higher latency_ms sorting first proves
+  // sequence reflects call-START order, not settle order.
+  assert.ok(entries[0].sequence < entries[1].sequence);
+  assert.ok(
+    entries[0].latency_ms > entries[1].latency_ms,
+    `expected the call that STARTED first (slower, ~40ms) to have the lower sequence; got latencies ${JSON.stringify(entries.map((e) => e.latency_ms))}`,
+  );
+});
+
+test("execution_trace.operations is returned sorted by sequence, mixing services that settle out of order", async () => {
+  const retriever = {
+    retrieve: (request) =>
+      new Promise((resolve) => {
+        const delayMs = request.query === "slow-first" ? 40 : 5;
+        setTimeout(() => resolve({ results: [] }), delayMs);
+      }),
+  };
+  const flow = {
+    id: "flow_operations_sort_order",
+    async run(input, context, services) {
+      const startedFirst = services.retriever.retrieve({ query: "slow-first" });
+      const startedSecond = services.retriever.retrieve({ query: "fast-second" });
+      await Promise.all([startedFirst, startedSecond]);
+      return { final_response: { question: "q", answer: "a" } };
+    },
+  };
+  const outcome = await runAgentFlow(flow, { question: "q" }, {}, BUDGET_LIMITS, { retriever });
+  const sequences = outcome.execution_trace.operations.map((op) => op.sequence);
+  assert.deepEqual(sequences, [...sequences].sort((a, b) => a - b));
+});
+
+// --- unawaited SharedServices calls are a Runtime contract violation, not
+// a silently vanished trace entry. A call the Runtime started tracking but
+// never saw settle before the Flow returned is (a) still visible in the
+// trace as `pending: true`, and (b) causes the whole request to be
+// rejected as UNAWAITED_SERVICE_CALL — the Runtime never waits for it. ----
+
+function neverSettles() {
+  return new Promise(() => {});
+}
+
+function delayedResolve(value, delayMs) {
+  return new Promise((resolve) => setTimeout(() => resolve(value), delayMs));
+}
+
+test("a Flow that fires a Retriever call without awaiting it before returning is rejected as UNAWAITED_SERVICE_CALL", async () => {
+  const retriever = { retrieve: () => delayedResolve({ results: [] }, 30) };
+  const flow = {
+    id: "flow_fire_and_forget_retriever",
+    async run(input, context, services) {
+      services.retriever.retrieve({ query: "q" }); // fired, never awaited
+      return { final_response: { question: "q", answer: "a" } };
+    },
+  };
+  const outcome = await runAgentFlow(flow, { question: "q" }, {}, BUDGET_LIMITS, { retriever });
+  assert.equal(outcome.execution_trace.fallback_reason, "REJECTED_INPUT:AgentFlow:UNAWAITED_SERVICE_CALL");
+  assert.doesNotThrow(() => JSON.stringify(outcome.final_response));
+});
+
+test("a Flow that fires an (async-declared) Validator call without awaiting it is also rejected as UNAWAITED_SERVICE_CALL", async () => {
+  const inputs = [fact()];
+  const flow = {
+    id: "flow_fire_and_forget_validator",
+    async run(input, context, services) {
+      services.validator.validateFacts(inputs); // fired, never awaited
+      return { final_response: { question: "q", answer: "a" } };
+    },
+  };
+  const outcome = await runAgentFlow(flow, { question: "q" }, CONTEXT, BUDGET_LIMITS, {
+    factStoreAdapter: factStoreAdapterFor(...inputs),
+  });
+  assert.equal(outcome.execution_trace.fallback_reason, "REJECTED_INPUT:AgentFlow:UNAWAITED_SERVICE_CALL");
+});
+
+test("the unawaited call itself still appears in the trace, marked pending, without leaking its request payload", async () => {
+  const retriever = { retrieve: () => delayedResolve({ results: [] }, 30) };
+  const flow = {
+    id: "flow_pending_visible",
+    async run(input, context, services) {
+      services.retriever.retrieve({ query: "SECRET_QUERY_MARKER" });
+      return { final_response: { question: "q", answer: "a" } };
+    },
+  };
+  const outcome = await runAgentFlow(flow, { question: "q" }, {}, BUDGET_LIMITS, { retriever });
+  const pendingEntry = outcome.execution_trace.tool_calls.find((c) => c.service === "Retriever");
+  assert.ok(pendingEntry, "the pending call must still be visible in the trace, not silently dropped");
+  assert.equal(pendingEntry.pending, true);
+  assert.equal(pendingEntry.ok, null);
+  const serialized = JSON.stringify(outcome.execution_trace);
+  assert.ok(!serialized.includes("SECRET_QUERY_MARKER"), "the pending call's request payload must never appear in the trace");
+});
+
+test("runAgentFlow does not hang waiting for an abandoned pending call that never resolves", async () => {
+  const retriever = { retrieve: () => neverSettles() };
+  const flow = {
+    id: "flow_truly_abandoned",
+    async run(input, context, services) {
+      services.retriever.retrieve({ query: "q" }); // never settles, never awaited
+      return { final_response: { question: "q", answer: "a" } };
+    },
+  };
+  const started = Date.now();
+  const outcome = await Promise.race([
+    runAgentFlow(flow, { question: "q" }, {}, BUDGET_LIMITS, { retriever }),
+    new Promise((_, reject) => setTimeout(() => reject(new Error("runAgentFlow hung waiting for the abandoned call")), 500)),
+  ]);
+  assert.ok(Date.now() - started < 500);
+  assert.equal(outcome.execution_trace.fallback_reason, "REJECTED_INPUT:AgentFlow:UNAWAITED_SERVICE_CALL");
+});
+
+test("a Flow that properly awaits every call (even concurrently, via Promise.all) is not flagged as unawaited", async () => {
+  const retriever = { retrieve: (request) => delayedResolve({ results: [], query: request.query }, 5) };
+  const flow = {
+    id: "flow_properly_awaited_concurrent",
+    async run(input, context, services) {
+      await Promise.all([services.retriever.retrieve({ query: "a" }), services.retriever.retrieve({ query: "b" })]);
+      return { final_response: { question: "q", answer: "a" } };
+    },
+  };
+  const outcome = await runAgentFlow(flow, { question: "q" }, {}, BUDGET_LIMITS, { retriever });
+  assert.equal(outcome.execution_trace.fallback_reason, null);
+  assert.equal(outcome.execution_trace.tool_calls.filter((c) => c.service === "Retriever").length, 2);
+  assert.ok(outcome.execution_trace.tool_calls.every((c) => c.pending !== true));
+});
+
+test("late settlement of an abandoned call after runAgentFlow already returned does not mutate the already-returned trace", async () => {
+  let releasePending;
+  const retriever = {
+    retrieve: () => new Promise((resolve) => { releasePending = resolve; }),
+  };
+  const flow = {
+    id: "flow_late_settlement",
+    async run(input, context, services) {
+      services.retriever.retrieve({ query: "q" });
+      return { final_response: { question: "q", answer: "a" } };
+    },
+  };
+  const outcome = await runAgentFlow(flow, { question: "q" }, {}, BUDGET_LIMITS, { retriever });
+  const before = JSON.parse(JSON.stringify(outcome.execution_trace));
+  releasePending({ results: [] });
+  await new Promise((resolve) => setTimeout(resolve, 20)); // let the abandoned .then() fire, if it's going to
+  assert.deepEqual(outcome.execution_trace, before, "the already-returned trace must not change after the fact");
+});
+
+// --- a Flow that stashes `services` in an outer variable still holds a
+// live reference after runAgentFlow returns. Calling it post-finalize must
+// be fail-closed rejected BEFORE the real underlying service ever runs —
+// otherwise it would execute completely untracked (registerPending()
+// silently no-ops once finalized). ------------------------------------
+
+test("a Flow that stashes services and calls them after runAgentFlow returns is rejected as RUNTIME_CONTEXT_CLOSED before the real service ever runs", async () => {
+  let stashedServices;
+  let rawRetrieverCalls = 0;
+  const retriever = {
+    retrieve: () => {
+      rawRetrieverCalls += 1;
+      return { results: [] };
+    },
+  };
+  const flow = {
+    id: "flow_stashes_services",
+    async run(input, context, services) {
+      stashedServices = services;
+      return { final_response: { question: "q", answer: "a" } };
+    },
+  };
+  const inputs = [fact()];
+  const outcome = await runAgentFlow(flow, { question: "q" }, CONTEXT, BUDGET_LIMITS, {
+    retriever,
+    factStoreAdapter: factStoreAdapterFor(...inputs),
+  });
+  const beforeTrace = JSON.parse(JSON.stringify(outcome.execution_trace));
+
+  // sync-wrapped services (Calculator/HcxClient/Retriever/PolicyGuard) throw synchronously
+  assert.throws(
+    () => stashedServices.retriever.retrieve({ query: "q" }),
+    (error) => error instanceof RejectedInputError && error.code === "RUNTIME_CONTEXT_CLOSED",
+  );
+  assert.equal(rawRetrieverCalls, 0, "the real underlying Retriever must never run once the request has closed");
+
+  assert.throws(
+    () => stashedServices.hcxClient.explain({ type: "EARLY_EXIT", reason: "x" }),
+    (error) => error instanceof RejectedInputError && error.code === "RUNTIME_CONTEXT_CLOSED",
+  );
+
+  assert.throws(
+    () => stashedServices.calculator.calculate({ formula: "SUM", inputs: [fact()], validation: {} }),
+    (error) => error instanceof RejectedInputError && error.code === "RUNTIME_CONTEXT_CLOSED",
+  );
+
+  assert.throws(
+    () => stashedServices.policyGuard.checkAnswer("정상적인 답변입니다."),
+    (error) => error instanceof RejectedInputError && error.code === "RUNTIME_CONTEXT_CLOSED",
+  );
+
+  // async-declared services (Validator/StructuredStore) reject instead of throwing
+  await assert.rejects(
+    () => stashedServices.validator.validateFacts(inputs),
+    (error) => error instanceof RejectedInputError && error.code === "RUNTIME_CONTEXT_CLOSED",
+  );
+  await assert.rejects(
+    () => stashedServices.structuredStore.query({ query_id: "q1" }),
+    (error) => error instanceof RejectedInputError && error.code === "RUNTIME_CONTEXT_CLOSED",
+  );
+
+  // none of the above stale calls may have touched the already-returned trace
+  assert.deepEqual(outcome.execution_trace, beforeTrace);
+});
+
+// --- an unawaited, later-rejecting SharedServices call must not ALSO
+// surface as a Node `unhandledRejection` on top of runAgentFlow's own
+// UNAWAITED_SERVICE_CALL rejection — the underlying Promise the Flow fired
+// and abandoned is still a real Promise that can still reject later,
+// independent of the request already having been rejected. -------------
+
+test("an awaited failing SharedServices call still rejects the CALLER with the real, unaltered error", async () => {
+  const retriever = { retrieve: () => new Promise((_, reject) => setTimeout(() => reject(new Error("boom")), 5)) };
+  let caught;
+  const flow = {
+    id: "flow_awaits_failure",
+    async run(input, context, services) {
+      try {
+        await services.retriever.retrieve({ query: "q" });
+      } catch (error) {
+        caught = error;
+      }
+      return { final_response: { question: "q", answer: "a" } };
+    },
+  };
+  const outcome = await runAgentFlow(flow, { question: "q" }, {}, BUDGET_LIMITS, { retriever });
+  assert.ok(caught instanceof Error, "the no-op bookkeeping handler must not swallow or replace the real error");
+  assert.equal(caught.message, "boom");
+  // the Flow handled its own failure, so the request itself succeeded normally
+  assert.equal(outcome.execution_trace.fallback_reason, null);
+  const entry = outcome.execution_trace.tool_calls.find((c) => c.service === "Retriever");
+  assert.equal(entry.ok, false);
+  assert.equal(entry.error_code, "INTERNAL_ERROR");
+});
+
+test("an unawaited call that will eventually REJECT (not just resolve) is still classified as UNAWAITED_SERVICE_CALL", async () => {
+  const retriever = { retrieve: () => new Promise((_, reject) => setTimeout(() => reject(new Error("late retrieval failure")), 10)) };
+  const flow = {
+    id: "flow_late_reject_unawaited",
+    async run(input, context, services) {
+      services.retriever.retrieve({ query: "q" }); // fired, never awaited
+      return { final_response: { question: "q", answer: "a" } };
+    },
+  };
+  const outcome = await runAgentFlow(flow, { question: "q" }, {}, BUDGET_LIMITS, { retriever });
+  assert.equal(outcome.execution_trace.fallback_reason, "REJECTED_INPUT:AgentFlow:UNAWAITED_SERVICE_CALL");
+  await new Promise((resolve) => setTimeout(resolve, 30)); // let the abandoned call actually reject in the background
+});
+
+test("an unawaited late-rejecting call does not produce a process unhandledRejection event", async () => {
+  const unhandled = [];
+  const onUnhandledRejection = (reason) => unhandled.push(reason);
+  process.on("unhandledRejection", onUnhandledRejection);
+  try {
+    const retriever = {
+      retrieve: () => new Promise((_, reject) => setTimeout(() => reject(new Error("late retrieval failure")), 10)),
+    };
+    const flow = {
+      id: "flow_no_unhandled_rejection",
+      async run(input, context, services) {
+        services.retriever.retrieve({ query: "q" }); // fired, never awaited
+        return { final_response: { question: "q", answer: "a" } };
+      },
+    };
+    const outcome = await runAgentFlow(flow, { question: "q" }, {}, BUDGET_LIMITS, { retriever });
+    assert.equal(outcome.execution_trace.fallback_reason, "REJECTED_INPUT:AgentFlow:UNAWAITED_SERVICE_CALL");
+    await new Promise((resolve) => setTimeout(resolve, 40)); // past the 10ms delay, so the abandoned promise actually rejects
+  } finally {
+    process.removeListener("unhandledRejection", onUnhandledRejection);
+  }
+  assert.deepEqual(unhandled, [], "the abandoned call's late rejection must never surface as a process unhandledRejection");
+});
+
+test("an unawaited late-rejecting call does not mutate the already-returned execution_trace once it actually settles", async () => {
+  const retriever = {
+    retrieve: () => new Promise((_, reject) => setTimeout(() => reject(new Error("late retrieval failure")), 10)),
+  };
+  const flow = {
+    id: "flow_late_reject_trace_immutable",
+    async run(input, context, services) {
+      services.retriever.retrieve({ query: "q" });
+      return { final_response: { question: "q", answer: "a" } };
+    },
+  };
+  const outcome = await runAgentFlow(flow, { question: "q" }, {}, BUDGET_LIMITS, { retriever });
+  const before = JSON.parse(JSON.stringify(outcome.execution_trace));
+  await new Promise((resolve) => setTimeout(resolve, 40)); // let the abandoned call actually reject
+  assert.deepEqual(outcome.execution_trace, before, "the already-returned trace must not change once the abandoned call settles");
+});
+
+test("post-finalize service calls are still blocked as RUNTIME_CONTEXT_CLOSED after the unhandledRejection fix", async () => {
+  let stashedServices;
+  const flow = {
+    id: "flow_stashes_after_unhandled_fix",
+    async run(input, context, services) {
+      stashedServices = services;
+      return { final_response: { question: "q", answer: "a" } };
+    },
+  };
+  await runAgentFlow(flow, { question: "q" }, {}, BUDGET_LIMITS);
+  assert.throws(
+    () => stashedServices.calculator.calculate({ formula: "SUM", inputs: [fact()], validation: {} }),
+    (error) => error instanceof RejectedInputError && error.code === "RUNTIME_CONTEXT_CLOSED",
+  );
+  await assert.rejects(
+    () => stashedServices.validator.validateFacts([fact()]),
+    (error) => error instanceof RejectedInputError && error.code === "RUNTIME_CONTEXT_CLOSED",
+  );
 });

@@ -229,6 +229,8 @@ export const LOCAL_REJECTION_CODES = Object.freeze([
   "UNTRUSTED_VALIDATION",
   "PROOF_SUBJECT_MISMATCH",
   "UNSUPPORTED_ANSWERABILITY",
+  "UNAWAITED_SERVICE_CALL",
+  "RUNTIME_CONTEXT_CLOSED",
 ]);
 
 export const REJECTION_CODES = Object.freeze([
@@ -697,6 +699,311 @@ export function createSerializer() {
   };
 }
 
+// --- ExecutionTrace auto-instrumentation: the Runtime Host records every
+//     real SharedServices boundary call itself. A Flow's own
+//     execution_trace.operations/tool_calls/hcx_calls are never read —
+//     runAgentFlow sources these three fields exclusively from the
+//     recorder built here, so a Flow cannot fabricate, hide, or edit a
+//     call it did or didn't make. Only service/method/order/timing/
+//     success/error-code are recorded — never a call's arguments, a
+//     quoted/raw text span, an HCX prompt, or any other payload. ----------
+
+function instrumentationErrorCode(error) {
+  if (error instanceof RejectedInputError) return error.code;
+  if (error instanceof BudgetExceededError) return `BUDGET_EXCEEDED:${error.budgetName}`;
+  return "INTERNAL_ERROR";
+}
+
+// TraceRecorder is intentionally never attached to the `services` object a
+// Flow receives (see TRACE_RECORDERS/getTraceRecorder/inspectServiceTrace
+// below) — only this closure and code inside this module ever get a
+// reference with a working record-capable API.
+//
+// A call is tracked in two phases, not one: registerPending() pushes a
+// placeholder into the arrays the instant a call STARTS (so it can never
+// go missing even if the Flow never awaits it — see runAgentFlow's
+// UNAWAITED_SERVICE_CALL check), and settle() mutates that SAME object in
+// place once the call actually resolves or rejects. Because it's the same
+// object reference in the array the whole time, nothing needs to search
+// for it later, and array push order already matches call-start order —
+// snapshot() sorting by sequence is a defensive no-op in the normal case,
+// not the only thing keeping order correct.
+function createTraceRecorder() {
+  const operations = [];
+  const toolCalls = [];
+  const hcxCalls = [];
+  const pendingBySequence = new Map();
+  let sequenceCounter = 0;
+  let finalized = false;
+
+  // Sequence is allocated at CALL START (see callers: always the first
+  // thing a wrapper does, before invoking the underlying method), not at
+  // completion — two calls started A-then-B keep sequence A<B even if B
+  // settles first, so snapshot()'s sequence-sorted order reflects when a
+  // call was actually initiated, not the (nondeterministic, race-prone)
+  // order in which async calls happen to resolve or reject.
+  function nextSequence() {
+    sequenceCounter += 1;
+    return sequenceCounter;
+  }
+
+  function registerPending({ sequence, category, service, method, started_at }) {
+    if (finalized) return;
+    const placeholder = { sequence, category, service, method, started_at, latency_ms: null, ok: null, error_code: null, pending: true };
+    pendingBySequence.set(sequence, placeholder);
+    operations.push(placeholder);
+    if (category === "tool") toolCalls.push(placeholder);
+    if (category === "hcx") hcxCalls.push(placeholder);
+  }
+
+  // Mutates the already-pushed placeholder in place — a no-op once
+  // finalize() has run, so a promise that abandons and settles LATE (after
+  // runAgentFlow already returned its response) can never mutate data the
+  // caller already has a reference to.
+  function settle(sequence, fields) {
+    if (finalized) return;
+    const placeholder = pendingBySequence.get(sequence);
+    if (!placeholder) return;
+    pendingBySequence.delete(sequence);
+    Object.assign(placeholder, fields, { pending: false });
+    Object.freeze(placeholder);
+  }
+
+  // Synchronous, exact "is anything still in flight right now" check — the
+  // caller (runAgentFlow) uses this the instant flow.run() resolves. It
+  // never waits: whatever hasn't settled by that exact moment is treated
+  // as abandoned.
+  function pendingCalls() {
+    return [...pendingBySequence.values()];
+  }
+
+  function bySequence(a, b) {
+    return a.sequence - b.sequence;
+  }
+
+  // Locks the recorder: no further registerPending/settle has any effect.
+  // Called once, unconditionally, right before runAgentFlow returns, so a
+  // stray late .then()/.catch() from an abandoned call can never mutate an
+  // execution_trace object the caller already holds a reference to.
+  function finalize() {
+    finalized = true;
+    for (const placeholder of pendingBySequence.values()) Object.freeze(placeholder);
+  }
+
+  // A pending entry is NOT frozen yet (settle() still needs to mutate it in
+  // place), so returning the live placeholder object itself — even inside
+  // a freshly-copied array — would let a caller holding a snapshot mutate
+  // that shared object and corrupt the recorder's real internal state
+  // (e.g. `snapshot.tool_calls[0].service = "FORGED"` while that call is
+  // still pending). snapshot() therefore copies every ENTRY into a new
+  // frozen plain object, not just the arrays that hold them — for both
+  // pending and already-settled entries, so nothing returned from here is
+  // ever a live reference into recorder-owned state.
+  function copyEntry(entry) {
+    return Object.freeze({ ...entry });
+  }
+
+  return {
+    nextSequence,
+    registerPending,
+    settle,
+    pendingCalls,
+    finalize,
+    isFinalized: () => finalized,
+    snapshot() {
+      return {
+        operations: [...operations].sort(bySequence).map(copyEntry),
+        tool_calls: [...toolCalls].sort(bySequence).map(copyEntry),
+        hcx_calls: [...hcxCalls].sort(bySequence).map(copyEntry),
+      };
+    },
+  };
+}
+
+function isThenable(value) {
+  return value !== null && typeof value === "object" && typeof value.then === "function";
+}
+
+// A Flow that stashes its `services` argument in an outer variable can
+// still hold a live reference to it after runAgentFlow has returned — the
+// object itself isn't destroyed. Without this check, calling a stashed
+// method post-finalize would run the REAL underlying service (Retriever,
+// HcxClient, ...) completely untracked, since registerPending() silently
+// no-ops once finalized. This is the actual guard: called as the very
+// first thing inside every wrapper, before fn is ever invoked, so the
+// underlying call never happens at all once the request has closed.
+function rejectIfRuntimeClosed(recorder, service, method) {
+  if (recorder.isFinalized()) {
+    throw new RejectedInputError(service, [
+      fail("RUNTIME_CONTEXT_CLOSED", `${service}.${method} was called after its SharedServices instance's request already completed`),
+    ]);
+  }
+}
+
+// `fn` may be a plain synchronous method OR one that happens to return a
+// Promise (e.g. Retriever/HcxClient are not declared `async` in this
+// module, so their return type isn't statically known — and a future real
+// async HCX Client would be exactly this shape too). This wrapper handles
+// both without changing fn's own calling convention: a synchronous throw
+// (e.g. budget exceeded, thrown before any real call happens) is still
+// caught and rethrown synchronously, so `assert.throws(() => wrapped())`
+// keeps working; a returned Promise is NOT recorded as settled until it
+// actually resolves or rejects (registerPending marks it pending the
+// instant it's fired, so it can never just vanish from the trace either
+// way — see runAgentFlow's UNAWAITED_SERVICE_CALL check).
+//
+// A Flow that fires this call without awaiting it (which is itself an
+// UNAWAITED_SERVICE_CALL contract violation, but the underlying Promise
+// still exists and can still reject later, independent of runAgentFlow
+// having already rejected the request) must not ALSO trigger a Node
+// `unhandledRejection` on top of that — see the `observed`/`.then(f, g)`
+// dance below.
+function wrapMaybeAsync(recorder, service, method, category, fn, { onSuccess } = {}) {
+  return (...args) => {
+    rejectIfRuntimeClosed(recorder, service, method);
+    const sequence = recorder.nextSequence();
+    const startedAtMs = Date.now();
+    recorder.registerPending({ sequence, category, service, method, started_at: new Date(startedAtMs).toISOString() });
+    const finish = (ok, error, extra) => {
+      recorder.settle(sequence, {
+        latency_ms: Date.now() - startedAtMs,
+        ok,
+        error_code: ok ? null : instrumentationErrorCode(error),
+        ...(extra ?? {}),
+      });
+    };
+    try {
+      const result = fn(...args);
+      if (isThenable(result)) {
+        const observed = Promise.resolve(result);
+        // Attaching a rejection reaction here — synchronously, in the same
+        // tick `observed` is created — is what makes Node consider
+        // `observed` "handled", regardless of whether the CALLER ever
+        // awaits/`.then()`s the value returned below. This reaction must
+        // never rethrow: if it did, IT would become a new unhandled
+        // promise instead (that was the original bug). `observed` itself
+        // — not a promise derived from this reaction — is what gets
+        // returned, so a caller that DOES await it still sees the real
+        // error via `observed`'s own rejection.
+        observed.then(
+          (value) => finish(true, null, onSuccess ? onSuccess(args, value) : undefined),
+          (error) => finish(false, error),
+        );
+        return observed;
+      }
+      finish(true, null, onSuccess ? onSuccess(args, result) : undefined);
+      return result;
+    } catch (error) {
+      finish(false, error);
+      throw error;
+    }
+  };
+}
+
+// `fn` is a method genuinely declared `async` in this module (Validator,
+// StructuredStore) — it always returns a real Promise. The wrapper itself
+// is deliberately NOT declared `async` (a plain function returning a
+// Promise built via an inner async IIFE instead): that IIFE's promise
+// (`settled`) is what actually rejects with the real error, and a
+// SEPARATE no-op `.catch(() => {})` attached to that same `settled`
+// promise (not to some other derived promise) marks it "handled" for
+// Node's unhandledRejection tracking without changing what `settled`
+// itself settles to. `settled` — not the no-op catch's own derived
+// promise — is what's returned, so an awaiting caller still gets the real
+// rejection. RUNTIME_CONTEXT_CLOSED is thrown from inside the IIFE (not
+// before it), so it still REJECTS `settled` rather than throwing
+// synchronously out of the outer function — Validator/StructuredStore stay
+// "async services reject", not "throw", once closed.
+function wrapAsync(recorder, service, method, category, fn, { onSuccess } = {}) {
+  return (...args) => {
+    const settled = (async () => {
+      rejectIfRuntimeClosed(recorder, service, method);
+      const sequence = recorder.nextSequence();
+      const startedAtMs = Date.now();
+      recorder.registerPending({ sequence, category, service, method, started_at: new Date(startedAtMs).toISOString() });
+      try {
+        const result = await fn(...args);
+        recorder.settle(sequence, {
+          latency_ms: Date.now() - startedAtMs,
+          ok: true,
+          error_code: null,
+          ...(onSuccess ? onSuccess(args, result) : {}),
+        });
+        return result;
+      } catch (error) {
+        recorder.settle(sequence, {
+          latency_ms: Date.now() - startedAtMs,
+          ok: false,
+          error_code: instrumentationErrorCode(error),
+        });
+        throw error;
+      }
+    })();
+
+    settled.catch(() => {});
+
+    return settled;
+  };
+}
+
+// Policy Guard never throws (policy-guard.mjs) — its return value IS the
+// input/output check result, so this records that result directly instead
+// of exception-based ok/error_code. The checked text itself is the one
+// argument this module handles that is never passed to the recorder. Fully
+// synchronous, so registerPending+settle happen back to back — there is no
+// meaningful "pending" window, but going through the same two-phase API
+// keeps every entry's shape identical.
+function wrapPolicyGuardCheck(recorder, method, fn) {
+  return (text) => {
+    rejectIfRuntimeClosed(recorder, "PolicyGuard", method);
+    const sequence = recorder.nextSequence();
+    const startedAtMs = Date.now();
+    recorder.registerPending({
+      sequence,
+      category: "operation",
+      service: "PolicyGuard",
+      method,
+      started_at: new Date(startedAtMs).toISOString(),
+    });
+    const result = fn(text);
+    recorder.settle(sequence, {
+      latency_ms: Date.now() - startedAtMs,
+      ok: result?.ok !== false,
+      error_code: result?.ok === false ? result.code : null,
+    });
+    return result;
+  };
+}
+
+// Records a Runtime Host-level rejection (not a SharedServices call) —
+// used for runAgentFlow's own input/outcome/pending-call checks.
+function recordAgentFlowRejection(recorder, method, error) {
+  const sequence = recorder.nextSequence();
+  recorder.registerPending({ sequence, category: "operation", service: "AgentFlow", method, started_at: new Date().toISOString() });
+  recorder.settle(sequence, { latency_ms: 0, ok: false, error_code: instrumentationErrorCode(error) });
+}
+
+// services -> TraceRecorder. Module-private: only createSharedServices
+// (setter) and getTraceRecorder (getter, used by runAgentFlow in this same
+// module) ever see a recorder with a working record-capable API. The only
+// exported accessor, inspectServiceTrace below, hands back a read-only
+// snapshot — never the recorder itself — so nothing that can mutate the
+// trace is reachable through the `services` object a Flow receives, or by
+// calling an exported function with that object either.
+const TRACE_RECORDERS = new WeakMap();
+
+function getTraceRecorder(services) {
+  return TRACE_RECORDERS.get(services);
+}
+
+// Harness/test introspection only: a read-only snapshot of the calls
+// recorded so far for this SharedServices instance, or null if `services`
+// isn't one this module created.
+export function inspectServiceTrace(services) {
+  const recorder = TRACE_RECORDERS.get(services);
+  return recorder ? recorder.snapshot() : null;
+}
+
 // --- Execution Budget: owns its own clock, caps calls and wall-clock time -
 
 export function createExecutionBudget({ maxHcxCalls, maxRetrievals, maxToolCalls, timeoutMs, now = Date.now }) {
@@ -817,6 +1124,54 @@ export function createSharedServices(
     policyGuard: createPolicyGuard(),
   };
   if (retriever) services.retriever = createBudgetedRetriever(retriever, budget);
+
+  // Instrument every SharedServices boundary method AFTER budgeting is
+  // applied, so a budget-exceeded attempt (thrown before the raw client is
+  // ever reached) is recorded too, not just calls that made it through.
+  //
+  // Calculator/HcxClient/Retriever are wrapped with wrapMaybeAsync, not
+  // wrapAsync: none of them is declared `async` in this module (Retriever
+  // is caller-supplied and HcxClient may become a real async network call
+  // later), so their return type isn't guaranteed to be a Promise — only
+  // wrapMaybeAsync records the REAL settle outcome for either shape without
+  // assuming one. Validator/StructuredStore ARE declared `async` here, so
+  // there's no such ambiguity and wrapAsync is sufficient (and simpler).
+  const recorder = createTraceRecorder();
+  services.validator = {
+    validateEvidence: wrapAsync(recorder, "Validator", "validateEvidence", "tool", services.validator.validateEvidence, {
+      // The one piece of domain data this module captures for
+      // ExecutionTrace: the bare evidence_id of a bundle that was
+      // ACTUALLY verified (this callback only runs on success) — never
+      // quoted_text, source content, or any other field of the bundle.
+      onSuccess: (args) => {
+        const evidenceId = args[0]?.evidence_id;
+        return typeof evidenceId === "string" ? { evidence_id: evidenceId } : {};
+      },
+    }),
+    validateFacts: wrapAsync(recorder, "Validator", "validateFacts", "tool", services.validator.validateFacts),
+  };
+  services.calculator = {
+    calculate: wrapMaybeAsync(recorder, "Calculator", "calculate", "tool", services.calculator.calculate),
+  };
+  services.hcxClient = {
+    explain: wrapMaybeAsync(recorder, "HcxClient", "explain", "hcx", services.hcxClient.explain),
+  };
+  services.structuredStore = {
+    query: wrapAsync(recorder, "StructuredStore", "query", "tool", services.structuredStore.query),
+  };
+  services.policyGuard = {
+    checkQuestion: wrapPolicyGuardCheck(recorder, "checkQuestion", services.policyGuard.checkQuestion),
+    checkAnswer: wrapPolicyGuardCheck(recorder, "checkAnswer", services.policyGuard.checkAnswer),
+  };
+  if (services.retriever) {
+    services.retriever = {
+      retrieve: wrapMaybeAsync(recorder, "Retriever", "retrieve", "tool", services.retriever.retrieve),
+    };
+  }
+
+  // Deliberately NOT attached as services.trace — see TRACE_RECORDERS above.
+  TRACE_RECORDERS.set(services, recorder);
+
   return services;
 }
 
@@ -852,14 +1207,17 @@ function policySafeAnswer(code) {
 export async function runAgentFlow(flow, input, context, budgetLimits, serviceAdapters = {}) {
   const budget = createExecutionBudget(budgetLimits);
   const services = createSharedServices(budgetLimits, { ...serviceAdapters, context, budget });
+  const recorder = getTraceRecorder(services);
 
   let finalResponseCandidate = {};
-  let traceExtras = {};
+  let claimedSelectedEvidence = [];
   let fallbackReason = null;
 
   try {
     if (typeof input?.question !== "string") {
-      throw new RejectedInputError("AgentFlow", [fail("INVALID_SHAPE", "input.question must be a string")]);
+      const error = new RejectedInputError("AgentFlow", [fail("INVALID_SHAPE", "input.question must be a string")]);
+      recordAgentFlowRejection(recorder, "validateInputShape", error);
+      throw error;
     }
 
     const questionCheck = services.policyGuard.checkQuestion(input.question);
@@ -872,10 +1230,38 @@ export async function runAgentFlow(flow, input, context, budgetLimits, serviceAd
       finalResponseCandidate = { question: input.question, answer: policySafeAnswer(questionCheck.code) };
     } else {
       const outcome = await flow.run(input, context, services);
-      const shapeErrors = validateAgentOutcomeShape(outcome);
-      if (shapeErrors.length > 0) throw new RejectedInputError("AgentFlow", shapeErrors);
 
-      traceExtras = outcome.execution_trace && typeof outcome.execution_trace === "object" ? outcome.execution_trace : {};
+      // The instant the Flow's own async function resolves, check for any
+      // SharedServices call it fired but never awaited. This is a
+      // synchronous check against whatever registerPending() left behind —
+      // it does NOT wait for a pending call to settle (that call may never
+      // settle at all), so a genuinely abandoned Promise can't hang the
+      // request.
+      const stillPending = recorder.pendingCalls();
+      if (stillPending.length > 0) {
+        const error = new RejectedInputError("AgentFlow", [
+          fail(
+            "UNAWAITED_SERVICE_CALL",
+            `Flow returned with ${stillPending.length} SharedServices call(s) still pending: ${stillPending.map((p) => `${p.service}.${p.method}`).join(", ")}`,
+          ),
+        ]);
+        recordAgentFlowRejection(recorder, "checkPendingServiceCalls", error);
+        throw error;
+      }
+
+      const shapeErrors = validateAgentOutcomeShape(outcome);
+      if (shapeErrors.length > 0) {
+        const error = new RejectedInputError("AgentFlow", shapeErrors);
+        recordAgentFlowRejection(recorder, "validateOutcomeShape", error);
+        throw error;
+      }
+
+      // The Flow may narrow which already-verified evidence it actually
+      // used (see the intersection computed below), but this claim is
+      // never trusted on its own — see selectedEvidence.
+      const outcomeTrace =
+        outcome.execution_trace && typeof outcome.execution_trace === "object" ? outcome.execution_trace : {};
+      claimedSelectedEvidence = safeArray(outcomeTrace.selected_evidence).filter((id) => typeof id === "string");
 
       const answerCheck = services.policyGuard.checkAnswer(outcome.final_response.answer);
       if (!answerCheck.ok) {
@@ -897,15 +1283,38 @@ export async function runAgentFlow(flow, input, context, budgetLimits, serviceAd
   }
 
   const finalResponse = services.serializer.serialize(finalResponseCandidate);
+  const trace = recorder.snapshot();
+  // selected_evidence is the INTERSECTION of what the Flow claims (above)
+  // and the bare evidence_id of every validateEvidence call that actually
+  // succeeded this request (captured via the onSuccess hook in
+  // createSharedServices — never quoted_text or any other bundle field).
+  // Verified is not the same as selected: the Flow may narrow a verified
+  // set down to what it actually used, but claiming an evidence_id that
+  // was never verified (or whose verification failed) can never add it —
+  // and claiming operations/tool_calls/hcx_calls is not read at all, ever.
+  // Order follows the Flow's claimed order; duplicates are collapsed.
+  const verifiedEvidenceIds = new Set(
+    trace.tool_calls
+      .filter((entry) => entry.service === "Validator" && entry.method === "validateEvidence" && entry.ok === true)
+      .map((entry) => entry.evidence_id)
+      .filter((evidenceId) => typeof evidenceId === "string"),
+  );
+  const selectedEvidence = [...new Set(claimedSelectedEvidence.filter((id) => verifiedEvidenceIds.has(id)))];
+
+  // Lock the recorder before returning: nothing after this point (in
+  // particular, a stray late settlement of an abandoned call) may mutate
+  // the trace object the caller is about to receive.
+  recorder.finalize();
+
   return {
     final_response: finalResponse,
     execution_trace: {
       flow_id: typeof flow?.id === "string" ? flow.id : "unknown",
       execution_mode: finalResponse.think_trace.execution_mode,
-      operations: safeArray(traceExtras.operations),
-      tool_calls: safeArray(traceExtras.tool_calls),
-      selected_evidence: safeArray(traceExtras.selected_evidence),
-      hcx_calls: safeArray(traceExtras.hcx_calls),
+      operations: trace.operations,
+      tool_calls: trace.tool_calls,
+      selected_evidence: selectedEvidence,
+      hcx_calls: trace.hcx_calls,
       latency_ms: budget.elapsedMs(),
       fallback_reason: fallbackReason,
     },
