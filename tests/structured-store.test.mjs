@@ -9,6 +9,7 @@ import {
   validateStructuredQuery,
 } from "../domain/runtime/structured-store.mjs";
 import { BudgetExceededError, createExecutionBudget } from "../domain/runtime/agent-runtime.mjs";
+import { RequestAbortedError } from "../domain/runtime/abortable.mjs";
 
 const resultSchema = JSON.parse(
   readFileSync(new URL("../domain/interfaces/structured-result.schema.json", import.meta.url), "utf8"),
@@ -331,4 +332,63 @@ test("a budgeted StructuredStore consumes a tool call before delegating, and nev
   assert.equal(calls, 1);
   await assert.rejects(() => budgeted.query(officialQuery()), BudgetExceededError);
   assert.equal(calls, 1, "raw store must not be called once the budget is spent");
+});
+
+// --- request-scoped AbortSignal boundary ------------------------------------
+
+test("query() passes the exact same AbortSignal to the adapter as a separate second argument", async () => {
+  const controller = new AbortController();
+  let receivedSignal;
+  const adapter = {
+    query: async (query, options) => {
+      receivedSignal = options?.signal;
+      return { status: "OK", corpus_snapshot_id: query.corpus_snapshot_id, fact_coverage_snapshot_id: query.fact_coverage_snapshot_id, records: [verifiedRecord()] };
+    },
+  };
+  await createStructuredStore(adapter, RUN_CONTEXT, controller.signal).query(officialQuery());
+  assert.equal(receivedSignal, controller.signal);
+});
+
+test("query() called directly (not through agent-runtime.mjs) with an already-aborted signal never calls the adapter, and returns a schema-valid TIMEOUT result", async () => {
+  const controller = new AbortController();
+  controller.abort();
+  let adapterCalls = 0;
+  const adapter = {
+    query: async () => {
+      adapterCalls += 1;
+      return { status: "OK", corpus_snapshot_id: CORPUS_SNAPSHOT_ID, fact_coverage_snapshot_id: FACT_COVERAGE_SNAPSHOT_ID, records: [verifiedRecord()] };
+    },
+  };
+  const result = assertValidResult(await createStructuredStore(adapter, RUN_CONTEXT, controller.signal).query(officialQuery()));
+  assert.equal(adapterCalls, 0);
+  assert.equal(result.status, "ERROR");
+  assert.deepEqual(result.error_codes, ["TIMEOUT"]);
+});
+
+test("query() with no signal at all behaves exactly as before (no regression)", async () => {
+  const adapter = { query: async () => ({ status: "OK", corpus_snapshot_id: CORPUS_SNAPSHOT_ID, fact_coverage_snapshot_id: FACT_COVERAGE_SNAPSHOT_ID, records: [verifiedRecord()] }) };
+  const result = assertValidResult(await createStructuredStore(adapter, RUN_CONTEXT).query(officialQuery()));
+  assert.equal(result.status, "OK");
+});
+
+test("query() with a signal that is NOT aborted behaves exactly as before (no regression)", async () => {
+  const controller = new AbortController();
+  const adapter = { query: async () => ({ status: "OK", corpus_snapshot_id: CORPUS_SNAPSHOT_ID, fact_coverage_snapshot_id: FACT_COVERAGE_SNAPSHOT_ID, records: [verifiedRecord()] }) };
+  const result = assertValidResult(await createStructuredStore(adapter, RUN_CONTEXT, controller.signal).query(officialQuery()));
+  assert.equal(result.status, "OK");
+});
+
+test("an adapter that observes signal mid-flight and throws a RequestAbortedError is reported as TIMEOUT, not INTERNAL_ERROR", async () => {
+  const controller = new AbortController();
+  const adapter = {
+    query: () =>
+      new Promise((resolve, reject) => {
+        controller.signal.addEventListener("abort", () => reject(new RequestAbortedError("TIMEOUT")), { once: true });
+      }),
+  };
+  const pending = createStructuredStore(adapter, RUN_CONTEXT, controller.signal).query(officialQuery());
+  controller.abort();
+  const result = assertValidResult(await pending);
+  assert.equal(result.status, "ERROR");
+  assert.deepEqual(result.error_codes, ["TIMEOUT"]);
 });

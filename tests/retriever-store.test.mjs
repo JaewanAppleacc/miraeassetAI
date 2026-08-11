@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { RequestAbortedError } from "../domain/runtime/abortable.mjs";
 import { createRetrieverStore, RETRIEVER_CODES, validateRetrievalRequest } from "../domain/runtime/retriever-store.mjs";
 
 // The SharedContext this "request" is pinned to (CLAUDE.md's corpus/
@@ -478,4 +479,41 @@ test("the returned result is frozen — mutating it after the fact does not sile
   assert.equal(result.ok, true);
   assert.throws(() => { result.result.top_k = 999; }, TypeError);
   assert.equal(result.result.top_k, request.top_k);
+});
+
+// --- request-scoped AbortSignal boundary ------------------------------------
+
+test("resolve() passes the exact same AbortSignal to the adapter as a separate second argument", async () => {
+  const controller = new AbortController();
+  const request = retrievalRequest();
+  let receivedSignal;
+  const adapter = {
+    retrieve: async (req, options) => {
+      receivedSignal = options?.signal;
+      return retrievalResult(req);
+    },
+  };
+  await createRetrieverStore(adapter, RUN_CONTEXT).resolve(request, { signal: controller.signal });
+  assert.equal(receivedSignal, controller.signal);
+});
+
+test("resolve() called directly (not through agent-runtime.mjs) with an already-aborted signal rejects with RequestAbortedError, and the adapter is never called", async () => {
+  const controller = new AbortController();
+  controller.abort();
+  let adapterCalls = 0;
+  const request = retrievalRequest();
+  const adapter = { retrieve: async (req) => { adapterCalls += 1; return retrievalResult(req); } };
+  const store = createRetrieverStore(adapter, RUN_CONTEXT);
+  await assert.rejects(
+    () => store.resolve(request, { signal: controller.signal }),
+    (error) => error instanceof RequestAbortedError,
+  );
+  assert.equal(adapterCalls, 0);
+});
+
+test("resolve() with no signal at all behaves exactly as before (no regression)", async () => {
+  const request = retrievalRequest();
+  const adapter = { retrieve: async (req) => retrievalResult(req) };
+  const result = await createRetrieverStore(adapter, RUN_CONTEXT).resolve(request);
+  assert.equal(result.ok, true);
 });

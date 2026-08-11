@@ -48,9 +48,24 @@ const NO_FLOW_CONNECTED_BUDGET_LIMITS = Object.freeze({
 });
 
 // Returns a runner matching createAnswerHandler's expected shape:
-// (question: string) => Promise<{final_response, execution_trace}>.
+// (question: string, options: {signal, deadline_at, timeout_ms}) =>
+// Promise<{final_response, execution_trace}>. `options.signal` — the
+// request-scoped deadline/client-disconnect AbortSignal createAnswerHandler
+// creates per request (see abortable.mjs) — is threaded into
+// runAgentFlow's SharedContext.signal unchanged, so Flow execution and
+// (once any exist) SharedServices calls made by a real Flow all race
+// against the exact same signal createAnswerHandler is itself racing
+// against. `deadline_at`/`timeout_ms` are accepted for forward
+// compatibility with a future real Flow that wants to reason about how
+// much time remains, but this placeholder Flow never awaits anything, so
+// it has no use for them itself.
 export function createNoFlowConnectedRunner({ context = {} } = {}) {
-  return async function runNoFlowConnected(question) {
-    return runAgentFlow(NO_FLOW_CONNECTED_FLOW, { question }, context, NO_FLOW_CONNECTED_BUDGET_LIMITS);
+  return async function runNoFlowConnected(question, options = {}) {
+    return runAgentFlow(
+      NO_FLOW_CONNECTED_FLOW,
+      { question },
+      { ...context, signal: options.signal },
+      NO_FLOW_CONNECTED_BUDGET_LIMITS,
+    );
   };
 }

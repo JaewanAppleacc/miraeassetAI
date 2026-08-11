@@ -29,3 +29,27 @@ test("the default runner still runs the real PolicyGuard question check (prompt 
   assert.equal(isValidFinalResponse(outcome.final_response), true);
   assert.ok(outcome.execution_trace.fallback_reason?.startsWith("REJECTED_INPUT:PolicyGuard:"));
 });
+
+// --- runner call contract: (question, {signal, deadline_at, timeout_ms}) ---
+
+test("the default runner accepts the new (question, options) call shape without options at all (backward compatible)", async () => {
+  const run = createNoFlowConnectedRunner();
+  const outcome = await run("q");
+  assert.equal(isValidFinalResponse(outcome.final_response), true);
+});
+
+test("the default runner threads options.signal into runAgentFlow's SharedContext — an already-aborted caller signal fails closed", async () => {
+  const run = createNoFlowConnectedRunner();
+  const controller = new AbortController();
+  controller.abort();
+  const outcome = await run("q", { signal: controller.signal });
+  assert.equal(isValidFinalResponse(outcome.final_response), true);
+  assert.ok(outcome.execution_trace.fallback_reason?.startsWith("ABORTED:"));
+});
+
+test("the default runner's own context fields (e.g. as_of_date) still pass through when options.signal is also supplied", async () => {
+  const run = createNoFlowConnectedRunner({ context: { as_of_date: "2026-08-10" } });
+  const outcome = await run("q", { signal: new AbortController().signal });
+  assert.equal(isValidFinalResponse(outcome.final_response), true);
+  assert.equal(outcome.execution_trace.fallback_reason, null);
+});

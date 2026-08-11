@@ -20,6 +20,7 @@ import {
   runAgentFlow,
   validateCalculationRequest,
 } from "../domain/runtime/agent-runtime.mjs";
+import { RequestAbortedError } from "../domain/runtime/abortable.mjs";
 import { createCitationValidator, createDocumentStore, createEvidenceStore } from "../domain/runtime/citation-validator.mjs";
 import { createFactProvenanceValidator, createFactStore } from "../domain/runtime/fact-store.mjs";
 import { validateFinalResponse } from "../domain/runtime/final-response-validator.mjs";
@@ -2299,4 +2300,525 @@ test("RETRIEVER_CODES are part of the shared Failure Registry (REJECTION_CODES)"
   for (const code of RETRIEVER_CODES) {
     assert.ok(REJECTION_CODES.includes(code), code);
   }
+});
+
+// --- request-scoped Timeout/AbortSignal (SharedContext.signal) -------------
+//
+// The AbortSignal a caller (createAnswerHandler) puts on SharedContext races
+// against BOTH the Flow's own execution (flow.run()) and every async
+// SharedServices call a Flow makes, at the same time — see
+// closeRuntimeContextOnAbort/raceAgainstAbort in agent-runtime.mjs and
+// domain/runtime/abortable.mjs.
+
+test("runAgentFlow returns a fast, safe EARLY_EXIT once context.signal aborts, even if the Flow itself never resolves", async () => {
+  const controller = new AbortController();
+  const flow = { id: "flow_hangs_forever", async run() { return new Promise(() => {}); } };
+  const started = Date.now();
+  const resultPromise = runAgentFlow(flow, { question: "테스트 질문" }, { signal: controller.signal }, BUDGET_LIMITS);
+  controller.abort(new RequestAbortedError("TIMEOUT"));
+  const outcome = await resultPromise;
+  assert.ok(Date.now() - started < 500, "must not wait for the abandoned Flow");
+  assert.equal(outcome.final_response.think_trace.execution_mode, "EARLY_EXIT");
+  assert.equal(outcome.final_response.question, "테스트 질문");
+  assert.deepEqual(outcome.final_response.retrieved_context, []);
+  assert.deepEqual(outcome.final_response.think_trace.operations, []);
+  assert.deepEqual(outcome.final_response.think_trace.calculation, {});
+  assert.deepEqual(outcome.final_response.think_trace.validation, {});
+  assert.equal(outcome.execution_trace.fallback_reason, "ABORTED:TIMEOUT");
+  assert.doesNotThrow(() => JSON.stringify(outcome.final_response));
+  assert.doesNotThrow(() => JSON.stringify(outcome.execution_trace));
+});
+
+test("runAgentFlow classifies a client-disconnect abort distinctly from a timeout abort in fallback_reason only (never in final_response)", async () => {
+  const controller = new AbortController();
+  const flow = { id: "flow_hangs_forever_2", async run() { return new Promise(() => {}); } };
+  const resultPromise = runAgentFlow(flow, { question: "q" }, { signal: controller.signal }, BUDGET_LIMITS);
+  controller.abort(new RequestAbortedError("CLIENT_DISCONNECT"));
+  const outcome = await resultPromise;
+  assert.equal(outcome.execution_trace.fallback_reason, "ABORTED:CLIENT_DISCONNECT");
+  assert.ok(!JSON.stringify(outcome.final_response).includes("CLIENT_DISCONNECT"));
+});
+
+test("runAgentFlow immediately fails closed if context.signal is already aborted before the Flow ever runs", async () => {
+  const controller = new AbortController();
+  controller.abort(new RequestAbortedError("CLIENT_DISCONNECT"));
+  const flow = {
+    id: "flow_should_not_be_trusted",
+    async run(input) {
+      return { final_response: { question: input.question, retrieved_context: [], think_trace: { execution_mode: "STRUCTURED", operations: [], calculation: {}, validation: {} }, answer: "should never be trusted" } };
+    },
+  };
+  const outcome = await runAgentFlow(flow, { question: "q" }, { signal: controller.signal }, BUDGET_LIMITS);
+  assert.equal(outcome.execution_trace.fallback_reason, "ABORTED:CLIENT_DISCONNECT");
+  assert.notEqual(outcome.final_response.answer, "should never be trusted");
+});
+
+test("the signal a Flow receives via SharedContext is the exact one that becomes aborted, observable from inside the Flow", async () => {
+  const controller = new AbortController();
+  let observedAbortedInsideFlow = null;
+  const flow = {
+    id: "flow_observes_signal",
+    async run(input, context) {
+      return new Promise((resolve) => {
+        context.signal.addEventListener("abort", () => {
+          observedAbortedInsideFlow = context.signal.aborted;
+          resolve({ final_response: { question: input.question, retrieved_context: [], think_trace: { execution_mode: "EARLY_EXIT", operations: [], calculation: {}, validation: {} }, answer: "late" } });
+        });
+      });
+    },
+  };
+  const resultPromise = runAgentFlow(flow, { question: "q" }, { signal: controller.signal }, BUDGET_LIMITS);
+  controller.abort(new RequestAbortedError("TIMEOUT"));
+  await resultPromise;
+  await new Promise((resolve) => setTimeout(resolve, 15)); // let the abandoned Flow's own abort listener run
+  assert.equal(observedAbortedInsideFlow, true);
+});
+
+test("aborting the request-scoped signal rejects an in-flight async Retriever call promptly, instead of leaving it hanging", async () => {
+  const controller = new AbortController();
+  const services = createSharedServices(BUDGET_LIMITS, {
+    context: { ...RETRIEVAL_CONTEXT, signal: controller.signal },
+    retriever: { retrieve: () => neverSettles() },
+  });
+  const pending = services.retriever.retrieve(retrievalRequest());
+  let settled = false;
+  pending.then(() => { settled = true; }, () => { settled = true; });
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.equal(settled, false, "must still be pending before abort");
+  controller.abort(new RequestAbortedError("TIMEOUT"));
+  await assert.rejects(() => pending, (error) => error instanceof RequestAbortedError && error.reason === "TIMEOUT");
+});
+
+test("a Flow that keeps running after being abandoned by abort cannot reach a real adapter — SharedServices calls are rejected before it, real adapter calls stay at 0", async () => {
+  const controller = new AbortController();
+  let rawAdapterCalls = 0;
+  const retriever = {
+    retrieve: () => {
+      rawAdapterCalls += 1;
+      return Promise.resolve(retrievalResult(retrievalRequest()));
+    },
+  };
+  let caughtAfterAbort;
+  const flow = {
+    id: "flow_calls_after_abort",
+    async run(input, context, services) {
+      await new Promise((resolve) => context.signal.addEventListener("abort", resolve, { once: true }));
+      try {
+        await services.retriever.retrieve(retrievalRequest());
+      } catch (error) {
+        caughtAfterAbort = error;
+      }
+      return { final_response: { question: input.question, retrieved_context: [], think_trace: { execution_mode: "EARLY_EXIT", operations: [], calculation: {}, validation: {} }, answer: "late" } };
+    },
+  };
+  const resultPromise = runAgentFlow(flow, { question: "q" }, { ...RETRIEVAL_CONTEXT, signal: controller.signal }, BUDGET_LIMITS, { retriever });
+  controller.abort(new RequestAbortedError("TIMEOUT"));
+  const outcome = await resultPromise;
+  assert.equal(outcome.execution_trace.fallback_reason, "ABORTED:TIMEOUT");
+  await new Promise((resolve) => setTimeout(resolve, 20)); // let the abandoned Flow's continuation actually run
+  assert.equal(rawAdapterCalls, 0, "the real Retriever adapter must never be reached once the request has closed");
+  assert.ok(caughtAfterAbort instanceof RejectedInputError);
+  assert.equal(caughtAfterAbort.code, "RUNTIME_CONTEXT_CLOSED");
+});
+
+test("a Flow abandoned by abort that resolves late does not mutate the already-returned final_response or execution_trace", async () => {
+  const controller = new AbortController();
+  let releaseFlow;
+  const flow = {
+    id: "flow_late_resolve_after_abort",
+    async run(input) {
+      return new Promise((resolve) => {
+        releaseFlow = () =>
+          resolve({
+            final_response: {
+              question: input.question,
+              retrieved_context: [],
+              think_trace: { execution_mode: "STRUCTURED", operations: [], calculation: {}, validation: {} },
+              answer: "should never be seen",
+            },
+          });
+      });
+    },
+  };
+  const resultPromise = runAgentFlow(flow, { question: "q" }, { signal: controller.signal }, BUDGET_LIMITS);
+  controller.abort(new RequestAbortedError("TIMEOUT"));
+  const outcome = await resultPromise;
+  const before = JSON.parse(JSON.stringify(outcome));
+  releaseFlow();
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.deepEqual(outcome, before, "the already-returned outcome must not change after the abandoned Flow settles late");
+  assert.notEqual(outcome.final_response.answer, "should never be seen");
+});
+
+test("a Flow abandoned by abort that REJECTS late does not produce a process unhandledRejection", async () => {
+  const unhandled = [];
+  const onUnhandledRejection = (reason) => unhandled.push(reason);
+  process.on("unhandledRejection", onUnhandledRejection);
+  try {
+    const controller = new AbortController();
+    let rejectFlow;
+    const flow = {
+      id: "flow_late_reject_after_abort",
+      async run() {
+        return new Promise((_, reject) => {
+          rejectFlow = () => reject(new Error("late flow failure"));
+        });
+      },
+    };
+    const resultPromise = runAgentFlow(flow, { question: "q" }, { signal: controller.signal }, BUDGET_LIMITS);
+    controller.abort(new RequestAbortedError("TIMEOUT"));
+    await resultPromise;
+    rejectFlow();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  } finally {
+    process.removeListener("unhandledRejection", onUnhandledRejection);
+  }
+  assert.deepEqual(unhandled, [], "the abandoned Flow's late rejection must never surface as a process unhandledRejection");
+});
+
+test("runAgentFlow with no context.signal at all behaves exactly as before (abort machinery is fully opt-in)", async () => {
+  const flow = {
+    id: "flow_no_signal",
+    async run(input) {
+      return { final_response: { question: input.question, retrieved_context: [], think_trace: { execution_mode: "STRUCTURED", operations: [], calculation: {}, validation: {} }, answer: "a" } };
+    },
+  };
+  const outcome = await runAgentFlow(flow, { question: "q" }, {}, BUDGET_LIMITS);
+  assert.equal(outcome.execution_trace.fallback_reason, null);
+  assert.equal(outcome.final_response.answer, "a");
+});
+
+// --- SharedServices wrappers reject an already-aborted signal BEFORE
+//     invoking the real underlying service, independent of runAgentFlow —
+//     createSharedServices can be used standalone (no closeRuntimeContextOnAbort
+//     listener ever wired, since that only exists inside runAgentFlow), so
+//     wrapMaybeAsync/wrapAsync must each check signal.aborted themselves,
+//     not rely on recorder.isFinalized() alone. -----------------------------
+
+test("standalone createSharedServices: an already-aborted signal rejects a synchronous HcxClient call before the real client ever runs", () => {
+  const controller = new AbortController();
+  controller.abort();
+  const services = createSharedServices(BUDGET_LIMITS, { context: { ...CONTEXT, signal: controller.signal } });
+  assert.throws(
+    () => services.hcxClient.explain({ type: "EARLY_EXIT", reason: "x" }),
+    (error) => error instanceof RequestAbortedError,
+  );
+});
+
+test("standalone createSharedServices: an already-aborted signal rejects a synchronous Calculator call before the real calculator ever runs", () => {
+  const controller = new AbortController();
+  controller.abort();
+  const services = createSharedServices(BUDGET_LIMITS, { context: { ...CONTEXT, signal: controller.signal } });
+  assert.throws(
+    () => services.calculator.calculate({ formula: "SUM", inputs: [fact()], validation: {} }),
+    (error) => error instanceof RequestAbortedError,
+  );
+});
+
+test("standalone createSharedServices: an already-aborted signal rejects an async Validator call (as a rejected Promise, not a throw) before the real work ever runs", async () => {
+  const controller = new AbortController();
+  controller.abort();
+  const inputs = [fact()];
+  let rawAdapterCalls = 0;
+  const services = createSharedServices(BUDGET_LIMITS, {
+    context: { ...CONTEXT, signal: controller.signal },
+    factStoreAdapter: async () => {
+      rawAdapterCalls += 1;
+      return null;
+    },
+  });
+  const pending = services.validator.validateFacts(inputs);
+  assert.ok(pending instanceof Promise, "wrapAsync must reject as a Promise, not throw synchronously");
+  await assert.rejects(() => pending, (error) => error instanceof RequestAbortedError);
+  assert.equal(rawAdapterCalls, 0, "the real FactStore adapter must never be reached once the signal has aborted");
+});
+
+test("standalone createSharedServices: an already-aborted signal keeps the real Retriever adapter call count at 0 (Retriever is wrapMaybeAsync-wrapped, so this throws synchronously, same as Calculator/HcxClient)", () => {
+  const controller = new AbortController();
+  controller.abort();
+  let rawAdapterCalls = 0;
+  const retriever = {
+    retrieve: () => {
+      rawAdapterCalls += 1;
+      return Promise.resolve(retrievalResult(retrievalRequest()));
+    },
+  };
+  const services = createSharedServices(BUDGET_LIMITS, {
+    context: { ...RETRIEVAL_CONTEXT, signal: controller.signal },
+    retriever,
+  });
+  assert.throws(
+    () => services.retriever.retrieve(retrievalRequest()),
+    (error) => error instanceof RequestAbortedError,
+  );
+  assert.equal(rawAdapterCalls, 0, "the real Retriever adapter must never be reached once the signal has aborted");
+});
+
+test("standalone createSharedServices: a signal that is NOT aborted behaves exactly as before (no regression)", () => {
+  const controller = new AbortController();
+  const services = createSharedServices(BUDGET_LIMITS, { context: { ...CONTEXT, signal: controller.signal } });
+  assert.deepEqual(services.hcxClient.explain({ type: "EARLY_EXIT", reason: "x" }), { accepted: true, type: "EARLY_EXIT" });
+});
+
+test("standalone createSharedServices with no signal at all behaves exactly as before (no regression)", () => {
+  const services = createSharedServices(BUDGET_LIMITS, { context: CONTEXT });
+  assert.deepEqual(services.hcxClient.explain({ type: "EARLY_EXIT", reason: "x" }), { accepted: true, type: "EARLY_EXIT" });
+});
+
+test("post-finalize RUNTIME_CONTEXT_CLOSED behavior is unaffected by the new abort pre-check (regression check on the existing 'stashed services' scenario)", async () => {
+  let stashedServices;
+  const flow = {
+    id: "flow_stashes_services_regression_check",
+    async run(input, context, services) {
+      stashedServices = services;
+      return { final_response: { question: input.question, retrieved_context: [], think_trace: { execution_mode: "STRUCTURED", operations: [], calculation: {}, validation: {} }, answer: "a" } };
+    },
+  };
+  await runAgentFlow(flow, { question: "q" }, CONTEXT, BUDGET_LIMITS);
+  assert.throws(
+    () => stashedServices.hcxClient.explain({ type: "EARLY_EXIT", reason: "x" }),
+    (error) => error instanceof RejectedInputError && error.code === "RUNTIME_CONTEXT_CLOSED",
+  );
+});
+
+// --- P1 fix: raceAgainstAbort's own derived Promise ("raced") must be
+//     handled, independent of whether the underlying observed/settled
+//     promise already has a handler. Once `signal` is present (even if it
+//     never aborts), raceAgainstAbort(observed/settled, signal) constructs
+//     a BRAND NEW Promise distinct from observed/settled — the bookkeeping
+//     `.then()`/`.catch()` already attached to observed/settled does NOT
+//     make Node treat this new Promise as handled too. Every regression
+//     test above that predates this fix used a context with NO signal at
+//     all, so raceAgainstAbort took its "no signal -> return the same
+//     promise unchanged" shortcut and never exercised the buggy branch —
+//     that is exactly why this slipped through. Every test below
+//     deliberately supplies a signal that is present but never (or not
+//     yet) aborted, so it genuinely exercises wrapMaybeAsync/wrapAsync's
+//     `raced` variable. -------------------------------------------------
+
+test("non-aborted signal + unawaited late-rejecting Retriever call: still UNAWAITED_SERVICE_CALL, zero unhandledRejection", async () => {
+  const unhandled = [];
+  const onUnhandledRejection = (reason) => unhandled.push(reason);
+  process.on("unhandledRejection", onUnhandledRejection);
+  try {
+    const controller = new AbortController(); // present, never aborted in this test
+    const retriever = {
+      retrieve: () => new Promise((_, reject) => setTimeout(() => reject(new Error("late retrieval failure")), 10)),
+    };
+    const flow = {
+      id: "flow_raced_leak_retriever",
+      async run(input, context, services) {
+        services.retriever.retrieve(retrievalRequest()); // fired, never awaited
+        return {
+          final_response: {
+            question: input.question,
+            retrieved_context: [],
+            think_trace: { execution_mode: "STRUCTURED", operations: [], calculation: {}, validation: {} },
+            answer: "a",
+          },
+        };
+      },
+    };
+    const outcome = await runAgentFlow(
+      flow,
+      { question: "q" },
+      { ...RETRIEVAL_CONTEXT, signal: controller.signal },
+      BUDGET_LIMITS,
+      { retriever },
+    );
+    assert.equal(outcome.execution_trace.fallback_reason, "REJECTED_INPUT:AgentFlow:UNAWAITED_SERVICE_CALL");
+    await new Promise((resolve) => setTimeout(resolve, 40)); // past the 10ms delay, so the abandoned call actually rejects
+  } finally {
+    process.removeListener("unhandledRejection", onUnhandledRejection);
+  }
+  assert.deepEqual(unhandled, [], "the abandoned call's late rejection (via the raced Promise) must never surface as a process unhandledRejection");
+});
+
+test("non-aborted signal + unawaited late-rejecting async Validator call: still UNAWAITED_SERVICE_CALL, zero unhandledRejection", async () => {
+  const unhandled = [];
+  const onUnhandledRejection = (reason) => unhandled.push(reason);
+  process.on("unhandledRejection", onUnhandledRejection);
+  try {
+    const controller = new AbortController();
+    const inputs = [fact()];
+    // A factStoreAdapter that resolves late and then reports an
+    // unresolvable fact — factProvenanceValidator.check() awaits this,
+    // then createValidator.validateFacts() itself throws a
+    // RejectedInputError AFTER that delay: a genuinely late rejection of
+    // the wrapAsync-wrapped validateFacts call, not an immediate one.
+    const flow = {
+      id: "flow_raced_leak_validator",
+      async run(input, context, services) {
+        services.validator.validateFacts(inputs); // fired, never awaited
+        return {
+          final_response: {
+            question: input.question,
+            retrieved_context: [],
+            think_trace: { execution_mode: "STRUCTURED", operations: [], calculation: {}, validation: {} },
+            answer: "a",
+          },
+        };
+      },
+    };
+    const outcome = await runAgentFlow(flow, { question: "q" }, { ...CONTEXT, signal: controller.signal }, BUDGET_LIMITS, {
+      factStoreAdapter: () => new Promise((resolve) => setTimeout(() => resolve(null), 10)), // resolves late to "not found"
+    });
+    assert.equal(outcome.execution_trace.fallback_reason, "REJECTED_INPUT:AgentFlow:UNAWAITED_SERVICE_CALL");
+    await new Promise((resolve) => setTimeout(resolve, 40));
+  } finally {
+    process.removeListener("unhandledRejection", onUnhandledRejection);
+  }
+  assert.deepEqual(unhandled, [], "the abandoned Validator call's late rejection must never surface as a process unhandledRejection");
+});
+
+test("non-aborted signal + unawaited StructuredStore call: still UNAWAITED_SERVICE_CALL, zero unhandledRejection (StructuredStore itself always resolves — this guards the same raced-Promise machinery regardless)", async () => {
+  const unhandled = [];
+  const onUnhandledRejection = (reason) => unhandled.push(reason);
+  process.on("unhandledRejection", onUnhandledRejection);
+  try {
+    const controller = new AbortController();
+    const flow = {
+      id: "flow_raced_leak_structuredstore",
+      async run(input, context, services) {
+        services.structuredStore.query({ query_id: "query_unawaited_1" }); // fired, never awaited
+        return {
+          final_response: {
+            question: input.question,
+            retrieved_context: [],
+            think_trace: { execution_mode: "STRUCTURED", operations: [], calculation: {}, validation: {} },
+            answer: "a",
+          },
+        };
+      },
+    };
+    const structuredStoreAdapter = {
+      query: () => new Promise((resolve) => setTimeout(() => resolve({ status: "NOT_FOUND", records: [] }), 10)),
+    };
+    const outcome = await runAgentFlow(flow, { question: "q" }, { ...CONTEXT, signal: controller.signal }, BUDGET_LIMITS, {
+      structuredStoreAdapter,
+    });
+    assert.equal(outcome.execution_trace.fallback_reason, "REJECTED_INPUT:AgentFlow:UNAWAITED_SERVICE_CALL");
+    await new Promise((resolve) => setTimeout(resolve, 40));
+  } finally {
+    process.removeListener("unhandledRejection", onUnhandledRejection);
+  }
+  assert.deepEqual(unhandled, []);
+});
+
+test("if signal aborts (while an unawaited call's underlying promise is still pending), the raced Promise's own abort-rejection produces zero unhandledRejection", async () => {
+  const unhandled = [];
+  const onUnhandledRejection = (reason) => unhandled.push(reason);
+  process.on("unhandledRejection", onUnhandledRejection);
+  try {
+    const controller = new AbortController();
+    const retriever = { retrieve: () => neverSettles() }; // never settles on its own
+    const flow = {
+      id: "flow_raced_abort_leak",
+      async run(input, context, services) {
+        services.retriever.retrieve(retrievalRequest()); // fired, never awaited
+        return {
+          final_response: {
+            question: input.question,
+            retrieved_context: [],
+            think_trace: { execution_mode: "STRUCTURED", operations: [], calculation: {}, validation: {} },
+            answer: "a",
+          },
+        };
+      },
+    };
+    const outcome = await runAgentFlow(
+      flow,
+      { question: "q" },
+      { ...RETRIEVAL_CONTEXT, signal: controller.signal },
+      BUDGET_LIMITS,
+      { retriever },
+    );
+    assert.equal(outcome.execution_trace.fallback_reason, "REJECTED_INPUT:AgentFlow:UNAWAITED_SERVICE_CALL");
+    // The abandoned retriever call's own `raced` Promise is still alive —
+    // nothing settled it yet (retrieve() never settles on its own). Abort
+    // it now: this is what makes `raced` reject, well after the request
+    // itself already returned.
+    controller.abort();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  } finally {
+    process.removeListener("unhandledRejection", onUnhandledRejection);
+  }
+  assert.deepEqual(unhandled, [], "raced losing to a later abort must never surface as a process unhandledRejection, even fully unawaited");
+});
+
+test("with a non-aborted signal present, an AWAITED caller still receives the real, unaltered underlying error (the fix does not swallow or replace it)", async () => {
+  const controller = new AbortController();
+  const request = retrievalRequest();
+  const retriever = { retrieve: () => new Promise((_, reject) => setTimeout(() => reject(new Error("boom")), 5)) };
+  let caught;
+  const flow = {
+    id: "flow_raced_awaited_real_error",
+    async run(input, context, services) {
+      try {
+        await services.retriever.retrieve(request);
+      } catch (error) {
+        caught = error;
+      }
+      return {
+        final_response: {
+          question: input.question,
+          retrieved_context: [],
+          think_trace: { execution_mode: "STRUCTURED", operations: [], calculation: {}, validation: {} },
+          answer: "a",
+        },
+      };
+    },
+  };
+  const outcome = await runAgentFlow(
+    flow,
+    { question: "q" },
+    { ...RETRIEVAL_CONTEXT, signal: controller.signal },
+    BUDGET_LIMITS,
+    { retriever },
+  );
+  assert.ok(caught instanceof RejectedInputError);
+  assert.equal(caught.code, "RETRIEVER_ADAPTER_ERROR");
+  assert.equal(outcome.execution_trace.fallback_reason, null);
+});
+
+test("with a non-aborted signal present, an AWAITED caller still receives a RequestAbortedError when the signal aborts mid-flight", async () => {
+  const controller = new AbortController();
+  const services = createSharedServices(BUDGET_LIMITS, {
+    context: { ...RETRIEVAL_CONTEXT, signal: controller.signal },
+    retriever: { retrieve: () => neverSettles() },
+  });
+  const pending = services.retriever.retrieve(retrievalRequest());
+  controller.abort(new RequestAbortedError("TIMEOUT"));
+  await assert.rejects(() => pending, (error) => error instanceof RequestAbortedError && error.reason === "TIMEOUT");
+});
+
+test("with a non-aborted signal present, ExecutionTrace does not change after an unawaited call settles late", async () => {
+  const controller = new AbortController();
+  const retriever = {
+    retrieve: () => new Promise((_, reject) => setTimeout(() => reject(new Error("late retrieval failure")), 10)),
+  };
+  const flow = {
+    id: "flow_raced_trace_immutable",
+    async run(input, context, services) {
+      services.retriever.retrieve(retrievalRequest());
+      return {
+        final_response: {
+          question: input.question,
+          retrieved_context: [],
+          think_trace: { execution_mode: "STRUCTURED", operations: [], calculation: {}, validation: {} },
+          answer: "a",
+        },
+      };
+    },
+  };
+  const outcome = await runAgentFlow(
+    flow,
+    { question: "q" },
+    { ...RETRIEVAL_CONTEXT, signal: controller.signal },
+    BUDGET_LIMITS,
+    { retriever },
+  );
+  const before = JSON.parse(JSON.stringify(outcome));
+  await new Promise((resolve) => setTimeout(resolve, 40)); // let the abandoned call actually reject in the background
+  assert.deepEqual(outcome, before, "the already-returned outcome (final_response + execution_trace) must not change after the fact");
 });

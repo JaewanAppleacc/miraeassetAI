@@ -111,6 +111,7 @@
  * @property {string} [chunking_config_id]   pinned for Retriever request/context snapshot-triple checks; see retriever-store.mjs
  * @property {string} [index_snapshot_id]    pinned for Retriever request/context snapshot-triple checks; see retriever-store.mjs
  * @property {string} [as_of_date]
+ * @property {AbortSignal} [signal]   request-scoped deadline/client-disconnect signal (see abortable.mjs); Flow execution and every async SharedServices call race against it
  */
 
 /**
@@ -149,6 +150,7 @@
  */
 
 import { createHash, randomUUID } from "node:crypto";
+import { abortReason, raceAgainstAbort, RequestAbortedError } from "./abortable.mjs";
 import { EXECUTION_ROUTES, VALUE_STATUSES } from "../contracts.mjs";
 import { CITATION_CODES, createCitationValidator, createDocumentStore, createEvidenceStore } from "./citation-validator.mjs";
 import { createFactProvenanceValidator, createFactStore, FACT_STORE_CODES } from "./fact-store.mjs";
@@ -202,9 +204,18 @@ function fail(code, message) {
 //   2. ExecutionTrace.fallback_reason — runAgentFlow's own classification
 //      of what it caught, not a RejectedInputError code by itself:
 //      `REJECTED_INPUT:<service>:<code>` (code is always a member of
-//      REJECTION_CODES), `BUDGET_EXCEEDED:<budgetName>`, the literal
-//      string `INTERNAL_ERROR` for anything else, or `null` on success.
-//      See classifyFailure.
+//      REJECTION_CODES), `BUDGET_EXCEEDED:<budgetName>`,
+//      `ABORTED:<TIMEOUT|CLIENT_DISCONNECT|ABORTED>` (the request-scoped
+//      AbortSignal from SharedContext.signal fired — see abortable.mjs;
+//      the reason distinguishes an internal deadline from an external
+//      caller-supplied signal aborting, e.g. a client disconnect), the
+//      literal string `INTERNAL_ERROR` for anything else, or `null` on
+//      success. See classifyFailure. Like BUDGET_EXCEEDED, ABORTED is a
+//      Runtime Host-level classification, not a RejectedInputError code —
+//      it is never a member of REJECTION_CODES itself. This
+//      fallback_reason value is Runtime Host-internal bookkeeping only;
+//      it is never read by domain/runtime/answer-handler.mjs when
+//      building the external API response body.
 //   3. StructuredResult.error_codes — a separate JSON-Schema-enforced
 //      enum for the OFFICIAL StructuredQuery/StructuredResult API
 //      response (domain/interfaces/structured-result.schema.json), not a
@@ -734,6 +745,7 @@ export function createSerializer() {
 function instrumentationErrorCode(error) {
   if (error instanceof RejectedInputError) return error.code;
   if (error instanceof BudgetExceededError) return `BUDGET_EXCEEDED:${error.budgetName}`;
+  if (error instanceof RequestAbortedError) return `ABORTED:${error.reason}`;
   return "INTERNAL_ERROR";
 }
 
@@ -863,6 +875,25 @@ function rejectIfRuntimeClosed(recorder, service, method) {
   }
 }
 
+// A SECOND, independent gate from rejectIfRuntimeClosed above — deliberately
+// not folded into it. rejectIfRuntimeClosed only catches an already-closed
+// request when something (today: runAgentFlow's closeRuntimeContextOnAbort
+// listener) has actually finalized the recorder; createSharedServices can be
+// used standalone, with no runAgentFlow wrapping it and no such listener
+// ever wired up, in which case recorder.isFinalized() would never become
+// true from an abort alone. Checking `signal.aborted` directly here means
+// every SharedServices call this module wraps is blocked before its real
+// `fn` is ever invoked — Calculator/HcxClient/Retriever/Validator/
+// StructuredStore alike — whether or not the caller happens to be
+// runAgentFlow. Called as the very first thing inside every wrapper
+// (alongside rejectIfRuntimeClosed), before fn is ever invoked, so the real
+// underlying call never happens at all once the signal has aborted.
+function rejectIfAborted(signal) {
+  if (signal?.aborted) {
+    throw new RequestAbortedError(abortReason(signal));
+  }
+}
+
 // `fn` may be a plain synchronous method OR one that happens to return a
 // Promise (e.g. Retriever/HcxClient are not declared `async` in this
 // module, so their return type isn't statically known — and a future real
@@ -881,9 +912,10 @@ function rejectIfRuntimeClosed(recorder, service, method) {
 // having already rejected the request) must not ALSO trigger a Node
 // `unhandledRejection` on top of that — see the `observed`/`.then(f, g)`
 // dance below.
-function wrapMaybeAsync(recorder, service, method, category, fn, { onSuccess } = {}) {
+function wrapMaybeAsync(recorder, service, method, category, fn, { onSuccess, signal } = {}) {
   return (...args) => {
     rejectIfRuntimeClosed(recorder, service, method);
+    rejectIfAborted(signal);
     const sequence = recorder.nextSequence();
     const startedAtMs = Date.now();
     recorder.registerPending({ sequence, category, service, method, started_at: new Date(startedAtMs).toISOString() });
@@ -904,15 +936,44 @@ function wrapMaybeAsync(recorder, service, method, category, fn, { onSuccess } =
         // `observed` "handled", regardless of whether the CALLER ever
         // awaits/`.then()`s the value returned below. This reaction must
         // never rethrow: if it did, IT would become a new unhandled
-        // promise instead (that was the original bug). `observed` itself
-        // — not a promise derived from this reaction — is what gets
-        // returned, so a caller that DOES await it still sees the real
-        // error via `observed`'s own rejection.
+        // promise instead (that was the original bug). This bookkeeping
+        // always tracks the REAL eventual outcome — recorder.settle() is
+        // already a safe no-op once the recorder has been finalized (e.g.
+        // by an abort — see closeRuntimeContextOnAbort), so a call that
+        // wins this bookkeeping race late, after the request has already
+        // moved on, can never retroactively mutate an already-returned
+        // ExecutionTrace.
         observed.then(
           (value) => finish(true, null, onSuccess ? onSuccess(args, value) : undefined),
           (error) => finish(false, error),
         );
-        return observed;
+        // What the CALLER actually awaits is raced against `signal`
+        // separately from the bookkeeping above: if `signal` aborts before
+        // `observed` settles, the caller gets a prompt rejection instead of
+        // hanging until the real call finishes (or never finishes) — see
+        // abortable.mjs. `observed` itself is fully observed by the
+        // bookkeeping `.then()` above either way.
+        //
+        // BUT raceAgainstAbort(observed, signal) is NOT `observed` itself
+        // once `signal` is present — it constructs and returns a brand
+        // new, distinct Promise (`raced`), which starts out completely
+        // unobserved. A Flow that fires this call without awaiting it
+        // (UNAWAITED_SERVICE_CALL) leaves `raced` with no handler at all;
+        // if `raced` later rejects — the real call failing, OR losing the
+        // race to an abort — Node sees an unhandled rejection on `raced`
+        // itself, independent of `observed` already being handled. The
+        // fix is the same pattern as `observed`/`settled` above, applied
+        // one layer further out: attach a synchronous, non-rethrowing
+        // catch to `raced` itself (marks it "handled" without consuming
+        // its value), then return `raced` — not some other promise
+        // derived from that catch — so an awaiting caller still receives
+        // the real rejection/RequestAbortedError exactly as before.
+        const raced = raceAgainstAbort(observed, signal);
+        raced.then(
+          () => {},
+          () => {},
+        );
+        return raced;
       }
       finish(true, null, onSuccess ? onSuccess(args, result) : undefined);
       return result;
@@ -937,10 +998,11 @@ function wrapMaybeAsync(recorder, service, method, category, fn, { onSuccess } =
 // before it), so it still REJECTS `settled` rather than throwing
 // synchronously out of the outer function — Validator/StructuredStore stay
 // "async services reject", not "throw", once closed.
-function wrapAsync(recorder, service, method, category, fn, { onSuccess } = {}) {
+function wrapAsync(recorder, service, method, category, fn, { onSuccess, signal } = {}) {
   return (...args) => {
     const settled = (async () => {
       rejectIfRuntimeClosed(recorder, service, method);
+      rejectIfAborted(signal);
       const sequence = recorder.nextSequence();
       const startedAtMs = Date.now();
       recorder.registerPending({ sequence, category, service, method, started_at: new Date(startedAtMs).toISOString() });
@@ -963,9 +1025,28 @@ function wrapAsync(recorder, service, method, category, fn, { onSuccess } = {}) 
       }
     })();
 
+    // Always observed, independent of the abort race below — see the
+    // matching comment in wrapMaybeAsync. recorder.settle() inside the IIFE
+    // above is already a no-op once finalized, so a late settlement here
+    // can never mutate an already-returned ExecutionTrace either.
     settled.catch(() => {});
 
-    return settled;
+    // What the CALLER actually awaits races against `signal` — see
+    // abortable.mjs and the matching comment in wrapMaybeAsync. `raced` is
+    // a NEW, distinct Promise once `signal` is present (not `settled`
+    // itself), so `settled.catch()` above does not make Node treat `raced`
+    // as handled — it needs its own synchronous, non-rethrowing catch, or
+    // an unawaited fire-and-forget call whose `raced` later rejects (the
+    // real failure, or losing the race to an abort) surfaces as an
+    // unhandledRejection. `raced` itself — not a promise derived from that
+    // catch — is what's returned, so an awaiting caller still gets the
+    // real rejection/RequestAbortedError.
+    const raced = raceAgainstAbort(settled, signal);
+    raced.then(
+      () => {},
+      () => {},
+    );
+    return raced;
   };
 }
 
@@ -1120,10 +1201,20 @@ export function createBudgetedRetriever(retriever, budget) {
 // to citation-validator.mjs/fact-store.mjs's own {ok,code} results.
 // retriever-store.mjs does not import RejectedInputError itself, to avoid
 // a circular import with this module.
-function createRetrieverService(retrieverStore) {
+//
+// `signal` (the request-scoped AbortSignal, if any) is bound here via
+// closure — a Flow's own `services.retriever.retrieve(request)` call stays
+// single-argument, exactly as documented in the SharedServices typedef; it
+// never has to know about or thread abort plumbing itself. It is passed to
+// retrieverStore.resolve() as a separate `{ signal }` options argument, NOT
+// mixed into `request` — `request` stays exactly what retrieval-
+// request.schema.json validates, so a real Retriever adapter can opt into
+// honoring `signal` (e.g. to cancel a real search backend call) without
+// that ever becoming part of the schema-validated request shape.
+function createRetrieverService(retrieverStore, signal) {
   return {
     async retrieve(request) {
-      const resolution = await retrieverStore.resolve(request);
+      const resolution = await retrieverStore.resolve(request, { signal });
       if (!resolution.ok) {
         throw new RejectedInputError("Retriever", [fail(resolution.code, resolution.message)]);
       }
@@ -1147,21 +1238,35 @@ export function createSharedServices(
 ) {
   const budget = providedBudget ?? createExecutionBudget({ ...budgetLimits, now });
   const authority = createValidationAuthority(context, now ? { now } : {});
+  // The request-scoped AbortSignal, if any (see SharedContext's typedef
+  // above and abortable.mjs). Bound once here and threaded through every
+  // wrapper below, AND into DocumentStore/EvidenceStore/FactStore/
+  // StructuredStore/Retriever's own constructors — a Flow's own
+  // SharedServices call signatures never change because of it.
+  const signal = context?.signal;
   const citationValidator = createCitationValidator(
-    createDocumentStore(documentStoreAdapter ?? null, context),
-    createEvidenceStore(evidenceStoreAdapter ?? null, context),
+    createDocumentStore(documentStoreAdapter ?? null, context, signal),
+    createEvidenceStore(evidenceStoreAdapter ?? null, context, signal),
   );
-  const factProvenanceValidator = createFactProvenanceValidator(createFactStore(factStoreAdapter ?? null, context));
+  const factProvenanceValidator = createFactProvenanceValidator(
+    createFactStore(factStoreAdapter ?? null, context, signal),
+  );
   const services = {
     validator: createBudgetedValidator(createValidator(authority, citationValidator, factProvenanceValidator), budget),
     calculator: createBudgetedCalculator(createCalculator(authority), budget),
     hcxClient: createBudgetedHcxClient(createHcxClient(authority), budget),
     serializer: createSerializer(),
     executionBudget: budget,
-    structuredStore: createBudgetedStructuredStore(createStructuredStore(structuredStoreAdapter ?? null, context), budget),
+    structuredStore: createBudgetedStructuredStore(
+      createStructuredStore(structuredStoreAdapter ?? null, context, signal),
+      budget,
+    ),
     // Deliberately NOT wrapped in createBudgetedXxx — see policy-guard.mjs's
     // header comment: a safety check must never become skippable just
-    // because the execution budget ran out elsewhere.
+    // because the execution budget ran out elsewhere. For the same reason
+    // it is never raced against `signal` either — a synchronous safety
+    // check must never become skippable just because the request's
+    // deadline happened to already pass.
     policyGuard: createPolicyGuard(),
     // Always present, fail-closed via RETRIEVER_UNAVAILABLE with no
     // adapter wired — same as validator/calculator/structuredStore, and
@@ -1170,7 +1275,7 @@ export function createSharedServices(
     // instead of a recorded, safe rejection. There is no way to reach a
     // Retriever adapter through createSharedServices without going through
     // retriever-store.mjs's request/result boundary first.
-    retriever: createBudgetedRetriever(createRetrieverService(createRetrieverStore(retriever ?? null, context)), budget),
+    retriever: createBudgetedRetriever(createRetrieverService(createRetrieverStore(retriever ?? null, context), signal), budget),
   };
 
   // Instrument every SharedServices boundary method AFTER budgeting is
@@ -1195,24 +1300,31 @@ export function createSharedServices(
         const evidenceId = args[0]?.evidence_id;
         return typeof evidenceId === "string" ? { evidence_id: evidenceId } : {};
       },
+      signal,
     }),
-    validateFacts: wrapAsync(recorder, "Validator", "validateFacts", "tool", services.validator.validateFacts),
+    validateFacts: wrapAsync(recorder, "Validator", "validateFacts", "tool", services.validator.validateFacts, { signal }),
   };
   services.calculator = {
-    calculate: wrapMaybeAsync(recorder, "Calculator", "calculate", "tool", services.calculator.calculate),
+    calculate: wrapMaybeAsync(recorder, "Calculator", "calculate", "tool", services.calculator.calculate, { signal }),
   };
   services.hcxClient = {
-    explain: wrapMaybeAsync(recorder, "HcxClient", "explain", "hcx", services.hcxClient.explain),
+    // No real HCX network client exists yet (CLAUDE.md's KNOWN LIMITATION
+    // notes apply the same way here as elsewhere in this file) — `explain`
+    // is still fully synchronous today, so this `signal` wiring has
+    // nothing to actually race against yet. It is threaded through anyway
+    // so a future real (async) HcxClient inherits the same abort boundary
+    // automatically, with no change required here.
+    explain: wrapMaybeAsync(recorder, "HcxClient", "explain", "hcx", services.hcxClient.explain, { signal }),
   };
   services.structuredStore = {
-    query: wrapAsync(recorder, "StructuredStore", "query", "tool", services.structuredStore.query),
+    query: wrapAsync(recorder, "StructuredStore", "query", "tool", services.structuredStore.query, { signal }),
   };
   services.policyGuard = {
     checkQuestion: wrapPolicyGuardCheck(recorder, "checkQuestion", services.policyGuard.checkQuestion),
     checkAnswer: wrapPolicyGuardCheck(recorder, "checkAnswer", services.policyGuard.checkAnswer),
   };
   services.retriever = {
-    retrieve: wrapMaybeAsync(recorder, "Retriever", "retrieve", "tool", services.retriever.retrieve),
+    retrieve: wrapMaybeAsync(recorder, "Retriever", "retrieve", "tool", services.retriever.retrieve, { signal }),
   };
 
   // Deliberately NOT attached as services.trace — see TRACE_RECORDERS above.
@@ -1235,6 +1347,7 @@ export function validateAgentOutcomeShape(outcome) {
 function classifyFailure(error) {
   if (error instanceof RejectedInputError) return `REJECTED_INPUT:${error.service}:${error.code}`;
   if (error instanceof BudgetExceededError) return `BUDGET_EXCEEDED:${error.budgetName}`;
+  if (error instanceof RequestAbortedError) return `ABORTED:${error.reason}`;
   return "INTERNAL_ERROR";
 }
 
@@ -1246,20 +1359,65 @@ function policySafeAnswer(code) {
   return POLICY_GUARD_SAFE_ANSWERS[code] ?? "요청을 처리할 수 없습니다.";
 }
 
+// Closes the request scope (recorder.finalize()) the INSTANT `signal`
+// aborts — synchronously, in the same tick as whatever called
+// `controller.abort()`, not merely once the abandoned flow.run() promise
+// eventually unwinds back to runAgentFlow's own catch block a microtask or
+// more later. This is what makes "any SharedServices call attempted after
+// abort is rejected before it reaches a real adapter" hold even for calls a
+// still-running (but already-abandoned) Flow makes in the brief window
+// after abort — reusing the exact same RUNTIME_CONTEXT_CLOSED mechanism
+// that already closes the request scope on normal completion (see
+// rejectIfRuntimeClosed), not a second, parallel closing concept.
+// recorder.finalize() is idempotent, so this composes safely with the
+// unconditional recorder.finalize() call later in this function.
+function closeRuntimeContextOnAbort(signal, recorder) {
+  if (!signal) return () => {};
+  if (signal.aborted) {
+    recorder.finalize();
+    return () => {};
+  }
+  const onAbort = () => recorder.finalize();
+  signal.addEventListener("abort", onAbort, { once: true });
+  return () => signal.removeEventListener("abort", onAbort);
+}
+
 // `serviceAdapters` (structuredStoreAdapter/documentStoreAdapter/
 // evidenceStoreAdapter/retriever) is optional and passes straight through
 // to createSharedServices — omit it and every store fails closed, same as
-// calling createSharedServices with no adapters at all.
+// calling createSharedServices with no adapters at all. `context.signal`
+// (see SharedContext's typedef above), if provided, is the request-scoped
+// deadline/client-disconnect AbortSignal: both Flow execution (the
+// `flow.run()` race below) and every async SharedServices call (see
+// createSharedServices' wrapAsync/wrapMaybeAsync wiring) race against the
+// SAME signal, so aborting it closes the whole request from every angle at
+// once, not just the one this function happens to be waiting on.
 export async function runAgentFlow(flow, input, context, budgetLimits, serviceAdapters = {}) {
   const budget = createExecutionBudget(budgetLimits);
   const services = createSharedServices(budgetLimits, { ...serviceAdapters, context, budget });
   const recorder = getTraceRecorder(services);
+  const signal = context?.signal;
 
   let finalResponseCandidate = {};
   let claimedSelectedEvidence = [];
   let fallbackReason = null;
 
+  const detachAbortClose = closeRuntimeContextOnAbort(signal, recorder);
+
   try {
+    // Checked explicitly, BEFORE anything else — including PolicyGuard's
+    // own checkQuestion. Without this, an already-aborted signal would
+    // still reach PolicyGuard's wrapper, which (via closeRuntimeContextOnAbort
+    // having already finalized the recorder above) would itself reject as
+    // RUNTIME_CONTEXT_CLOSED — a confusing, indirect way to learn the real
+    // cause was an abort. This makes "the request was already aborted
+    // before it started" its own clean, direct ABORTED:<reason>
+    // classification instead of an accidental side effect of a DIFFERENT
+    // boundary's own closed-context check.
+    if (signal?.aborted) {
+      throw new RequestAbortedError(abortReason(signal));
+    }
+
     if (typeof input?.question !== "string") {
       const error = new RejectedInputError("AgentFlow", [fail("INVALID_SHAPE", "input.question must be a string")]);
       recordAgentFlowRejection(recorder, "validateInputShape", error);
@@ -1275,7 +1433,15 @@ export async function runAgentFlow(flow, input, context, budgetLimits, serviceAd
       fallbackReason = `REJECTED_INPUT:PolicyGuard:${questionCheck.code}`;
       finalResponseCandidate = { question: input.question, answer: policySafeAnswer(questionCheck.code) };
     } else {
-      const outcome = await flow.run(input, context, services);
+      // Raced against `signal`, not just plainly awaited: a Flow that
+      // hangs (whether inside an abandoned SharedServices call or in its
+      // own code that never touches SharedServices at all) can never keep
+      // this function waiting past abort. flow.run()'s own promise is
+      // still fully observed by raceAgainstAbort even when it loses this
+      // race, so an abandoned Flow that eventually settles late can never
+      // produce an unhandledRejection or mutate anything this function
+      // already returned.
+      const outcome = await raceAgainstAbort(flow.run(input, context, services), signal);
 
       // The instant the Flow's own async function resolves, check for any
       // SharedServices call it fired but never awaited. This is a
@@ -1326,6 +1492,8 @@ export async function runAgentFlow(flow, input, context, budgetLimits, serviceAd
   } catch (error) {
     fallbackReason = classifyFailure(error);
     finalResponseCandidate = { question: typeof input?.question === "string" ? input.question : "" };
+  } finally {
+    detachAbortClose();
   }
 
   const finalResponse = services.serializer.serialize(finalResponseCandidate);

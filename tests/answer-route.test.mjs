@@ -55,3 +55,19 @@ test("GET /answer never requires ChatGPT auth headers to succeed", async () => {
   const response = await GET(requestFor("?question=q"));
   assert.equal(response.status, 200);
 });
+
+test("GET /answer wires request.signal through — an already-aborted request (client disconnect) still returns fast with a valid EARLY_EXIT body", async () => {
+  const controller = new AbortController();
+  controller.abort();
+  const request = new Request("http://localhost/answer?question=q", { signal: controller.signal });
+  const started = Date.now();
+  const response = await GET(request);
+  assert.ok(Date.now() - started < 1000);
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(isValidFinalResponse(body), true);
+  assert.equal(body.think_trace.execution_mode, "EARLY_EXIT");
+  assert.equal(body.question, "q");
+  assert.equal(response.headers.get("Content-Type"), "application/json; charset=utf-8");
+  assert.equal(response.headers.get("Cache-Control"), "no-store");
+});

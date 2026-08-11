@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { RequestAbortedError } from "../domain/runtime/abortable.mjs";
 import { createFactProvenanceValidator, createFactStore, projectFactToCalculationInput } from "../domain/runtime/fact-store.mjs";
 
 const CONTEXT = { corpus_snapshot_id: "corpus_04750795e1a2d5c3", fact_coverage_snapshot_id: "fact_coverage_snapshot_0123456789abcdef01234567" };
@@ -175,4 +176,68 @@ test("one unresolvable fact among several fails the entire calculation input set
   const inputs = [calculationInput(), calculationInput({ fact_id: "fact_missing_00000000000000" })];
   const result = await newValidator({ records }).check(inputs);
   assert.deepEqual(result, { ok: false, code: "FACT_NOT_FOUND" });
+});
+
+// --- request-scoped AbortSignal boundary ------------------------------------
+
+test("createFactStore passes the exact same AbortSignal to the adapter as a separate second argument", async () => {
+  const controller = new AbortController();
+  let receivedSignal;
+  const adapter = {
+    getFact: async (factId, options) => {
+      receivedSignal = options?.signal;
+      return {
+        corpus_snapshot_id: CONTEXT.corpus_snapshot_id,
+        fact_coverage_snapshot_id: CONTEXT.fact_coverage_snapshot_id,
+        record: factRecord(),
+      };
+    },
+  };
+  await createFactStore(adapter, CONTEXT, controller.signal).resolve("fact_0123456789abcdef01234567");
+  assert.equal(receivedSignal, controller.signal);
+});
+
+test("createFactStore: an already-aborted signal rejects with RequestAbortedError and the adapter is never called", async () => {
+  const controller = new AbortController();
+  controller.abort();
+  let adapterCalls = 0;
+  const adapter = {
+    getFact: async () => {
+      adapterCalls += 1;
+      return {
+        corpus_snapshot_id: CONTEXT.corpus_snapshot_id,
+        fact_coverage_snapshot_id: CONTEXT.fact_coverage_snapshot_id,
+        record: factRecord(),
+      };
+    },
+  };
+  await assert.rejects(
+    () => createFactStore(adapter, CONTEXT, controller.signal).resolve("fact_0123456789abcdef01234567"),
+    (error) => error instanceof RequestAbortedError,
+  );
+  assert.equal(adapterCalls, 0);
+});
+
+test("createFactStore: an adapter that observes signal mid-flight and aborts is reported as RequestAbortedError, not a generic store failure", async () => {
+  const controller = new AbortController();
+  const adapter = {
+    getFact: () =>
+      new Promise((resolve, reject) => {
+        controller.signal.addEventListener("abort", () => reject(new RequestAbortedError("CLIENT_DISCONNECT")), { once: true });
+      }),
+  };
+  const pending = createFactStore(adapter, CONTEXT, controller.signal).resolve("fact_0123456789abcdef01234567");
+  controller.abort();
+  await assert.rejects(() => pending, (error) => error instanceof RequestAbortedError && error.reason === "CLIENT_DISCONNECT");
+});
+
+test("existing FactStore fail-closed codes are unaffected when no signal is supplied at all (no regression)", async () => {
+  const result = await createFactStore(null, CONTEXT).resolve("fact_0123456789abcdef01234567");
+  assert.deepEqual(result, { ok: false, code: "FACT_STORE_UNAVAILABLE" });
+});
+
+test("existing FactStore fail-closed codes are unaffected by a signal that is NOT aborted (no regression)", async () => {
+  const controller = new AbortController();
+  const result = await createFactStore(null, CONTEXT, controller.signal).resolve("fact_0123456789abcdef01234567");
+  assert.deepEqual(result, { ok: false, code: "FACT_STORE_UNAVAILABLE" });
 });

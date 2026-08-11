@@ -76,6 +76,7 @@
 
 import Ajv2020 from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
+import { abortReason, RequestAbortedError } from "./abortable.mjs";
 import { validateRetrievalRequestResultPair, validateRetrievalResult } from "../contracts.mjs";
 import requestSchema from "../retrieval/retrieval-request.schema.json" with { type: "json" };
 import resultSchema from "../retrieval/retrieval-result.schema.json" with { type: "json" };
@@ -138,7 +139,15 @@ export function createRetrieverStore(adapter = null, context = {}) {
 
   return {
     // Returns { ok: true, result } or { ok: false, code, message }.
-    async resolve(request) {
+    // `options.signal`, if provided, is the request-scoped AbortSignal
+    // (see domain/runtime/abortable.mjs and agent-runtime.mjs's
+    // createRetrieverService) — it is passed to the adapter as a SEPARATE
+    // second argument, never merged into `request`, so a real adapter can
+    // opt into honoring it (e.g. to cancel a real search backend call)
+    // without `request` ever growing a field retrieval-request.schema.json
+    // does not declare. No real adapter exists yet — this module only
+    // defines the boundary a future one can pass through.
+    async resolve(request, options = {}) {
       const requestErrors = validateRetrievalRequest(request);
       if (requestErrors.length > 0) {
         return rejected("RETRIEVER_INVALID_REQUEST", requestErrors.join("; "));
@@ -164,6 +173,22 @@ export function createRetrieverStore(adapter = null, context = {}) {
         return rejected("RETRIEVER_UNAVAILABLE", "no Retriever adapter is wired");
       }
 
+      // Checked immediately before the adapter call, independent of
+      // whoever constructed this store (agent-runtime.mjs's wrapMaybeAsync
+      // pre-check covers the normal runAgentFlow path, but this module can
+      // be used directly too — see structured-store.mjs/citation-
+      // validator.mjs/fact-store.mjs for the same pattern applied to their
+      // own adapters). A RequestAbortedError is thrown here rather than
+      // returned as this module's usual { ok: false, code, message } shape
+      // — a deliberate, narrow exception to that convention so the
+      // TIMEOUT/CLIENT_DISCONNECT distinction survives all the way up to
+      // ExecutionTrace.fallback_reason instead of collapsing into a generic
+      // RETRIEVER_* code (agent-runtime.mjs's createRetrieverService does
+      // not catch this — it propagates straight through).
+      if (options.signal?.aborted) {
+        throw new RequestAbortedError(abortReason(options.signal));
+      }
+
       let raw;
       try {
         // The adapter gets its own independent, mutable clone — never
@@ -171,8 +196,13 @@ export function createRetrieverStore(adapter = null, context = {}) {
         // `request` object. Whatever the adapter does to what it's
         // handed has zero effect on what this module validates next, and
         // zero effect on the caller's own object.
-        raw = await adapter.retrieve(deepClone(requestSnapshot));
-      } catch {
+        raw = await adapter.retrieve(deepClone(requestSnapshot), { signal: options.signal });
+      } catch (error) {
+        // A real adapter that itself observes `signal` mid-flight and
+        // aborts is reporting the SAME condition as the pre-check above,
+        // just discovered later — preserve it rather than collapsing it
+        // into a generic adapter-failure code.
+        if (error instanceof RequestAbortedError) throw error;
         return rejected("RETRIEVER_ADAPTER_ERROR", "the Retriever adapter threw while executing the search");
       }
 

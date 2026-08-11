@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createAnswerHandler } from "../domain/runtime/answer-handler.mjs";
+import { createAnswerHandler, DEFAULT_TIMEOUT_MS } from "../domain/runtime/answer-handler.mjs";
 import { isValidFinalResponse } from "../domain/runtime/final-response-validator.mjs";
 
 function params(pairs) {
@@ -353,4 +353,316 @@ test("every /answer body produced above validates against final-response.schema.
   for (const { body } of cases) {
     assert.equal(isValidFinalResponse(body), true);
   }
+});
+
+// --- per-request Timeout/AbortSignal ------------------------------------------
+
+test("createAnswerHandler defaults timeoutMs to 60000", () => {
+  assert.equal(DEFAULT_TIMEOUT_MS, 60_000);
+});
+
+test("createAnswerHandler rejects a non-positive timeoutMs", () => {
+  assert.throws(() => createAnswerHandler({ runner: echoRunner(), timeoutMs: 0 }), TypeError);
+  assert.throws(() => createAnswerHandler({ runner: echoRunner(), timeoutMs: -5 }), TypeError);
+});
+
+test("createAnswerHandler rejects a non-finite or non-number timeoutMs", () => {
+  assert.throws(() => createAnswerHandler({ runner: echoRunner(), timeoutMs: Infinity }), TypeError);
+  assert.throws(() => createAnswerHandler({ runner: echoRunner(), timeoutMs: NaN }), TypeError);
+  assert.throws(() => createAnswerHandler({ runner: echoRunner(), timeoutMs: "60000" }), TypeError);
+});
+
+test("a normal runner that finishes well before the deadline succeeds normally", async () => {
+  const handle = createAnswerHandler({
+    runner: async (question) => ({
+      final_response: {
+        question,
+        retrieved_context: [],
+        think_trace: { execution_mode: "STRUCTURED", operations: [], calculation: {}, validation: {} },
+        answer: "on time",
+      },
+    }),
+    timeoutMs: 200,
+  });
+  const { status, body } = await handle(questionOnly("q"));
+  assert.equal(status, 200);
+  assert.equal(body.answer, "on time");
+  assert.equal(isValidFinalResponse(body), true);
+});
+
+test("a runner that never resolves is cut off at the deadline and returns a safe EARLY_EXIT response", async () => {
+  const handle = createAnswerHandler({
+    runner: () => new Promise(() => {}),
+    timeoutMs: 30,
+  });
+  const started = Date.now();
+  const { status, body } = await handle(questionOnly("q"));
+  const elapsed = Date.now() - started;
+  assert.equal(status, 200);
+  assert.ok(elapsed < 1000, `expected a fast timeout response, took ${elapsed}ms`);
+  assert.equal(isValidFinalResponse(body), true);
+  assert.equal(body.think_trace.execution_mode, "EARLY_EXIT");
+  assert.equal(body.question, "q");
+  assert.deepEqual(body.retrieved_context, []);
+  assert.deepEqual(body.think_trace.operations, []);
+  assert.deepEqual(body.think_trace.calculation, {});
+  assert.deepEqual(body.think_trace.validation, {});
+});
+
+test("the signal passed to the runner becomes aborted at the deadline", async () => {
+  let observedSignal;
+  let observedAbortedInsideRunner = null;
+  const handle = createAnswerHandler({
+    runner: (question, options) => {
+      observedSignal = options.signal;
+      return new Promise((resolve) => {
+        options.signal.addEventListener("abort", () => {
+          observedAbortedInsideRunner = options.signal.aborted;
+          resolve({
+            final_response: {
+              question,
+              retrieved_context: [],
+              think_trace: { execution_mode: "EARLY_EXIT", operations: [], calculation: {}, validation: {} },
+              answer: "late",
+            },
+          });
+        });
+      });
+    },
+    timeoutMs: 30,
+  });
+  await handle(questionOnly("q"));
+  assert.equal(observedSignal.aborted, true);
+  assert.equal(observedAbortedInsideRunner, true);
+});
+
+test("the runner also receives deadline_at and timeout_ms options matching the configured timeoutMs", async () => {
+  let received;
+  const handle = createAnswerHandler({
+    runner: async (question, options) => {
+      received = options;
+      return {
+        final_response: {
+          question,
+          retrieved_context: [],
+          think_trace: { execution_mode: "EARLY_EXIT", operations: [], calculation: {}, validation: {} },
+          answer: "a",
+        },
+      };
+    },
+    timeoutMs: 12345,
+  });
+  await handle(questionOnly("q"));
+  assert.equal(received.timeout_ms, 12345);
+  assert.equal(typeof received.deadline_at, "string");
+  assert.ok(!Number.isNaN(Date.parse(received.deadline_at)));
+});
+
+test("a client-supplied abort signal propagates to the runner's signal and short-circuits the request", async () => {
+  const clientController = new AbortController();
+  let observedSignal;
+  const handle = createAnswerHandler({
+    runner: (question, options) => {
+      observedSignal = options.signal;
+      return new Promise(() => {});
+    },
+    timeoutMs: 60_000, // long enough that only the client abort could end this quickly
+  });
+  const resultPromise = handle(questionOnly("q"), { signal: clientController.signal });
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  clientController.abort();
+  const { status, body } = await resultPromise;
+  assert.equal(status, 200);
+  assert.equal(observedSignal.aborted, true);
+  assert.equal(isValidFinalResponse(body), true);
+  assert.equal(body.think_trace.execution_mode, "EARLY_EXIT");
+});
+
+test("an already-aborted client signal means the runner is NEVER called — not even once", async () => {
+  const clientController = new AbortController();
+  clientController.abort();
+  let runnerCallCount = 0;
+  const handle = createAnswerHandler({
+    runner: async () => {
+      runnerCallCount += 1;
+      return new Promise(() => {});
+    },
+    timeoutMs: 60_000,
+  });
+  const started = Date.now();
+  const { status, body } = await handle(questionOnly("원래 질문"), { signal: clientController.signal });
+  assert.ok(Date.now() - started < 1000);
+  assert.equal(runnerCallCount, 0, "the runner must never be invoked when the request is already aborted at entry");
+  assert.equal(status, 200);
+  assert.equal(body.question, "원래 질문");
+  assert.equal(isValidFinalResponse(body), true);
+  assert.equal(body.think_trace.execution_mode, "EARLY_EXIT");
+  assert.ok(!JSON.stringify(body).includes("CLIENT_DISCONNECT"));
+});
+
+test("an already-aborted client signal still clears the deadline timer and detaches the client-abort listener (cleanup runs even on the early-return path)", async () => {
+  const originalSetTimeout = globalThis.setTimeout;
+  const originalClearTimeout = globalThis.clearTimeout;
+  const createdTimers = new Set();
+  const clearedTimers = new Set();
+  globalThis.setTimeout = (...args) => {
+    const id = originalSetTimeout(...args);
+    createdTimers.add(id);
+    return id;
+  };
+  globalThis.clearTimeout = (id) => {
+    clearedTimers.add(id);
+    return originalClearTimeout(id);
+  };
+  const clientController = new AbortController();
+  clientController.abort();
+  try {
+    const handle = createAnswerHandler({ runner: echoRunner(), timeoutMs: 60_000 });
+    await handle(questionOnly("q"), { signal: clientController.signal });
+  } finally {
+    globalThis.setTimeout = originalSetTimeout;
+    globalThis.clearTimeout = originalClearTimeout;
+  }
+  assert.ok(createdTimers.size > 0);
+  for (const id of createdTimers) assert.ok(clearedTimers.has(id));
+});
+
+test("a timeout response never leaks the runner's internal error text, or the TIMEOUT/CLIENT_DISCONNECT distinction", async () => {
+  const handle = createAnswerHandler({
+    runner: (question, options) =>
+      new Promise((resolve, reject) => {
+        options.signal.addEventListener("abort", () => {
+          reject(new Error("SECRET_INTERNAL_DETAIL at /app/secret.mjs:1:1"));
+        });
+      }),
+    timeoutMs: 30,
+  });
+  const { status, body } = await handle(questionOnly("q"));
+  assert.equal(status, 200);
+  const serialized = JSON.stringify(body);
+  assert.ok(!serialized.includes("SECRET_INTERNAL_DETAIL"));
+  assert.ok(!serialized.includes("secret.mjs"));
+  assert.ok(!serialized.includes("TIMEOUT"));
+  assert.ok(!serialized.includes("CLIENT_DISCONNECT"));
+});
+
+test("a late resolve from a timed-out runner does not change the already-returned response", async () => {
+  let releaseLate;
+  const handle = createAnswerHandler({
+    runner: (question) =>
+      new Promise((resolve) => {
+        releaseLate = () =>
+          resolve({
+            final_response: {
+              question,
+              retrieved_context: [],
+              think_trace: { execution_mode: "STRUCTURED", operations: [], calculation: {}, validation: {} },
+              answer: "should never be seen",
+            },
+          });
+      }),
+    timeoutMs: 30,
+  });
+  const { status, body } = await handle(questionOnly("q"));
+  assert.equal(status, 200);
+  assert.equal(body.think_trace.execution_mode, "EARLY_EXIT");
+  const before = JSON.parse(JSON.stringify(body));
+  releaseLate();
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.deepEqual(body, before, "the already-returned body must not change after the runner resolves late");
+});
+
+test("a late reject from a timed-out runner does not produce a process unhandledRejection", async () => {
+  const unhandled = [];
+  const onUnhandledRejection = (reason) => unhandled.push(reason);
+  process.on("unhandledRejection", onUnhandledRejection);
+  try {
+    let rejectLate;
+    const handle = createAnswerHandler({
+      runner: () =>
+        new Promise((_, reject) => {
+          rejectLate = () => reject(new Error("late failure"));
+        }),
+      timeoutMs: 30,
+    });
+    const { status } = await handle(questionOnly("q"));
+    assert.equal(status, 200);
+    rejectLate();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  } finally {
+    process.removeListener("unhandledRejection", onUnhandledRejection);
+  }
+  assert.deepEqual(unhandled, []);
+});
+
+test("the deadline timer is cleared after a normal completion, not left running", async () => {
+  const originalSetTimeout = globalThis.setTimeout;
+  const originalClearTimeout = globalThis.clearTimeout;
+  const createdTimers = new Set();
+  const clearedTimers = new Set();
+  globalThis.setTimeout = (...args) => {
+    const id = originalSetTimeout(...args);
+    createdTimers.add(id);
+    return id;
+  };
+  globalThis.clearTimeout = (id) => {
+    clearedTimers.add(id);
+    return originalClearTimeout(id);
+  };
+  try {
+    const handle = createAnswerHandler({
+      runner: async (question) => ({
+        final_response: {
+          question,
+          retrieved_context: [],
+          think_trace: { execution_mode: "STRUCTURED", operations: [], calculation: {}, validation: {} },
+          answer: "a",
+        },
+      }),
+      timeoutMs: 100,
+    });
+    await handle(questionOnly("q"));
+  } finally {
+    globalThis.setTimeout = originalSetTimeout;
+    globalThis.clearTimeout = originalClearTimeout;
+  }
+  assert.ok(createdTimers.size > 0, "expected the handler to create at least one timer");
+  for (const id of createdTimers) {
+    assert.ok(clearedTimers.has(id), "every timer created by the handler must be cleared after normal completion");
+  }
+});
+
+test("no timer or AbortController is shared across concurrent requests — one request's timeout does not affect another's", async () => {
+  const handle = createAnswerHandler({
+    runner: async (question, options) => {
+      if (question === "slow") {
+        await new Promise((resolve) => options.signal.addEventListener("abort", resolve, { once: true }));
+        return {
+          final_response: {
+            question,
+            retrieved_context: [],
+            think_trace: { execution_mode: "EARLY_EXIT", operations: [], calculation: {}, validation: {} },
+            answer: "slow-timed-out",
+          },
+        };
+      }
+      return {
+        final_response: {
+          question,
+          retrieved_context: [],
+          think_trace: { execution_mode: "STRUCTURED", operations: [], calculation: {}, validation: {} },
+          answer: "fast-ok",
+        },
+      };
+    },
+    timeoutMs: 30,
+  });
+  const [slow, fast] = await Promise.all([handle(questionOnly("slow")), handle(questionOnly("fast"))]);
+  assert.equal(slow.status, 200);
+  assert.equal(isValidFinalResponse(slow.body), true);
+  assert.equal(slow.body.question, "slow");
+  assert.equal(fast.status, 200);
+  assert.equal(fast.body.answer, "fast-ok");
+  assert.equal(fast.body.think_trace.execution_mode, "STRUCTURED");
+  assert.equal(isValidFinalResponse(fast.body), true);
 });

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import test from "node:test";
+import { RequestAbortedError } from "../domain/runtime/abortable.mjs";
 import { createCitationValidator, createDocumentStore, createEvidenceStore } from "../domain/runtime/citation-validator.mjs";
 
 function sha256Hex(text) {
@@ -242,4 +243,120 @@ test("a quote spanning across two different table ROWS is rejected", async () =>
   const bundle = evidenceBundle({ source_locator: "section.2.table.1", quoted_text: "1,000,000,000\" \"보증금" });
   const result = await newValidator({ evidenceRecords }).check(bundle);
   assert.deepEqual(result, { ok: false, code: "QUOTE_MISMATCH" });
+});
+
+// --- request-scoped AbortSignal boundary ------------------------------------
+
+test("createDocumentStore passes the exact same AbortSignal to the adapter as a separate second argument", async () => {
+  const controller = new AbortController();
+  let receivedSignal;
+  const adapter = {
+    getDocument: async (documentId, options) => {
+      receivedSignal = options?.signal;
+      return documentIR();
+    },
+  };
+  await createDocumentStore(adapter, CONTEXT, controller.signal).resolve(DOCUMENT_ID);
+  assert.equal(receivedSignal, controller.signal);
+});
+
+test("createEvidenceStore passes the exact same AbortSignal to the adapter as a separate second argument", async () => {
+  const controller = new AbortController();
+  let receivedSignal;
+  const adapter = {
+    getEvidence: async (evidenceId, options) => {
+      receivedSignal = options?.signal;
+      return { corpus_snapshot_id: CONTEXT.corpus_snapshot_id, record: evidenceRecord() };
+    },
+  };
+  await createEvidenceStore(adapter, CONTEXT, controller.signal).resolve("evidence_0123456789abcdef01234567");
+  assert.equal(receivedSignal, controller.signal);
+});
+
+test("createDocumentStore: an already-aborted signal rejects with RequestAbortedError and the adapter is never called", async () => {
+  const controller = new AbortController();
+  controller.abort();
+  let adapterCalls = 0;
+  const adapter = { getDocument: async () => { adapterCalls += 1; return documentIR(); } };
+  await assert.rejects(
+    () => createDocumentStore(adapter, CONTEXT, controller.signal).resolve(DOCUMENT_ID),
+    (error) => error instanceof RequestAbortedError,
+  );
+  assert.equal(adapterCalls, 0);
+});
+
+test("createEvidenceStore: an already-aborted signal rejects with RequestAbortedError and the adapter is never called", async () => {
+  const controller = new AbortController();
+  controller.abort();
+  let adapterCalls = 0;
+  const adapter = {
+    getEvidence: async () => {
+      adapterCalls += 1;
+      return { corpus_snapshot_id: CONTEXT.corpus_snapshot_id, record: evidenceRecord() };
+    },
+  };
+  await assert.rejects(
+    () => createEvidenceStore(adapter, CONTEXT, controller.signal).resolve("evidence_0123456789abcdef01234567"),
+    (error) => error instanceof RequestAbortedError,
+  );
+  assert.equal(adapterCalls, 0);
+});
+
+test("createDocumentStore: an adapter that observes signal mid-flight and aborts is reported as RequestAbortedError, not a generic store failure", async () => {
+  const controller = new AbortController();
+  const adapter = {
+    getDocument: () =>
+      new Promise((resolve, reject) => {
+        controller.signal.addEventListener("abort", () => reject(new RequestAbortedError("TIMEOUT")), { once: true });
+      }),
+  };
+  const pending = createDocumentStore(adapter, CONTEXT, controller.signal).resolve(DOCUMENT_ID);
+  controller.abort();
+  await assert.rejects(() => pending, (error) => error instanceof RequestAbortedError && error.reason === "TIMEOUT");
+});
+
+test("existing DocumentStore/EvidenceStore fail-closed codes are unaffected when no signal is supplied at all (no regression)", async () => {
+  const noSignalValidator = createCitationValidator(
+    createDocumentStore(null, CONTEXT),
+    createEvidenceStore(null, CONTEXT),
+  );
+  const result = await noSignalValidator.check(evidenceBundle());
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "EVIDENCE_STORE_UNAVAILABLE");
+});
+
+test("existing DocumentStore/EvidenceStore fail-closed codes are unaffected by a signal that is NOT aborted (no regression)", async () => {
+  const controller = new AbortController();
+  const validator = createCitationValidator(
+    createDocumentStore(null, CONTEXT, controller.signal),
+    createEvidenceStore(null, CONTEXT, controller.signal),
+  );
+  const result = await validator.check(evidenceBundle());
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "EVIDENCE_STORE_UNAVAILABLE");
+});
+
+test("if the signal aborts right after EvidenceStore resolves but before DocumentStore is reached, DocumentStore's adapter is never called", async () => {
+  const controller = new AbortController();
+  let documentAdapterCalls = 0;
+  const evidenceAdapter = {
+    getEvidence: async () => {
+      // Simulate the signal aborting exactly in the window between the two
+      // sequential store calls inside createCitationValidator.check().
+      controller.abort();
+      return { corpus_snapshot_id: CONTEXT.corpus_snapshot_id, record: evidenceRecord() };
+    },
+  };
+  const documentAdapter = {
+    getDocument: async () => {
+      documentAdapterCalls += 1;
+      return documentIR();
+    },
+  };
+  const validator = createCitationValidator(
+    createDocumentStore(documentAdapter, CONTEXT, controller.signal),
+    createEvidenceStore(evidenceAdapter, CONTEXT, controller.signal),
+  );
+  await assert.rejects(() => validator.check(evidenceBundle()), (error) => error instanceof RequestAbortedError);
+  assert.equal(documentAdapterCalls, 0, "DocumentStore's adapter must never be reached once the signal aborted between the two checks");
 });

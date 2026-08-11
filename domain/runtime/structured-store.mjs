@@ -23,6 +23,7 @@
 import { randomUUID } from "node:crypto";
 import Ajv2020 from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
+import { RequestAbortedError } from "./abortable.mjs";
 import querySchema from "../interfaces/structured-query.schema.json" with { type: "json" };
 import resultSchema from "../interfaces/structured-result.schema.json" with { type: "json" };
 
@@ -96,7 +97,15 @@ function errorResult(query, errorCode, startedAt) {
 // choosing its own corpus_snapshot_id and an adapter obligingly echoing it
 // back would otherwise agree with each other while both disagreeing with
 // the request's real snapshot.
-export function createStructuredStore(adapter = null, context = {}) {
+// `signal`, if provided, is the request-scoped AbortSignal (see
+// domain/runtime/abortable.mjs and agent-runtime.mjs's createSharedServices)
+// — bound here via closure (not part of `structuredQuery`, which stays
+// exactly what structured-query.schema.json validates) and passed to the
+// adapter as a SEPARATE second argument, so a real adapter can opt into
+// honoring it without that ever becoming part of the schema-validated
+// query shape. No real adapter exists yet — this module only defines the
+// boundary a future one can pass through.
+export function createStructuredStore(adapter = null, context = {}, signal) {
   return {
     async query(structuredQuery) {
       const startedAt = Date.now();
@@ -116,10 +125,25 @@ export function createStructuredStore(adapter = null, context = {}) {
       }
       if (!adapter) return errorResult(structuredQuery, "STORE_UNAVAILABLE", startedAt);
 
+      // Checked immediately before the adapter call — this module can be
+      // used directly, not only through agent-runtime.mjs's wrapAsync
+      // pre-check, so it needs its own guard (same pattern as retriever-
+      // store.mjs/citation-validator.mjs/fact-store.mjs). Unlike those
+      // modules, this one's whole design is "never throws, always returns
+      // a schema-valid StructuredResult" (see the header comment), so this
+      // stays inside that convention rather than throwing —
+      // structured-result.schema.json's error_codes already declares
+      // "TIMEOUT" for exactly this kind of "did not complete" outcome, so
+      // no schema/contract change is needed to report it this way.
+      if (signal?.aborted) return errorResult(structuredQuery, "TIMEOUT", startedAt);
+
       let raw;
       try {
-        raw = await adapter.query(structuredQuery);
-      } catch {
+        raw = await adapter.query(structuredQuery, { signal });
+      } catch (error) {
+        // A real adapter that itself observes `signal` mid-flight and
+        // aborts is reporting the same condition as the pre-check above.
+        if (error instanceof RequestAbortedError) return errorResult(structuredQuery, "TIMEOUT", startedAt);
         return errorResult(structuredQuery, "INTERNAL_ERROR", startedAt);
       }
 

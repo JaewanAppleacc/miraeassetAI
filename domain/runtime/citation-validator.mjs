@@ -27,6 +27,7 @@
 // confirmed (see agent-runtime.mjs's Validator.validateEvidence).
 
 import { createHash } from "node:crypto";
+import { abortReason, RequestAbortedError } from "./abortable.mjs";
 
 export const CITATION_CODES = Object.freeze([
   "DOCUMENT_STORE_UNAVAILABLE",
@@ -49,17 +50,32 @@ function sha256Hex(text) {
 }
 
 // `context` pins the corpus_snapshot_id this request is actually running
-// against — the same pinning pattern createStructuredStore uses.
-export function createDocumentStore(adapter = null, context = {}) {
+// against — the same pinning pattern createStructuredStore uses. `signal`
+// (the request-scoped AbortSignal, if any — see abortable.mjs) is bound
+// via closure and passed to the adapter as a SEPARATE second argument,
+// never merged into `documentId`. Checked immediately before the adapter
+// call — this store can be used directly (e.g. from createCitationValidator
+// standalone), not only through agent-runtime.mjs's wrapAsync pre-check, so
+// it needs its own guard. A RequestAbortedError is thrown here — a
+// deliberate, narrow exception to this module's usual { ok: false, code }
+// return convention, so the TIMEOUT/CLIENT_DISCONNECT distinction survives
+// up to ExecutionTrace.fallback_reason instead of collapsing into a generic
+// DOCUMENT_STORE_UNAVAILABLE.
+export function createDocumentStore(adapter = null, context = {}, signal) {
   return {
     // Returns { ok: true, documentIR } or { ok: false, code }.
     async resolve(documentId) {
       if (!adapter) return { ok: false, code: "DOCUMENT_STORE_UNAVAILABLE" };
+      if (signal?.aborted) throw new RequestAbortedError(abortReason(signal));
 
       let documentIR;
       try {
-        documentIR = await adapter.getDocument(documentId);
-      } catch {
+        documentIR = await adapter.getDocument(documentId, { signal });
+      } catch (error) {
+        // A real adapter that itself observes `signal` mid-flight and
+        // aborts is reporting the same condition as the pre-check above —
+        // preserve it rather than collapsing it into a generic failure.
+        if (error instanceof RequestAbortedError) throw error;
         return { ok: false, code: "DOCUMENT_STORE_UNAVAILABLE" };
       }
 
@@ -84,16 +100,20 @@ export function createDocumentStore(adapter = null, context = {}) {
 // the current one — the semantic-bundle Evidence record itself is never
 // changed to carry this; the adapter's response is wrapped in an envelope
 // ({ corpus_snapshot_id, record }) that this store checks and then discards.
-export function createEvidenceStore(adapter = null, context = {}) {
+// `signal`: see createDocumentStore's own comment above — same pattern,
+// same reasoning, applied here.
+export function createEvidenceStore(adapter = null, context = {}, signal) {
   return {
     // Returns { ok: true, record } or { ok: false, code }.
     async resolve(evidenceId) {
       if (!adapter) return { ok: false, code: "EVIDENCE_STORE_UNAVAILABLE" };
+      if (signal?.aborted) throw new RequestAbortedError(abortReason(signal));
 
       let envelope;
       try {
-        envelope = await adapter.getEvidence(evidenceId);
-      } catch {
+        envelope = await adapter.getEvidence(evidenceId, { signal });
+      } catch (error) {
+        if (error instanceof RequestAbortedError) throw error;
         return { ok: false, code: "EVIDENCE_STORE_UNAVAILABLE" };
       }
 

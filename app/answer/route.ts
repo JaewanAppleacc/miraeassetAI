@@ -15,6 +15,9 @@ const JSON_HEADERS = {
 
 export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url);
-  const { status, body } = await handleAnswerRequest(url.searchParams);
+  // request.signal fires when the client disconnects — createAnswerHandler
+  // combines it with its own internal deadline timer into one per-request
+  // AbortController, so either cause closes the same request scope.
+  const { status, body } = await handleAnswerRequest(url.searchParams, { signal: request.signal });
   return new Response(JSON.stringify(body), { status, headers: JSON_HEADERS });
 }

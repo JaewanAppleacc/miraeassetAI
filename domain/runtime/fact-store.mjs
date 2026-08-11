@@ -24,6 +24,8 @@
 // wiring to an actual VERIFIED Fact store/DB in this repo (BLOCKED_BY_
 // HUMAN_REVIEW per domain/HANDOFF.md).
 
+import { abortReason, RequestAbortedError } from "./abortable.mjs";
+
 export const FACT_STORE_CODES = Object.freeze([
   "FACT_STORE_UNAVAILABLE",
   "FACT_NOT_FOUND",
@@ -59,17 +61,28 @@ export function projectFactToCalculationInput(record) {
 // `context` pins the corpus_snapshot_id AND fact_coverage_snapshot_id this
 // request is actually running against — the same pinning pattern
 // createDocumentStore/createEvidenceStore use, extended with the second
-// snapshot dimension that specifically governs Fact usability.
-export function createFactStore(adapter = null, context = {}) {
+// snapshot dimension that specifically governs Fact usability. `signal`
+// (the request-scoped AbortSignal, if any — see abortable.mjs) is bound
+// via closure and passed to the adapter as a SEPARATE second argument,
+// never merged into `factId`. Checked immediately before the adapter call
+// — this store can be used directly, not only through agent-runtime.mjs's
+// wrapAsync pre-check, so it needs its own guard. A RequestAbortedError is
+// thrown here — a deliberate, narrow exception to this module's usual
+// { ok: false, code } return convention, so the TIMEOUT/CLIENT_DISCONNECT
+// distinction survives up to ExecutionTrace.fallback_reason instead of
+// collapsing into a generic FACT_STORE_UNAVAILABLE.
+export function createFactStore(adapter = null, context = {}, signal) {
   return {
     // Returns { ok: true, record } or { ok: false, code }.
     async resolve(factId) {
       if (!adapter) return { ok: false, code: "FACT_STORE_UNAVAILABLE" };
+      if (signal?.aborted) throw new RequestAbortedError(abortReason(signal));
 
       let envelope;
       try {
-        envelope = await adapter.getFact(factId);
-      } catch {
+        envelope = await adapter.getFact(factId, { signal });
+      } catch (error) {
+        if (error instanceof RequestAbortedError) throw error;
         return { ok: false, code: "FACT_STORE_UNAVAILABLE" };
       }
 
