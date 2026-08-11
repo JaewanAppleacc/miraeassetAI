@@ -1,0 +1,56 @@
+// The GET /answer API boundary needs *some* runner wired at all times, but
+// Flow A does not exist yet (CLAUDE.md section 19 lists it as an
+// outstanding milestone). This is the fail-closed placeholder runner: it
+// never fabricates evidence, a calculation, or an answer — it always
+// returns a schema-valid EARLY_EXIT FinalResponse stating plainly that no
+// analysis Flow is connected yet.
+//
+// It still goes through the full runAgentFlow pipeline (PolicyGuard,
+// ExecutionTrace instrumentation, Serializer), so GET /answer already
+// inherits real input screening (e.g. prompt-injection rejection) and a
+// real, schema-valid response shape before any real Flow exists — this is
+// not a shortcut that bypasses the Runtime Host.
+//
+// Budget limits are all zero: this Flow calls no SharedServices at all, and
+// if a future edit to this file ever tried to, the execution budget would
+// reject that call immediately (BUDGET_EXCEEDED, caught by runAgentFlow's
+// own try/catch and turned into another safe EARLY_EXIT) rather than
+// silently letting an unverified call through.
+
+import { runAgentFlow } from "./agent-runtime.mjs";
+
+const NO_FLOW_CONNECTED_ANSWER = "아직 연결된 분석 Flow가 없어 이 질문에 답변할 수 없습니다.";
+
+const NO_FLOW_CONNECTED_FLOW = Object.freeze({
+  id: "no-flow-connected",
+  async run(input) {
+    return {
+      final_response: {
+        question: input.question,
+        retrieved_context: [],
+        think_trace: {
+          execution_mode: "EARLY_EXIT",
+          operations: [],
+          calculation: {},
+          validation: {},
+        },
+        answer: NO_FLOW_CONNECTED_ANSWER,
+      },
+    };
+  },
+});
+
+const NO_FLOW_CONNECTED_BUDGET_LIMITS = Object.freeze({
+  maxHcxCalls: 0,
+  maxRetrievals: 0,
+  maxToolCalls: 0,
+  timeoutMs: 5000,
+});
+
+// Returns a runner matching createAnswerHandler's expected shape:
+// (question: string) => Promise<{final_response, execution_trace}>.
+export function createNoFlowConnectedRunner({ context = {} } = {}) {
+  return async function runNoFlowConnected(question) {
+    return runAgentFlow(NO_FLOW_CONNECTED_FLOW, { question }, context, NO_FLOW_CONNECTED_BUDGET_LIMITS);
+  };
+}
