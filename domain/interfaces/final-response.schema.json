@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://disclosure-analyst.local/schema/final-response.v0.1.json",
+  "title": "FinalResponse v0.1",
+  "description": "The Agent <-> external Evaluation Harness common wire contract (CLAUDE.md section 2). This is the exact object domain/runtime/agent-runtime.mjs's createSerializer() returns as `final_response` from runAgentFlow — never `execution_trace`, which is a separate sibling field, not part of this shape. A Harness must validate its input against this schema instead of hand-rolling its own field checks.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["question", "retrieved_context", "think_trace", "answer"],
+  "properties": {
+    "question": { "type": "string" },
+    "retrieved_context": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/jsonValue" }
+    },
+    "think_trace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["execution_mode", "operations", "calculation", "validation"],
+      "properties": {
+        "execution_mode": {
+          "description": "Must stay identical to domain/contracts.mjs's EXECUTION_ROUTES; enforced by tests/final-response-validator.test.mjs so the two can never silently drift apart.",
+          "enum": ["STRUCTURED", "RETRIEVAL", "BOTH", "EARLY_EXIT"]
+        },
+        "operations": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/jsonValue" }
+        },
+        "calculation": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/jsonValue" }
+        },
+        "validation": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/jsonValue" }
+        }
+      }
+    },
+    "answer": { "type": "string" }
+  },
+  "$defs": {
+    "jsonValue": {
+      "description": "Recursively restricts a value to exactly what the JSON wire can represent: null, boolean, finite number, string, an array of jsonValue, or an object whose every property value is itself a jsonValue. Excludes BigInt, function, Symbol, undefined, and non-finite numbers (NaN/Infinity/-Infinity) at every nesting depth, not just the immediate value — a schema-shaped container is not accepted just because its outer type matches.",
+      "anyOf": [
+        { "type": "null" },
+        { "type": "boolean" },
+        { "type": "number" },
+        { "type": "string" },
+        { "type": "array", "items": { "$ref": "#/$defs/jsonValue" } },
+        { "type": "object", "additionalProperties": { "$ref": "#/$defs/jsonValue" } }
+      ]
+    }
+  }
+}

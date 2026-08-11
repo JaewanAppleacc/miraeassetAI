@@ -28,6 +28,20 @@
 `fact_coverage_snapshot_id`를 동일하게 고정해야 합니다. 중간에 Fact coverage가
 갱신되면 기존 라운드에 섞지 않고 새 round를 만듭니다.
 
+## Agent → Evaluation Harness: FinalResponse
+
+`final-response.schema.json`은 `domain/runtime/agent-runtime.mjs`의
+`createSerializer()`가 반환하는 `final_response`(question/retrieved_context/
+think_trace/answer) 형식을 Agent와 외부 Evaluation Harness가 함께 쓰는 단일
+기계 계약으로 고정합니다. `execution_trace`는 이 스키마에 포함되지 않습니다 —
+`runAgentFlow`의 반환값에서 `final_response`와 나란히 있는 별도 필드입니다.
+Harness는 자체적인 수동 응답 검증 규칙을 새로 만들지 않고
+`domain/runtime/final-response-validator.mjs`의 `validateFinalResponse()`(또는
+이 스키마 파일 자체)를 그대로 사용해야 합니다. `createSerializer()`의 정상
+출력과 `SAFE_RESPONSE_FALLBACK`은 모두 이 스키마를 만족하도록 Runtime에 직접
+연결돼 있습니다(`tests/final-response-validator.test.mjs`,
+`tests/agent-runtime.test.mjs` 참고).
+
 ## Compatibility
 
 - minor field 추가는 `schema_version`의 minor 증가와 함께 허용합니다.

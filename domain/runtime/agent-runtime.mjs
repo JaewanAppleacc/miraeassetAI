@@ -152,6 +152,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { EXECUTION_ROUTES, VALUE_STATUSES } from "../contracts.mjs";
 import { CITATION_CODES, createCitationValidator, createDocumentStore, createEvidenceStore } from "./citation-validator.mjs";
 import { createFactProvenanceValidator, createFactStore, FACT_STORE_CODES } from "./fact-store.mjs";
+import { isValidFinalResponse } from "./final-response-validator.mjs";
 import { createPolicyGuard, POLICY_GUARD_CODES, POLICY_GUARD_SAFE_ANSWERS } from "./policy-guard.mjs";
 import { createRetrieverStore, RETRIEVER_CODES } from "./retriever-store.mjs";
 import { createBudgetedStructuredStore, createStructuredStore } from "./structured-store.mjs";
@@ -636,6 +637,16 @@ const SAFE_RESPONSE_FALLBACK = Object.freeze({
   answer: "요청을 안전하게 처리하지 못했습니다.",
 });
 
+// domain/interfaces/final-response.schema.json is the single source of
+// truth for this shape (CLAUDE.md section 2) — this is a load-time
+// assertion, not a runtime branch: if SAFE_RESPONSE_FALLBACK is ever edited
+// to no longer satisfy the schema, importing this module fails loudly
+// immediately, instead of that drift only surfacing the next time a request
+// happens to hit the fallback path.
+if (!isValidFinalResponse(SAFE_RESPONSE_FALLBACK)) {
+  throw new Error("agent-runtime.mjs: SAFE_RESPONSE_FALLBACK does not satisfy domain/interfaces/final-response.schema.json");
+}
+
 function toJsonSafe(value, seen, depth) {
   if (depth > MAX_SERIALIZE_DEPTH) return "[Truncated]";
   if (typeof value === "bigint") return value.toString();
@@ -695,6 +706,14 @@ export function createSerializer() {
         };
 
         JSON.stringify(response);
+        // The coercion above (safeString/safeArray/safePlainObject/the
+        // executionMode allow-list) exists because a JSON Schema cannot by
+        // itself repair malformed input — only reject it. This is the
+        // opposite half of the same contract: a coerced-but-still-invalid
+        // shape is never returned as if it were a valid FinalResponse. Both
+        // halves point at the one schema file, so they cannot drift apart
+        // the way two independently hand-maintained field lists could.
+        if (!isValidFinalResponse(response)) return structuredClone(SAFE_RESPONSE_FALLBACK);
         return response;
       } catch {
         return structuredClone(SAFE_RESPONSE_FALLBACK);
