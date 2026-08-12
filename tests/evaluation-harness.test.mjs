@@ -14,12 +14,19 @@ import { scoreOpen } from "../domain/evaluation-harness/metrics/open-metric.mjs"
 import { runHarness, validateConfig } from "../domain/evaluation-harness/harness-runner.mjs";
 import { appendEventLineDurable, acquireExclusiveLock, releaseExclusiveLock } from "../domain/evaluation-harness/durable-ledger.mjs";
 import { validateFinalResponse } from "../domain/runtime/final-response-validator.mjs";
+import { toAnswerWireResponse } from "../domain/runtime/answer-wire-response.mjs";
 import { appendUsageEvent, appendEventLineAtomic, readLedgerFile } from "../domain/runtime/evaluation-usage-ledger.mjs";
 import { requiredFactSlotsSha256 } from "../domain/contracts.mjs";
 
 const SHA = "a".repeat(64);
 const COMMIT = "0".repeat(40);
 
+// The INTERNAL FinalResponse shape (retrieved_context array, think_trace
+// object) -- used directly by the metrics unit tests below (scoreClosed/
+// scoreOpen's own contract is unchanged by the wire update) and as the
+// source object wireBody() converts from for every mock GET /answer server
+// response, since a real server now replies with the WIRE shape, never
+// this one, directly.
 function baseResponse(overrides = {}) {
   return {
     question: "q",
@@ -28,6 +35,16 @@ function baseResponse(overrides = {}) {
     answer: "no",
     ...overrides,
   };
+}
+
+// What a real GET /answer server actually sends: the 5-string-field wire
+// body (see domain/interfaces/answer-wire-response.schema.json). Every
+// mock HTTP server in this file must respond with this, not the internal
+// shape, so these tests exercise harness-runner.mjs's real wire-decoding
+// path (validateAnswerWireResponse + fromAnswerWireResponseSafe), not a
+// shape it will never actually see in production.
+function wireBody(questionId, overrides = {}) {
+  return toAnswerWireResponse(questionId, baseResponse(overrides));
 }
 
 async function withTmpDir(fn) {
@@ -340,7 +357,7 @@ test("reservation is durably persisted to the ledger file BEFORE the HTTP reques
       const ledgerAtRequestTime = readLedgerFile(ledgerPath);
       sawLedgerAtRequestTime = ledgerAtRequestTime.length;
       res.setHeader("content-type", "application/json");
-      res.end(JSON.stringify(baseResponse({ question: "테스트 질문" })));
+      res.end(JSON.stringify(wireBody("q_test_001", { question: "테스트 질문" })));
     });
     t.after(() => server.close());
 
@@ -384,7 +401,7 @@ test("a reservation failure means zero HTTP requests are sent for that item", as
     let requestCount = 0;
     const { server, baseUrl } = await startServer((req, res) => {
       requestCount++;
-      res.end(JSON.stringify(baseResponse()));
+      res.end(JSON.stringify(wireBody("q_test_001")));
     });
     t.after(() => server.close());
 
@@ -486,7 +503,7 @@ test("after a mid-run crash, retrying under the SAME run_id is rejected -- no fr
     let requestCount = 0;
     const { server, baseUrl } = await startServer((req, res) => {
       requestCount++;
-      res.end(JSON.stringify(baseResponse()));
+      res.end(JSON.stringify(wireBody("q_test_001")));
     });
     t.after(() => server.close());
 
@@ -555,7 +572,7 @@ test("detects a question echo mismatch between the request and the FinalResponse
 
     const { server, baseUrl } = await startServer((req, res) => {
       res.setHeader("content-type", "application/json");
-      res.end(JSON.stringify(baseResponse({ question: "다른 질문", think_trace: { execution_mode: "EARLY_EXIT", operations: [], calculation: {}, validation: { answerability: "SUPPORTED" } } })));
+      res.end(JSON.stringify(wireBody("q_test_001", { question: "다른 질문", think_trace: { execution_mode: "EARLY_EXIT", operations: [], calculation: {}, validation: { answerability: "SUPPORTED" } } })));
     });
     t.after(() => server.close());
 
@@ -625,16 +642,16 @@ test("HTTP client isolates 500, invalid JSON, timeout, and continues", async (t)
       return res.end("{}");
     }
     res.setHeader("content-type", "application/json");
-    res.end(JSON.stringify(baseResponse()));
+    res.end(JSON.stringify(wireBody("q_test_001")));
   });
   t.after(() => server.close());
   const config = { base_url: baseUrl, answer_path: "/answer", question_parameter: "q", timeout_ms: 200 };
-  assert.equal((await requestAnswer(config, "ok")).httpStatus, 200);
-  assert.equal((await requestAnswer(config, "500")).httpStatus, 500);
-  assert.ok((await requestAnswer(config, "bad")).parseError);
+  assert.equal((await requestAnswer(config, "Q-1", "ok")).httpStatus, 200);
+  assert.equal((await requestAnswer(config, "Q-1", "500")).httpStatus, 500);
+  assert.ok((await requestAnswer(config, "Q-1", "bad")).parseError);
   const slowConfig = { ...config, timeout_ms: 20 };
-  assert.equal((await requestAnswer(slowConfig, "slow")).timedOut, true);
-  assert.equal((await requestAnswer(config, "ok")).httpStatus, 200);
+  assert.equal((await requestAnswer(slowConfig, "Q-1", "slow")).timedOut, true);
+  assert.equal((await requestAnswer(config, "Q-1", "ok")).httpStatus, 200);
 });
 
 test("transport errors never leak the request URL or raw response text", async (t) => {
@@ -643,7 +660,7 @@ test("transport errors never leak the request URL or raw response text", async (
   });
   t.after(() => server.close());
   const config = { base_url: baseUrl, answer_path: "/answer", question_parameter: "q", timeout_ms: 20 };
-  const result = await requestAnswer(config, "super-secret-question-text");
+  const result = await requestAnswer(config, "Q-1", "super-secret-question-text");
   assert.equal(result.transportError.includes("super-secret-question-text"), false);
   assert.equal(result.transportError.includes(baseUrl), false);
 });
@@ -657,7 +674,7 @@ test("raw response is only ever stored as a SHA-256 hash in results, never verba
 
     const { server, baseUrl } = await startServer((req, res) => {
       res.setHeader("content-type", "application/json");
-      res.end(JSON.stringify(baseResponse({ answer: "MARKER_SHOULD_NOT_APPEAR_RAW" })));
+      res.end(JSON.stringify(wireBody("q_test_001", { answer: "MARKER_SHOULD_NOT_APPEAR_RAW" })));
     });
     t.after(() => server.close());
 
@@ -695,14 +712,18 @@ test("concurrency does not reorder results -- output stays in Gold order", async
     await writeFile(goldPath, records.map((r) => JSON.stringify(r)).join("\n") + "\n");
 
     const { server, baseUrl } = await startServer((req, res) => {
-      const q = new URL(req.url, "http://x").searchParams.get("q");
+      const params = new URL(req.url, "http://x").searchParams;
+      const questionId = params.get("question_id");
+      const question = params.get("q");
       // Respond to LATER questions faster than earlier ones, so completion
       // order is the reverse of Gold order if the implementation ever
-      // reorders by completion instead of by index.
-      const delay = q === "q_a" ? 60 : q === "q_b" ? 40 : q === "q_c" ? 20 : 0;
+      // reorders by completion instead of by index. Keyed on question_id
+      // (unique per record) rather than the question text (every record
+      // here shares the same default "테스트 질문").
+      const delay = questionId === "q_a" ? 60 : questionId === "q_b" ? 40 : questionId === "q_c" ? 20 : 0;
       setTimeout(() => {
         res.setHeader("content-type", "application/json");
-        res.end(JSON.stringify(baseResponse({ question: q })));
+        res.end(JSON.stringify(wireBody(questionId, { question })));
       }, delay);
     });
     t.after(() => server.close());
@@ -1013,10 +1034,11 @@ test("a full SANDBOX harness run never sends an HTTP request for a question outs
     let requestCount = 0;
     const { server, baseUrl } = await startServer((req, res) => {
       requestCount++;
+      const questionId = new URL(req.url, "http://x").searchParams.get("question_id");
       res.setHeader("content-type", "application/json");
       res.end(
         JSON.stringify(
-          baseResponse({ question: "테스트 질문", think_trace: { execution_mode: "EARLY_EXIT", operations: [], calculation: {}, validation: { answerability: "SUPPORTED" } } })
+          wireBody(questionId, { question: "테스트 질문", think_trace: { execution_mode: "EARLY_EXIT", operations: [], calculation: {}, validation: { answerability: "SUPPORTED" } } })
         )
       );
     });
@@ -1079,7 +1101,7 @@ test("SANDBOX ledger reservation failure means zero HTTP requests for that quest
     let requestCount = 0;
     const { server, baseUrl } = await startServer((req, res) => {
       requestCount++;
-      res.end(JSON.stringify(baseResponse()));
+      res.end(JSON.stringify(wireBody("q_test_001")));
     });
     t.after(() => server.close());
 
@@ -1143,7 +1165,7 @@ test("response_usable is false and no metric is computed when HTTP 500 carries a
       res.setHeader("content-type", "application/json");
       res.end(
         JSON.stringify(
-          baseResponse({ question: "실패 질문", think_trace: { execution_mode: "STRUCTURED", operations: [], calculation: { result: 100 }, validation: { answerability: "SUPPORTED" } } })
+          wireBody("q_test_001", { question: "실패 질문", think_trace: { execution_mode: "STRUCTURED", operations: [], calculation: { result: 100 }, validation: { answerability: "SUPPORTED" } } })
         )
       );
     });
@@ -1184,7 +1206,7 @@ test("response_usable is false and no metric is computed when HTTP 200 carries a
       res.setHeader("content-type", "application/json");
       res.end(
         JSON.stringify(
-          baseResponse({ question: "다른 질문", think_trace: { execution_mode: "STRUCTURED", operations: [], calculation: { result: 100 }, validation: { answerability: "SUPPORTED" } } })
+          wireBody("q_test_001", { question: "다른 질문", think_trace: { execution_mode: "STRUCTURED", operations: [], calculation: { result: 100 }, validation: { answerability: "SUPPORTED" } } })
         )
       );
     });
@@ -1225,7 +1247,7 @@ test("response_usable is true and metrics ARE computed for a normal HTTP 200, sc
       res.setHeader("content-type", "application/json");
       res.end(
         JSON.stringify(
-          baseResponse({ question: "정상 질문", think_trace: { execution_mode: "STRUCTURED", operations: [], calculation: { result: 100 }, validation: { answerability: "SUPPORTED" } } })
+          wireBody("q_test_001", { question: "정상 질문", think_trace: { execution_mode: "STRUCTURED", operations: [], calculation: { result: 100 }, validation: { answerability: "SUPPORTED" } } })
         )
       );
     });
@@ -1272,7 +1294,7 @@ test("a lock held by another process blocks the run entirely -- zero HTTP reques
     let requestCount = 0;
     const { server, baseUrl } = await startServer((req, res) => {
       requestCount++;
-      res.end(JSON.stringify(baseResponse()));
+      res.end(JSON.stringify(wireBody("q_test_001")));
     });
     t.after(() => server.close());
 
@@ -1338,7 +1360,7 @@ test("the exclusive lock file does not outlive a completed run (released even on
     await writeFile(goldPath, JSON.stringify(goldRecord({ split: "DEV_CHECK" })) + "\n");
     await writeFile(lifecyclePath, JSON.stringify([lifecycleState()]));
 
-    const { server, baseUrl } = await startServer((req, res) => res.end(JSON.stringify(baseResponse())));
+    const { server, baseUrl } = await startServer((req, res) => res.end(JSON.stringify(wireBody("q_test_001"))));
     t.after(() => server.close());
 
     await runHarness({
@@ -1372,7 +1394,7 @@ test("the exclusive lock is released even when the run throws (e.g. HOLDOUT_SEAL
     await writeFile(goldPath, JSON.stringify(goldRecord({ split: "HOLDOUT" })) + "\n");
     await writeFile(lifecyclePath, JSON.stringify([lifecycleState({ assigned_split: "HOLDOUT", holdout_lifecycle_status: "SEALED" })]));
 
-    const { server, baseUrl } = await startServer((req, res) => res.end(JSON.stringify(baseResponse())));
+    const { server, baseUrl } = await startServer((req, res) => res.end(JSON.stringify(wireBody("q_test_001"))));
     t.after(() => server.close());
 
     await assert.rejects(() =>
@@ -1412,7 +1434,7 @@ test("an externally held lock blocks a SANDBOX run entirely -- zero HTTP request
     let requestCount = 0;
     const { server, baseUrl } = await startServer((req, res) => {
       requestCount++;
-      res.end(JSON.stringify(baseResponse()));
+      res.end(JSON.stringify(wireBody("q_test_001")));
     });
     t.after(() => server.close());
 
@@ -1460,7 +1482,7 @@ test("an externally held lock blocks a DEV_TUNE run that opts into lifecycle_pat
     let requestCount = 0;
     const { server, baseUrl } = await startServer((req, res) => {
       requestCount++;
-      res.end(JSON.stringify(baseResponse()));
+      res.end(JSON.stringify(wireBody("q_test_001")));
     });
     t.after(() => server.close());
 
@@ -1503,7 +1525,7 @@ test("a DEV_TUNE run WITHOUT lifecycle_path/ledger_path is unaffected by an exte
     const { server, baseUrl } = await startServer((req, res) => {
       requestCount++;
       res.setHeader("content-type", "application/json");
-      res.end(JSON.stringify(baseResponse({ question: "테스트 질문" })));
+      res.end(JSON.stringify(wireBody("q_test_001", { question: "테스트 질문" })));
     });
     t.after(() => server.close());
 
@@ -1566,13 +1588,14 @@ test("summary has no ambiguous 'success' field; api_success/contract_success/met
     await writeFile(goldPath, [passRecord, failRecord, openRecord].map((r) => JSON.stringify(r)).join("\n") + "\n");
 
     const { server, baseUrl } = await startServer((req, res) => {
-      const q = new URL(req.url, "http://x").searchParams.get("q");
-      const resultByQuestion = { 합격_질문: 100, 실패_질문: 1 };
+      const params = new URL(req.url, "http://x").searchParams;
+      const q = params.get("q");
+      const questionId = params.get("question_id");
       const calcResult = q === "합격 질문" ? 100 : q === "실패 질문" ? 1 : undefined;
       res.setHeader("content-type", "application/json");
       res.end(
         JSON.stringify(
-          baseResponse({
+          wireBody(questionId, {
             question: q,
             answer: "설명",
             think_trace: {
@@ -1711,7 +1734,7 @@ test("a reservation write that fails with writeSync=0 aborts before any HTTP req
     let requestCount = 0;
     const { server, baseUrl } = await startServer((req, res) => {
       requestCount++;
-      res.end(JSON.stringify(baseResponse()));
+      res.end(JSON.stringify(wireBody("q_test_001")));
     });
     t.after(() => server.close());
 
@@ -1758,7 +1781,7 @@ test("a DEV_CHECK reservation calls fsyncSync before the HTTP request is sent", 
     const { server, baseUrl } = await startServer((req, res) => {
       fsyncCallsBeforeRequest = fsyncSpy.mock.calls.length;
       res.setHeader("content-type", "application/json");
-      res.end(JSON.stringify(baseResponse({ question: "테스트 질문" })));
+      res.end(JSON.stringify(wireBody("q_test_001", { question: "테스트 질문" })));
     });
     t.after(() => server.close());
 
@@ -1857,4 +1880,588 @@ test("evidence slot still PASSes on evidence_id alone when the wire provides no 
   });
   const response = baseResponse({ retrieved_context: [{ evidence_id: "evidence_abc123" }] });
   assert.equal(scoreClosed(gold, response)["evidence:x"].status, "PASS");
+});
+
+// ---------------------------------------------------------------------------
+// 15. Wire-boundary decoding: the harness never applies
+// domain/runtime/final-response-validator.mjs's INTERNAL validator to a raw
+// wire body; a wire-schema-valid body whose retrieved_context/think_trace
+// strings are not valid JSON is a diagnosable contract defect
+// (response_usable=false), not a thrown exception. question_id echo is
+// checked independently of question echo.
+// ---------------------------------------------------------------------------
+
+test("response_usable is false when the wire body's question_id does not match the request's, even though the question text and everything else matches", async (t) => {
+  await withTmpDir(async (dir) => {
+    const goldPath = join(dir, "gold.jsonl");
+    const resultPath = join(dir, "result.jsonl");
+    const summaryPath = join(dir, "summary.json");
+    await writeFile(goldPath, JSON.stringify(goldRecord({ split: "DEV_TUNE", question: "테스트 질문" })) + "\n");
+
+    const { server, baseUrl } = await startServer((req, res) => {
+      res.setHeader("content-type", "application/json");
+      res.end(JSON.stringify(wireBody("WRONG-QUESTION-ID", { question: "테스트 질문" })));
+    });
+    t.after(() => server.close());
+
+    const { results } = await runHarness({
+      base_url: baseUrl,
+      answer_path: "/answer",
+      question_parameter: "q",
+      gold_path: goldPath,
+      result_path: resultPath,
+      summary_path: summaryPath,
+      split: "DEV_TUNE",
+      run_purpose: "FLOW_SELECTION",
+      timeout_ms: 2000,
+      concurrency: 1,
+      configuration_sha256: SHA,
+      git_commit: COMMIT,
+    });
+
+    assert.equal(results[0].question_echo_matches, false);
+    assert.equal(results[0].response_usable, false);
+  });
+});
+
+test("response_usable is false when retrieved_context is not valid JSON, even though the wire shape itself (5 strings) is schema-valid -- never throws out of runHarness", async (t) => {
+  await withTmpDir(async (dir) => {
+    const goldPath = join(dir, "gold.jsonl");
+    const resultPath = join(dir, "result.jsonl");
+    const summaryPath = join(dir, "summary.json");
+    await writeFile(goldPath, JSON.stringify(goldRecord({ split: "DEV_TUNE", question: "테스트 질문" })) + "\n");
+
+    const { server, baseUrl } = await startServer((req, res) => {
+      res.setHeader("content-type", "application/json");
+      res.end(
+        JSON.stringify({
+          question_id: "q_test_001",
+          question: "테스트 질문",
+          retrieved_context: "not valid json",
+          think_trace: "{}",
+          answer: "a",
+        })
+      );
+    });
+    t.after(() => server.close());
+
+    const { results } = await runHarness({
+      base_url: baseUrl,
+      answer_path: "/answer",
+      question_parameter: "q",
+      gold_path: goldPath,
+      result_path: resultPath,
+      summary_path: summaryPath,
+      split: "DEV_TUNE",
+      run_purpose: "FLOW_SELECTION",
+      timeout_ms: 2000,
+      concurrency: 1,
+      configuration_sha256: SHA,
+      git_commit: COMMIT,
+    });
+
+    assert.equal(results[0].response_contract_valid, false);
+    assert.equal(results[0].response_usable, false);
+    assert.ok(results[0].contract_errors.some((e) => e.includes("JSON decode failed")));
+  });
+});
+
+test("response_usable is false when retrieved_context/think_trace ARE valid JSON but decode to the wrong internal type (retrieved_context=\"42\", think_trace=\"[]\") -- JSON.parse succeeding is not enough", async (t) => {
+  await withTmpDir(async (dir) => {
+    const goldPath = join(dir, "gold.jsonl");
+    const resultPath = join(dir, "result.jsonl");
+    const summaryPath = join(dir, "summary.json");
+    await writeFile(goldPath, JSON.stringify(goldRecord({ split: "DEV_TUNE", question: "테스트 질문" })) + "\n");
+
+    const { server, baseUrl } = await startServer((req, res) => {
+      res.setHeader("content-type", "application/json");
+      // Wire-schema-valid (5 required strings) AND both retrieved_context
+      // and think_trace ARE valid JSON -- fromAnswerWireResponseSafe
+      // succeeds -- but they decode to a number and an array, neither of
+      // which satisfies final-response.schema.json's retrieved_context
+      // (must be an array) / think_trace (must be an object) shape. Only
+      // gate 3 (validateFinalResponse on the restored value) catches this.
+      res.end(
+        JSON.stringify({
+          question_id: "q_test_001",
+          question: "테스트 질문",
+          retrieved_context: "42",
+          think_trace: "[]",
+          answer: "a",
+        })
+      );
+    });
+    t.after(() => server.close());
+
+    const { results } = await runHarness({
+      base_url: baseUrl,
+      answer_path: "/answer",
+      question_parameter: "q",
+      gold_path: goldPath,
+      result_path: resultPath,
+      summary_path: summaryPath,
+      split: "DEV_TUNE",
+      run_purpose: "FLOW_SELECTION",
+      timeout_ms: 2000,
+      concurrency: 1,
+      configuration_sha256: SHA,
+      git_commit: COMMIT,
+    });
+
+    assert.equal(results[0].response_contract_valid, false);
+    assert.equal(results[0].response_usable, false);
+    assert.deepEqual(results[0].metric_results, {}, "no metric may be computed when the restored value fails validateFinalResponse");
+    assert.ok(
+      results[0].contract_errors.some((e) => e.includes("restored FinalResponse invalid")),
+      `expected a "restored FinalResponse invalid" contract error, got: ${JSON.stringify(results[0].contract_errors)}`
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 16. Retry policy: timeout or HTTP 5xx get up to `retries` additional
+// attempts (default 2, so up to 3 total HTTP calls); a 4xx, a 2xx contract
+// defect, or a question-echo mismatch are never retried. Every attempt
+// sends the exact same question_id/question, and the Usage Ledger
+// reservation happens exactly once per item regardless of attempt count.
+// ---------------------------------------------------------------------------
+
+test("a timeout is retried up to the default 2 times (3 total attempts)", async (t) => {
+  await withTmpDir(async (dir) => {
+    const goldPath = join(dir, "gold.jsonl");
+    const resultPath = join(dir, "result.jsonl");
+    const summaryPath = join(dir, "summary.json");
+    await writeFile(goldPath, JSON.stringify(goldRecord({ split: "DEV_TUNE" })) + "\n");
+
+    let requestCount = 0;
+    const { server, baseUrl } = await startServer(() => {
+      requestCount++;
+      // Never responds -- every attempt times out.
+    });
+    t.after(() => server.close());
+
+    const { results } = await runHarness({
+      base_url: baseUrl,
+      answer_path: "/answer",
+      question_parameter: "q",
+      gold_path: goldPath,
+      result_path: resultPath,
+      summary_path: summaryPath,
+      split: "DEV_TUNE",
+      run_purpose: "FLOW_SELECTION",
+      timeout_ms: 100,
+      concurrency: 1,
+      configuration_sha256: SHA,
+      git_commit: COMMIT,
+    });
+
+    assert.equal(requestCount, 3, "1 initial attempt + 2 retries = 3 total HTTP calls");
+    assert.equal(results[0].attempt_count, 3);
+    assert.equal(results[0].attempts.length, 3);
+    for (const attempt of results[0].attempts) assert.equal(attempt.timed_out, true);
+    assert.equal(results[0].timed_out, true);
+    assert.equal(results[0].response_usable, false);
+  });
+});
+
+test("an HTTP 5xx is retried up to the default 2 times (3 total attempts)", async (t) => {
+  await withTmpDir(async (dir) => {
+    const goldPath = join(dir, "gold.jsonl");
+    const resultPath = join(dir, "result.jsonl");
+    const summaryPath = join(dir, "summary.json");
+    await writeFile(goldPath, JSON.stringify(goldRecord({ split: "DEV_TUNE" })) + "\n");
+
+    let requestCount = 0;
+    const { server, baseUrl } = await startServer((req, res) => {
+      requestCount++;
+      res.statusCode = 503;
+      res.end("service unavailable");
+    });
+    t.after(() => server.close());
+
+    const { results } = await runHarness({
+      base_url: baseUrl,
+      answer_path: "/answer",
+      question_parameter: "q",
+      gold_path: goldPath,
+      result_path: resultPath,
+      summary_path: summaryPath,
+      split: "DEV_TUNE",
+      run_purpose: "FLOW_SELECTION",
+      timeout_ms: 2000,
+      concurrency: 1,
+      configuration_sha256: SHA,
+      git_commit: COMMIT,
+    });
+
+    assert.equal(requestCount, 3);
+    assert.equal(results[0].attempt_count, 3);
+    assert.equal(results[0].http_status, 503);
+    assert.equal(results[0].response_usable, false);
+  });
+});
+
+test("retries stop as soon as an attempt succeeds -- a 5xx followed by a 200 makes exactly 2 attempts, not 3", async (t) => {
+  await withTmpDir(async (dir) => {
+    const goldPath = join(dir, "gold.jsonl");
+    const resultPath = join(dir, "result.jsonl");
+    const summaryPath = join(dir, "summary.json");
+    await writeFile(goldPath, JSON.stringify(goldRecord({ split: "DEV_TUNE" })) + "\n");
+
+    let requestCount = 0;
+    const { server, baseUrl } = await startServer((req, res) => {
+      requestCount++;
+      if (requestCount === 1) {
+        res.statusCode = 503;
+        return res.end("try again");
+      }
+      res.setHeader("content-type", "application/json");
+      res.end(JSON.stringify(wireBody("q_test_001", { question: "테스트 질문" })));
+    });
+    t.after(() => server.close());
+
+    const { results } = await runHarness({
+      base_url: baseUrl,
+      answer_path: "/answer",
+      question_parameter: "q",
+      gold_path: goldPath,
+      result_path: resultPath,
+      summary_path: summaryPath,
+      split: "DEV_TUNE",
+      run_purpose: "FLOW_SELECTION",
+      timeout_ms: 2000,
+      concurrency: 1,
+      configuration_sha256: SHA,
+      git_commit: COMMIT,
+    });
+
+    assert.equal(requestCount, 2);
+    assert.equal(results[0].attempt_count, 2);
+    assert.equal(results[0].http_status, 200);
+    assert.equal(results[0].response_usable, true);
+  });
+});
+
+test("an HTTP 4xx is never retried -- exactly one attempt", async (t) => {
+  await withTmpDir(async (dir) => {
+    const goldPath = join(dir, "gold.jsonl");
+    const resultPath = join(dir, "result.jsonl");
+    const summaryPath = join(dir, "summary.json");
+    await writeFile(goldPath, JSON.stringify(goldRecord({ split: "DEV_TUNE" })) + "\n");
+
+    let requestCount = 0;
+    const { server, baseUrl } = await startServer((req, res) => {
+      requestCount++;
+      res.statusCode = 400;
+      res.end("bad request");
+    });
+    t.after(() => server.close());
+
+    const { results } = await runHarness({
+      base_url: baseUrl,
+      answer_path: "/answer",
+      question_parameter: "q",
+      gold_path: goldPath,
+      result_path: resultPath,
+      summary_path: summaryPath,
+      split: "DEV_TUNE",
+      run_purpose: "FLOW_SELECTION",
+      timeout_ms: 2000,
+      concurrency: 1,
+      configuration_sha256: SHA,
+      git_commit: COMMIT,
+    });
+
+    assert.equal(requestCount, 1);
+    assert.equal(results[0].attempt_count, 1);
+    assert.equal(results[0].http_status, 400);
+  });
+});
+
+test("an HTTP 200 with a schema-invalid (contract-defect) body is never retried -- exactly one attempt", async (t) => {
+  await withTmpDir(async (dir) => {
+    const goldPath = join(dir, "gold.jsonl");
+    const resultPath = join(dir, "result.jsonl");
+    const summaryPath = join(dir, "summary.json");
+    await writeFile(goldPath, JSON.stringify(goldRecord({ split: "DEV_TUNE" })) + "\n");
+
+    let requestCount = 0;
+    const { server, baseUrl } = await startServer((req, res) => {
+      requestCount++;
+      res.setHeader("content-type", "application/json");
+      res.end(JSON.stringify({ not: "a valid wire body" }));
+    });
+    t.after(() => server.close());
+
+    const { results } = await runHarness({
+      base_url: baseUrl,
+      answer_path: "/answer",
+      question_parameter: "q",
+      gold_path: goldPath,
+      result_path: resultPath,
+      summary_path: summaryPath,
+      split: "DEV_TUNE",
+      run_purpose: "FLOW_SELECTION",
+      timeout_ms: 2000,
+      concurrency: 1,
+      configuration_sha256: SHA,
+      git_commit: COMMIT,
+    });
+
+    assert.equal(requestCount, 1);
+    assert.equal(results[0].attempt_count, 1);
+    assert.equal(results[0].response_contract_valid, false);
+  });
+});
+
+test("a question-echo mismatch (HTTP 200, otherwise wire-schema-valid) is never retried -- exactly one attempt", async (t) => {
+  await withTmpDir(async (dir) => {
+    const goldPath = join(dir, "gold.jsonl");
+    const resultPath = join(dir, "result.jsonl");
+    const summaryPath = join(dir, "summary.json");
+    await writeFile(goldPath, JSON.stringify(goldRecord({ split: "DEV_TUNE", question: "실제 질문" })) + "\n");
+
+    let requestCount = 0;
+    const { server, baseUrl } = await startServer((req, res) => {
+      requestCount++;
+      res.setHeader("content-type", "application/json");
+      res.end(JSON.stringify(wireBody("q_test_001", { question: "다른 질문" })));
+    });
+    t.after(() => server.close());
+
+    const { results } = await runHarness({
+      base_url: baseUrl,
+      answer_path: "/answer",
+      question_parameter: "q",
+      gold_path: goldPath,
+      result_path: resultPath,
+      summary_path: summaryPath,
+      split: "DEV_TUNE",
+      run_purpose: "FLOW_SELECTION",
+      timeout_ms: 2000,
+      concurrency: 1,
+      configuration_sha256: SHA,
+      git_commit: COMMIT,
+    });
+
+    assert.equal(requestCount, 1);
+    assert.equal(results[0].attempt_count, 1);
+    assert.equal(results[0].question_echo_matches, false);
+  });
+});
+
+test("every retry attempt sends the exact same question_id and question", async (t) => {
+  await withTmpDir(async (dir) => {
+    const goldPath = join(dir, "gold.jsonl");
+    const resultPath = join(dir, "result.jsonl");
+    const summaryPath = join(dir, "summary.json");
+    await writeFile(goldPath, JSON.stringify(goldRecord({ split: "DEV_TUNE", question: "테스트 질문" })) + "\n");
+
+    const seenQuestionIds = [];
+    const seenQuestions = [];
+    const { server, baseUrl } = await startServer((req, res) => {
+      const params = new URL(req.url, "http://x").searchParams;
+      seenQuestionIds.push(params.get("question_id"));
+      seenQuestions.push(params.get("q"));
+      res.statusCode = 500;
+      res.end("fail");
+    });
+    t.after(() => server.close());
+
+    await runHarness({
+      base_url: baseUrl,
+      answer_path: "/answer",
+      question_parameter: "q",
+      gold_path: goldPath,
+      result_path: resultPath,
+      summary_path: summaryPath,
+      split: "DEV_TUNE",
+      run_purpose: "FLOW_SELECTION",
+      timeout_ms: 2000,
+      concurrency: 1,
+      configuration_sha256: SHA,
+      git_commit: COMMIT,
+    });
+
+    assert.equal(seenQuestionIds.length, 3);
+    assert.ok(seenQuestionIds.every((id) => id === "q_test_001"), "every attempt must send the same question_id");
+    assert.ok(seenQuestions.every((q) => q === "테스트 질문"), "every attempt must send the same question");
+  });
+});
+
+test("the Usage Ledger reservation happens exactly ONCE per item, even though the HTTP call is retried 3 times", async (t) => {
+  await withTmpDir(async (dir) => {
+    const goldPath = join(dir, "gold.jsonl");
+    const ledgerPath = join(dir, "ledger.jsonl");
+    const lifecyclePath = join(dir, "lifecycle.json");
+    const resultPath = join(dir, "result.jsonl");
+    const summaryPath = join(dir, "summary.json");
+    await writeFile(goldPath, JSON.stringify(goldRecord({ split: "DEV_CHECK" })) + "\n");
+    await writeFile(lifecyclePath, JSON.stringify([lifecycleState()]));
+
+    let requestCount = 0;
+    const { server, baseUrl } = await startServer((req, res) => {
+      requestCount++;
+      res.statusCode = 500;
+      res.end("fail");
+    });
+    t.after(() => server.close());
+
+    await runHarness({
+      base_url: baseUrl,
+      answer_path: "/answer",
+      question_parameter: "q",
+      gold_path: goldPath,
+      result_path: resultPath,
+      summary_path: summaryPath,
+      lifecycle_path: lifecyclePath,
+      ledger_path: ledgerPath,
+      split: "DEV_CHECK",
+      run_purpose: "CRITICAL_REGRESSION_CHECK",
+      timeout_ms: 2000,
+      concurrency: 1,
+      configuration_sha256: SHA,
+      git_commit: COMMIT,
+      run_id: "run-retry-ledger-once-test",
+    });
+
+    assert.equal(requestCount, 3, "sanity check: the HTTP call really was retried 3 times");
+    const finalLedger = readLedgerFile(ledgerPath);
+    assert.equal(finalLedger.length, 1, "exactly one reservation event must exist, regardless of how many HTTP attempts were made");
+  });
+});
+
+test("config.retries overrides the default -- retries:0 means exactly 1 attempt, never retried even on a 5xx", async (t) => {
+  await withTmpDir(async (dir) => {
+    const goldPath = join(dir, "gold.jsonl");
+    const resultPath = join(dir, "result.jsonl");
+    const summaryPath = join(dir, "summary.json");
+    await writeFile(goldPath, JSON.stringify(goldRecord({ split: "DEV_TUNE" })) + "\n");
+
+    let requestCount = 0;
+    const { server, baseUrl } = await startServer((req, res) => {
+      requestCount++;
+      res.statusCode = 500;
+      res.end("fail");
+    });
+    t.after(() => server.close());
+
+    const { results } = await runHarness({
+      base_url: baseUrl,
+      answer_path: "/answer",
+      question_parameter: "q",
+      gold_path: goldPath,
+      result_path: resultPath,
+      summary_path: summaryPath,
+      split: "DEV_TUNE",
+      run_purpose: "FLOW_SELECTION",
+      timeout_ms: 2000,
+      concurrency: 1,
+      configuration_sha256: SHA,
+      git_commit: COMMIT,
+      retries: 0,
+    });
+
+    assert.equal(requestCount, 1);
+    assert.equal(results[0].attempt_count, 1);
+  });
+});
+
+test("config: retries must be a non-negative integer when present", () => {
+  assert.throws(() => validateConfig(baseConfig({ retries: -1 })));
+  assert.throws(() => validateConfig(baseConfig({ retries: 1.5 })));
+  assert.throws(() => validateConfig(baseConfig({ retries: "2" })));
+  assert.doesNotThrow(() => validateConfig(baseConfig({ retries: 0 })));
+  assert.doesNotThrow(() => validateConfig(baseConfig({ retries: 5 })));
+});
+
+test("config: the official execution profile (timeout_ms=300000, concurrency=1, retries=2) validates cleanly", () => {
+  assert.doesNotThrow(() =>
+    validateConfig(baseConfig({ timeout_ms: 300_000, concurrency: 1, retries: 2 }))
+  );
+});
+
+test("a full run under the official execution profile (timeout_ms=300000, concurrency=1, retries=2) succeeds normally against a promptly-responding server", async (t) => {
+  await withTmpDir(async (dir) => {
+    const goldPath = join(dir, "gold.jsonl");
+    const resultPath = join(dir, "result.jsonl");
+    const summaryPath = join(dir, "summary.json");
+    await writeFile(goldPath, JSON.stringify(goldRecord({ split: "DEV_TUNE", question: "테스트 질문" })) + "\n");
+
+    let requestCount = 0;
+    const { server, baseUrl } = await startServer((req, res) => {
+      requestCount++;
+      res.setHeader("content-type", "application/json");
+      res.end(JSON.stringify(wireBody("q_test_001", { question: "테스트 질문" })));
+    });
+    t.after(() => server.close());
+
+    const { results, summary } = await runHarness({
+      base_url: baseUrl,
+      answer_path: "/answer",
+      question_parameter: "q",
+      gold_path: goldPath,
+      result_path: resultPath,
+      summary_path: summaryPath,
+      split: "DEV_TUNE",
+      run_purpose: "FLOW_SELECTION",
+      timeout_ms: 300_000,
+      concurrency: 1,
+      retries: 2,
+      configuration_sha256: SHA,
+      git_commit: COMMIT,
+    });
+
+    // The mock server responds immediately, so this never actually waits
+    // anywhere near 300 seconds -- this only proves the official profile's
+    // exact values flow through end-to-end without altering normal
+    // behavior: a single successful attempt, no retries consumed.
+    assert.equal(requestCount, 1, "a promptly-successful response must not trigger any retry, even with retries=2 configured");
+    assert.equal(results[0].attempt_count, 1);
+    assert.equal(results[0].response_usable, true);
+    assert.equal(summary.response_usable, 1);
+  });
+});
+
+test("concurrency=1 processes items strictly sequentially -- no two HTTP requests are ever in flight at the same time", async (t) => {
+  await withTmpDir(async (dir) => {
+    const goldPath = join(dir, "gold.jsonl");
+    const resultPath = join(dir, "result.jsonl");
+    const summaryPath = join(dir, "summary.json");
+    const records = ["q_1", "q_2", "q_3"].map((id) =>
+      goldRecord({ question_id: id, evaluation_group_id: `eval_group_${id}`, split: "DEV_TUNE", gold_document_ids: [`exchange_0000000${id}`] })
+    );
+    await writeFile(goldPath, records.map((r) => JSON.stringify(r)).join("\n") + "\n");
+
+    let inFlight = 0;
+    let maxInFlight = 0;
+    const { server, baseUrl } = await startServer((req, res) => {
+      inFlight++;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      const questionId = new URL(req.url, "http://x").searchParams.get("question_id");
+      setTimeout(() => {
+        inFlight--;
+        res.setHeader("content-type", "application/json");
+        res.end(JSON.stringify(wireBody(questionId, { question: "테스트 질문" })));
+      }, 20);
+    });
+    t.after(() => server.close());
+
+    await runHarness({
+      base_url: baseUrl,
+      answer_path: "/answer",
+      question_parameter: "q",
+      gold_path: goldPath,
+      result_path: resultPath,
+      summary_path: summaryPath,
+      split: "DEV_TUNE",
+      run_purpose: "FLOW_SELECTION",
+      timeout_ms: 2000,
+      concurrency: 1,
+      configuration_sha256: SHA,
+      git_commit: COMMIT,
+    });
+
+    assert.equal(maxInFlight, 1, "concurrency=1 must never have more than one HTTP request in flight at once");
+  });
 });

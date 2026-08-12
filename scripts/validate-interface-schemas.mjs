@@ -53,6 +53,10 @@ const pairs = [
     "domain/interfaces/final-response.schema.json",
     "domain/interfaces/examples/final-response.example.json",
   ],
+  [
+    "domain/interfaces/answer-wire-response.schema.json",
+    "domain/interfaces/examples/answer-wire-response.example.json",
+  ],
 ];
 
 const ajv = new Ajv2020({ allErrors: true, strict: true, allowUnionTypes: true });
@@ -109,6 +113,28 @@ if (structuredResultValidator(unverifiedOfficialResult)) {
     data: "generated OFFICIAL result containing CANDIDATE data",
     errors: [{ message: "OFFICIAL StructuredResult exposed non-VERIFIED data" }],
   });
+}
+
+const answerWireResponseExample = JSON.parse(
+  readFileSync("domain/interfaces/examples/answer-wire-response.example.json", "utf8"),
+);
+const expectedAnswerWireResponseFields = ["question_id", "question", "retrieved_context", "think_trace", "answer"];
+const answerWireResponseKeys = Object.keys(answerWireResponseExample).sort();
+if (JSON.stringify(answerWireResponseKeys) !== JSON.stringify([...expectedAnswerWireResponseFields].sort())) {
+  failures.push({
+    schema: "domain/interfaces/answer-wire-response.schema.json",
+    data: "domain/interfaces/examples/answer-wire-response.example.json",
+    errors: [{ message: `expected exactly the 5 fields ${expectedAnswerWireResponseFields.join(", ")}, got: ${answerWireResponseKeys.join(", ")}` }],
+  });
+}
+for (const field of expectedAnswerWireResponseFields) {
+  if (typeof answerWireResponseExample[field] !== "string") {
+    failures.push({
+      schema: "domain/interfaces/answer-wire-response.schema.json",
+      data: "domain/interfaces/examples/answer-wire-response.example.json",
+      errors: [{ message: `field "${field}" must be a string, got ${typeof answerWireResponseExample[field]}` }],
+    });
+  }
 }
 
 if (failures.length > 0) {

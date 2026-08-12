@@ -42,6 +42,32 @@ Harness는 자체적인 수동 응답 검증 규칙을 새로 만들지 않고
 연결돼 있습니다(`tests/final-response-validator.test.mjs`,
 `tests/agent-runtime.test.mjs` 참고).
 
+## Agent → External Caller: Answer Wire Response (organizer API notice)
+
+`answer-wire-response.schema.json`은 `GET /answer`가 외부에 반환하는 실제 HTTP wire body를
+고정합니다 — `question_id`/`question`/`retrieved_context`/`think_trace`/`answer` 5개
+문자열 필드뿐이며 `additionalProperties: false`입니다. 이것은 `final-response.schema.json`
+(내부, `retrieved_context`는 배열·`think_trace`는 객체)과 **다른 스키마**입니다. 내부
+Runtime Host와 AgentFlow는 여전히 `final-response.schema.json` 모양의 FinalResponse를
+주고받으며, 이번 변경은 FROZEN v1.1 내부 계약이 아니라 이 외부 wire 경계만 바꿉니다.
+
+`domain/runtime/answer-wire-response.mjs`가 두 모양을 잇는 유일한 변환 지점입니다.
+
+- `toAnswerWireResponse(questionId, finalResponse)`: 내부 FinalResponse → wire body.
+  `retrieved_context`/`think_trace`는 항상 `JSON.stringify()`로 인코딩합니다 — 이 인코딩
+  방식은 고정이며 호출자가 선택할 수 없습니다.
+- `fromAnswerWireResponse(wire)` / `fromAnswerWireResponseSafe(wire)`: wire body → 내부
+  FinalResponse 모양(Evaluation Harness의 기존 metric 채점 입력 형식). `JSON.parse()` 실패는
+  `fromAnswerWireResponseSafe`에서 예외 없이 `{ ok: false }`로 처리됩니다.
+- `question_id`는 요청 경계(query parameter)가 정본입니다. FinalResponse에는 애초에
+  `question_id` 필드가 없으므로 runner/Flow가 이를 자가 선언할 방법이 없습니다.
+
+`domain/runtime/final-response-validator.mjs`의 `validateFinalResponse()`를 이 외부 wire
+body에 직접 적용하지 않습니다 — 항상 실패합니다(모양이 다름). wire body 자체를 검증할
+때는 `domain/runtime/answer-wire-response.mjs`의 `validateAnswerWireResponse()`/
+`isValidAnswerWireResponse()`를 사용합니다. 자세한 HTTP 상태 코드·타임아웃·재시도 정책은
+`domain/evaluation-harness/README.md`를 참고하세요.
+
 ## Compatibility
 
 - minor field 추가는 `schema_version`의 minor 증가와 함께 허용합니다.

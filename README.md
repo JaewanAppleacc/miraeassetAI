@@ -14,13 +14,9 @@ npm run viewer
 
 브라우저에서 `http://localhost:3000`을 엽니다.
 
-기본 코퍼스 위치:
-
-```text
-/Users/jaewan/Downloads/3.공시/corpus
-```
-
-다른 위치를 사용하려면 실행 전에 환경변수를 지정합니다.
+기본 코퍼스 위치는 실행 디렉터리 기준 `./corpus`입니다(`scripts/viewer-api.mjs`).
+개인 로컬 경로를 코드나 문서에 커밋하지 않고, 다른 위치를 쓰려면 항상 실행 전
+환경변수로 지정합니다.
 
 ```bash
 DISCLOSURE_CORPUS_ROOT="/새로운/corpus/경로" npm run viewer
@@ -38,3 +34,55 @@ DISCLOSURE_CORPUS_ROOT="/새로운/corpus/경로" npm run viewer
 - 렌더링 보기와 원문 보기
 
 원본 `raw` 파일은 읽기만 하며 수정하거나 복제하지 않습니다.
+
+## 공시 Agent 공식 API — GET /answer
+
+경로와 파라미터는 고정입니다(주최측 API 공지 반영, 자세한 내부 계약은
+`domain/interfaces/README.md`·`domain/evaluation-harness/README.md` 참고).
+
+```text
+GET /answer?question_id=Q-001&question=평가질의
+```
+
+- `question_id`, `question`은 각각 정확히 1개, 문자열, 공백이 아닌 값이어야 합니다.
+  누락·빈 값·중복은 `400`입니다.
+- 인증 헤더는 요구하지 않습니다.
+
+응답은 항상 아래 5개 문자열 필드만 가진 JSON입니다
+(`domain/interfaces/answer-wire-response.schema.json`,
+`domain/interfaces/examples/answer-wire-response.example.json`):
+
+```json
+{
+  "question_id": "Q-001",
+  "question": "삼성전자의 2024년 11월 15일 자기주식취득결정 핵심 내용은 무엇인가?",
+  "retrieved_context": "[{\"document_id\":\"major_20241115000375\",\"source_locator\":\"major_20241115000375/20241115000375.xml#node=3\",\"snippet\":\"1. 취득예정주식(주) 보통주식 50,144,628\"}]",
+  "think_trace": "{\"execution_mode\":\"STRUCTURED\",\"operations\":[\"lookup_event\",\"resolve_latest_effective_version\"],\"calculation\":{},\"validation\":{\"evidence_supported\":true,\"version_valid\":true,\"answerability\":\"SUPPORTED\"}}",
+  "answer": "2024년 11월 15일 이사회에서 자기주식 취득을 결정했습니다."
+}
+```
+
+`retrieved_context`·`think_trace`는 내부 FinalResponse의 배열/객체를
+`JSON.stringify()`한 문자열입니다. 호출자는 `JSON.parse()`로 복원해야 하며, 이
+인코딩 방식은 고정입니다.
+
+**Public Endpoint: `DEPLOYMENT_PENDING`** — 실제 공개 Endpoint URL은 아직 배포되지
+않았습니다. 이 문서·config 예시는 실제 주소를 지어내지 않고 위 리터럴 문자열로
+남겨 둡니다.
+
+타임아웃·재시도(공식 실행 프로필: `timeout_ms=300000`, `concurrency=1`, `retries=2`):
+
+- 외부(공식 클라이언트) 타임아웃: **300초**
+- 이 handler 내부 deadline: **290초**(`DEFAULT_TIMEOUT_MS`) — 외부 타임아웃보다 항상
+  먼저 `503`으로 안전하게 반환합니다
+- 타임아웃 또는 HTTP 5xx만 최대 **2회 재시도**(총 3회 시도). 4xx, 2xx 계약 오류, question
+  echo mismatch는 재시도하지 않습니다
+
+### Release Gate
+
+최종 제출 전에 아래를 확인합니다.
+
+- [ ] 이 README와 관련 config의 `DEPLOYMENT_PENDING`을 실제 배포된 Public Endpoint
+      주소로 교체했다.
+- [ ] 교체한 주소로 `GET /answer?question_id=...&question=...`를 실제 호출해 5개
+      문자열 필드 응답을 확인했다.

@@ -8,16 +8,79 @@ node scripts/run-evaluation-harness.mjs path/to/config.json
 node --test tests/evaluation-harness.test.mjs
 ```
 
+## GET /answer 공식 Wire 계약 (주최측 API 공지 반영)
+
+경로는 고정이다. 인증 헤더는 요구하지 않는다.
+
+```text
+GET /answer?question_id=Q-001&question=평가질의
+```
+
+- `question_id`, `question`은 각각 정확히 1개, 문자열, 공백이 아닌 값이어야 한다. 누락·빈
+  값·중복은 `400`이다.
+- 실제 공개 Endpoint URL은 **아직 배포되지 않았다 — TODO**. 이 문서와 config 예시의
+  `base_url`은 항상 로컬/테스트 서버를 가리키며, 가짜 프로덕션 주소를 넣지 않는다.
+
+응답은 항상 다음 5개 문자열 필드만 가진 JSON이다(`domain/interfaces/
+answer-wire-response.schema.json`, `additionalProperties: false`):
+
+```json
+{
+  "question_id": "Q-001",
+  "question": "평가질의",
+  "retrieved_context": "[]",
+  "think_trace": "{\"execution_mode\":\"EARLY_EXIT\",\"operations\":[],\"calculation\":{},\"validation\":{}}",
+  "answer": "..."
+}
+```
+
+`retrieved_context`와 `think_trace`는 내부 FinalResponse의 배열/객체를 **JSON.stringify한
+문자열**이다 — 배열이나 객체가 아니라 문자열 그 자체가 wire 값이다. 호출자는 반드시
+`JSON.parse()`로 복원해야 한다. 이 인코딩 방식은 고정이며 바뀌지 않는다.
+`domain/runtime/answer-wire-response.mjs`의 `toAnswerWireResponse`/`fromAnswerWireResponse`가
+유일한 변환 지점이다. `think_trace`에는 구조화된 필드(execution_mode/operations/
+calculation/validation)만 들어가며, 숨겨진 chain-of-thought·시스템 프롬프트·비밀값·raw
+`execution_trace`는 절대 포함되지 않는다.
+
+HTTP 상태 코드:
+
+| 상태 | 의미 |
+|---|---|
+| `200` | 정상 응답, 정보한계, Policy Guard 거부, 정상 EARLY_EXIT — 모두 "유효한 응답이 생성됨" |
+| `400` | `question_id`/`question` 파라미터 오류 |
+| `503` | 이 handler 자체의 내부 deadline(290초) 초과, 또는 runner의 일시적 throw/rejection |
+
+malformed runner response나 request-question mismatch처럼 재시도로 해결되지 않는 계약
+결함은 `200`의 safe EARLY_EXIT으로 남는다(`503`으로 승격하지 않는다) — 재시도가 의미
+있는 실패(타임아웃/일시 오류)와, 재시도해도 절대 고쳐지지 않는 계약 결함을 상태 코드
+레벨에서 구분한다.
+
+타임아웃/재시도(공식 호출 시뮬레이션 기준):
+
+- 공식 클라이언트 타임아웃: **300초**
+- 이 handler 자체의 내부 deadline: **290초**(`DEFAULT_TIMEOUT_MS`) — 클라이언트가
+  타임아웃하기 전에 항상 먼저 `503`으로 안전하게 반환하기 위한 여유
+- 타임아웃 또는 HTTP 5xx만 최대 **2회 재시도**(총 3회 시도). 4xx, 2xx 계약 오류, question
+  echo mismatch는 재시도하지 않는다. 모든 재시도는 동일한 `question_id`/`question`을
+  보낸다
+
 ## 계약 소스
 
-Gold 검증(`gold-loader.mjs`), FinalResponse 검증(`harness-runner.mjs`), Usage Ledger
-예약(`harness-runner.mjs`)은 전부 이 저장소의 현재 코드를 직접 import한다 — 번들된 복사본이
-아니다.
+Gold 검증(`gold-loader.mjs`), Answer Wire Response 검증(`harness-runner.mjs`), Usage
+Ledger 예약(`harness-runner.mjs`)은 전부 이 저장소의 현재 코드를 직접 import한다 — 번들된
+복사본이 아니다.
 
 - `domain/contracts.mjs`
 - `domain/runtime/evaluation-usage-ledger.mjs`
-- `domain/runtime/final-response-validator.mjs`
+- `domain/runtime/answer-wire-response.mjs` (`domain/interfaces/answer-wire-response.schema.json`가 검증)
 - `domain/evaluation/evaluation-gold.v0.2.schema.json` (`domain/contracts.mjs`가 검증)
+
+내부 `domain/runtime/final-response-validator.mjs`는 이 Harness가 실제 wire body에 직접
+적용하지 않는다 — 그 스키마는 내부 FinalResponse(배열/객체) 모양이고, wire body는 항상
+5개 문자열 필드이기 때문이다. `harness-runner.mjs`는 `validateAnswerWireResponse()`로 wire
+모양을 확인한 뒤 `fromAnswerWireResponseSafe()`로 JSON 문자열을 복원해 기존 metric 채점
+입력 형식(내부 FinalResponse 모양)으로 변환한다. 문자열 파싱이 실패하면 예외를 던지지
+않고 `response_usable=false`로 기록한다.
 
 ## Config
 
@@ -25,18 +88,26 @@ Gold 검증(`gold-loader.mjs`), FinalResponse 검증(`harness-runner.mjs`), Usag
 
 | 필드 | 필수 | 설명 |
 |---|---|---|
-| `base_url` / `answer_path` / `question_parameter` | 항상 | `GET {base_url}{answer_path}?{question_parameter}=...` |
+| `base_url` / `answer_path` / `question_parameter` | 항상 | `GET {base_url}{answer_path}?{question_parameter}=...&{question_id_parameter}=...` |
+| `question_id_parameter` | 선택(기본 `"question_id"`) | Gold의 `question_id`를 실어 보내는 query parameter 이름 |
 | `gold_path` / `result_path` / `summary_path` | 항상 | 서로 다른 경로여야 하며 `lifecycle_path`/`ledger_path`와도 겹칠 수 없다 |
 | `split` | 항상 | `SANDBOX`/`DEV_TUNE`/`DEV_CHECK`/`HOLDOUT` |
 | `run_purpose` | 항상 | `domain/contracts.mjs`의 `RUN_PURPOSES`, `RUN_PURPOSE_TO_SPLITS`로 `split`과의 조합을 검증 |
-| `timeout_ms` / `concurrency` | 항상 | 양의 정수 |
+| `timeout_ms` / `concurrency` | 항상 | 양의 정수. 공식 시뮬레이션 값은 `timeout_ms=300000`, `concurrency=1` |
+| `retries` | 선택(기본 `2`) | 음수·정수가 아닌 값은 거부. 타임아웃 또는 HTTP 5xx만 재시도 대상이며, 총 시도 횟수는 `1 + retries`다 |
 | `configuration_sha256` | 항상 | 64자리 소문자 hex |
 | `git_commit` | 항상 | 40자리 소문자 hex(전체 SHA) |
 | `lifecycle_path` / `ledger_path` | `SANDBOX`/`DEV_CHECK`/`HOLDOUT`에서 필수, 그 외 split도 둘 중 하나만 주면 거부 | `lifecycle_path`는 문항별 `EvaluationSplitLifecycle` 객체의 JSON 배열이며 `assignment_id`는 `question_id` 또는 `evaluation_group_id`로 조회 가능해야 한다 |
 | `sandbox_allowlist` | 선택 | `split="SANDBOX"`일 때만 의미 있음 — 아래 "SANDBOX 신뢰 경계" 참고. **독립 승인 권한이 아니라 필터다** |
-| `headers_env_prefix` | 선택 | 이 prefix로 시작하는 환경변수만 요청 header로 사용한다(`_` → `-`). config 파일 자체에 비밀 header를 넣지 않는다 |
+| `headers_env_prefix` | 선택 | 이 prefix로 시작하는 환경변수만 요청 header로 사용한다(`_` → `-`). config 파일 자체에 비밀 header를 넣지 않는다. 별도 인증 헤더의 기본값은 없다 |
 | `run_id` | 선택 | 생략 시 무작위 생성 |
 | `lock_timeout_ms` | 선택(기본 5000) | ledger를 쓰는 모든 실행의 cross-process exclusive lock 대기 상한 — 아래 참고 |
+
+재시도는 새로운 평가 노출(exposure)이나 run으로 세지 않는다 — Usage Ledger 예약은
+assignment당 정확히 한 번만 수행되고(HTTP 재시도 횟수와 무관), 실제 결과
+artifact(`result_path`)의 각 레코드에는 `attempt_count`와 각 시도의 `{attempt, http_status,
+timed_out}`만 기록된다. 질문 원문이나 secret은 이 재시도 기록에도, 다른 오류 로그에도
+중복 노출되지 않는다.
 
 ## SANDBOX 신뢰 경계
 

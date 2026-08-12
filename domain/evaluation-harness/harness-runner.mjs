@@ -1,10 +1,35 @@
 // Evaluation Harness runner. Calls the deployed Agent's GET /answer over
 // real HTTP only — never imports any Agent-internal Flow module. Gold
-// loading, FinalResponse shape validation, and Usage Ledger accounting all
-// import this repository's own current contracts as the single source of
-// truth (domain/contracts.mjs, domain/runtime/evaluation-usage-ledger.mjs,
-// domain/runtime/final-response-validator.mjs) rather than bundling private
-// copies that could silently drift from the real thing.
+// loading, Answer Wire Response shape validation, and Usage Ledger
+// accounting all import this repository's own current contracts as the
+// single source of truth (domain/contracts.mjs, domain/runtime/
+// evaluation-usage-ledger.mjs, domain/runtime/answer-wire-response.mjs)
+// rather than bundling private copies that could silently drift from the
+// real thing.
+//
+// WIRE CONTRACT (organizer API notice): a real GET /answer response is the
+// five-string-field body described by domain/interfaces/
+// answer-wire-response.schema.json — NOT the internal FinalResponse shape
+// (final-response.schema.json) Flows exchange with the Runtime Host.
+// domain/runtime/final-response-validator.mjs's validateFinalResponse() is
+// therefore NEVER applied to the RAW wire body (it would always fail: wire
+// retrieved_context/think_trace are strings, not an array/object). Every
+// response instead goes through THREE gates, all of which must pass before
+// response_contract_valid/response_usable can be true:
+//   (1) validateAnswerWireResponse() against answer-wire-response.schema.json
+//       (the raw wire body: exactly 5 required string fields).
+//   (2) fromAnswerWireResponseSafe() — JSON.parse() of retrieved_context/
+//       think_trace back into the internal shape (never throws — a
+//       malformed JSON string in either field is a diagnosable contract
+//       error, not an uncaught exception that aborts the whole run).
+//   (3) validateFinalResponse() (domain/runtime/final-response-validator.mjs)
+//       applied to the RESTORED value from (2) — never to the raw wire
+//       body. A response can pass (1) and (2) yet still fail (3): e.g.
+//       retrieved_context="42" and think_trace="[]" are both valid JSON
+//       (so (2) succeeds) but decode to a number and an array, neither of
+//       which satisfies final-response.schema.json's retrieved_context
+//       (array) / think_trace (object) shape. Only a value that clears all
+//       three gates is ever handed to scoreClosed/scoreOpen.
 import { createHash, randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { resolve as resolvePath } from "node:path";
@@ -14,9 +39,18 @@ import { scoreClosed } from "./metrics/closed-metric.mjs";
 import { scoreOpen } from "./metrics/open-metric.mjs";
 import { writeJson, writeJsonl } from "./result-writer.mjs";
 import { appendEventLineDurable, acquireExclusiveLock, releaseExclusiveLock } from "./durable-ledger.mjs";
+import { fromAnswerWireResponseSafe, validateAnswerWireResponse } from "../runtime/answer-wire-response.mjs";
 import { validateFinalResponse } from "../runtime/final-response-validator.mjs";
 import { canUseSplit, appendUsageEvent, readLedgerFile } from "../runtime/evaluation-usage-ledger.mjs";
 import { EVALUATION_SPLITS, RUN_PURPOSES, RUN_PURPOSE_TO_SPLITS, USAGE_KIND_TO_SPLIT } from "../contracts.mjs";
+
+// The official default retry count (organizer API notice): timeout or HTTP
+// 5xx get up to this many retries (so up to 1 + DEFAULT_RETRIES total HTTP
+// attempts per item) — 4xx, a 2xx contract defect, and a question-echo
+// mismatch are never retried. A config may override this via `retries`,
+// but only with a non-negative integer (validateConfig rejects anything
+// else) — retrying a negative or fractional number of times is meaningless.
+const DEFAULT_RETRIES = 2;
 
 const ALL_SPLITS = Object.freeze(["SANDBOX", ...EVALUATION_SPLITS]);
 // Derived from contracts.mjs's own USAGE_KIND_TO_SPLIT — never a second,
@@ -103,6 +137,18 @@ export function validateConfig(c) {
   }
   if (!Number.isInteger(c.concurrency) || c.concurrency <= 0) {
     throw new Error("concurrency must be a positive integer");
+  }
+  // Optional; defaults to DEFAULT_RETRIES (2). Rejects a negative or
+  // non-integer value outright rather than silently clamping or ignoring
+  // it — a caller who sets a bad retries value should learn that at
+  // config-validation time, not have it silently coerced.
+  if (c.retries !== undefined && (!Number.isInteger(c.retries) || c.retries < 0)) {
+    throw new Error("retries must be a non-negative integer");
+  }
+  // Optional; defaults to "question_id" in api-client.mjs. Only type-
+  // checked here (question_parameter's own required-ness is unaffected).
+  if (c.question_id_parameter !== undefined && (typeof c.question_id_parameter !== "string" || c.question_id_parameter === "")) {
+    throw new Error("question_id_parameter must be a non-empty string when present");
   }
   if (!CONFIGURATION_SHA256.test(c.configuration_sha256)) {
     throw new Error("configuration_sha256 must be 64 lowercase hex characters");
@@ -305,6 +351,8 @@ async function executeRun(config, runId, gold, usesLedger, lifecycle) {
           transport_error: null,
           reservation_error: `${reservation.gate.code}: ${reservation.gate.message}`,
           http_requests_made: 0,
+          attempt_count: 0,
+          attempts: [],
           response_contract_valid: false,
           contract_errors: ["exposure reservation failed; request was never sent"],
           question_echo_matches: null,
@@ -318,23 +366,71 @@ async function executeRun(config, runId, gold, usesLedger, lifecycle) {
       }
 
       const started = new Date().toISOString();
-      const api = await requestAnswer(config, item.question);
-      const contractErrors = api.body ? validateFinalResponse(api.body) : [api.parseError ?? api.transportError ?? `HTTP ${api.httpStatus}`];
-      const contractValid = api.body ? contractErrors.length === 0 : false;
-      const questionEchoMatches = contractValid ? api.body.question === item.question : null;
 
-      // response_usable = HTTP 2xx AND FinalResponse schema-valid AND the
-      // response echoes the exact question that was asked. A schema-valid
-      // body riding on an HTTP 500, or a schema-valid body that answers a
-      // DIFFERENT question than the one requested, is never usable — no
-      // metric is computed for it, and it always counts as failed.
+      // Retry policy (organizer API notice): only a timeout or an HTTP 5xx
+      // is retried, up to `maxAttempts` total HTTP calls for this item —
+      // NEVER a 4xx, a 2xx riding a contract defect, or a question-echo
+      // mismatch (none of those are fixed by trying again). Every attempt
+      // sends the exact same item.question_id/item.question (requestAnswer
+      // always takes them straight from `item`, which never changes across
+      // the loop). The exposure reservation above already happened exactly
+      // once for this item, before any attempt — retries never re-reserve
+      // or count as a second exposure/run.
+      const maxAttempts = 1 + (config.retries ?? DEFAULT_RETRIES);
+      const attempts = [];
+      let api;
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        api = await requestAnswer(config, item.question_id, item.question);
+        attempts.push({ attempt, http_status: api.httpStatus, timed_out: api.timedOut });
+        const isServerError = typeof api.httpStatus === "number" && api.httpStatus >= 500 && api.httpStatus < 600;
+        const retryable = api.timedOut || isServerError;
+        if (!retryable || attempt === maxAttempts) break;
+      }
+
+      // Three-gate validation (see this module's header comment). Gate 1:
+      // wire-shape (answer-wire-response.schema.json: 5 required string
+      // fields) — never domain/runtime/final-response-validator.mjs's
+      // validateFinalResponse() applied to a raw wire body. Gate 2: only if
+      // the wire shape itself is valid does retrieved_context/think_trace
+      // get JSON.parse'd back into the internal shape; a malformed JSON
+      // string in either becomes a contract error, never a thrown
+      // exception. Gate 3: only if that JSON decode succeeds is
+      // validateFinalResponse() run on the RESTORED value -- a decode that
+      // succeeds but produces a value that does not itself satisfy
+      // final-response.schema.json (e.g. retrieved_context="42" decodes to
+      // the number 42, not an array) must still be rejected, not silently
+      // treated as contract-valid just because JSON.parse() didn't throw.
+      const wireSchemaErrors = api.body ? validateAnswerWireResponse(api.body) : [];
+      const wireSchemaValid = api.body ? wireSchemaErrors.length === 0 : false;
+      const decoded = wireSchemaValid ? fromAnswerWireResponseSafe(api.body) : null;
+      const internalErrors = decoded?.ok ? validateFinalResponse(decoded.value) : [];
+      const internalValid = decoded?.ok ? internalErrors.length === 0 : false;
+      const contractErrors = api.body
+        ? wireSchemaValid
+          ? decoded.ok
+            ? internalValid
+              ? []
+              : internalErrors.map((error) => `restored FinalResponse invalid: ${error}`)
+            : [`retrieved_context/think_trace JSON decode failed: ${decoded.error}`]
+          : wireSchemaErrors
+        : [api.parseError ?? api.transportError ?? `HTTP ${api.httpStatus}`];
+      const contractValid = api.body ? contractErrors.length === 0 : false;
+      const restored = contractValid ? decoded.value : null;
+      const questionEchoMatches = contractValid ? api.body.question_id === item.question_id && api.body.question === item.question : null;
+
+      // response_usable = HTTP 2xx AND the wire body is schema-valid AND
+      // JSON-decodable AND both question_id and question echo exactly what
+      // was requested. A schema-valid body riding on an HTTP 500, or a
+      // schema-valid body that answers a DIFFERENT question (or carries a
+      // different question_id) than the one requested, is never usable —
+      // no metric is computed for it, and it always counts as failed.
       const httpOk = typeof api.httpStatus === "number" && api.httpStatus >= 200 && api.httpStatus < 300;
       const responseUsable = httpOk && contractValid && questionEchoMatches === true;
 
       const metrics = responseUsable
         ? item.answer_mode === "CLOSED"
-          ? scoreClosed(item, api.body)
-          : scoreOpen(item, api.body)
+          ? scoreClosed(item, restored)
+          : scoreOpen(item, restored)
         : {};
 
       results[index] = {
@@ -347,13 +443,15 @@ async function executeRun(config, runId, gold, usesLedger, lifecycle) {
         timed_out: api.timedOut,
         transport_error: safeError(api.transportError ?? api.parseError),
         reservation_error: null,
-        http_requests_made: 1,
+        http_requests_made: attempts.length,
+        attempt_count: attempts.length,
+        attempts,
         response_contract_valid: contractValid,
         contract_errors: contractErrors,
         question_echo_matches: questionEchoMatches,
         response_usable: responseUsable,
-        answerability_actual: api.body?.think_trace?.validation?.answerability ?? null,
-        execution_mode_actual: api.body?.think_trace?.execution_mode ?? null,
+        answerability_actual: restored?.think_trace?.validation?.answerability ?? null,
+        execution_mode_actual: restored?.think_trace?.execution_mode ?? null,
         metric_results: metrics,
         raw_response_sha256: api.raw ? createHash("sha256").update(api.raw).digest("hex") : null,
       };

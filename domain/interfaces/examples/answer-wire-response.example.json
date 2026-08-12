@@ -1,0 +1,7 @@
+{
+  "question_id": "Q-001",
+  "question": "삼성전자의 2024년 11월 15일 자기주식취득결정 핵심 내용은 무엇인가?",
+  "retrieved_context": "[{\"document_id\":\"major_20241115000375\",\"source_locator\":\"major_20241115000375/20241115000375.xml#node=3\",\"snippet\":\"1. 취득예정주식(주) 보통주식 50,144,628\"}]",
+  "think_trace": "{\"execution_mode\":\"STRUCTURED\",\"operations\":[\"lookup_event\",\"resolve_latest_effective_version\"],\"calculation\":{},\"validation\":{\"evidence_supported\":true,\"version_valid\":true,\"answerability\":\"SUPPORTED\"}}",
+  "answer": "2024년 11월 15일 이사회에서 자기주식 취득을 결정했습니다."
+}

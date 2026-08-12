@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createAnswerHandler, DEFAULT_TIMEOUT_MS } from "../domain/runtime/answer-handler.mjs";
-import { isValidFinalResponse } from "../domain/runtime/final-response-validator.mjs";
+import { isValidAnswerWireResponse } from "../domain/runtime/answer-wire-response.mjs";
 
 function params(pairs) {
   const searchParams = new URLSearchParams();
@@ -9,8 +9,8 @@ function params(pairs) {
   return searchParams;
 }
 
-function questionOnly(value) {
-  return params([["question", value]]);
+function requestParams(questionId, question) {
+  return params([["question_id", questionId], ["question", question]]);
 }
 
 function echoRunner(finalResponseOverrides = {}) {
@@ -23,6 +23,22 @@ function echoRunner(finalResponseOverrides = {}) {
       ...finalResponseOverrides,
     },
   });
+}
+
+// Asserts the wire-shape invariant every response body must satisfy: valid
+// against answer-wire-response.schema.json, exactly the 5 required keys,
+// and every value actually typeof "string".
+function assertWireShape(body) {
+  assert.equal(isValidAnswerWireResponse(body), true, `expected a valid wire body, got: ${JSON.stringify(body)}`);
+  assert.deepEqual(Object.keys(body).sort(), ["answer", "question", "question_id", "retrieved_context", "think_trace"]);
+  for (const key of Object.keys(body)) assert.equal(typeof body[key], "string", `${key} must be a string`);
+}
+
+function parsedThinkTrace(body) {
+  return JSON.parse(body.think_trace);
+}
+function parsedRetrievedContext(body) {
+  return JSON.parse(body.retrieved_context);
 }
 
 // --- constructor contract ---------------------------------------------------
@@ -40,27 +56,36 @@ test("createAnswerHandler rejects a non-string questionParameter", () => {
   assert.throws(() => createAnswerHandler({ runner: echoRunner(), questionParameter: 42 }), TypeError);
 });
 
+test("createAnswerHandler rejects an empty questionIdParameter", () => {
+  assert.throws(() => createAnswerHandler({ runner: echoRunner(), questionIdParameter: "" }), TypeError);
+});
+
+test("createAnswerHandler rejects a non-string questionIdParameter", () => {
+  assert.throws(() => createAnswerHandler({ runner: echoRunner(), questionIdParameter: 42 }), TypeError);
+});
+
 // --- valid requests ----------------------------------------------------------
 
-test("a normal Korean question is passed through to the runner and returned as-is", async () => {
+test("a normal Korean question is passed through to the runner and returned as-is, with the request's question_id echoed", async () => {
   const handle = createAnswerHandler({ runner: echoRunner() });
-  const { status, body } = await handle(questionOnly("삼성전자 2024년 3분기 매출액은 얼마인가요?"));
+  const { status, body } = await handle(requestParams("Q-001", "삼성전자 2024년 3분기 매출액은 얼마인가요?"));
   assert.equal(status, 200);
+  assertWireShape(body);
+  assert.equal(body.question_id, "Q-001");
   assert.equal(body.question, "삼성전자 2024년 3분기 매출액은 얼마인가요?");
   assert.equal(body.answer, "echo: 삼성전자 2024년 3분기 매출액은 얼마인가요?");
-  assert.equal(isValidFinalResponse(body), true);
 });
 
 test("numbers, English abbreviations, and special characters in the question are preserved exactly", async () => {
   const tricky = "ROE(%) 2024Q1 vs 2023Q1 - 삼성전자·SK하이닉스 비교, 증가율은?";
   const handle = createAnswerHandler({ runner: echoRunner() });
-  const { status, body } = await handle(questionOnly(tricky));
+  const { status, body } = await handle(requestParams("Q-002", tricky));
   assert.equal(status, 200);
   assert.equal(body.question, tricky);
-  assert.equal(isValidFinalResponse(body), true);
+  assertWireShape(body);
 });
 
-test("a well-formed FinalResponse from the runner passes through 200 unchanged", async () => {
+test("a well-formed FinalResponse from the runner is converted to the wire shape: retrieved_context/think_trace become JSON strings", async () => {
   const wellFormed = {
     question: "q",
     retrieved_context: [{ document_id: "major_20241115000375" }],
@@ -68,86 +93,145 @@ test("a well-formed FinalResponse from the runner passes through 200 unchanged",
     answer: "a",
   };
   const handle = createAnswerHandler({ runner: async () => ({ final_response: wellFormed }) });
-  const { status, body } = await handle(questionOnly("q"));
+  const { status, body } = await handle(requestParams("Q-003", "q"));
   assert.equal(status, 200);
-  assert.deepEqual(body, wellFormed);
-  assert.equal(isValidFinalResponse(body), true);
+  assertWireShape(body);
+  assert.deepEqual(parsedRetrievedContext(body), wellFormed.retrieved_context);
+  assert.deepEqual(parsedThinkTrace(body), wellFormed.think_trace);
+  assert.equal(body.answer, "a");
+  assert.equal(body.question_id, "Q-003");
 });
 
 // --- invalid requests: HTTP 400 -----------------------------------------------
 
-test("a missing question parameter is rejected with 400 and a valid FinalResponse body", async () => {
+test("a missing question_id parameter is rejected with 400 and a valid wire body; question is still echoed", async () => {
   const handle = createAnswerHandler({ runner: echoRunner() });
-  const { status, body } = await handle(params([]));
+  const { status, body } = await handle(params([["question", "q"]]));
   assert.equal(status, 400);
-  assert.equal(isValidFinalResponse(body), true);
-  assert.equal(body.think_trace.execution_mode, "EARLY_EXIT");
+  assertWireShape(body);
+  assert.equal(body.question_id, "");
+  assert.equal(body.question, "q");
+  assert.equal(parsedThinkTrace(body).execution_mode, "EARLY_EXIT");
+});
+
+test("an empty question_id value is rejected with 400", async () => {
+  const handle = createAnswerHandler({ runner: echoRunner() });
+  const { status, body } = await handle(requestParams("", "q"));
+  assert.equal(status, 400);
+  assertWireShape(body);
+  assert.equal(body.question_id, "");
+});
+
+test("a whitespace-only question_id value is rejected with 400", async () => {
+  const handle = createAnswerHandler({ runner: echoRunner() });
+  const { status, body } = await handle(requestParams("   　  ", "q"));
+  assert.equal(status, 400);
+  assertWireShape(body);
+});
+
+test("a duplicated question_id parameter is rejected with 400, even with distinct values", async () => {
+  const handle = createAnswerHandler({ runner: echoRunner() });
+  const { status, body } = await handle(params([["question_id", "a"], ["question_id", "b"], ["question", "q"]]));
+  assert.equal(status, 400);
+  assertWireShape(body);
+});
+
+test("a missing question parameter is rejected with 400 and a valid wire body; question_id is still echoed", async () => {
+  const handle = createAnswerHandler({ runner: echoRunner() });
+  const { status, body } = await handle(params([["question_id", "Q-001"]]));
+  assert.equal(status, 400);
+  assertWireShape(body);
+  assert.equal(body.question_id, "Q-001");
+  assert.equal(body.question, "");
 });
 
 test("an empty question value is rejected with 400", async () => {
   const handle = createAnswerHandler({ runner: echoRunner() });
-  const { status, body } = await handle(questionOnly(""));
+  const { status, body } = await handle(requestParams("Q-001", ""));
   assert.equal(status, 400);
-  assert.equal(isValidFinalResponse(body), true);
+  assertWireShape(body);
 });
 
 test("a whitespace-only question value is rejected with 400", async () => {
   const handle = createAnswerHandler({ runner: echoRunner() });
-  const { status, body } = await handle(questionOnly("   　  "));
+  const { status, body } = await handle(requestParams("Q-001", "   　  "));
   assert.equal(status, 400);
-  assert.equal(isValidFinalResponse(body), true);
+  assertWireShape(body);
 });
 
 test("a duplicated question parameter is rejected with 400, even with distinct values", async () => {
   const handle = createAnswerHandler({ runner: echoRunner() });
-  const { status, body } = await handle(params([["question", "a"], ["question", "b"]]));
+  const { status, body } = await handle(params([["question_id", "Q-001"], ["question", "a"], ["question", "b"]]));
   assert.equal(status, 400);
-  assert.equal(isValidFinalResponse(body), true);
+  assertWireShape(body);
 });
 
 test("a duplicated question parameter with identical values is still rejected with 400", async () => {
   const handle = createAnswerHandler({ runner: echoRunner() });
-  const { status, body } = await handle(params([["question", "a"], ["question", "a"]]));
+  const { status, body } = await handle(params([["question_id", "Q-001"], ["question", "a"], ["question", "a"]]));
   assert.equal(status, 400);
-  assert.equal(isValidFinalResponse(body), true);
+  assertWireShape(body);
 });
 
-// --- runner failures never surface as 5xx or leak internals -----------------
+test("both question_id and question missing is rejected with 400 and both echo back as empty strings", async () => {
+  const handle = createAnswerHandler({ runner: echoRunner() });
+  const { status, body } = await handle(params([]));
+  assert.equal(status, 400);
+  assertWireShape(body);
+  assert.equal(body.question_id, "");
+  assert.equal(body.question, "");
+});
 
-test("a runner that throws synchronously still returns 200 with a safe EARLY_EXIT response", async () => {
+// --- runner failures: 503, never leak internals -----------------------------
+
+test("a runner that throws synchronously returns 503 with a safe wire body, no leaked internals", async () => {
   const handle = createAnswerHandler({
     runner: () => {
       throw new Error("SECRET_DB_PASSWORD=hunter2 at /internal/path\n  at boom (secret.js:1:1)");
     },
   });
-  const { status, body } = await handle(questionOnly("q"));
-  assert.equal(status, 200);
-  assert.equal(isValidFinalResponse(body), true);
-  assert.equal(body.think_trace.execution_mode, "EARLY_EXIT");
+  const { status, body } = await handle(requestParams("Q-1", "q"));
+  assert.equal(status, 503);
+  assertWireShape(body);
+  assert.equal(parsedThinkTrace(body).execution_mode, "EARLY_EXIT");
   const serialized = JSON.stringify(body);
   assert.ok(!serialized.includes("SECRET_DB_PASSWORD"));
   assert.ok(!serialized.includes("hunter2"));
   assert.ok(!serialized.includes("secret.js"));
 });
 
-test("a runner whose promise rejects still returns 200 with a safe EARLY_EXIT response, not the raw error", async () => {
+test("a runner whose promise rejects returns 503 with a safe wire body, not the raw error", async () => {
   const handle = createAnswerHandler({
     runner: async () => {
       throw new Error("internal stack trace leak: at Object.<anonymous> (/app/secret.mjs:42:9)");
     },
   });
-  const { status, body } = await handle(questionOnly("q"));
-  assert.equal(status, 200);
-  assert.equal(isValidFinalResponse(body), true);
+  const { status, body } = await handle(requestParams("Q-1", "q"));
+  assert.equal(status, 503);
+  assertWireShape(body);
   assert.ok(!JSON.stringify(body).includes("secret.mjs"));
 });
+
+test("the request's question_id is still echoed on a 503 runner-failure response", async () => {
+  const handle = createAnswerHandler({
+    runner: async () => {
+      throw new Error("boom");
+    },
+  });
+  const { status, body } = await handle(requestParams("Q-CORRELATE-503", "q"));
+  assert.equal(status, 503);
+  assert.equal(body.question_id, "Q-CORRELATE-503");
+  assert.equal(body.question, "q");
+});
+
+// --- contract defects a retry cannot fix: still 200, never repaired ---------
 
 // A malformed candidate is wholly discarded, never field-by-field repaired:
 // no partial trust in retrieved_context, no fabricated STRUCTURED mode, no
 // surviving operations/calculation/validation — a bad answer type anywhere
 // in the candidate collapses the ENTIRE response to a fresh, hand-built
-// EARLY_EXIT built only from the original request question.
-test("a malformed answer type together with fake retrieved_context/STRUCTURED mode is wholly discarded as EARLY_EXIT, not repaired field-by-field", async () => {
+// EARLY_EXIT built only from the original request question_id/question.
+test("a malformed answer type together with fake retrieved_context/STRUCTURED mode is wholly discarded as EARLY_EXIT, still 200 (not a retryable failure)", async () => {
   const handle = createAnswerHandler({
     runner: async () => ({
       final_response: {
@@ -158,17 +242,18 @@ test("a malformed answer type together with fake retrieved_context/STRUCTURED mo
       },
     }),
   });
-  const { status, body } = await handle(questionOnly("q"));
+  const { status, body } = await handle(requestParams("Q-1", "q"));
   assert.equal(status, 200);
-  assert.equal(isValidFinalResponse(body), true);
-  assert.equal(body.think_trace.execution_mode, "EARLY_EXIT");
-  assert.deepEqual(body.retrieved_context, []);
+  assertWireShape(body);
+  assert.equal(parsedThinkTrace(body).execution_mode, "EARLY_EXIT");
+  assert.deepEqual(parsedRetrievedContext(body), []);
   assert.equal(body.question, "q");
+  assert.equal(body.question_id, "Q-1");
   assert.notEqual(body.answer, undefined);
-  assert.notDeepEqual(body.retrieved_context, [{ document_id: "major_20241115000375", forged: true }]);
+  assert.notDeepEqual(parsedRetrievedContext(body), [{ document_id: "major_20241115000375", forged: true }]);
 });
 
-test("a malformed response's operations/calculation/validation are entirely discarded, not selectively kept", async () => {
+test("a malformed response's operations/calculation/validation are entirely discarded, not selectively kept, still 200", async () => {
   const handle = createAnswerHandler({
     runner: async () => ({
       final_response: {
@@ -184,22 +269,24 @@ test("a malformed response's operations/calculation/validation are entirely disc
       },
     }),
   });
-  const { status, body } = await handle(questionOnly("q"));
+  const { status, body } = await handle(requestParams("Q-1", "q"));
   assert.equal(status, 200);
-  assert.equal(isValidFinalResponse(body), true);
-  assert.deepEqual(body.think_trace.operations, []);
-  assert.deepEqual(body.think_trace.calculation, {});
-  assert.deepEqual(body.think_trace.validation, {});
-  assert.equal(body.think_trace.execution_mode, "EARLY_EXIT");
+  assertWireShape(body);
+  const trace = parsedThinkTrace(body);
+  assert.deepEqual(trace.operations, []);
+  assert.deepEqual(trace.calculation, {});
+  assert.deepEqual(trace.validation, {});
+  assert.equal(trace.execution_mode, "EARLY_EXIT");
 });
 
 test("a malformed runner response (missing required fields) is discarded to a safe EARLY_EXIT, still 200", async () => {
   const handle = createAnswerHandler({ runner: async () => ({ final_response: { not_a_real_field: true } }) });
-  const { status, body } = await handle(questionOnly("q"));
+  const { status, body } = await handle(requestParams("Q-1", "q"));
   assert.equal(status, 200);
-  assert.equal(isValidFinalResponse(body), true);
-  assert.equal(body.think_trace.execution_mode, "EARLY_EXIT");
+  assertWireShape(body);
+  assert.equal(parsedThinkTrace(body).execution_mode, "EARLY_EXIT");
   assert.equal(body.question, "q");
+  assert.equal(body.question_id, "Q-1");
 });
 
 test("a malformed runner response (wrong field types) is discarded to a safe EARLY_EXIT, still 200", async () => {
@@ -213,32 +300,32 @@ test("a malformed runner response (wrong field types) is discarded to a safe EAR
       },
     }),
   });
-  const { status, body } = await handle(questionOnly("q"));
+  const { status, body } = await handle(requestParams("Q-1", "q"));
   assert.equal(status, 200);
-  assert.equal(isValidFinalResponse(body), true);
-  assert.equal(body.think_trace.execution_mode, "EARLY_EXIT");
+  assertWireShape(body);
+  assert.equal(parsedThinkTrace(body).execution_mode, "EARLY_EXIT");
   assert.equal(body.question, "q");
 });
 
-test("a runner that resolves with no final_response at all is discarded to a safe EARLY_EXIT", async () => {
+test("a runner that resolves with no final_response at all is discarded to a safe EARLY_EXIT, still 200", async () => {
   const handle = createAnswerHandler({ runner: async () => ({}) });
-  const { status, body } = await handle(questionOnly("q"));
+  const { status, body } = await handle(requestParams("Q-1", "q"));
   assert.equal(status, 200);
-  assert.equal(isValidFinalResponse(body), true);
+  assertWireShape(body);
   assert.equal(body.question, "q");
 });
 
-test("a runner that resolves with undefined is discarded to a safe EARLY_EXIT", async () => {
+test("a runner that resolves with undefined is discarded to a safe EARLY_EXIT, still 200", async () => {
   const handle = createAnswerHandler({ runner: async () => undefined });
-  const { status, body } = await handle(questionOnly("q"));
+  const { status, body } = await handle(requestParams("Q-1", "q"));
   assert.equal(status, 200);
-  assert.equal(isValidFinalResponse(body), true);
+  assertWireShape(body);
   assert.equal(body.question, "q");
 });
 
 // --- request <-> response question binding -----------------------------------
 
-test("a runner response whose question differs from the request question is rejected wholesale", async () => {
+test("a runner response whose question differs from the request question is rejected wholesale, still 200", async () => {
   const handle = createAnswerHandler({
     runner: async () => ({
       final_response: {
@@ -249,14 +336,14 @@ test("a runner response whose question differs from the request question is reje
       },
     }),
   });
-  const { status, body } = await handle(questionOnly("실제 요청 질문"));
+  const { status, body } = await handle(requestParams("Q-1", "실제 요청 질문"));
   assert.equal(status, 200);
-  assert.equal(isValidFinalResponse(body), true);
-  assert.equal(body.think_trace.execution_mode, "EARLY_EXIT");
-  assert.deepEqual(body.retrieved_context, []);
+  assertWireShape(body);
+  assert.equal(parsedThinkTrace(body).execution_mode, "EARLY_EXIT");
+  assert.deepEqual(parsedRetrievedContext(body), []);
 });
 
-test("a question-mismatch rejection keeps the ORIGINAL request question, not the runner's claimed one, and does not silently overwrite it", async () => {
+test("a question-mismatch rejection keeps the ORIGINAL request question_id/question, not the runner's claimed one, and does not silently overwrite it", async () => {
   const handle = createAnswerHandler({
     runner: async () => ({
       final_response: {
@@ -267,11 +354,12 @@ test("a question-mismatch rejection keeps the ORIGINAL request question, not the
       },
     }),
   });
-  const { body } = await handle(questionOnly("original request question"));
+  const { body } = await handle(requestParams("Q-ORIGINAL", "original request question"));
+  assert.equal(body.question_id, "Q-ORIGINAL");
   assert.equal(body.question, "original request question");
 });
 
-test("a fully valid response whose question exactly matches the request passes through unchanged", async () => {
+test("a fully valid response whose question exactly matches the request passes through unchanged, converted to wire shape", async () => {
   const wellFormed = {
     question: "정확히 같은 질문",
     retrieved_context: [{ document_id: "major_20241115000375" }],
@@ -279,40 +367,137 @@ test("a fully valid response whose question exactly matches the request passes t
     answer: "a",
   };
   const handle = createAnswerHandler({ runner: async () => ({ final_response: wellFormed }) });
-  const { status, body } = await handle(questionOnly("정확히 같은 질문"));
+  const { status, body } = await handle(requestParams("Q-9", "정확히 같은 질문"));
   assert.equal(status, 200);
-  assert.deepEqual(body, wellFormed);
-  assert.equal(isValidFinalResponse(body), true);
+  assertWireShape(body);
+  assert.deepEqual(parsedRetrievedContext(body), wellFormed.retrieved_context);
+  assert.deepEqual(parsedThinkTrace(body), wellFormed.think_trace);
 });
 
-// --- configurable questionParameter -------------------------------------------
+// --- runner receives question_id via options, never via the AgentInput question arg ---
+
+test("the runner still receives the plain question string as its first argument (AgentInput contract unchanged)", async () => {
+  let receivedQuestionArg;
+  const handle = createAnswerHandler({
+    runner: async (question) => {
+      receivedQuestionArg = question;
+      return {
+        final_response: {
+          question,
+          retrieved_context: [],
+          think_trace: { execution_mode: "EARLY_EXIT", operations: [], calculation: {}, validation: {} },
+          answer: "a",
+        },
+      };
+    },
+  });
+  await handle(requestParams("Q-1", "the question text"));
+  assert.equal(receivedQuestionArg, "the question text");
+});
+
+test("the runner receives question_id ONLY via options.question_id, alongside signal/deadline_at/timeout_ms", async () => {
+  let receivedOptions;
+  const handle = createAnswerHandler({
+    runner: async (question, options) => {
+      receivedOptions = options;
+      return {
+        final_response: {
+          question,
+          retrieved_context: [],
+          think_trace: { execution_mode: "EARLY_EXIT", operations: [], calculation: {}, validation: {} },
+          answer: "a",
+        },
+      };
+    },
+  });
+  await handle(requestParams("Q-VIA-OPTIONS", "q"));
+  assert.equal(receivedOptions.question_id, "Q-VIA-OPTIONS");
+  assert.equal(typeof receivedOptions.signal, "object");
+  assert.equal(typeof receivedOptions.deadline_at, "string");
+  assert.equal(typeof receivedOptions.timeout_ms, "number");
+});
+
+test("a runner self-declaring a different question_id inside final_response has no effect -- final_response has no question_id field to begin with, and the response's question_id always comes from the request", async () => {
+  const handle = createAnswerHandler({
+    runner: async (question) => ({
+      final_response: {
+        question,
+        // Even if a misbehaving runner tried to smuggle a question_id-like
+        // field into final_response, isValidFinalResponse's
+        // additionalProperties:false would reject the whole candidate --
+        // demonstrated here by a genuinely well-formed response with no
+        // such field, whose response.question_id must still come from the
+        // REQUEST, never anywhere else.
+        retrieved_context: [],
+        think_trace: { execution_mode: "EARLY_EXIT", operations: [], calculation: {}, validation: {} },
+        answer: "a",
+      },
+    }),
+  });
+  const { body } = await handle(requestParams("Q-REQUEST-IS-AUTHORITATIVE", "q"));
+  assert.equal(body.question_id, "Q-REQUEST-IS-AUTHORITATIVE");
+});
+
+test("a runner final_response smuggling a question_id-shaped extra field is rejected wholesale (additionalProperties:false), never lets that value leak into the wire question_id", async () => {
+  const handle = createAnswerHandler({
+    runner: async (question) => ({
+      final_response: {
+        question,
+        question_id: "SMUGGLED-FROM-RUNNER",
+        retrieved_context: [],
+        think_trace: { execution_mode: "STRUCTURED", operations: [], calculation: {}, validation: {} },
+        answer: "a",
+      },
+    }),
+  });
+  const { status, body } = await handle(requestParams("Q-REAL", "q"));
+  assert.equal(status, 200);
+  assert.equal(parsedThinkTrace(body).execution_mode, "EARLY_EXIT", "the smuggled field makes final_response schema-invalid, discarded wholesale");
+  assert.equal(body.question_id, "Q-REAL");
+});
+
+// --- configurable questionParameter / questionIdParameter --------------------
 
 test("a custom questionParameter is used for lookup instead of the default 'question' key", async () => {
   const handle = createAnswerHandler({ runner: echoRunner(), questionParameter: "q" });
-  const { status, body } = await handle(params([["q", "custom param question"]]));
+  const { status, body } = await handle(params([["question_id", "Q-1"], ["q", "custom param question"]]));
   assert.equal(status, 200);
   assert.equal(body.question, "custom param question");
 });
 
 test("with a custom questionParameter, the default 'question' key is ignored entirely (missing -> 400)", async () => {
   const handle = createAnswerHandler({ runner: echoRunner(), questionParameter: "q" });
-  const { status, body } = await handle(questionOnly("this uses the wrong key now"));
+  const { status, body } = await handle(requestParams("Q-1", "this uses the wrong key now"));
   assert.equal(status, 400);
-  assert.equal(isValidFinalResponse(body), true);
+  assertWireShape(body);
 });
 
 test("the default questionParameter ('question') is used when none is configured", async () => {
   const handle = createAnswerHandler({ runner: echoRunner() });
-  const { status, body } = await handle(questionOnly("default param question"));
+  const { status, body } = await handle(requestParams("Q-1", "default param question"));
   assert.equal(status, 200);
   assert.equal(body.question, "default param question");
 });
 
 test("a duplicated custom questionParameter is still rejected with 400", async () => {
   const handle = createAnswerHandler({ runner: echoRunner(), questionParameter: "q" });
-  const { status, body } = await handle(params([["q", "a"], ["q", "b"]]));
+  const { status, body } = await handle(params([["question_id", "Q-1"], ["q", "a"], ["q", "b"]]));
   assert.equal(status, 400);
-  assert.equal(isValidFinalResponse(body), true);
+  assertWireShape(body);
+});
+
+test("a custom questionIdParameter is used for lookup instead of the default 'question_id' key", async () => {
+  const handle = createAnswerHandler({ runner: echoRunner(), questionIdParameter: "qid" });
+  const { status, body } = await handle(params([["qid", "custom-id"], ["question", "q"]]));
+  assert.equal(status, 200);
+  assert.equal(body.question_id, "custom-id");
+});
+
+test("with a custom questionIdParameter, the default 'question_id' key is ignored entirely (missing -> 400)", async () => {
+  const handle = createAnswerHandler({ runner: echoRunner(), questionIdParameter: "qid" });
+  const { status, body } = await handle(requestParams("Q-1", "q"));
+  assert.equal(status, 400);
+  assertWireShape(body);
 });
 
 // --- execution_trace and other internals never leak into the body -----------
@@ -333,32 +518,32 @@ test("the runner's execution_trace never appears in the response body", async ()
       },
     }),
   });
-  const { body } = await handle(questionOnly("q"));
+  const { body } = await handle(requestParams("Q-1", "q"));
   assert.equal(body.execution_trace, undefined);
-  assert.deepEqual(Object.keys(body).sort(), ["answer", "question", "retrieved_context", "think_trace"]);
+  assertWireShape(body);
   assert.ok(!JSON.stringify(body).includes("secret-flow-internal-id"));
 });
 
 // --- schema compliance across the board --------------------------------------
 
-test("every /answer body produced above validates against final-response.schema.json (spot re-check)", async () => {
+test("every /answer body produced above validates against answer-wire-response.schema.json (spot re-check)", async () => {
   const handle = createAnswerHandler({ runner: echoRunner() });
   const cases = await Promise.all([
-    handle(questionOnly("정상 질문")),
+    handle(requestParams("Q-1", "정상 질문")),
     handle(params([])),
-    handle(questionOnly("")),
-    handle(questionOnly("   ")),
-    handle(params([["question", "a"], ["question", "b"]])),
+    handle(requestParams("Q-1", "")),
+    handle(requestParams("Q-1", "   ")),
+    handle(params([["question_id", "Q-1"], ["question", "a"], ["question", "b"]])),
   ]);
   for (const { body } of cases) {
-    assert.equal(isValidFinalResponse(body), true);
+    assertWireShape(body);
   }
 });
 
 // --- per-request Timeout/AbortSignal ------------------------------------------
 
-test("createAnswerHandler defaults timeoutMs to 60000", () => {
-  assert.equal(DEFAULT_TIMEOUT_MS, 60_000);
+test("createAnswerHandler defaults timeoutMs to 290000", () => {
+  assert.equal(DEFAULT_TIMEOUT_MS, 290_000);
 });
 
 test("createAnswerHandler rejects a non-positive timeoutMs", () => {
@@ -372,7 +557,7 @@ test("createAnswerHandler rejects a non-finite or non-number timeoutMs", () => {
   assert.throws(() => createAnswerHandler({ runner: echoRunner(), timeoutMs: "60000" }), TypeError);
 });
 
-test("a normal runner that finishes well before the deadline succeeds normally", async () => {
+test("a normal runner that finishes well before the deadline succeeds normally (small injected timeoutMs, never waits the real 290s)", async () => {
   const handle = createAnswerHandler({
     runner: async (question) => ({
       final_response: {
@@ -384,29 +569,31 @@ test("a normal runner that finishes well before the deadline succeeds normally",
     }),
     timeoutMs: 200,
   });
-  const { status, body } = await handle(questionOnly("q"));
+  const { status, body } = await handle(requestParams("Q-1", "q"));
   assert.equal(status, 200);
   assert.equal(body.answer, "on time");
-  assert.equal(isValidFinalResponse(body), true);
+  assertWireShape(body);
 });
 
-test("a runner that never resolves is cut off at the deadline and returns a safe EARLY_EXIT response", async () => {
+test("a runner that never resolves is cut off at the deadline and returns 503 with a safe wire body (small injected timeoutMs)", async () => {
   const handle = createAnswerHandler({
     runner: () => new Promise(() => {}),
     timeoutMs: 30,
   });
   const started = Date.now();
-  const { status, body } = await handle(questionOnly("q"));
+  const { status, body } = await handle(requestParams("Q-TIMEOUT", "q"));
   const elapsed = Date.now() - started;
-  assert.equal(status, 200);
+  assert.equal(status, 503);
   assert.ok(elapsed < 1000, `expected a fast timeout response, took ${elapsed}ms`);
-  assert.equal(isValidFinalResponse(body), true);
-  assert.equal(body.think_trace.execution_mode, "EARLY_EXIT");
+  assertWireShape(body);
+  const trace = parsedThinkTrace(body);
+  assert.equal(trace.execution_mode, "EARLY_EXIT");
   assert.equal(body.question, "q");
-  assert.deepEqual(body.retrieved_context, []);
-  assert.deepEqual(body.think_trace.operations, []);
-  assert.deepEqual(body.think_trace.calculation, {});
-  assert.deepEqual(body.think_trace.validation, {});
+  assert.equal(body.question_id, "Q-TIMEOUT");
+  assert.deepEqual(parsedRetrievedContext(body), []);
+  assert.deepEqual(trace.operations, []);
+  assert.deepEqual(trace.calculation, {});
+  assert.deepEqual(trace.validation, {});
 });
 
 test("the signal passed to the runner becomes aborted at the deadline", async () => {
@@ -431,7 +618,7 @@ test("the signal passed to the runner becomes aborted at the deadline", async ()
     },
     timeoutMs: 30,
   });
-  await handle(questionOnly("q"));
+  await handle(requestParams("Q-1", "q"));
   assert.equal(observedSignal.aborted, true);
   assert.equal(observedAbortedInsideRunner, true);
 });
@@ -452,13 +639,13 @@ test("the runner also receives deadline_at and timeout_ms options matching the c
     },
     timeoutMs: 12345,
   });
-  await handle(questionOnly("q"));
+  await handle(requestParams("Q-1", "q"));
   assert.equal(received.timeout_ms, 12345);
   assert.equal(typeof received.deadline_at, "string");
   assert.ok(!Number.isNaN(Date.parse(received.deadline_at)));
 });
 
-test("a client-supplied abort signal propagates to the runner's signal and short-circuits the request", async () => {
+test("a client-supplied abort signal propagates to the runner's signal and short-circuits the request with 503", async () => {
   const clientController = new AbortController();
   let observedSignal;
   const handle = createAnswerHandler({
@@ -468,17 +655,17 @@ test("a client-supplied abort signal propagates to the runner's signal and short
     },
     timeoutMs: 60_000, // long enough that only the client abort could end this quickly
   });
-  const resultPromise = handle(questionOnly("q"), { signal: clientController.signal });
+  const resultPromise = handle(requestParams("Q-1", "q"), { signal: clientController.signal });
   await new Promise((resolve) => setTimeout(resolve, 10));
   clientController.abort();
   const { status, body } = await resultPromise;
-  assert.equal(status, 200);
+  assert.equal(status, 503);
   assert.equal(observedSignal.aborted, true);
-  assert.equal(isValidFinalResponse(body), true);
-  assert.equal(body.think_trace.execution_mode, "EARLY_EXIT");
+  assertWireShape(body);
+  assert.equal(parsedThinkTrace(body).execution_mode, "EARLY_EXIT");
 });
 
-test("an already-aborted client signal means the runner is NEVER called — not even once", async () => {
+test("an already-aborted client signal means the runner is NEVER called — not even once, and the response is 503", async () => {
   const clientController = new AbortController();
   clientController.abort();
   let runnerCallCount = 0;
@@ -490,13 +677,14 @@ test("an already-aborted client signal means the runner is NEVER called — not 
     timeoutMs: 60_000,
   });
   const started = Date.now();
-  const { status, body } = await handle(questionOnly("원래 질문"), { signal: clientController.signal });
+  const { status, body } = await handle(requestParams("Q-DISCONNECT", "원래 질문"), { signal: clientController.signal });
   assert.ok(Date.now() - started < 1000);
   assert.equal(runnerCallCount, 0, "the runner must never be invoked when the request is already aborted at entry");
-  assert.equal(status, 200);
+  assert.equal(status, 503);
   assert.equal(body.question, "원래 질문");
-  assert.equal(isValidFinalResponse(body), true);
-  assert.equal(body.think_trace.execution_mode, "EARLY_EXIT");
+  assert.equal(body.question_id, "Q-DISCONNECT");
+  assertWireShape(body);
+  assert.equal(parsedThinkTrace(body).execution_mode, "EARLY_EXIT");
   assert.ok(!JSON.stringify(body).includes("CLIENT_DISCONNECT"));
 });
 
@@ -518,7 +706,7 @@ test("an already-aborted client signal still clears the deadline timer and detac
   clientController.abort();
   try {
     const handle = createAnswerHandler({ runner: echoRunner(), timeoutMs: 60_000 });
-    await handle(questionOnly("q"), { signal: clientController.signal });
+    await handle(requestParams("Q-1", "q"), { signal: clientController.signal });
   } finally {
     globalThis.setTimeout = originalSetTimeout;
     globalThis.clearTimeout = originalClearTimeout;
@@ -537,8 +725,8 @@ test("a timeout response never leaks the runner's internal error text, or the TI
       }),
     timeoutMs: 30,
   });
-  const { status, body } = await handle(questionOnly("q"));
-  assert.equal(status, 200);
+  const { status, body } = await handle(requestParams("Q-1", "q"));
+  assert.equal(status, 503);
   const serialized = JSON.stringify(body);
   assert.ok(!serialized.includes("SECRET_INTERNAL_DETAIL"));
   assert.ok(!serialized.includes("secret.mjs"));
@@ -563,9 +751,9 @@ test("a late resolve from a timed-out runner does not change the already-returne
       }),
     timeoutMs: 30,
   });
-  const { status, body } = await handle(questionOnly("q"));
-  assert.equal(status, 200);
-  assert.equal(body.think_trace.execution_mode, "EARLY_EXIT");
+  const { status, body } = await handle(requestParams("Q-1", "q"));
+  assert.equal(status, 503);
+  assert.equal(parsedThinkTrace(body).execution_mode, "EARLY_EXIT");
   const before = JSON.parse(JSON.stringify(body));
   releaseLate();
   await new Promise((resolve) => setTimeout(resolve, 20));
@@ -585,8 +773,8 @@ test("a late reject from a timed-out runner does not produce a process unhandled
         }),
       timeoutMs: 30,
     });
-    const { status } = await handle(questionOnly("q"));
-    assert.equal(status, 200);
+    const { status } = await handle(requestParams("Q-1", "q"));
+    assert.equal(status, 503);
     rejectLate();
     await new Promise((resolve) => setTimeout(resolve, 20));
   } finally {
@@ -621,7 +809,7 @@ test("the deadline timer is cleared after a normal completion, not left running"
       }),
       timeoutMs: 100,
     });
-    await handle(questionOnly("q"));
+    await handle(requestParams("Q-1", "q"));
   } finally {
     globalThis.setTimeout = originalSetTimeout;
     globalThis.clearTimeout = originalClearTimeout;
@@ -657,12 +845,19 @@ test("no timer or AbortController is shared across concurrent requests — one r
     },
     timeoutMs: 30,
   });
-  const [slow, fast] = await Promise.all([handle(questionOnly("slow")), handle(questionOnly("fast"))]);
-  assert.equal(slow.status, 200);
-  assert.equal(isValidFinalResponse(slow.body), true);
+  const [slow, fast] = await Promise.all([handle(requestParams("Q-SLOW", "slow")), handle(requestParams("Q-FAST", "fast"))]);
+  // "slow" only resolves its final_response INSIDE the abort listener --
+  // by then raceAgainstAbort has already rejected with the deadline abort
+  // (the abort event, not the runner's late resolution, wins the race), so
+  // this is the same TIMEOUT/503 class as a runner that never resolves at
+  // all. The point of this test is that "slow" timing out does not affect
+  // "fast", which must still complete normally as 200 on its own timer.
+  assert.equal(slow.status, 503);
+  assertWireShape(slow.body);
   assert.equal(slow.body.question, "slow");
+  assert.equal(slow.body.question_id, "Q-SLOW");
   assert.equal(fast.status, 200);
   assert.equal(fast.body.answer, "fast-ok");
-  assert.equal(fast.body.think_trace.execution_mode, "STRUCTURED");
-  assert.equal(isValidFinalResponse(fast.body), true);
+  assert.equal(parsedThinkTrace(fast.body).execution_mode, "STRUCTURED");
+  assertWireShape(fast.body);
 });

@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://disclosure-analyst.local/schema/answer-wire-response.v0.1.json",
+  "title": "Answer Wire Response v0.1",
+  "description": "The official EXTERNAL GET /answer response contract (CLAUDE.md section 0/2, updated per organizer API notice). This is deliberately NOT final-response.schema.json: that schema describes the Agent's INTERNAL FinalResponse shape (retrieved_context as an array, think_trace as an object) that domain/runtime/agent-runtime.mjs's createSerializer() produces and Flows exchange with the Runtime Host. This schema describes the five-string WIRE body every external caller (including the Evaluation Harness) actually receives over HTTP. domain/runtime/answer-wire-response.mjs converts between the two -- see toAnswerWireResponse/fromAnswerWireResponse -- and is the only place that conversion happens; nothing else should hand-roll it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["question_id", "question", "retrieved_context", "think_trace", "answer"],
+  "properties": {
+    "question_id": {
+      "type": "string",
+      "description": "The correlation identifier exactly as supplied on the request's question_id query parameter. The request boundary is authoritative for this value -- it is never self-declared by a runner/Flow."
+    },
+    "question": {
+      "type": "string",
+      "description": "The Agent's own FinalResponse.question, always equal to the request's question query parameter (see domain/runtime/answer-handler.mjs's request<->response question binding gate)."
+    },
+    "retrieved_context": {
+      "type": "string",
+      "description": "The internal FinalResponse.retrieved_context array, JSON.stringify()-encoded. A caller must JSON.parse() this string to recover the array -- see domain/runtime/answer-wire-response.mjs's fromAnswerWireResponse()."
+    },
+    "think_trace": {
+      "type": "string",
+      "description": "The internal FinalResponse.think_trace object (execution_mode/operations/calculation/validation only -- never a raw execution_trace, hidden chain-of-thought, system prompt, or secret), JSON.stringify()-encoded. A caller must JSON.parse() this string to recover the object."
+    },
+    "answer": {
+      "type": "string"
+    }
+  }
+}

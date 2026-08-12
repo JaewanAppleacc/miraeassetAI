@@ -1,8 +1,17 @@
 // Real HTTP client for the deployed Agent's GET /answer. Deliberately never
 // imports any Agent-internal module — the whole point of a blackbox
 // Harness is that it can only see what a real caller sees.
-export async function requestAnswer(config, question) {
+//
+// Sends BOTH the Gold item's question_id (as the official
+// config.question_id_parameter query parameter, default "question_id") and
+// its question text (config.question_parameter) on every call, including
+// every retry — see harness-runner.mjs's retry loop, which always calls
+// this with the exact same (questionId, question) pair for a given item,
+// never a different one across attempts. No default Authorization/API-key
+// header is ever added here — `config.headers` (or nothing) is sent as-is.
+export async function requestAnswer(config, questionId, question) {
   const url = new URL(config.answer_path, config.base_url);
+  url.searchParams.set(config.question_id_parameter ?? "question_id", questionId);
   url.searchParams.set(config.question_parameter, question);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), config.timeout_ms);
