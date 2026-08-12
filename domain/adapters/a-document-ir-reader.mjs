@@ -9,8 +9,12 @@
 // corpus_snapshot_id ("corpus_04750795e1a2d5c3"), which every other
 // component in this repo (structured-query/result, retrieval examples,
 // etc.) already uses. This adapter performs exactly that documented
-// mapping when handing a document to DocumentStore — it does not invent a
-// new one.
+// mapping when handing a document to DocumentStore, via the single shared
+// mapping in domain/adapters/a-snapshot-contract.mjs — it does not declare
+// its own copy, so it and seed-canonical-document-ir-store.mjs can never
+// silently disagree about what a given raw snapshot id maps to. An
+// unrecognized raw snapshot id is rejected (thrown), never passed through
+// unmapped.
 //
 // KNOWN LIMITATION: this does a linear scan of the JSONL file per lookup.
 // Fine for the 4-document sample (work/a-document-ir/canonical.sample.jsonl)
@@ -22,14 +26,10 @@
 
 import { createReadStream } from "node:fs";
 import { createInterface } from "node:readline";
-
-const SNAPSHOT_MAP = Object.freeze({
-  snap_7484a10220422056: "corpus_04750795e1a2d5c3",
-});
+import { remapSourceSnapshotId } from "./a-snapshot-contract.mjs";
 
 function remapSnapshot(record) {
-  const mapped = SNAPSHOT_MAP[record.corpus_snapshot_id];
-  return mapped ? { ...record, corpus_snapshot_id: mapped } : record;
+  return { ...record, corpus_snapshot_id: remapSourceSnapshotId(record.corpus_snapshot_id) };
 }
 
 // Deliberately does NOT catch file-not-found / permission / stream-read /
