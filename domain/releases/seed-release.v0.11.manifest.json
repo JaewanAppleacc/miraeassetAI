@@ -1,0 +1,152 @@
+{
+  "schema_version": "0.1.0",
+  "release_id": "seed-release-v0.11",
+  "release_status": "BLOCKED_FOR_E2E",
+  "integrity_status": "LOCKED",
+  "corpus_snapshot_id": "corpus_04750795e1a2d5c3",
+  "manifest_sha256": "04750795e1a2d5c35f73e4bb7766ebede02ff3512d33c382bd4c3a51daba3364",
+  "gold_revision": "gold-seed-v0.11-relation-chain-lock",
+  "artifacts": [
+    {
+      "role": "CORPUS_SNAPSHOT",
+      "path": "work/domain-seed/corpus-snapshot.json",
+      "sha256": "947952d5e98cd09fd097aa807e6125ccc1b8b7872bebd2183447f53a4fa5d14d",
+      "bytes": 340,
+      "record_count": null
+    },
+    {
+      "role": "CANONICAL_DOCUMENT_IR_BASE",
+      "path": "work/domain-seed/seed-canonical-document-ir.v0.6.jsonl",
+      "sha256": "4539cceb239b69f05a9c38239680926e32c13367e9c870dc509c528f785fbcda",
+      "bytes": 121338555,
+      "record_count": 54
+    },
+    {
+      "role": "CANONICAL_DOCUMENT_IR_DELTA",
+      "path": "work/domain-seed/seed-canonical-document-ir.v0.7.delta.jsonl",
+      "sha256": "fefb41fa99434e7791a3bca51e42673b98fd0d5e5874fa15792e7f1af7dcb3fc",
+      "bytes": 7785,
+      "record_count": 1
+    },
+    {
+      "role": "VERIFIED_EVIDENCE",
+      "path": "work/domain-seed/seed-evidence-verified.v0.2.jsonl",
+      "sha256": "fc0e6e21b6ace82ff4e41f5e4318852b54962a4a1b684eb029fbc39eaf555acb",
+      "bytes": 288490,
+      "record_count": 121
+    },
+    {
+      "role": "VERIFIED_EVIDENCE_MANIFEST",
+      "path": "work/domain-seed/seed-evidence-verified.v0.2.manifest.json",
+      "sha256": "3f7f363179a2a89adf6c0cd78d3b66530768bef1e7ef80f3423e4756435cce0c",
+      "bytes": 6911,
+      "record_count": null
+    },
+    {
+      "role": "EVIDENCE_REVIEW_DECISION",
+      "path": "work/domain-seed/seed-evidence-v10-review-decision.json",
+      "sha256": "de47d774db64047a50a336f4a4a1a8905ab30dcbbbd9492f3f6ed01c4ee04afb",
+      "bytes": 3289,
+      "record_count": null
+    },
+    {
+      "role": "EVIDENCE_VERIFICATION_REPORT",
+      "path": "work/domain-seed/seed-evidence-v10-verification-report.v0.2.md",
+      "sha256": "b52759e8703888243e442126a43deaf4a76d15b0a3c7bc87237e1de6e7d6fd06",
+      "bytes": 5472,
+      "record_count": null
+    },
+    {
+      "role": "RELATION_REVIEW_SOURCE",
+      "path": "work/domain-seed/seed-relation-integration-review.v0.1.jsonl",
+      "sha256": "e8fa281b26b099c47beb02b8449e95273d3d185cacb6ced2d0ce35399f70e827",
+      "bytes": 23118,
+      "record_count": 43
+    },
+    {
+      "role": "RELATION_GOLD",
+      "path": "work/domain-seed/seed-relation-gold.v0.1.jsonl",
+      "sha256": "b6d294b2f245d766ebb6e05e9d6a2d65869e7b012cc737a55f03169777447ac8",
+      "bytes": 48450,
+      "record_count": 40
+    },
+    {
+      "role": "RELATION_GOLD_MANIFEST",
+      "path": "work/domain-seed/seed-relation-gold.v0.1.manifest.json",
+      "sha256": "9a2aede30f7ebd4cb1d69c6ee3f36bd768aabbcb297d9805e03a18689165e1ad",
+      "bytes": 1462,
+      "record_count": null
+    },
+    {
+      "role": "CHAIN_MANIFEST",
+      "path": "work/domain-seed/seed-chain-manifest.v0.1.jsonl",
+      "sha256": "9c9a0bcfdc446a390d0dac830f44a1b5eb28414c2d8060e8918d5b66250a12e6",
+      "bytes": 14222,
+      "record_count": 16
+    },
+    {
+      "role": "SEED_GOLD",
+      "path": "work/domain-seed/seed-gold-promotion-candidates.v0.11.jsonl",
+      "sha256": "11eb2be246b42b654e5d8c509fa25c52bd863b489e64acf9dd979e3225bb5403",
+      "bytes": 193804,
+      "record_count": 25
+    },
+    {
+      "role": "SEED_GOLD_SUMMARY",
+      "path": "work/domain-seed/seed-gold-promotion-candidates.v0.11.summary.json",
+      "sha256": "acfec747505fa49c267ff9ace88fb3edcf0ce4beb14b9bfcc4f52e5d340bb84f",
+      "bytes": 6262,
+      "record_count": null
+    },
+    {
+      "role": "SEED_GOLD_REVIEW",
+      "path": "work/domain-seed/seed-gold-promotion-candidates.v0.11.review.md",
+      "sha256": "9760ca9f1b73e8d1efa81f845d4ca547cb0d14a9017336adaec18a81bf1ac114",
+      "bytes": 11247,
+      "record_count": null
+    },
+    {
+      "role": "SEED_GOLD_UNRESOLVED_QUEUE",
+      "path": "work/domain-seed/seed-gold-promotion-candidates.v0.11.unresolved-queue.jsonl",
+      "sha256": "b2b9799518570bb46acaa1ec00bbc15b90706ed89ea8519d3d1ad01ec94ae952",
+      "bytes": 5292,
+      "record_count": 9
+    },
+    {
+      "role": "SEED_V10_TO_V11_MAPPING",
+      "path": "work/domain-seed/seed-v10-to-v11-mapping.jsonl",
+      "sha256": "8ee1de55b4bb75ea895470a5cdf268c57f647024c35987a9180ec1ae5dda1438",
+      "bytes": 17585,
+      "record_count": 25
+    },
+    {
+      "role": "RELATION_CHAIN_VERIFICATION_REPORT",
+      "path": "work/domain-seed/seed-relation-chain-verification-report.v0.1.md",
+      "sha256": "2c244b94235371554b212140854d784e0d56a4b4a88025fd96de99d003c8dad5",
+      "bytes": 5390,
+      "record_count": null
+    }
+  ],
+  "expected_invariants": {
+    "gold_records": 25,
+    "evidence_records": 121,
+    "relation_records": 40,
+    "chain_records": 16,
+    "locked_by_chain": 10,
+    "locked_by_coverage": 15,
+    "provisional": 0,
+    "duplicate_gold_evidence_link_occurrences": 2,
+    "gold_evidence_set_equals_verified_evidence_set": true,
+    "gold_chain_ids_resolve": true,
+    "relation_chain_ids_resolve": true
+  },
+  "e2e_blockers": [
+    "Seed v0.11의 Evidence linkage 상태 문구가 Evidence v0.2 승격 전 상태를 일부 포함한다.",
+    "question_seed_v07_03의 동일 question_id+slot_name+evidence_id 연결 2개가 각각 한 번씩 중복되어 있다(142 occurrences, 140 unique links).",
+    "Evidence 원문 provenance와 Gold slot 의미 검수를 별도 상태로 분리하지 않았다.",
+    "최소 VERIFIED Fact/Event와 Fact Coverage Snapshot이 없다.",
+    "실제 Document/Evidence/Fact Store adapter와 Flow A가 GET /answer에 연결되지 않았다.",
+    "전달받은 Evaluation Harness 구현의 metric과 exposure ledger 결함을 아직 수정·통합하지 않았다."
+  ],
+  "backup_requirement": "이 manifest만으로 대용량 artifact를 복구할 수 없다. 동일 SHA의 artifact bundle을 저장소 밖 immutable 위치에 별도로 보관해야 한다."
+}
