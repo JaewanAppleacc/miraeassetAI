@@ -1,0 +1,55 @@
+{
+  "schema_version": "0.3.0",
+  "report_type": "RELEASE_GATE_STATUS_AFTER_OFFICIAL_CLEAN_CLONE",
+  "subject_release": "domain/releases/seed-release.v0.20-r3.candidate.manifest.json",
+  "subject_source_commit": "aa1f16e1c920ce71f255185391e0bdd0ff2ad23d",
+  "subject_bundle_manifest": {
+    "path": "domain/releases/bundles/seed-release-v0.20-r3.candidate/bundle-manifest.json",
+    "sha256": "5158b001df5c2a2119f66f1b00fbdf92ac79311a9a73c4ef7013981f86640726"
+  },
+  "owner_decision": {
+    "path": "domain/releases/seed-release.v0.20-r3.candidate.owner-decision.approved.json",
+    "sha256": "b21007a677ada36ba293b9288fd924d10fdbf9b5f13e0e677b4c8c8623230f26",
+    "status": "APPROVED",
+    "reviewer": "최재완"
+  },
+  "official_clean_clone_verification": {
+    "command": "node --test tests/seed-release-isolated-deployment-official-clean-clone.test.mjs",
+    "method": "git archive HEAD + npm ci --omit=dev + bundle unpack + HTTP checks",
+    "tests_passed": 4,
+    "tests_failed": 0,
+    "tests_skipped": 0,
+    "ready_http_status": 200,
+    "answer_http_status": 200,
+    "workspace_open_file_leaks": 0,
+    "hardcoded_workspace_path_matches": 0,
+    "status": "PASS"
+  },
+  "gates": {
+    "data_promotion": "PASS",
+    "ontology_owner_review": "PASS",
+    "candidate_owner_review": "PASS",
+    "q18_information_limit_policy": "PASS",
+    "clean_plan_lineage": "PASS",
+    "runtime_candidate_e2e": "PASS",
+    "portable_bundle_integrity": "PASS",
+    "final_integration_owner_review": "PASS",
+    "official_clean_clone": "PASS",
+    "final_release_authorization": "PENDING",
+    "production_runtime_switch": "BLOCKED"
+  },
+  "overall": "READY_FOR_FINAL_RELEASE_AUTHORIZATION",
+  "remaining_actions": [
+    "Obtain explicit authorization to create the final v0.20 release manifest and decision.",
+    "Bind the production Runtime to that separately approved final release.",
+    "Run the post-binding production checks before any push or deployment."
+  ],
+  "authorization_boundary": {
+    "candidate_commit_created": true,
+    "final_release_manifest_created": false,
+    "production_runtime_switched": false,
+    "push_performed": false,
+    "deployment_performed": false
+  },
+  "notes": "The portability/reproducibility blocker is resolved. This status does not itself approve a final v0.20 release, production binding, push, or deployment."
+}
