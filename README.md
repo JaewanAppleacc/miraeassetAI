@@ -78,6 +78,20 @@ GET /answer?question_id=Q-001&question=평가질의
 - 타임아웃 또는 HTTP 5xx만 최대 **2회 재시도**(총 3회 시도). 4xx, 2xx 계약 오류, question
   echo mismatch는 재시도하지 않습니다
 
+`GET /health`는 프로세스 생존만 확인합니다. 실제 Seed artifact의 해시·스키마·snapshot
+검증까지 성공했는지는 `GET /ready`가 `200`과 `{"status":"READY","ready":true}`를
+반환하는지로 확인합니다. 배포 artifact를 소스 트리 밖에 마운트할 때는
+`SEED_RUNTIME_ROOT` 또는 `SEED_STRUCTURED_MANIFEST_PATH`,
+`SEED_CANONICAL_RELEASE_MANIFEST_PATH`, `SEED_PLAN_PATH`,
+`SEED_PLAN_MANIFEST_PATH`를 사용할 수 있습니다. 지정된 파일도 기존 manifest 검증을
+우회하지 않습니다.
+
+현재 제출용 실행 프로필은 로컬 파일로 pin된 대용량 Seed artifact를 읽는 **Node HTTP
+서버**입니다. `npm run start:agent`로 실행하며 `AGENT_HOST`(기본 `0.0.0.0`)와 `PORT`(기본
+`3000`)를 사용할 수 있습니다. Vinext/Cloudflare Worker 빌드는 UI·계약 호환성 확인용으로
+유지하지만 Worker에는 로컬 파일시스템이 없으므로, artifact를 R2/KV 등으로 이전하기 전에는
+제출 런타임으로 사용하지 않습니다. 이 경우 `/ready`는 반드시 503으로 닫혀야 합니다.
+
 ### Release Gate
 
 최종 제출 전에 아래를 확인합니다.
@@ -86,3 +100,8 @@ GET /answer?question_id=Q-001&question=평가질의
       주소로 교체했다.
 - [ ] 교체한 주소로 `GET /answer?question_id=...&question=...`를 실제 호출해 5개
       문자열 필드 응답을 확인했다.
+- [ ] 배포 서버의 `GET /ready`가 `200/READY`이고, Seed artifact를 제거하거나 변조한
+      부정 테스트에서는 새 프로세스가 `503/SEED_RUNTIME_INIT_FAILED`로 닫히는지 확인했다.
+- [ ] `work/domain-seed`를 로컬에만 둔 채 배포하지 않았고, manifest가 pin한 runtime
+      artifact와 canonical DocumentIR shard가 모두 배포 이미지 또는 읽기 전용 mount에
+      포함됐는지 확인했다.

@@ -15,6 +15,37 @@ function notScored(detail) {
 }
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+function normalizedDates(text) {
+  const dates = new Set();
+  const pattern = /(\d{4})(?:-|\.|\/|년\s*)(\d{1,2})(?:-|\.|\/|월\s*)(\d{1,2})(?:일)?/g;
+  for (const match of String(text ?? "").matchAll(pattern)) {
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+    const value = `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    const parsed = new Date(`${value}T00:00:00Z`);
+    if (!Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value) dates.add(value);
+  }
+  return dates;
+}
+function structuredValueMatches(actual, expected, spec) {
+  if (typeof expected === "number") {
+    if (typeof actual !== "number" || !Number.isFinite(actual)) return false;
+    const tolerance = Number(spec.tolerance ?? 0);
+    return spec.comparator === "RELATIVE"
+      ? Math.abs(actual - expected) <= Math.abs(expected) * tolerance
+      : Math.abs(actual - expected) <= tolerance;
+  }
+  if (Array.isArray(expected)) {
+    return Array.isArray(actual) && actual.length === expected.length
+      && expected.every((value, index) => structuredValueMatches(actual[index], value, spec));
+  }
+  if (expected && typeof expected === "object") {
+    return actual && typeof actual === "object" && !Array.isArray(actual)
+      && Object.keys(expected).every((key) => Object.hasOwn(actual, key) && structuredValueMatches(actual[key], expected[key], spec));
+  }
+  return actual === expected;
+}
 
 // Deterministic: reuses the exact same evidence-identity rule as Closed
 // scoring (evidence_id first, else document_id+source_locator+quoted_text).
@@ -44,11 +75,29 @@ function explicitFactValueSlots(gold, response) {
     return notScored("expected_answer.value has no explicit fact/value slots to check");
   }
   const answer = typeof response?.answer === "string" ? response.answer : "";
+  const calculation = response?.think_trace?.calculation?.value;
+  const structured = calculation && typeof calculation === "object" && !Array.isArray(calculation) ? calculation : {};
+  const spec = gold.scoring_spec ?? {};
   const fields = {};
   let anyScored = false;
   let anyFail = false;
+  let anyReview = false;
   for (const [key, fieldValue] of Object.entries(value)) {
+    if (Object.hasOwn(structured, key)) {
+      const actual = structured[key];
+      const pass = structuredValueMatches(actual, fieldValue, spec);
+      fields[key] = pass ? "PASS" : "FAIL";
+      anyScored = true;
+      if (!pass) anyFail = true;
+      continue;
+    }
     if (typeof fieldValue === "string" && fieldValue.length >= 2 && !DATE_PATTERN.test(fieldValue)) {
+      const paraphraseSensitive = fieldValue.length >= 80 || /(?:note|summary|reason|impact|attribution|caveat)$/i.test(key);
+      if (paraphraseSensitive) {
+        fields[key] = "REVIEW_REQUIRED";
+        anyReview = true;
+        continue;
+      }
       const pass = answer.includes(fieldValue);
       fields[key] = pass ? "PASS" : "FAIL";
       anyScored = true;
@@ -57,8 +106,8 @@ function explicitFactValueSlots(gold, response) {
       fields[key] = "NOT_SCORED";
     }
   }
-  if (!anyScored) return notScored("no string-shaped explicit fact/value fields");
-  return { status: anyFail ? "FAIL" : "PASS", detail: fields };
+  if (!anyScored && !anyReview) return notScored("no string-shaped explicit fact/value fields");
+  return { status: anyFail ? "FAIL" : anyReview ? "REVIEW_REQUIRED" : "PASS", detail: fields };
 }
 
 // Deterministic: date-shaped fields are unambiguous, unlike free prose —
@@ -70,12 +119,13 @@ function temporalRequirements(gold, response) {
     return notScored("expected_answer.value has no date-shaped fields to check");
   }
   const answer = typeof response?.answer === "string" ? response.answer : "";
+  const answerDates = normalizedDates(answer);
   const dateFields = Object.entries(value).filter(([, v]) => typeof v === "string" && DATE_PATTERN.test(v));
   if (!dateFields.length) return notScored("no explicit date-shaped fields in expected_answer.value");
   const fields = {};
   let anyFail = false;
   for (const [key, dateValue] of dateFields) {
-    const pass = answer.includes(dateValue);
+    const pass = answerDates.has(dateValue);
     fields[key] = pass ? "PASS" : "FAIL";
     if (!pass) anyFail = true;
   }

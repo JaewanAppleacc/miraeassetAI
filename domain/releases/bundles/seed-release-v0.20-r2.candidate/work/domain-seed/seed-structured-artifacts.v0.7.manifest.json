@@ -1,0 +1,73 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_set_id": "seed-structured-artifacts-v0.7",
+  "status": "VERIFIED_SEED_SUBSET",
+  "generated_at": "2026-08-16T03:57:17.903Z",
+  "corpus_snapshot_id": "corpus_04750795e1a2d5c3",
+  "fact_coverage_snapshot_id": "fact_coverage_snapshot_87ad2fa54e8ab7f7543c1ce3",
+  "semantic_bundle_schema_version": "0.2.0",
+  "artifacts": [
+    {
+      "role": "VERIFIED_EVIDENCE",
+      "path": "work/domain-seed/seed-evidence-verified.v0.9.jsonl",
+      "sha256": "e25271abe264337d54d1209e0515e2fdba01844a2f2fc52232afa16d1923f02e",
+      "bytes": 404674,
+      "record_count": 219
+    },
+    {
+      "role": "VERIFIED_EVIDENCE_MANIFEST",
+      "path": "work/domain-seed/seed-evidence-verified.v0.9.manifest.json",
+      "sha256": "b1a22db61b690ef94623f731666c62e3dd32656b75abf193b90b88fdf119ea93",
+      "bytes": 9816,
+      "record_count": null
+    },
+    {
+      "role": "VERIFIED_EVENT",
+      "path": "work/domain-seed/seed-events-verified.v0.1.jsonl",
+      "sha256": "b13ed9f1b7c2a9b9bcab48d01841edc20acee685012333ec629f2fa6d5035396",
+      "bytes": 20487,
+      "record_count": 24
+    },
+    {
+      "role": "VERIFIED_RELATION",
+      "path": "work/domain-seed/seed-relation-gold.v0.2.jsonl",
+      "sha256": "66543d26e8e6fd99e6c8ea26e364774006f8b15d6bc70839295b2baff54eb399",
+      "bytes": 48731,
+      "record_count": 40
+    },
+    {
+      "role": "CHAIN_MANIFEST",
+      "path": "work/domain-seed/seed-chain-manifest.v0.2.jsonl",
+      "sha256": "14564122fb733dec5950bda8d4495a01551fe7a93018af125037ebca514cf0f7",
+      "bytes": 14226,
+      "record_count": 16
+    },
+    {
+      "role": "VERIFIED_FACT",
+      "path": "work/domain-seed/seed-facts-verified.v0.8.jsonl",
+      "sha256": "0492ece83ea65f08cc030ce5f4a1cf3cc408a3041b3c778975aa63f8ecbe057c",
+      "bytes": 146949,
+      "record_count": 87
+    },
+    {
+      "role": "FACT_COVERAGE_SNAPSHOT",
+      "path": "work/domain-seed/seed-fact-coverage-verified.v0.7.json",
+      "sha256": "690b34bda825b7bebd9c975cdc77b3a55121e860b6cb54cb49c01aa1924b4a5d",
+      "bytes": 54062,
+      "record_count": 102
+    },
+    {
+      "role": "OWNER_DECISION",
+      "path": "work/domain-seed/seed-structured-owner-decision.v0.10.jsonl",
+      "sha256": "9921417b1b0c26eef02dea3b32cb7fabcc0db2fae45c52883f3edeab20b75bcc",
+      "bytes": 405981,
+      "record_count": 102
+    }
+  ],
+  "excluded_question_ids": [],
+  "release_status": "CANDIDATE_NOT_YET_RELEASE_AUTHORIZED",
+  "supersedes": "work/domain-seed/seed-structured-artifacts.v0.6.manifest.json",
+  "supersession_note": "Turn M7: Owner-approved 14개 Candidate Fact를 VERIFIED로 승격 (Fact 73->87, Coverage 88->102 slots, Owner decision 88->102 records). Evidence/Event/Relation/Chain은 이번 Turn에 변경되지 않아 v0.6과 동일 revision을 그대로 재사용함. 이 manifest는 release manifest/decision이 아니며 v0.20 release authorization을 부여하지 않음 -- release_status가 명시적으로 미승인 상태.",
+  "v06_left_unmodified": true,
+  "v06_sha256": "e9c99572ef9012bcbc4f8cacfb36718ad5f6ef56a050d9daf88c8707c4a9b686"
+}

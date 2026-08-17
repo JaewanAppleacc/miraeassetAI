@@ -1,0 +1,150 @@
+{
+  "schema_version": "0.1.0",
+  "release_id": "seed-release-v0.13-draft",
+  "release_status": "DRAFT",
+  "integrity_status": "UNLOCKED_DRAFT",
+  "corpus_snapshot_id": "corpus_04750795e1a2d5c3",
+  "manifest_sha256": "04750795e1a2d5c35f73e4bb7766ebede02ff3512d33c382bd4c3a51daba3364",
+  "gold_revision": "gold-seed-v0.13-focused-rereview-fixes",
+  "supersedes": "seed-release-v0.12-draft (domain/releases/seed-release.v0.12.draft.manifest.json은 수정하지 않고 그대로 보존)",
+  "artifacts": [
+    {
+      "role": "CORPUS_SNAPSHOT",
+      "path": "work/domain-seed/corpus-snapshot.json",
+      "sha256": "947952d5e98cd09fd097aa807e6125ccc1b8b7872bebd2183447f53a4fa5d14d",
+      "bytes": 340,
+      "record_count": null,
+      "changed_from_v0.12": false
+    },
+    {
+      "role": "CANONICAL_DOCUMENT_IR_BASE",
+      "path": "work/domain-seed/seed-canonical-document-ir.v0.6.jsonl",
+      "sha256": "4539cceb239b69f05a9c38239680926e32c13367e9c870dc509c528f785fbcda",
+      "bytes": 121338555,
+      "record_count": 54,
+      "changed_from_v0.12": false
+    },
+    {
+      "role": "CANONICAL_DOCUMENT_IR_DELTA",
+      "path": "work/domain-seed/seed-canonical-document-ir.v0.7.delta.jsonl",
+      "sha256": "fefb41fa99434e7791a3bca51e42673b98fd0d5e5874fa15792e7f1af7dcb3fc",
+      "bytes": 7785,
+      "record_count": 1,
+      "changed_from_v0.12": false
+    },
+    {
+      "role": "VERIFIED_EVIDENCE",
+      "path": "work/domain-seed/seed-evidence-verified.v0.3.jsonl",
+      "sha256": "3c4ce67adebb31f1b6008289624e5d1f582ade298bb9250a0f45769bee7bde55",
+      "bytes": 316173,
+      "record_count": 136,
+      "changed_from_v0.12": false,
+      "note": "v0.13은 신규 Evidence를 추가하거나 삭제하지 않았다. Q12/Q16의 Gold linkage만 v0.11 원본으로 복원했다(evidence_id/quoted_text/quote_sha256은 v0.2 시점부터 불변)."
+    },
+    {
+      "role": "VERIFIED_EVIDENCE_MANIFEST",
+      "path": "work/domain-seed/seed-evidence-verified.v0.3.manifest.json",
+      "sha256": "0efc8a5486ed5bf36f48f12f3b985694d745b62e80067c6a6640944625ac25ba",
+      "bytes": 7743,
+      "record_count": null,
+      "changed_from_v0.12": false
+    },
+    {
+      "role": "RELATION_GOLD",
+      "path": "work/domain-seed/seed-relation-gold.v0.1.jsonl",
+      "sha256": "b6d294b2f245d766ebb6e05e9d6a2d65869e7b012cc737a55f03169777447ac8",
+      "bytes": 48450,
+      "record_count": 40,
+      "changed_from_v0.12": false
+    },
+    {
+      "role": "CHAIN_MANIFEST",
+      "path": "work/domain-seed/seed-chain-manifest.v0.1.jsonl",
+      "sha256": "9c9a0bcfdc446a390d0dac830f44a1b5eb28414c2d8060e8918d5b66250a12e6",
+      "bytes": 14222,
+      "record_count": 16,
+      "changed_from_v0.12": false
+    },
+    {
+      "role": "SEED_GOLD_PREVIOUS",
+      "path": "work/domain-seed/seed-gold-promotion-candidates.v0.12.jsonl",
+      "sha256": "511d399f3eb773d5b18d4286188971638c30881deb8d53641916db1549c34cd7",
+      "bytes": 207994,
+      "record_count": 25,
+      "changed_from_v0.12": false,
+      "note": "v0.12는 수정하지 않고 그대로 보존; v0.13은 아래 SEED_GOLD를 사용한다."
+    },
+    {
+      "role": "FOCUSED_REREVIEW_INPUT",
+      "path": "work/domain-seed/seed-v012-focused-rereview.v0.1.jsonl",
+      "sha256": null,
+      "bytes": null,
+      "record_count": 34,
+      "changed_from_v0.12": true,
+      "note": "이번 v0.13 입력. 독립 재검수에서 Q12/Q16 REJECT_RECOMMENDED(2건), Q3/Q17/Q22/Q23 FIX_REQUIRED 발견."
+    },
+    {
+      "role": "SEED_GOLD",
+      "path": "work/domain-seed/seed-gold-promotion-candidates.v0.13.jsonl",
+      "sha256": "1e1d1b1a6dc1ee821070f4d0c21a54e9b82ae54b1e1982c6937b8fd80f040422",
+      "bytes": 209449,
+      "record_count": 25,
+      "changed_from_v0.12": true
+    },
+    {
+      "role": "SEED_GOLD_SUMMARY",
+      "path": "work/domain-seed/seed-gold-promotion-candidates.v0.13.summary.json",
+      "sha256": "82c470f4b7523488b6effd155a14d6c4e17f62fb34bff4aafdfb01b2e7321262",
+      "bytes": 6238,
+      "record_count": null,
+      "changed_from_v0.12": true
+    },
+    {
+      "role": "SEED_GOLD_REVIEW",
+      "path": "work/domain-seed/seed-gold-promotion-candidates.v0.13.review.md",
+      "sha256": "0c6bd53c908facc4e9c715f3ce1ba42d0285212ac862534ab884b2780fb6d043",
+      "bytes": 6923,
+      "record_count": null,
+      "changed_from_v0.12": true
+    },
+    {
+      "role": "SEED_GOLD_UNRESOLVED_QUEUE",
+      "path": "work/domain-seed/seed-gold-promotion-candidates.v0.13.unresolved-queue.jsonl",
+      "sha256": "09aaaa7230abf9829a1ccc6955aa86d0eb0fd3dba428e8a33711231e344d73f1",
+      "bytes": 1565,
+      "record_count": 2,
+      "changed_from_v0.12": true
+    },
+    {
+      "role": "SEED_V12_TO_V13_MAPPING",
+      "path": "work/domain-seed/seed-v12-to-v13-mapping.jsonl",
+      "sha256": "81dcaec7049fab55872b691a3695398e43e68b78b1692f1124efa7ef9de5d2fd",
+      "bytes": 6737,
+      "record_count": 25,
+      "changed_from_v0.12": true
+    }
+  ],
+  "expected_invariants": {
+    "gold_records": 25,
+    "evidence_records": 136,
+    "relation_records": 40,
+    "chain_records": 16,
+    "locked_by_chain": 10,
+    "locked_by_coverage": 15,
+    "provisional": 0,
+    "duplicate_gold_evidence_link_occurrences": 0,
+    "gold_evidence_set_subset_of_verified_evidence_set": true,
+    "gold_chain_ids_resolve": true,
+    "relation_chain_ids_resolve": true,
+    "e2e_ready_count": 23,
+    "e2e_excluded_count": 2,
+    "e2e_excluded_question_ids": ["question_seed_v07_03", "question_seed_v07_22"]
+  },
+  "e2e_blockers": [
+    "question_seed_v07_03: Evidence identity 계약 결정 대기(FROZEN 계약 변경 필요, Owner/Codex 승인 대기).",
+    "question_seed_v07_22: canonical DocumentIR 두 문서(exchange_20240215801246, exchange_20240522800200) 편입 대기.",
+    "v0.11/v0.12의 기존 e2e_blockers(최소 VERIFIED Fact/Event·Fact Coverage Snapshot 부재, 실제 Store adapter·Flow A 미연결, Evaluation Harness 결함 미수정)는 이번 범위 밖이며 그대로 유지된다.",
+    "이 manifest는 DRAFT이며 release-ready로 승격되지 않았다(Q3/Q22 미해결로 인해 integrity_status=UNLOCKED_DRAFT)."
+  ],
+  "backup_requirement": "이 manifest만으로 대용량 artifact를 복구할 수 없다. 동일 SHA의 artifact bundle을 저장소 밖 immutable 위치에 별도로 보관해야 한다."
+}

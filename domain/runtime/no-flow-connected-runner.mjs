@@ -1,6 +1,6 @@
-// The GET /answer API boundary needs *some* runner wired at all times, but
-// Flow A does not exist yet (CLAUDE.md section 19 lists it as an
-// outstanding milestone). This is the fail-closed placeholder runner: it
+// The GET /answer API boundary needs a safe fallback even when a requested
+// question is outside the pinned Thin Flow plan set, or deployment
+// artifacts fail construction. This is that fail-closed runner: it
 // never fabricates evidence, a calculation, or an answer — it always
 // returns a schema-valid EARLY_EXIT FinalResponse stating plainly that no
 // analysis Flow is connected yet.
@@ -53,7 +53,7 @@ const NO_FLOW_CONNECTED_BUDGET_LIMITS = Object.freeze({
 // request-scoped deadline/client-disconnect AbortSignal createAnswerHandler
 // creates per request (see abortable.mjs) — is threaded into
 // runAgentFlow's SharedContext.signal unchanged, so Flow execution and
-// (once any exist) SharedServices calls made by a real Flow all race
+// SharedServices calls made by a connected Flow all race
 // against the exact same signal createAnswerHandler is itself racing
 // against. `deadline_at`/`timeout_ms` are accepted for forward
 // compatibility with a future real Flow that wants to reason about how

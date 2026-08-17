@@ -222,6 +222,29 @@ test("object-shaped expected_answer.value PASSes overall when every field matche
   assert.equal(scoreClosed(gold, response).value.status, "PASS");
 });
 
+test("object-shaped non_scored_fields stay diagnostic and never fail the scored aggregate", () => {
+  const gold = goldRecord({
+    expected_answer: {
+      status: "SUPPORTED",
+      value: { amount: 100, non_scored_fields: { diagnostic_ratio: 12.34 } },
+      unit: null,
+      reason_code: null,
+    },
+  });
+  const response = baseResponse({
+    think_trace: {
+      execution_mode: "STRUCTURED",
+      operations: [],
+      calculation: { value: { amount: 100, non_scored_fields: { diagnostic_ratio: 99 } } },
+      validation: { answerability: "SUPPORTED" },
+    },
+  });
+  const result = scoreClosed(gold, response).value;
+  assert.equal(result.status, "PASS");
+  assert.equal(result.fields.amount.status, "PASS");
+  assert.equal(result.fields.non_scored_fields.status, "NOT_SCORED");
+});
+
 // ---------------------------------------------------------------------------
 // 3. Evidence grading
 // ---------------------------------------------------------------------------
@@ -318,6 +341,51 @@ test("open metric explicit_fact_value_slots checks real expected_answer.value st
   assert.equal(scoreOpen(gold, failResponse).explicit_fact_value_slots.status, "FAIL");
 });
 
+test("open metric sends paraphrase-sensitive reason/impact/summary fields to review instead of exact-string FAIL", () => {
+  const gold = goldRecord({
+    answer_mode: "OPEN",
+    expected_answer: {
+      status: "SUPPORTED",
+      value: {
+        company: "테슬라(Tesla, Inc.)",
+        issuer_stated_financial_impact: "회사는 이미 받은 선수금과 재매각 대금으로 비용을 보전하여 재무 영향이 제한적일 것이라고 공시했습니다.",
+      },
+      unit: null,
+      reason_code: null,
+    },
+  });
+  const response = baseResponse({ answer: "계약 상대방은 테슬라(Tesla, Inc.)이며, 회사 설명상 비용 보전으로 영향은 제한적입니다." });
+  const result = scoreOpen(gold, response).explicit_fact_value_slots;
+  assert.equal(result.status, "REVIEW_REQUIRED");
+  assert.equal(result.detail.company, "PASS");
+  assert.equal(result.detail.issuer_stated_financial_impact, "REVIEW_REQUIRED");
+});
+
+test("open explicit values prefer structured numbers, booleans, strings, and nested objects over prose scraping", () => {
+  const gold = goldRecord({
+    answer_mode: "OPEN",
+    expected_answer: {
+      status: "SUPPORTED",
+      value: { amount: 100, disclosed: true, company: "A", nested: { ratio: 5.5 } },
+      unit: null,
+      reason_code: null,
+    },
+    scoring_spec: { comparator: "RELATIVE", tolerance: 0.001, unit: null, rounding: null },
+  });
+  const response = baseResponse({
+    answer: "prose has no values",
+    think_trace: {
+      execution_mode: "STRUCTURED",
+      operations: [],
+      calculation: { value: { amount: 100.05, disclosed: true, company: "A", nested: { ratio: 5.5001 } } },
+      validation: { answerability: "SUPPORTED" },
+    },
+  });
+  const result = scoreOpen(gold, response).explicit_fact_value_slots;
+  assert.equal(result.status, "PASS");
+  assert.deepEqual(result.detail, { amount: "PASS", disclosed: "PASS", company: "PASS", nested: "PASS" });
+});
+
 test("open metric temporal_requirements checks date-shaped fields deterministically, separate from other facts", () => {
   const gold = goldRecord({
     answer_mode: "OPEN",
@@ -325,6 +393,22 @@ test("open metric temporal_requirements checks date-shaped fields deterministica
   });
   const response = baseResponse({ answer: "계약 종료일은 2033-12-31 입니다." });
   assert.equal(scoreOpen(gold, response).temporal_requirements.status, "PASS");
+});
+
+test("open temporal metric normalizes ISO, Korean, dotted, and slash date spellings", () => {
+  const gold = goldRecord({
+    answer_mode: "OPEN",
+    expected_answer: {
+      status: "SUPPORTED",
+      value: { a: "2025-02-17", b: "2024-08-08", c: "2023-03-13", d: "2026-01-02" },
+      unit: null,
+      reason_code: null,
+    },
+  });
+  const response = baseResponse({ answer: "2025년 2월 17일 / 2024.08.08 / 2023/03/13 / 2026-01-02" });
+  const result = scoreOpen(gold, response).temporal_requirements;
+  assert.equal(result.status, "PASS");
+  assert.deepEqual(result.detail, { a: "PASS", b: "PASS", c: "PASS", d: "PASS" });
 });
 
 // ---------------------------------------------------------------------------
@@ -1275,6 +1359,33 @@ test("response_usable is true and metrics ARE computed for a normal HTTP 200, sc
   });
 });
 
+test("E2E_EXCLUDED remains API/contract tested but is omitted from answer-quality metrics", async (t) => {
+  await withTmpDir(async (dir) => {
+    const item = goldRecord({ question: "제외 질문", extensions: { e2e_usage_status: "E2E_EXCLUDED" } });
+    const goldPath = join(dir, "gold.jsonl");
+    await writeFile(goldPath, `${JSON.stringify(item)}\n`);
+    const { server, baseUrl } = await startServer((_req, res) => {
+      res.setHeader("content-type", "application/json");
+      res.end(JSON.stringify(wireBody(item.question_id, {
+        question: item.question,
+        think_trace: { execution_mode: "EARLY_EXIT", operations: [], calculation: {}, validation: {} },
+      })));
+    });
+    t.after(() => server.close());
+    const { results, summary } = await runHarness({
+      base_url: baseUrl, answer_path: "/answer", question_parameter: "question",
+      gold_path: goldPath, result_path: join(dir, "result.jsonl"), summary_path: join(dir, "summary.json"),
+      split: "DEV_TUNE", run_purpose: "FLOW_SELECTION", timeout_ms: 1000, concurrency: 1,
+      configuration_sha256: SHA, git_commit: COMMIT,
+    });
+    assert.equal(results[0].response_usable, true);
+    assert.equal(results[0].metric_evaluation_status, "E2E_EXCLUDED");
+    assert.deepEqual(results[0].metric_results, {});
+    assert.equal(summary.metric_eligible, 0);
+    assert.equal(summary.metric_excluded, 1);
+  });
+});
+
 // ---------------------------------------------------------------------------
 // 11. Cross-process exclusive lock: applies to EVERY execution that uses a
 // ledger, not just DEV_CHECK/HOLDOUT -- needsExclusiveLock === usesLedger.
@@ -1880,6 +1991,17 @@ test("evidence slot still PASSes on evidence_id alone when the wire provides no 
   });
   const response = baseResponse({ retrieved_context: [{ evidence_id: "evidence_abc123" }] });
   assert.equal(scoreClosed(gold, response)["evidence:x"].status, "PASS");
+});
+
+test("a recognized lower-level Evidence link can ground a higher-level slot only when its full provenance matches an acceptable source", () => {
+  const gold = goldRecord({
+    required_evidence_slots: [{ slot_name: "latest_effective_conditions", acceptable_sources: [{ document_id: "d", source_locator: "loc", evidence_span: "54,495" }] }],
+    extensions: { evidence_verification: [
+      { slot_name: "latest_amount", document_id: "d", evidence_id: "evidence_abc123", canonical_source_locator: "loc", quote_sha256: sha256Hex("54,495") },
+    ] },
+  });
+  const response = baseResponse({ retrieved_context: [{ evidence_id: "evidence_abc123", document_id: "d", source_locator: "loc", quoted_text: "54,495" }] });
+  assert.equal(scoreClosed(gold, response)["evidence:latest_effective_conditions"].status, "PASS");
 });
 
 // ---------------------------------------------------------------------------

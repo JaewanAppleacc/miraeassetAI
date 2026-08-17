@@ -1,0 +1,176 @@
+{
+  "schema_version": "0.1.0",
+  "release_id": "seed-release-v0.12-draft",
+  "release_status": "DRAFT",
+  "integrity_status": "UNLOCKED_DRAFT",
+  "corpus_snapshot_id": "corpus_04750795e1a2d5c3",
+  "manifest_sha256": "04750795e1a2d5c35f73e4bb7766ebede02ff3512d33c382bd4c3a51daba3364",
+  "gold_revision": "gold-seed-v0.12-phase2-fix-required-and-reject-applied",
+  "supersedes": "seed-release-v0.11 (domain/releases/seed-release.v0.11.manifest.json은 수정하지 않고 그대로 보존)",
+  "artifacts": [
+    {
+      "role": "CORPUS_SNAPSHOT",
+      "path": "work/domain-seed/corpus-snapshot.json",
+      "sha256": "947952d5e98cd09fd097aa807e6125ccc1b8b7872bebd2183447f53a4fa5d14d",
+      "bytes": 340,
+      "record_count": null,
+      "changed_from_v0.11": false
+    },
+    {
+      "role": "CANONICAL_DOCUMENT_IR_BASE",
+      "path": "work/domain-seed/seed-canonical-document-ir.v0.6.jsonl",
+      "sha256": "4539cceb239b69f05a9c38239680926e32c13367e9c870dc509c528f785fbcda",
+      "bytes": 121338555,
+      "record_count": 54,
+      "changed_from_v0.11": false
+    },
+    {
+      "role": "CANONICAL_DOCUMENT_IR_DELTA",
+      "path": "work/domain-seed/seed-canonical-document-ir.v0.7.delta.jsonl",
+      "sha256": "fefb41fa99434e7791a3bca51e42673b98fd0d5e5874fa15792e7f1af7dcb3fc",
+      "bytes": 7785,
+      "record_count": 1,
+      "changed_from_v0.11": false
+    },
+    {
+      "role": "VERIFIED_EVIDENCE_PREVIOUS",
+      "path": "work/domain-seed/seed-evidence-verified.v0.2.jsonl",
+      "sha256": "fc0e6e21b6ace82ff4e41f5e4318852b54962a4a1b684eb029fbc39eaf555acb",
+      "bytes": 288490,
+      "record_count": 121,
+      "changed_from_v0.11": false,
+      "note": "v0.2는 수정하지 않고 그대로 보존; v0.12는 아래 VERIFIED_EVIDENCE(v0.3)를 사용한다."
+    },
+    {
+      "role": "VERIFIED_EVIDENCE",
+      "path": "work/domain-seed/seed-evidence-verified.v0.3.jsonl",
+      "sha256": "3c4ce67adebb31f1b6008289624e5d1f582ade298bb9250a0f45769bee7bde55",
+      "bytes": 316173,
+      "record_count": 136,
+      "changed_from_v0.11": true,
+      "note": "v0.2(121건) + 신규 15건. 기존 5건은 metadata.linked_question_ids/linked_slot_names만 v0.12 Gold와 재정합(evidence_id/quoted_text/quote_sha256은 불변)."
+    },
+    {
+      "role": "VERIFIED_EVIDENCE_MANIFEST",
+      "path": "work/domain-seed/seed-evidence-verified.v0.3.manifest.json",
+      "sha256": "0efc8a5486ed5bf36f48f12f3b985694d745b62e80067c6a6640944625ac25ba",
+      "bytes": 7743,
+      "record_count": null,
+      "changed_from_v0.11": true
+    },
+    {
+      "role": "RELATION_GOLD",
+      "path": "work/domain-seed/seed-relation-gold.v0.1.jsonl",
+      "sha256": "b6d294b2f245d766ebb6e05e9d6a2d65869e7b012cc737a55f03169777447ac8",
+      "bytes": 48450,
+      "record_count": 40,
+      "changed_from_v0.11": false
+    },
+    {
+      "role": "RELATION_GOLD_MANIFEST",
+      "path": "work/domain-seed/seed-relation-gold.v0.1.manifest.json",
+      "sha256": "9a2aede30f7ebd4cb1d69c6ee3f36bd768aabbcb297d9805e03a18689165e1ad",
+      "bytes": 1462,
+      "record_count": null,
+      "changed_from_v0.11": false
+    },
+    {
+      "role": "CHAIN_MANIFEST",
+      "path": "work/domain-seed/seed-chain-manifest.v0.1.jsonl",
+      "sha256": "9c9a0bcfdc446a390d0dac830f44a1b5eb28414c2d8060e8918d5b66250a12e6",
+      "bytes": 14222,
+      "record_count": 16,
+      "changed_from_v0.11": false
+    },
+    {
+      "role": "GOLD_HUMAN_REVIEW_DECISIONS",
+      "path": "seed-gold-human-decisions.c.v0.1.jsonl (Codex_AI_C_REVIEW, 원본은 저장소 밖 검수 산출물)",
+      "sha256": null,
+      "bytes": null,
+      "record_count": 25,
+      "changed_from_v0.11": true,
+      "note": "이번 Phase 2 입력. 25건 중 APPROVE 12 / FIX_REQUIRED 13."
+    },
+    {
+      "role": "RELATION_CHAIN_HUMAN_REVIEW_DECISIONS",
+      "path": "seed-relation-chain-human-decisions.c.v0.1.jsonl (Codex_AI_C_REVIEW, 원본은 저장소 밖 검수 산출물)",
+      "sha256": null,
+      "bytes": null,
+      "record_count": 43,
+      "changed_from_v0.11": true,
+      "note": "이번 Phase 2 입력. 43건 전건 APPROVE(변경 없음 확인)."
+    },
+    {
+      "role": "EVIDENCE_SEMANTIC_LINK_HUMAN_REVIEW_DECISIONS",
+      "path": "seed-evidence-semantic-link-human-decisions.a.v0.1.jsonl (원본은 저장소 밖 검수 산출물)",
+      "sha256": null,
+      "bytes": null,
+      "record_count": 140,
+      "changed_from_v0.11": true,
+      "note": "이번 Phase 2 입력. APPROVE 131 / FIX_REQUIRED 8 / REJECT 1."
+    },
+    {
+      "role": "SEED_GOLD",
+      "path": "work/domain-seed/seed-gold-promotion-candidates.v0.12.jsonl",
+      "sha256": "511d399f3eb773d5b18d4286188971638c30881deb8d53641916db1549c34cd7",
+      "bytes": 207994,
+      "record_count": 25,
+      "changed_from_v0.11": true
+    },
+    {
+      "role": "SEED_GOLD_SUMMARY",
+      "path": "work/domain-seed/seed-gold-promotion-candidates.v0.12.summary.json",
+      "sha256": "5205a6ef89328071f5a66b6992fa621f55533ed55c229ce5f6ea70ebe9456fba",
+      "bytes": 9388,
+      "record_count": null,
+      "changed_from_v0.11": true
+    },
+    {
+      "role": "SEED_GOLD_REVIEW",
+      "path": "work/domain-seed/seed-gold-promotion-candidates.v0.12.review.md",
+      "sha256": "84fe870ba2c8ed804f6abb11b0440f960148509a5fe77a569556cba325777e4d",
+      "bytes": 12177,
+      "record_count": null,
+      "changed_from_v0.11": true
+    },
+    {
+      "role": "SEED_GOLD_UNRESOLVED_QUEUE",
+      "path": "work/domain-seed/seed-gold-promotion-candidates.v0.12.unresolved-queue.jsonl",
+      "sha256": "e697e2aa513f6a7c96b2a910d2f17a7244da8b02cb9371de5fb8768a0e5186ae",
+      "bytes": 1116,
+      "record_count": 1,
+      "changed_from_v0.11": true
+    },
+    {
+      "role": "SEED_V11_TO_V12_MAPPING",
+      "path": "work/domain-seed/seed-v11-to-v12-mapping.jsonl",
+      "sha256": "94eeabaf31d8eb13de1f5bab9f056ed3a80166c73295bcfabab89c8fc1357279",
+      "bytes": 13067,
+      "record_count": 25,
+      "changed_from_v0.11": true
+    }
+  ],
+  "expected_invariants": {
+    "gold_records": 25,
+    "evidence_records": 136,
+    "relation_records": 40,
+    "chain_records": 16,
+    "locked_by_chain": 10,
+    "locked_by_coverage": 15,
+    "provisional": 0,
+    "duplicate_gold_evidence_link_occurrences": 0,
+    "gold_evidence_set_subset_of_verified_evidence_set": true,
+    "gold_chain_ids_resolve": true,
+    "relation_chain_ids_resolve": true,
+    "evidence_semantic_link_decisions_total": 140,
+    "evidence_semantic_link_decisions_approve": 131,
+    "evidence_semantic_link_decisions_fix_required": 8,
+    "evidence_semantic_link_decisions_reject": 1
+  },
+  "e2e_blockers": [
+    "question_seed_v07_22는 FIX_REQUIRED/unresolved 상태로 남아 있다: Owner가 확인한 4개 변경사항 중 2건(2024-02-15 계약금액, 2024-05-22 계약상대방)의 원문 문서(exchange_20240215801246, exchange_20240522800200)가 canonical DocumentIR shard(seed-canonical-document-ir.v0.6/v0.7)에 없어 VERIFIED Evidence를 생성할 수 없다.",
+    "v0.11의 e2e_blockers(최소 VERIFIED Fact/Event·Fact Coverage Snapshot 부재, 실제 Store adapter·Flow A 미연결, Evaluation Harness 결함 미수정)는 이번 Phase 2 범위 밖이며 그대로 유지된다.",
+    "이 manifest는 DRAFT이며 release-ready로 승격되지 않았다(Q22 미해결로 인해 integrity_status=UNLOCKED_DRAFT)."
+  ],
+  "backup_requirement": "이 manifest만으로 대용량 artifact를 복구할 수 없다. 동일 SHA의 artifact bundle을 저장소 밖 immutable 위치에 별도로 보관해야 한다."
+}

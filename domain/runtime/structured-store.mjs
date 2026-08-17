@@ -14,23 +14,17 @@
 // response this module produces, on every path, is schema-valid by
 // construction, not by convention.
 //
-// KNOWN LIMITATION: no adapter is implemented yet. VERIFIED Fact/Evidence
-// data does not exist in this repo (domain/HANDOFF.md: BLOCKED_BY_HUMAN_
-// REVIEW), so there is nothing to wire a real adapter to today. This
-// module only defines the fail-closed boundary and the OFFICIAL-scope
-// enforcement that a future adapter must pass through.
+// The default remains deliberately fail-closed. A concrete Seed adapter
+// exists in domain/adapters/seed-structured-query-adapter.mjs, but Runtime
+// only uses it when a caller explicitly constructs and injects it; this
+// boundary never silently selects local data or a mutable "latest" file.
 
 import { randomUUID } from "node:crypto";
-import Ajv2020 from "ajv/dist/2020.js";
-import addFormats from "ajv-formats";
 import { RequestAbortedError } from "./abortable.mjs";
-import querySchema from "../interfaces/structured-query.schema.json" with { type: "json" };
-import resultSchema from "../interfaces/structured-result.schema.json" with { type: "json" };
-
-const ajv = new Ajv2020({ allErrors: true, strict: true });
-addFormats(ajv);
-const validateQuerySchema = ajv.compile(querySchema);
-const validateResultSchema = ajv.compile(resultSchema);
+import {
+  validateStructuredQuerySchema as validateQuerySchema,
+  validateStructuredResultSchema as validateResultSchema,
+} from "../generated/runtime-schema-validators.mjs";
 
 const RESULT_STATUSES = Object.freeze(["OK", "NOT_FOUND", "PARTIAL", "PARSE_BLOCKED", "ERROR"]);
 
@@ -101,10 +95,9 @@ function errorResult(query, errorCode, startedAt) {
 // domain/runtime/abortable.mjs and agent-runtime.mjs's createSharedServices)
 // — bound here via closure (not part of `structuredQuery`, which stays
 // exactly what structured-query.schema.json validates) and passed to the
-// adapter as a SEPARATE second argument, so a real adapter can opt into
+// adapter as a SEPARATE second argument, so an adapter can opt into
 // honoring it without that ever becoming part of the schema-validated
-// query shape. No real adapter exists yet — this module only defines the
-// boundary a future one can pass through.
+// query shape.
 export function createStructuredStore(adapter = null, context = {}, signal) {
   return {
     async query(structuredQuery) {

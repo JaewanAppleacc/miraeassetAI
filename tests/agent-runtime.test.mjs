@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import test from "node:test";
 import {
   BudgetExceededError,
+  CALCULATOR_FORMULAS,
   createBudgetedCalculator,
   createBudgetedHcxClient,
   createBudgetedRetriever,
@@ -29,6 +30,10 @@ import { RETRIEVER_CODES } from "../domain/runtime/retriever-store.mjs";
 
 const AS_OF = "2026-08-10";
 const CONTEXT = { as_of_date: AS_OF, corpus_snapshot_id: "snap_1", fact_coverage_snapshot_id: "cov_1" };
+
+test("Turn M10.1 contract: unit aliases are backward-compatible validation acceptance only; the Calculator formula enum is unchanged", () => {
+  assert.deepEqual(CALCULATOR_FORMULAS, ["SUM", "DIFF", "RATIO", "PERCENTAGE_CHANGE"]);
+});
 
 // A SharedContext carrying the corpus/chunking/index snapshot triple
 // retriever-store.mjs pins a RetrieverRequest against — see
@@ -519,6 +524,69 @@ test("Calculator rejects mismatched units even when only one input carries a uni
     (error) => error instanceof RejectedInputError && error.code === "UNIT_MISMATCH",
   );
 });
+
+// Turn M10: the real VERIFIED Fact corpus is not consistent about
+// whether `unit` holds the enum token ("KRW") or the raw Korean/symbol
+// label ("원") for the SAME real unit -- the Calculator now recognizes
+// this equivalence for its own UNIT_MISMATCH comparison ONLY, never
+// altering the input records themselves (the proof-binding hash is
+// computed over the untouched inputs, so this must not require mutating
+// them -- the second assertion below confirms the input objects passed
+// in are unchanged after calculate() runs).
+test("Turn M10: Calculator accepts two inputs whose units are the SAME real unit spelled differently (KRW enum token vs 원 raw label)", async () => {
+  const authority = newAuthority();
+  const inputs = [fact({ fact_id: "a", value: 10, unit: "KRW" }), fact({ fact_id: "b", value: 4, unit: "원" })];
+  const inputsSnapshot = JSON.parse(JSON.stringify(inputs));
+  const validation = await createValidator(authority, undefined, newFactProvenanceValidator(...inputs)).validateFacts(inputs);
+  const proofSnapshot = JSON.parse(JSON.stringify(validation));
+  const result = createCalculator(authority).calculate({ formula: "DIFF", inputs, validation });
+  assert.equal(result.result, 6);
+  assert.deepEqual(inputs, inputsSnapshot, "Calculator must never mutate the caller's input records");
+  assert.deepEqual(result.inputs, inputsSnapshot, "CalculationResult must preserve the original input units verbatim");
+  assert.deepEqual(validation, proofSnapshot, "unit alias comparison must never rewrite the proof subject or validation result");
+});
+
+for (const [leftUnit, rightUnit, label] of [
+  ["PERCENT", "%", "PERCENT enum token vs % raw label"],
+  ["SHARES", "주", "SHARES enum token vs 주 raw label"],
+]) {
+  test(`Turn M10.1: Calculator accepts the closed unit alias ${label} without rewriting either input`, async () => {
+    const authority = newAuthority();
+    const inputs = [fact({ fact_id: "a", value: 10, unit: leftUnit }), fact({ fact_id: "b", value: 4, unit: rightUnit })];
+    const snapshot = JSON.parse(JSON.stringify(inputs));
+    const validation = await createValidator(authority, undefined, newFactProvenanceValidator(...inputs)).validateFacts(inputs);
+    const result = createCalculator(authority).calculate({ formula: "DIFF", inputs, validation });
+    assert.equal(result.result, 6);
+    assert.deepEqual(inputs, snapshot);
+    assert.deepEqual(result.inputs, snapshot);
+  });
+}
+
+test("Turn M10 counterexample: the Calculator still rejects two inputs whose units are genuinely different real units (KRW vs 원-labeled PERCENT is never conflated)", async () => {
+  const authority = newAuthority();
+  const inputs = [fact({ fact_id: "a", unit: "KRW" }), fact({ fact_id: "b", unit: "%" })];
+  const validation = await createValidator(authority, undefined, newFactProvenanceValidator(...inputs)).validateFacts(inputs);
+  assert.throws(
+    () => createCalculator(authority).calculate({ formula: "SUM", inputs, validation }),
+    (error) => error instanceof RejectedInputError && error.code === "UNIT_MISMATCH",
+  );
+});
+
+for (const [leftUnit, rightUnit, label] of [
+  ["원", "%", "원 vs %"],
+  ["SHARES", "KRW", "SHARES vs KRW"],
+  ["SYNTHETIC_UNIT_A", "SYNTHETIC_UNIT_B", "two unknown distinct units"],
+]) {
+  test(`Turn M10.1 counterexample: Calculator rejects ${label} as UNIT_MISMATCH`, async () => {
+    const authority = newAuthority();
+    const inputs = [fact({ fact_id: "a", unit: leftUnit }), fact({ fact_id: "b", unit: rightUnit })];
+    const validation = await createValidator(authority, undefined, newFactProvenanceValidator(...inputs)).validateFacts(inputs);
+    assert.throws(
+      () => createCalculator(authority).calculate({ formula: "SUM", inputs, validation }),
+      (error) => error instanceof RejectedInputError && error.code === "UNIT_MISMATCH",
+    );
+  });
+}
 
 test("Calculator rejects mismatched scope even when only one input carries a scope", async () => {
   const authority = newAuthority();

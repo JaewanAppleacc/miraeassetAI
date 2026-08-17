@@ -1,0 +1,29 @@
+{
+  "schema_version": "0.1.0",
+  "release_id": "seed-release-v0.15-draft",
+  "release_status": "DRAFT",
+  "corpus_snapshot_id": "corpus_04750795e1a2d5c3",
+  "artifacts": [
+    {
+      "role": "CANONICAL_DOCUMENT_IR_BASE",
+      "path": "work/domain-seed/seed-canonical-document-ir.v0.6.jsonl",
+      "sha256": "4539cceb239b69f05a9c38239680926e32c13367e9c870dc509c528f785fbcda",
+      "bytes": 121338555,
+      "record_count": 54
+    },
+    {
+      "role": "CANONICAL_DOCUMENT_IR_DELTA",
+      "path": "work/domain-seed/seed-canonical-document-ir.v0.15.delta.jsonl",
+      "sha256": "94f0f24a29cd0233f2f2be7f74e7549f0c4320f3d75a0008e6cb94dc127f54f6",
+      "bytes": 216700,
+      "record_count": 14
+    },
+    {
+      "role": "SEED_GOLD",
+      "path": "work/domain-seed/seed-gold-promotion-candidates.v0.15.jsonl",
+      "sha256": "94a8aa5076cbd3f4e634fedad33e2e44a35687ae595d3445ae414069f86e2987",
+      "bytes": 254073,
+      "record_count": 25
+    }
+  ]
+}

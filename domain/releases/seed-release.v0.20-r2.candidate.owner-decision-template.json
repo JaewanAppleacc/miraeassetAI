@@ -1,0 +1,26 @@
+{
+  "schema_version": "0.1.0",
+  "decision_id": "seed-release-v0.20-r2-candidate-owner-decision",
+  "status": "PENDING",
+  "subject_release_manifest": {
+    "path": "domain/releases/seed-release.v0.20-r2.candidate.manifest.json",
+    "sha256": "5d5d73f6c013a4f6247d8291e5b48029a11bb2359e6d15a8a4b1e9094ad23436"
+  },
+  "subject_gate_status": {
+    "path": "domain/releases/seed-release.v0.20-r2.candidate.RELEASE_GATE_STATUS.json"
+  },
+  "subject_integration_packet": {
+    "path": "work/handoff/seed-final-response-owner-review/results/seed-response-turn-m8-integration-packet.v0.1.json"
+  },
+  "checklist": {
+    "clean_plan_lineage_confirmed": null,
+    "q18_information_limit_wording_acceptable": null,
+    "six_changed_questions_reviewed_in_integration_packet": null,
+    "no_unrelated_regression_vs_pre_turn_m7_baseline": null,
+    "owner_batch_decision_and_merged_decision_agree": null
+  },
+  "owner_disposition": "PENDING",
+  "reviewer": null,
+  "reviewed_at": null,
+  "notes": "Turn M8 산출물 -- 사람이 검수하기 전까지 PENDING으로 유지된다. 자동 승인 없음. v0.20 APPROVED release 판단은 이 템플릿을 사람이 채운 뒤에만 성립한다."
+}

@@ -1,0 +1,59 @@
+{
+  "schema_version": "0.1.0",
+  "generated_at": "2026-08-16T12:48:09.076Z",
+  "based_on": {
+    "path": "work/domain-seed/seed-thin-flow-plans.v0.12.clean.candidate.jsonl",
+    "sha256": "79e87d20982ef2c86eaaa64e8dddda68ce91e1d7d448a56f04426d1ce18298f2"
+  },
+  "explicitly_not_based_on": {
+    "note": "This is a pure, single-question addition on top of Plan v0.12 clean candidate (itself based on Plan v0.6, not the v0.7-v0.11 Candidate research lineage). No sub_request_authority, no new ontology token, no new Fact/Event."
+  },
+  "changed_question_ids": [
+    "question_seed_v07_18"
+  ],
+  "unchanged_question_ids": [
+    "question_seed_v07_01",
+    "question_seed_v07_02",
+    "question_seed_v07_03",
+    "question_seed_v07_04",
+    "question_seed_v07_05",
+    "question_seed_v07_06",
+    "question_seed_v07_07",
+    "question_seed_v07_08",
+    "question_seed_v07_09",
+    "question_seed_v07_10",
+    "question_seed_v07_11",
+    "question_seed_v07_12",
+    "question_seed_v07_13",
+    "question_seed_v07_14",
+    "question_seed_v07_15",
+    "question_seed_v07_16",
+    "question_seed_v07_17",
+    "question_seed_v07_19",
+    "question_seed_v07_20",
+    "question_seed_v07_21",
+    "question_seed_v07_22",
+    "question_seed_v07_23",
+    "question_seed_v07_24",
+    "question_seed_v07_25"
+  ],
+  "per_question_diff": [
+    {
+      "question_id": "question_seed_v07_18",
+      "change": "added_top_level_evidence_id",
+      "added_evidence_id": "evidence_027901c5fc28cf428810b88e",
+      "reason": "makes the already-existing VERIFIED correction Event reachable via the Flow's existing evidence_ids-keyed EVENT query -- no new Fact/Event/Evidence authored",
+      "target_event_id": "event_407a5f1c9f81db32e0cbe668"
+    }
+  ],
+  "sub_request_authority_present": false,
+  "corpus_snapshot_id": "corpus_04750795e1a2d5c3",
+  "fact_coverage_snapshot_id": "fact_coverage_snapshot_87ad2fa54e8ab7f7543c1ce3",
+  "source_gold": "work/domain-seed/seed-gold-promotion-candidates.v0.17.jsonl",
+  "source_gold_sha256": "a9a4c23be632df40b2409660ef34e21347b33b32a1f7be407bf55dfe92491d2c",
+  "source_coverage": "work/domain-seed/seed-fact-coverage-verified.v0.7.json",
+  "source_coverage_sha256": "690b34bda825b7bebd9c975cdc77b3a55121e860b6cb54cb49c01aa1924b4a5d",
+  "record_count": 25,
+  "artifact_sha256": "efe9e689ad94cd24ca4bc1262a6c320885caee0433e8d19a991634fdd96b54e8",
+  "base_plan_v012_sha256": "79e87d20982ef2c86eaaa64e8dddda68ce91e1d7d448a56f04426d1ce18298f2"
+}

@@ -1,0 +1,30 @@
+{
+  "schema_version": "0.1.0",
+  "decision_id": "seed-release-v0.20-r3-candidate-owner-decision",
+  "status": "PENDING",
+  "subject_release_manifest": {
+    "path": "domain/releases/seed-release.v0.20-r3.candidate.manifest.json",
+    "sha256": "1d601ecf971d1b76fc97fdf173290b6af83974a23182ed678da52a7157904c37"
+  },
+  "subject_gate_status": {
+    "path": "domain/releases/seed-release.v0.20-r3.candidate.RELEASE_GATE_STATUS.json"
+  },
+  "subject_integration_packet": {
+    "path": "work/handoff/seed-final-response-owner-review/results/seed-response-turn-m101-closure-report.v0.1.json"
+  },
+  "checklist": {
+    "clean_plan_lineage_confirmed": null,
+    "q18_information_limit_wording_acceptable": null,
+    "turn_m101_seven_changed_questions_closure_confirmed": null,
+    "no_unexpected_regression_vs_r14": null,
+    "owner_batch_decision_and_merged_decision_agree": null
+  },
+  "owner_disposition": "PENDING",
+  "reviewer": null,
+  "reviewed_at": null,
+  "notes": "Turn M10.1 종료 Candidate -- 사람이 검수하기 전까지 PENDING으로 유지된다. 자동 승인 없음. v0.20 APPROVED release 판단은 이 템플릿을 사람이 채운 뒤에만 성립한다.",
+  "subject_bundle_manifest": {
+    "path": "domain/releases/bundles/seed-release-v0.20-r3.candidate/bundle-manifest.json",
+    "sha256": "5158b001df5c2a2119f66f1b00fbdf92ac79311a9a73c4ef7013981f86640726"
+  }
+}

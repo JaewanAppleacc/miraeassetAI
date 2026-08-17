@@ -1,0 +1,234 @@
+{
+  "schema_version": "0.1.0",
+  "generated_at": "2026-08-16T07:30:04.528Z",
+  "artifact": "work/domain-seed/seed-thin-flow-plans.v0.12.clean.candidate.jsonl",
+  "artifact_sha256": "79e87d20982ef2c86eaaa64e8dddda68ce91e1d7d448a56f04426d1ce18298f2",
+  "record_count": 25,
+  "corpus_snapshot_id": "corpus_04750795e1a2d5c3",
+  "fact_coverage_snapshot_id": "fact_coverage_snapshot_87ad2fa54e8ab7f7543c1ce3",
+  "source_gold": "work/domain-seed/seed-gold-promotion-candidates.v0.17.jsonl",
+  "source_gold_sha256": "a9a4c23be632df40b2409660ef34e21347b33b32a1f7be407bf55dfe92491d2c",
+  "source_coverage": "work/domain-seed/seed-fact-coverage-verified.v0.7.json",
+  "source_coverage_sha256": "690b34bda825b7bebd9c975cdc77b3a55121e860b6cb54cb49c01aa1924b4a5d",
+  "forbidden_runtime_fields": [
+    "expected_answer",
+    "scoring_spec",
+    "required_evidence_slots"
+  ],
+  "based_on": {
+    "path": "work/domain-seed/seed-thin-flow-plans.v0.6.jsonl",
+    "sha256": "02fa208d93a84566aa8851b0c04c679935cbe919366fac8ba4466d5807bf26e8"
+  },
+  "explicitly_not_based_on": {
+    "note": "이 Plan은 v0.7~v0.11 Candidate/연구 계보를 base로 사용하지 않았다 -- v0.6에서 직접 파생됨. 아래는 그 계보 파일들과의 SHA-256 불일치를 명시적으로 기록 (byte-collision 없음을 증명).",
+    "candidate_lineage_sha256": {
+      "v07": "55dc8571069717f4227acd81343b013a6f8231dde6f85dfe678b942ffcef5c1c",
+      "v08": "4c88fdcbcae65ac96f001686bb3a95e7f47cb593e35aea3078a4c997e1a2e98d",
+      "v09": "4c88fdcbcae65ac96f001686bb3a95e7f47cb593e35aea3078a4c997e1a2e98d",
+      "v10": "b9c64aa2c8c19750ec9058a811ef73ed44e2229d84702b25107faafaefb4347f",
+      "v11": "63b88407325f43b98f1246344757a0fa65a562bd285fed23d8a3da2d008980a4"
+    }
+  },
+  "changed_question_ids": [
+    "question_seed_v07_06",
+    "question_seed_v07_09",
+    "question_seed_v07_17",
+    "question_seed_v07_18",
+    "question_seed_v07_20",
+    "question_seed_v07_25"
+  ],
+  "unchanged_question_ids": [
+    "question_seed_v07_01",
+    "question_seed_v07_02",
+    "question_seed_v07_03",
+    "question_seed_v07_04",
+    "question_seed_v07_05",
+    "question_seed_v07_07",
+    "question_seed_v07_08",
+    "question_seed_v07_10",
+    "question_seed_v07_11",
+    "question_seed_v07_12",
+    "question_seed_v07_13",
+    "question_seed_v07_14",
+    "question_seed_v07_15",
+    "question_seed_v07_16",
+    "question_seed_v07_19",
+    "question_seed_v07_21",
+    "question_seed_v07_22",
+    "question_seed_v07_23",
+    "question_seed_v07_24"
+  ],
+  "per_question_diff": [
+    {
+      "question_id": "question_seed_v07_01",
+      "changed_beyond_schema_version_bump": false,
+      "added_slot_names": [],
+      "information_limits_added": false
+    },
+    {
+      "question_id": "question_seed_v07_02",
+      "changed_beyond_schema_version_bump": false,
+      "added_slot_names": [],
+      "information_limits_added": false
+    },
+    {
+      "question_id": "question_seed_v07_03",
+      "changed_beyond_schema_version_bump": false,
+      "added_slot_names": [],
+      "information_limits_added": false
+    },
+    {
+      "question_id": "question_seed_v07_04",
+      "changed_beyond_schema_version_bump": false,
+      "added_slot_names": [],
+      "information_limits_added": false
+    },
+    {
+      "question_id": "question_seed_v07_05",
+      "changed_beyond_schema_version_bump": false,
+      "added_slot_names": [],
+      "information_limits_added": false
+    },
+    {
+      "question_id": "question_seed_v07_06",
+      "changed_beyond_schema_version_bump": true,
+      "added_slot_names": [
+        "crane_investment_purpose",
+        "crane_investment_target",
+        "dock_investment_purpose",
+        "dock_investment_target"
+      ],
+      "information_limits_added": false
+    },
+    {
+      "question_id": "question_seed_v07_07",
+      "changed_beyond_schema_version_bump": false,
+      "added_slot_names": [],
+      "information_limits_added": false
+    },
+    {
+      "question_id": "question_seed_v07_08",
+      "changed_beyond_schema_version_bump": false,
+      "added_slot_names": [],
+      "information_limits_added": false
+    },
+    {
+      "question_id": "question_seed_v07_09",
+      "changed_beyond_schema_version_bump": true,
+      "added_slot_names": [
+        "trust_contract_institution",
+        "acquisition_planned_shares"
+      ],
+      "information_limits_added": false
+    },
+    {
+      "question_id": "question_seed_v07_10",
+      "changed_beyond_schema_version_bump": false,
+      "added_slot_names": [],
+      "information_limits_added": false
+    },
+    {
+      "question_id": "question_seed_v07_11",
+      "changed_beyond_schema_version_bump": false,
+      "added_slot_names": [],
+      "information_limits_added": false
+    },
+    {
+      "question_id": "question_seed_v07_12",
+      "changed_beyond_schema_version_bump": false,
+      "added_slot_names": [],
+      "information_limits_added": false
+    },
+    {
+      "question_id": "question_seed_v07_13",
+      "changed_beyond_schema_version_bump": false,
+      "added_slot_names": [],
+      "information_limits_added": false
+    },
+    {
+      "question_id": "question_seed_v07_14",
+      "changed_beyond_schema_version_bump": false,
+      "added_slot_names": [],
+      "information_limits_added": false
+    },
+    {
+      "question_id": "question_seed_v07_15",
+      "changed_beyond_schema_version_bump": false,
+      "added_slot_names": [],
+      "information_limits_added": false
+    },
+    {
+      "question_id": "question_seed_v07_16",
+      "changed_beyond_schema_version_bump": false,
+      "added_slot_names": [],
+      "information_limits_added": false
+    },
+    {
+      "question_id": "question_seed_v07_17",
+      "changed_beyond_schema_version_bump": true,
+      "added_slot_names": [
+        "samsung_heavy_latest_contract_amount",
+        "hyosung_latest_contract_amount"
+      ],
+      "information_limits_added": false
+    },
+    {
+      "question_id": "question_seed_v07_18",
+      "changed_beyond_schema_version_bump": true,
+      "added_slot_names": [],
+      "information_limits_added": true
+    },
+    {
+      "question_id": "question_seed_v07_19",
+      "changed_beyond_schema_version_bump": false,
+      "added_slot_names": [],
+      "information_limits_added": false
+    },
+    {
+      "question_id": "question_seed_v07_20",
+      "changed_beyond_schema_version_bump": true,
+      "added_slot_names": [
+        "correction_reason"
+      ],
+      "information_limits_added": false
+    },
+    {
+      "question_id": "question_seed_v07_21",
+      "changed_beyond_schema_version_bump": false,
+      "added_slot_names": [],
+      "information_limits_added": false
+    },
+    {
+      "question_id": "question_seed_v07_22",
+      "changed_beyond_schema_version_bump": false,
+      "added_slot_names": [],
+      "information_limits_added": false
+    },
+    {
+      "question_id": "question_seed_v07_23",
+      "changed_beyond_schema_version_bump": false,
+      "added_slot_names": [],
+      "information_limits_added": false
+    },
+    {
+      "question_id": "question_seed_v07_24",
+      "changed_beyond_schema_version_bump": false,
+      "added_slot_names": [],
+      "information_limits_added": false
+    },
+    {
+      "question_id": "question_seed_v07_25",
+      "changed_beyond_schema_version_bump": true,
+      "added_slot_names": [
+        "reservation_deadline_intermediate_1",
+        "reservation_deadline_intermediate_2",
+        "reservation_deadline_intermediate_3",
+        "reservation_deadline_intermediate_4",
+        "reservation_deadline_final"
+      ],
+      "information_limits_added": false
+    }
+  ],
+  "sub_request_authority_present": false,
+  "status": "CANDIDATE"
+}

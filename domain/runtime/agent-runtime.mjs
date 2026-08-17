@@ -501,6 +501,22 @@ export function createValidator(
 
 export const CALCULATOR_FORMULAS = Object.freeze(["SUM", "DIFF", "RATIO", "PERCENTAGE_CHANGE"]);
 
+// Turn M10: the real VERIFIED Fact corpus is not consistent about
+// whether a Fact's `unit` field holds the enum token ("KRW") or the raw
+// Korean/symbol label ("원") for the SAME real unit -- domain/flows/
+// synthesis/response-composer.mjs's claimTypeForUnit already had to work
+// around the identical inconsistency for PERCENT/SHARES presentation.
+// This is a COMPARISON-ONLY canonicalization used solely to decide
+// whether two calculation inputs share a unit: it is never applied to
+// `request.inputs` itself (each input keeps its own real, unmodified
+// unit value throughout -- the proof-binding hash in
+// createValidationAuthority.check() is computed over the untouched
+// inputs the Validator actually approved, and must stay that way).
+const CALCULATOR_UNIT_CANONICAL_TOKEN = Object.freeze({ 원: "KRW", "%": "PERCENT", 주: "SHARES" });
+function canonicalCalculatorUnit(unit) {
+  return CALCULATOR_UNIT_CANONICAL_TOKEN[unit] ?? unit ?? null;
+}
+
 const FORMULA_ARITY = Object.freeze({
   SUM: { min: 1 },
   DIFF: { exact: 2 },
@@ -550,7 +566,7 @@ export function validateCalculationRequest(request, authority) {
   if (proofErrors.length > 0) return proofErrors.map(toMessage);
 
   const errors = [];
-  const units = new Set(request.inputs.map((input) => input.unit ?? null));
+  const units = new Set(request.inputs.map((input) => canonicalCalculatorUnit(input.unit)));
   if (units.size > 1) errors.push(fail("UNIT_MISMATCH", "inputs do not all share the same unit"));
 
   const scopes = new Set(request.inputs.map((input) => input.scope ?? null));

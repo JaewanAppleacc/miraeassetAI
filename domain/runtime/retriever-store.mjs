@@ -74,17 +74,12 @@
 //     being handed back, so a consumer mutating it afterward can't
 //     retroactively "un-validate" what this module already checked.
 
-import Ajv2020 from "ajv/dist/2020.js";
-import addFormats from "ajv-formats";
 import { abortReason, RequestAbortedError } from "./abortable.mjs";
 import { validateRetrievalRequestResultPair, validateRetrievalResult } from "../contracts.mjs";
-import requestSchema from "../retrieval/retrieval-request.schema.json" with { type: "json" };
-import resultSchema from "../retrieval/retrieval-result.schema.json" with { type: "json" };
-
-const ajv = new Ajv2020({ allErrors: true, strict: true });
-addFormats(ajv);
-const validateRequestSchema = ajv.compile(requestSchema);
-const validateResultSchema = ajv.compile(resultSchema);
+import {
+  validateRetrievalRequestSchema as validateRequestSchema,
+  validateRetrievalResultSchema as validateResultSchema,
+} from "../generated/runtime-schema-validators.mjs";
 
 export const RETRIEVER_CODES = Object.freeze([
   "RETRIEVER_UNAVAILABLE",

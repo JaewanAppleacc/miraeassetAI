@@ -1,0 +1,40 @@
+{
+  "schema_version": "0.1.0",
+  "release_id": "seed-release-v0.19",
+  "release_status": "APPROVED",
+  "corpus_snapshot_id": "corpus_04750795e1a2d5c3",
+  "artifacts": [
+    {
+      "role": "CANONICAL_DOCUMENT_IR_BASE",
+      "path": "work/domain-seed/seed-canonical-document-ir.v0.6.jsonl",
+      "sha256": "4539cceb239b69f05a9c38239680926e32c13367e9c870dc509c528f785fbcda",
+      "bytes": 121338555,
+      "record_count": 54
+    },
+    {
+      "role": "CANONICAL_DOCUMENT_IR_DELTA",
+      "path": "work/domain-seed/seed-canonical-document-ir.v0.15.delta.jsonl",
+      "sha256": "94f0f24a29cd0233f2f2be7f74e7549f0c4320f3d75a0008e6cb94dc127f54f6",
+      "bytes": 216700,
+      "record_count": 14
+    },
+    {
+      "role": "SEED_GOLD",
+      "path": "work/domain-seed/seed-gold-promotion-candidates.v0.17.jsonl",
+      "sha256": "a9a4c23be632df40b2409660ef34e21347b33b32a1f7be407bf55dfe92491d2c",
+      "bytes": 261444,
+      "record_count": 25
+    }
+  ],
+  "approved_revision": "seed-structured-artifacts-v0.6",
+  "supersedes": "domain/releases/seed-release.v0.18.manifest.json",
+  "supersession_note": "v0.18의 데이터(Fact v0.7/Evidence v0.9/Coverage v0.6/Gold v0.17/Plan v0.6/Chain v0.2)를 그대로 재사용하는 순수 재승인 revision. v0.18 자체는 수정하지 않고 감사 이력으로 보존. 변경된 것은 domain/adapters/seed-runtime-service-adapters.mjs 하나뿐: decision.owner_batch_decision을 실제 Runtime release-authorization 경계(assertOwnerBatchDecisionBinding)가 이제 직접 읽고 검증한다 (path 안전성/SHA-256/JSONL 파싱/record_count/중복 ID/전원 APPROVE/reviewer=approved_by 일치/reviewed_at 유효성/all_approve 재계산, 그리고 promoted VERIFIED Fact·Evidence 및 structured manifest의 merged OWNER_DECISION과의 교차검증까지). 이전에는 tests/seed-release-v018.test.mjs만 별도로 검증했고 실제 Gate는 그 필드를 읽지 않아 load-bearing하지 않았다. Fact/Evidence/Coverage/Gold/Plan/Chain 데이터나 Thin Flow 템플릿은 이 revision에서 전혀 추가/변경되지 않았다 -- Q07/Q21/Q24 metric_fail(4건)과 REVIEW_REQUIRED(17건)는 여전히 미해결이며, 전체 Release Gate는 domain/releases/seed-release.v0.18.RELEASE_GATE_STATUS.json 기준으로 BLOCKED로 유지된다.",
+  "release_authorization": {
+    "status": "APPROVED",
+    "approved_by": "최재완",
+    "approved_at": "2026-08-13T19:13:03.941Z",
+    "decision_artifact_path": "domain/releases/seed-release.v0.19.decision.json",
+    "decision_artifact_sha256": "b705a75873fdd59c2a2cd804823e540c9562c59f54e6ffc02f878c83eb12ba15",
+    "signing_note": "Repository-internal procedural Owner assertion, not a cryptographic signature -- see domain/releases/README.md."
+  }
+}

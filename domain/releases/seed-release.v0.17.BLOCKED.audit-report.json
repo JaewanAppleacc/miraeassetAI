@@ -1,0 +1,51 @@
+{
+  "schema_version": "0.1.0",
+  "report_type": "RELEASE_BLOCKER",
+  "subject_release": "domain/releases/seed-release.v0.17.manifest.json",
+  "subject_structured_manifest": "work/domain-seed/seed-structured-artifacts.v0.5.manifest.json",
+  "status": "BLOCKED",
+  "generated_at": "2026-08-14T00:00:00.000Z",
+  "audited_by": "Codex (independent review)",
+  "remediated_by": "Claude Code",
+  "finding": {
+    "severity": "P0",
+    "summary": "6 Facts/Evidence promoted to VERIFIED status in v0.5/v0.7 (and bound into the v0.17 release) via an Owner-decision record that scripts/build-and-promote-seed-fact-batch-v05.mjs generated itself -- owner_disposition:\"APPROVE\", reviewer:\"최재완\", reviewed_at all hardcoded by the same automated script that authored the underlying data. No independent human reviewed or signed off on this specific batch through any channel outside the same code path that produced the claim.",
+    "affected_artifacts": [
+      "work/domain-seed/seed-structured-owner-decision.v0.5-batch.jsonl",
+      "work/domain-seed/seed-evidence-verified.v0.7.jsonl",
+      "work/domain-seed/seed-facts-verified.v0.5.jsonl",
+      "work/domain-seed/seed-fact-coverage-verified.v0.5.json",
+      "work/domain-seed/seed-structured-artifacts.v0.5.manifest.json",
+      "domain/releases/seed-release.v0.17.manifest.json",
+      "domain/releases/seed-release.v0.17.decision.json"
+    ],
+    "affected_items": [
+      { "fact_id": "fact_819ddadfa03109eb282dd229", "evidence_id": "evidence_56d0c83ad3038235ab3cd7a0", "question_id": "question_seed_v07_02", "slot_name": "equity_ratio_percent" },
+      { "fact_id": "fact_7706aad10260c083b61e2bef", "evidence_id": "evidence_51916f367d6d427a837334bb", "question_id": "question_seed_v07_04", "slot_name": "change_vs_previous_shares" },
+      { "fact_id": "fact_2a80a094d25c91d29fd54fcc", "evidence_id": "evidence_6936961584b7752beb818bee", "question_id": "question_seed_v07_05", "slot_name": "planned_amount_krw" },
+      { "fact_id": "fact_778a432c28583bef3f49180d", "evidence_id": "evidence_8592539f59b6cf9b95596509", "question_id": "question_seed_v07_05", "slot_name": "context_reference_price_krw" },
+      { "fact_id": "fact_19318691dcb7b893d33d697c", "evidence_id": "evidence_87dd3ba0efc94dc8ff496fa7", "question_id": "question_seed_v07_10", "slot_name": "consolidation_entity_count_2023" },
+      { "fact_id": "fact_c5febab8818528a008deacf5", "evidence_id": "evidence_51a0fce7d467550b2f426bf0", "question_id": "question_seed_v07_10", "slot_name": "consolidation_entity_count_2025" }
+    ]
+  },
+  "disposition": {
+    "preserved_as_audit_history": [
+      "work/domain-seed/seed-evidence-verified.v0.7.jsonl (unmodified, byte-identical)",
+      "work/domain-seed/seed-facts-verified.v0.5.jsonl (unmodified, byte-identical)",
+      "work/domain-seed/seed-fact-coverage-verified.v0.5.json (unmodified, byte-identical)",
+      "work/domain-seed/seed-structured-owner-decision.v0.5-batch.jsonl (unmodified, byte-identical)",
+      "work/domain-seed/seed-structured-artifacts.v0.5.manifest.json (unmodified, byte-identical)",
+      "domain/releases/seed-release.v0.17.manifest.json (unmodified, byte-identical)",
+      "domain/releases/seed-release.v0.17.decision.json (unmodified, byte-identical)"
+    ],
+    "not_release_ready": "domain/releases/seed-release.v0.17.manifest.json is NOT treated as release-ready anywhere in this codebase as of this report. domain/runtime/configured-seed-runtime.mjs no longer defaults to it (reverted to the last genuinely 82-item-Owner-approved bundle, domain/releases/seed-release.v0.16.manifest.json / seed-structured-artifacts.v0.4.manifest.json -- which itself now fails the separately-added Thin-plan/CHAIN_MANIFEST hardening gate and so also fails closed; see tests/seed-release-v016.test.mjs). There is currently NO release that is both validly Owner-approved and hardened-gate-compliant.",
+    "remediation": {
+      "candidate_authoring_script": "scripts/build-seed-fact-batch-v06-candidates.mjs (authors CANDIDATE-only Evidence/Fact + a PENDING decision template; contains no code path that can produce an approval)",
+      "candidate_evidence": "work/domain-seed/seed-evidence-candidates.v0.8.delta.jsonl (6 records, verification_status=CANDIDATE)",
+      "candidate_facts": "work/domain-seed/seed-facts-candidates.v0.6.delta.jsonl (6 records, verification_status=CANDIDATE, owner_disposition=PENDING)",
+      "decision_template": "work/domain-seed/seed-structured-owner-decision.v0.6-batch.template.jsonl (6 items, owner_disposition=PENDING, reviewer=null, reviewed_at=null)",
+      "promotion_script": "scripts/promote-seed-fact-batch-v06.mjs (separate script; requires an externally authored decision artifact; fail-closed on any missing/extra/duplicate item, any non-APPROVE disposition, missing reviewer, or invalid reviewed_at; never writes the decision artifact; never touches a release manifest or configured-seed-runtime.mjs)"
+    }
+  },
+  "next_official_release": "A real Owner must open work/domain-seed/seed-structured-owner-decision.v0.6-batch.template.jsonl, change each owner_disposition from PENDING to APPROVE (or REJECT), fill in reviewer/reviewed_at, save the edited copy elsewhere, then run `node scripts/promote-seed-fact-batch-v06.mjs --decision <path>`. Only after that (and after a new release manifest/decision is authored binding the promoted data plus the Thin-plan/CHAIN_MANIFEST hardening) should a v0.18-or-later release be minted and configured-seed-runtime.mjs repointed at it."
+}

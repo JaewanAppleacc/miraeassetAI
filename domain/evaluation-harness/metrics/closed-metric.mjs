@@ -127,6 +127,14 @@ function scoreObject(expected, response, spec) {
   let anyFail = false;
   let anyUnscored = false;
   for (const [key, expectedField] of Object.entries(expected.value)) {
+    // Gold may carry explicitly informational projections under this
+    // reserved key. They are useful for diagnostics but, by definition,
+    // must not turn an otherwise exact answer into FAIL. Keep their detail
+    // visible while excluding them from the aggregate scored status.
+    if (key === "non_scored_fields") {
+      fields[key] = outcome("NOT_SCORED", "explicitly excluded from scoring by Gold");
+      continue;
+    }
     if (structured === undefined || !(key in structured)) {
       fields[key] = outcome("NOT_SCORED", "no structured field in think_trace.calculation");
       anyUnscored = true;

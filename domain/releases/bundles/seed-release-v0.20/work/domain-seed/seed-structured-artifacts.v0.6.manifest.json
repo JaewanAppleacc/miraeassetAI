@@ -1,0 +1,71 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_set_id": "seed-structured-artifacts-v0.6",
+  "status": "VERIFIED_SEED_SUBSET",
+  "generated_at": "2026-08-13T16:23:23.265Z",
+  "corpus_snapshot_id": "corpus_04750795e1a2d5c3",
+  "fact_coverage_snapshot_id": "fact_coverage_snapshot_e496090c2a4da212a768e53d",
+  "semantic_bundle_schema_version": "0.2.0",
+  "artifacts": [
+    {
+      "role": "VERIFIED_EVIDENCE",
+      "path": "work/domain-seed/seed-evidence-verified.v0.9.jsonl",
+      "sha256": "e25271abe264337d54d1209e0515e2fdba01844a2f2fc52232afa16d1923f02e",
+      "bytes": 404674,
+      "record_count": 219
+    },
+    {
+      "role": "VERIFIED_EVIDENCE_MANIFEST",
+      "path": "work/domain-seed/seed-evidence-verified.v0.9.manifest.json",
+      "sha256": "b1a22db61b690ef94623f731666c62e3dd32656b75abf193b90b88fdf119ea93",
+      "bytes": 9816,
+      "record_count": null
+    },
+    {
+      "role": "VERIFIED_EVENT",
+      "path": "work/domain-seed/seed-events-verified.v0.1.jsonl",
+      "sha256": "b13ed9f1b7c2a9b9bcab48d01841edc20acee685012333ec629f2fa6d5035396",
+      "bytes": 20487,
+      "record_count": 24
+    },
+    {
+      "role": "VERIFIED_RELATION",
+      "path": "work/domain-seed/seed-relation-gold.v0.2.jsonl",
+      "sha256": "66543d26e8e6fd99e6c8ea26e364774006f8b15d6bc70839295b2baff54eb399",
+      "bytes": 48731,
+      "record_count": 40
+    },
+    {
+      "role": "CHAIN_MANIFEST",
+      "path": "work/domain-seed/seed-chain-manifest.v0.2.jsonl",
+      "sha256": "14564122fb733dec5950bda8d4495a01551fe7a93018af125037ebca514cf0f7",
+      "bytes": 14226,
+      "record_count": 16
+    },
+    {
+      "role": "VERIFIED_FACT",
+      "path": "work/domain-seed/seed-facts-verified.v0.7.jsonl",
+      "sha256": "80845c88b6b5813cb19e75b5cb744bf6e4dfc20243fdcb5be805f49869fb0e87",
+      "bytes": 126289,
+      "record_count": 73
+    },
+    {
+      "role": "FACT_COVERAGE_SNAPSHOT",
+      "path": "work/domain-seed/seed-fact-coverage-verified.v0.6.json",
+      "sha256": "1c0af3325706aa11590624d0fcfde9e77a727eebc85939a8245efbd36d64dcfb",
+      "bytes": 46641,
+      "record_count": 88
+    },
+    {
+      "role": "OWNER_DECISION",
+      "path": "work/domain-seed/seed-structured-owner-decision.v0.7.jsonl",
+      "sha256": "7e4a4456231bf34cff7cafcfe63f612d235ea0f6df0e0382399949f848e771e0",
+      "bytes": 388346,
+      "record_count": 88
+    }
+  ],
+  "excluded_question_ids": [],
+  "release_status": "APPROVED_PENDING_RELEASE_AUTHORIZATION",
+  "supersedes": "work/domain-seed/seed-structured-artifacts.v0.4.manifest.json",
+  "supersession_note": "v0.17 감사(domain/releases/seed-release.v0.17.BLOCKED.audit-report.json)에서 지적된 자동 self-approval 결함을 실제 Owner 승인으로 대체. Q10 두 Fact의 기간 의미 결함(CUMULATIVE -> POINT_IN_TIME, as_of_date/known_at 분리)도 함께 수정됨. v0.5(자동 승인, 폐기)는 이 계보에 포함되지 않고 감사 이력으로 그대로 보존됨."
+}

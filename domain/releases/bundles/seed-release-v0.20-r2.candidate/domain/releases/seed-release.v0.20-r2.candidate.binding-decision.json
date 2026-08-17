@@ -1,0 +1,115 @@
+{
+  "schema_version": "0.3.0",
+  "decision_id": "seed-release-v0.20-r2-candidate-binding-decision",
+  "status": "APPROVED",
+  "approved_by": "최재완",
+  "approved_at": "2026-08-16T08:03:38.805Z",
+  "release_id": "seed-release-v0.20-r2-candidate",
+  "approved_revision": "seed-structured-artifacts-v0.7",
+  "corpus_snapshot_id": "corpus_04750795e1a2d5c3",
+  "fact_coverage_snapshot_id": "fact_coverage_snapshot_87ad2fa54e8ab7f7543c1ce3",
+  "canonical_release_manifest": {
+    "path": "domain/releases/seed-release.v0.20-r2.candidate.manifest.json",
+    "sha256": "5d5d73f6c013a4f6247d8291e5b48029a11bb2359e6d15a8a4b1e9094ad23436"
+  },
+  "structured_manifest": {
+    "path": "work/domain-seed/seed-structured-artifacts.v0.7.manifest.json",
+    "sha256": "2e9ebd60503af366d8cbc7e079ee6fd0eedecc81a69a2d2cc154983680ee3c29"
+  },
+  "canonical_artifacts": [
+    {
+      "role": "CANONICAL_DOCUMENT_IR_BASE",
+      "path": "work/domain-seed/seed-canonical-document-ir.v0.6.jsonl",
+      "sha256": "4539cceb239b69f05a9c38239680926e32c13367e9c870dc509c528f785fbcda",
+      "record_count": 54
+    },
+    {
+      "role": "CANONICAL_DOCUMENT_IR_DELTA",
+      "path": "work/domain-seed/seed-canonical-document-ir.v0.15.delta.jsonl",
+      "sha256": "94f0f24a29cd0233f2f2be7f74e7549f0c4320f3d75a0008e6cb94dc127f54f6",
+      "record_count": 14
+    },
+    {
+      "role": "SEED_GOLD",
+      "path": "work/domain-seed/seed-gold-promotion-candidates.v0.17.jsonl",
+      "sha256": "a9a4c23be632df40b2409660ef34e21347b33b32a1f7be407bf55dfe92491d2c",
+      "record_count": 25
+    }
+  ],
+  "structured_artifacts": [
+    {
+      "role": "VERIFIED_EVIDENCE",
+      "path": "work/domain-seed/seed-evidence-verified.v0.9.jsonl",
+      "sha256": "e25271abe264337d54d1209e0515e2fdba01844a2f2fc52232afa16d1923f02e",
+      "record_count": 219
+    },
+    {
+      "role": "VERIFIED_EVIDENCE_MANIFEST",
+      "path": "work/domain-seed/seed-evidence-verified.v0.9.manifest.json",
+      "sha256": "b1a22db61b690ef94623f731666c62e3dd32656b75abf193b90b88fdf119ea93",
+      "record_count": null
+    },
+    {
+      "role": "VERIFIED_EVENT",
+      "path": "work/domain-seed/seed-events-verified.v0.1.jsonl",
+      "sha256": "b13ed9f1b7c2a9b9bcab48d01841edc20acee685012333ec629f2fa6d5035396",
+      "record_count": 24
+    },
+    {
+      "role": "VERIFIED_RELATION",
+      "path": "work/domain-seed/seed-relation-gold.v0.2.jsonl",
+      "sha256": "66543d26e8e6fd99e6c8ea26e364774006f8b15d6bc70839295b2baff54eb399",
+      "record_count": 40
+    },
+    {
+      "role": "CHAIN_MANIFEST",
+      "path": "work/domain-seed/seed-chain-manifest.v0.2.jsonl",
+      "sha256": "14564122fb733dec5950bda8d4495a01551fe7a93018af125037ebca514cf0f7",
+      "record_count": 16
+    },
+    {
+      "role": "VERIFIED_FACT",
+      "path": "work/domain-seed/seed-facts-verified.v0.8.jsonl",
+      "sha256": "0492ece83ea65f08cc030ce5f4a1cf3cc408a3041b3c778975aa63f8ecbe057c",
+      "record_count": 87
+    },
+    {
+      "role": "FACT_COVERAGE_SNAPSHOT",
+      "path": "work/domain-seed/seed-fact-coverage-verified.v0.7.json",
+      "sha256": "690b34bda825b7bebd9c975cdc77b3a55121e860b6cb54cb49c01aa1924b4a5d",
+      "record_count": 102
+    },
+    {
+      "role": "OWNER_DECISION",
+      "path": "work/domain-seed/seed-structured-owner-decision.v0.10.jsonl",
+      "sha256": "9921417b1b0c26eef02dea3b32cb7fabcc0db2fae45c52883f3edeab20b75bcc",
+      "record_count": 102
+    }
+  ],
+  "thin_plan": {
+    "path": "work/domain-seed/seed-thin-flow-plans.v0.12.clean.candidate.jsonl",
+    "sha256": "79e87d20982ef2c86eaaa64e8dddda68ce91e1d7d448a56f04426d1ce18298f2",
+    "record_count": 25
+  },
+  "thin_plan_manifest": {
+    "path": "work/domain-seed/seed-thin-flow-plans.v0.12.clean.candidate.manifest.json",
+    "sha256": "d97e522de17111b7229fce507bb748c0a45edbea7ba7d31311f339fe8fd3a6bf"
+  },
+  "thin_plan_source_gold": {
+    "path": "work/domain-seed/seed-gold-promotion-candidates.v0.17.jsonl",
+    "sha256": "a9a4c23be632df40b2409660ef34e21347b33b32a1f7be407bf55dfe92491d2c"
+  },
+  "thin_plan_source_coverage": {
+    "path": "work/domain-seed/seed-fact-coverage-verified.v0.7.json",
+    "sha256": "690b34bda825b7bebd9c975cdc77b3a55121e860b6cb54cb49c01aa1924b4a5d"
+  },
+  "owner_batch_decision": {
+    "path": "work/domain-seed/seed-structured-owner-decision.v0.7-batch.decision.jsonl",
+    "sha256": "49d75a9f60b2e1af88ba5931135b2ca2c3f4f463e4dc73b6d25e30583943a6f8",
+    "record_count": 6,
+    "approved_by": "최재완",
+    "all_approve": true
+  },
+  "basis": "Turn M8 clean Plan (Plan v0.6 기반, v0.7-v0.11 Candidate 계보 미상속) + Turn M7 승격 14건 Fact + 병합 Owner decision v0.10(102) + 승인된 Company Directory v0.2. 이 decision의 status:APPROVED는 manifest-decision 결합을 위한 저장소 내부 절차적 assertion일 뿐, v0.20 실제 release 승인이 아니다 -- 실제 release 판단은 별도 owner-decision-template.json(PENDING)에서 이루어진다.",
+  "signing_note": "Repository-internal procedural binding decision, sandbox-equivalent authorization plumbing only -- never a production release authorization. See domain/releases/README.md."
+}

@@ -1,0 +1,72 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_set_id": "seed-structured-artifacts-v0.1",
+  "status": "VERIFIED_SEED_SUBSET",
+  "generated_at": "2026-08-13T01:00:30Z",
+  "corpus_snapshot_id": "corpus_04750795e1a2d5c3",
+  "fact_coverage_snapshot_id": "fact_coverage_snapshot_8102664d6ead285485104d8f",
+  "semantic_bundle_schema_version": "0.2.0",
+  "artifacts": [
+    {
+      "role": "VERIFIED_EVIDENCE",
+      "path": "work/domain-seed/seed-evidence-verified.v0.4.jsonl",
+      "sha256": "e184bd2c87f48fd38f76ca9bacde3e5c3ca6e18e15f869090cdfa9957688832b",
+      "bytes": 350369,
+      "record_count": 160
+    },
+    {
+      "role": "VERIFIED_EVIDENCE_MANIFEST",
+      "path": "work/domain-seed/seed-evidence-verified.v0.4.manifest.json",
+      "sha256": "f6b92f4ff929002da5f6da7c59e5470e3153c8d33934b1bacc10fc141410a266",
+      "bytes": 7323,
+      "record_count": null
+    },
+    {
+      "role": "VERIFIED_FACT",
+      "path": "work/domain-seed/seed-facts-verified.v0.1.jsonl",
+      "sha256": "1c7a8f7f046cdce1bdc49b7a57b49684a513949cbb9f14f164db493b1eb0bebd",
+      "bytes": 67374,
+      "record_count": 54
+    },
+    {
+      "role": "VERIFIED_EVENT",
+      "path": "work/domain-seed/seed-events-verified.v0.1.jsonl",
+      "sha256": "b13ed9f1b7c2a9b9bcab48d01841edc20acee685012333ec629f2fa6d5035396",
+      "bytes": 20487,
+      "record_count": 24
+    },
+    {
+      "role": "VERIFIED_RELATION",
+      "path": "work/domain-seed/seed-relation-gold.v0.1.jsonl",
+      "sha256": "b6d294b2f245d766ebb6e05e9d6a2d65869e7b012cc737a55f03169777447ac8",
+      "bytes": 48450,
+      "record_count": 40
+    },
+    {
+      "role": "FACT_COVERAGE_SNAPSHOT",
+      "path": "work/domain-seed/seed-fact-coverage-verified.v0.1.json",
+      "sha256": "0418e46dc6b2e19d4606a41213de397e91f1bd775decd1618bc141cdad6efa41",
+      "bytes": 34632,
+      "record_count": 69
+    },
+    {
+      "role": "OWNER_DECISION",
+      "path": "work/domain-seed/seed-structured-owner-decision.v0.1.json",
+      "sha256": "f8c1879271fd2c6ea3eb0b3a0cb55f1c332572734f5701a3eacd39f79fc7f559",
+      "bytes": 824,
+      "record_count": null
+    },
+    {
+      "role": "CHAIN_MANIFEST",
+      "path": "work/domain-seed/seed-chain-manifest.v0.1.jsonl",
+      "sha256": "9c9a0bcfdc446a390d0dac830f44a1b5eb28414c2d8060e8918d5b66250a12e6",
+      "bytes": 14222,
+      "record_count": 16
+    }
+  ],
+  "excluded_question_ids": [
+    "question_seed_v07_03",
+    "question_seed_v07_22"
+  ],
+  "release_status": "DRAFT_UNTIL_FLOW_API_E2E_AND_EXCLUDED_QUESTIONS_RESOLVED"
+}

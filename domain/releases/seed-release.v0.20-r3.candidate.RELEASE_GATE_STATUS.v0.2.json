@@ -1,0 +1,34 @@
+{
+  "schema_version": "0.2.0",
+  "report_type": "RELEASE_GATE_STATUS_AFTER_OWNER_APPROVAL",
+  "subject_release": "domain/releases/seed-release.v0.20-r3.candidate.manifest.json",
+  "subject_bundle_manifest": {
+    "path": "domain/releases/bundles/seed-release-v0.20-r3.candidate/bundle-manifest.json",
+    "sha256": "5158b001df5c2a2119f66f1b00fbdf92ac79311a9a73c4ef7013981f86640726"
+  },
+  "owner_decision": {
+    "path": "domain/releases/seed-release.v0.20-r3.candidate.owner-decision.approved.json",
+    "sha256": "b21007a677ada36ba293b9288fd924d10fdbf9b5f13e0e677b4c8c8623230f26",
+    "status": "APPROVED",
+    "reviewer": "최재완"
+  },
+  "gates": {
+    "data_promotion": "PASS",
+    "ontology_owner_review": "PASS",
+    "candidate_owner_review": "PASS",
+    "q18_information_limit_policy": "PASS",
+    "clean_plan_lineage": "PASS",
+    "runtime_candidate_e2e": "PASS",
+    "portable_bundle_integrity": "PASS",
+    "final_integration_owner_review": "PASS",
+    "official_clean_clone": "BLOCKED_BY_UNCOMMITTED_SOURCE",
+    "deployment": "BLOCKED"
+  },
+  "overall": "BLOCKED_BY_UNCOMMITTED_SOURCE",
+  "remaining_actions": [
+    "Stage and commit the exact reviewed source and bundle set only after explicit commit authorization.",
+    "Run the official git-archive/npm-ci clean-clone deployment test against that commit.",
+    "Only after the clean-clone gate passes, create a separately authorized final v0.20 release manifest and production Runtime binding."
+  ],
+  "notes": "Owner content review is complete. The remaining block is procedural and reproducibility-related, not an unresolved answer/ontology/Plan defect. No final release authorization, production switch, stage, commit, or push is represented by this status file."
+}

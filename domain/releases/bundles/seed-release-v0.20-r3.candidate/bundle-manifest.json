@@ -1,0 +1,208 @@
+{
+  "schema_version": "0.1.0",
+  "status": "CANDIDATE",
+  "release_id": "seed-release-v0.20-r3-candidate",
+  "approved_revision": "seed-structured-artifacts-v0.7",
+  "corpus_snapshot_id": "corpus_04750795e1a2d5c3",
+  "fact_coverage_snapshot_id": "fact_coverage_snapshot_87ad2fa54e8ab7f7543c1ce3",
+  "generated_at": "2026-08-17T00:06:27.452Z",
+  "entry_count": 21,
+  "entries": [
+    {
+      "role": "RELEASE_DECISION",
+      "bundle_path": "domain/releases/seed-release.v0.20-r3.candidate.binding-decision.json",
+      "source_path": "domain/releases/seed-release.v0.20-r3.candidate.binding-decision.json",
+      "compression": "none",
+      "decoded_sha256": "90d4318cadd68797037329fcdc3eea4eda975f47fa0164d6e1fad3d635907376",
+      "decoded_bytes": 5135,
+      "record_count": null
+    },
+    {
+      "role": "CANONICAL_RELEASE_MANIFEST",
+      "bundle_path": "domain/releases/seed-release.v0.20-r3.candidate.manifest.json",
+      "source_path": "domain/releases/seed-release.v0.20-r3.candidate.manifest.json",
+      "compression": "none",
+      "decoded_sha256": "05ad4f70e23c44411be02a2eacdf710bab65b7683416c4f6c7250ee9b7008007",
+      "decoded_bytes": 2386,
+      "record_count": null
+    },
+    {
+      "role": "CANONICAL_DOCUMENT_IR_DELTA",
+      "bundle_path": "work/domain-seed/seed-canonical-document-ir.v0.15.delta.jsonl.gz",
+      "source_path": "work/domain-seed/seed-canonical-document-ir.v0.15.delta.jsonl",
+      "compression": "gzip",
+      "gzip_level": 9,
+      "decoded_sha256": "94f0f24a29cd0233f2f2be7f74e7549f0c4320f3d75a0008e6cb94dc127f54f6",
+      "decoded_bytes": 216700,
+      "encoded_sha256": "64414616682b0369fa0d060007ba7f674a44d9ed1eb0bbd178363a2a90acf133",
+      "encoded_bytes": 8801,
+      "record_count": 14
+    },
+    {
+      "role": "CANONICAL_DOCUMENT_IR_BASE",
+      "bundle_path": "work/domain-seed/seed-canonical-document-ir.v0.6.jsonl.gz",
+      "source_path": "work/domain-seed/seed-canonical-document-ir.v0.6.jsonl",
+      "compression": "gzip",
+      "gzip_level": 9,
+      "decoded_sha256": "4539cceb239b69f05a9c38239680926e32c13367e9c870dc509c528f785fbcda",
+      "decoded_bytes": 121338555,
+      "encoded_sha256": "1d765707e7e40227e59ef0207963bb766e3216a6927398de31d6a1fc4c0e34e0",
+      "encoded_bytes": 12165624,
+      "record_count": 54
+    },
+    {
+      "role": "CHAIN_MANIFEST",
+      "bundle_path": "work/domain-seed/seed-chain-manifest.v0.2.jsonl",
+      "source_path": "work/domain-seed/seed-chain-manifest.v0.2.jsonl",
+      "compression": "none",
+      "decoded_sha256": "14564122fb733dec5950bda8d4495a01551fe7a93018af125037ebca514cf0f7",
+      "decoded_bytes": 14226,
+      "record_count": 16
+    },
+    {
+      "role": "COMPANY_DIRECTORY_OWNER_DECISION",
+      "bundle_path": "work/domain-seed/seed-company-directory-owner-decision.v0.2.approved.json",
+      "source_path": "work/domain-seed/seed-company-directory-owner-decision.v0.2.approved.json",
+      "compression": "none",
+      "decoded_sha256": "01bfb35409b304b7ff2b709774b41615e3087150b90a0abfd25e5f228cd73d47",
+      "decoded_bytes": 1864,
+      "record_count": 70
+    },
+    {
+      "role": "COMPANY_DIRECTORY",
+      "bundle_path": "work/domain-seed/seed-company-directory.v0.2.approved.jsonl",
+      "source_path": "work/domain-seed/seed-company-directory.v0.2.approved.jsonl",
+      "compression": "none",
+      "decoded_sha256": "6d91c4a8dcef9f7953d9e2797ab3e346dec748882161108b52677ed1fec16b3a",
+      "decoded_bytes": 5982,
+      "record_count": 70
+    },
+    {
+      "role": "COMPANY_DIRECTORY_MANIFEST",
+      "bundle_path": "work/domain-seed/seed-company-directory.v0.2.approved.manifest.json",
+      "source_path": "work/domain-seed/seed-company-directory.v0.2.approved.manifest.json",
+      "compression": "none",
+      "decoded_sha256": "3da4bd83a5c22350c9976f934a292a864946c512b38d6c841746dc1860a4392d",
+      "decoded_bytes": 1012,
+      "record_count": null
+    },
+    {
+      "role": "VERIFIED_EVENT",
+      "bundle_path": "work/domain-seed/seed-events-verified.v0.1.jsonl",
+      "source_path": "work/domain-seed/seed-events-verified.v0.1.jsonl",
+      "compression": "none",
+      "decoded_sha256": "b13ed9f1b7c2a9b9bcab48d01841edc20acee685012333ec629f2fa6d5035396",
+      "decoded_bytes": 20487,
+      "record_count": 24
+    },
+    {
+      "role": "VERIFIED_EVIDENCE",
+      "bundle_path": "work/domain-seed/seed-evidence-verified.v0.9.jsonl",
+      "source_path": "work/domain-seed/seed-evidence-verified.v0.9.jsonl",
+      "compression": "none",
+      "decoded_sha256": "e25271abe264337d54d1209e0515e2fdba01844a2f2fc52232afa16d1923f02e",
+      "decoded_bytes": 404674,
+      "record_count": 219
+    },
+    {
+      "role": "VERIFIED_EVIDENCE_MANIFEST",
+      "bundle_path": "work/domain-seed/seed-evidence-verified.v0.9.manifest.json",
+      "source_path": "work/domain-seed/seed-evidence-verified.v0.9.manifest.json",
+      "compression": "none",
+      "decoded_sha256": "b1a22db61b690ef94623f731666c62e3dd32656b75abf193b90b88fdf119ea93",
+      "decoded_bytes": 9816,
+      "record_count": null
+    },
+    {
+      "role": "FACT_COVERAGE_SNAPSHOT",
+      "bundle_path": "work/domain-seed/seed-fact-coverage-verified.v0.7.json",
+      "source_path": "work/domain-seed/seed-fact-coverage-verified.v0.7.json",
+      "compression": "none",
+      "decoded_sha256": "690b34bda825b7bebd9c975cdc77b3a55121e860b6cb54cb49c01aa1924b4a5d",
+      "decoded_bytes": 54062,
+      "record_count": 102
+    },
+    {
+      "role": "VERIFIED_FACT",
+      "bundle_path": "work/domain-seed/seed-facts-verified.v0.8.jsonl",
+      "source_path": "work/domain-seed/seed-facts-verified.v0.8.jsonl",
+      "compression": "none",
+      "decoded_sha256": "0492ece83ea65f08cc030ce5f4a1cf3cc408a3041b3c778975aa63f8ecbe057c",
+      "decoded_bytes": 146949,
+      "record_count": 87
+    },
+    {
+      "role": "SEED_GOLD",
+      "bundle_path": "work/domain-seed/seed-gold-promotion-candidates.v0.17.jsonl",
+      "source_path": "work/domain-seed/seed-gold-promotion-candidates.v0.17.jsonl",
+      "compression": "none",
+      "decoded_sha256": "a9a4c23be632df40b2409660ef34e21347b33b32a1f7be407bf55dfe92491d2c",
+      "decoded_bytes": 261444,
+      "record_count": 25
+    },
+    {
+      "role": "VERIFIED_RELATION",
+      "bundle_path": "work/domain-seed/seed-relation-gold.v0.2.jsonl",
+      "source_path": "work/domain-seed/seed-relation-gold.v0.2.jsonl",
+      "compression": "none",
+      "decoded_sha256": "66543d26e8e6fd99e6c8ea26e364774006f8b15d6bc70839295b2baff54eb399",
+      "decoded_bytes": 48731,
+      "record_count": 40
+    },
+    {
+      "role": "STRUCTURED_MANIFEST",
+      "bundle_path": "work/domain-seed/seed-structured-artifacts.v0.7.manifest.json",
+      "source_path": "work/domain-seed/seed-structured-artifacts.v0.7.manifest.json",
+      "compression": "none",
+      "decoded_sha256": "2e9ebd60503af366d8cbc7e079ee6fd0eedecc81a69a2d2cc154983680ee3c29",
+      "decoded_bytes": 3092,
+      "record_count": null
+    },
+    {
+      "role": "OWNER_DECISION",
+      "bundle_path": "work/domain-seed/seed-structured-owner-decision.v0.10.jsonl",
+      "source_path": "work/domain-seed/seed-structured-owner-decision.v0.10.jsonl",
+      "compression": "none",
+      "decoded_sha256": "9921417b1b0c26eef02dea3b32cb7fabcc0db2fae45c52883f3edeab20b75bcc",
+      "decoded_bytes": 405981,
+      "record_count": 102
+    },
+    {
+      "role": "OWNER_BATCH_DECISION",
+      "bundle_path": "work/domain-seed/seed-structured-owner-decision.v0.7-batch.decision.jsonl",
+      "source_path": "work/domain-seed/seed-structured-owner-decision.v0.7-batch.decision.jsonl",
+      "compression": "none",
+      "decoded_sha256": "49d75a9f60b2e1af88ba5931135b2ca2c3f4f463e4dc73b6d25e30583943a6f8",
+      "decoded_bytes": 5501,
+      "record_count": 6
+    },
+    {
+      "role": "THIN_PLAN",
+      "bundle_path": "work/domain-seed/seed-thin-flow-plans.v0.13.clean.candidate.jsonl",
+      "source_path": "work/domain-seed/seed-thin-flow-plans.v0.13.clean.candidate.jsonl",
+      "compression": "none",
+      "decoded_sha256": "efe9e689ad94cd24ca4bc1262a6c320885caee0433e8d19a991634fdd96b54e8",
+      "decoded_bytes": 29700,
+      "record_count": 25
+    },
+    {
+      "role": "THIN_PLAN_MANIFEST",
+      "bundle_path": "work/domain-seed/seed-thin-flow-plans.v0.13.clean.candidate.manifest.json",
+      "source_path": "work/domain-seed/seed-thin-flow-plans.v0.13.clean.candidate.manifest.json",
+      "compression": "none",
+      "decoded_sha256": "ca295e443378f09f958c16bd9b00c72d4127d2f562108d9d3db404ecd8ded867",
+      "decoded_bytes": 2459,
+      "record_count": null
+    },
+    {
+      "role": "TIMELINE_FACT_NARRATIVE_POLICY_DECISION",
+      "bundle_path": "work/domain-seed/seed-timeline-fact-narrative-policy-decision.v0.1.json",
+      "source_path": "work/domain-seed/seed-timeline-fact-narrative-policy-decision.v0.1.json",
+      "compression": "none",
+      "decoded_sha256": "e97c791b816c19665d1310520db1f6ea746e5bf72d795f813eb888473d9dcf45",
+      "decoded_bytes": 3118,
+      "record_count": null
+    }
+  ],
+  "note": "status is CANDIDATE/RELEASE_PENDING only -- this manifest never approves itself; a separate release decision must externally pin this file's own raw-byte SHA-256 (see seed-release-bundle-manifest-binding.mjs) before this bundle can be treated as release-authorized."
+}

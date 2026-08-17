@@ -1,0 +1,15 @@
+{
+  "schema_version": "0.1.0",
+  "artifact": "work/domain-seed/seed-thin-flow-plans.v0.6.jsonl",
+  "artifact_sha256": "02fa208d93a84566aa8851b0c04c679935cbe919366fac8ba4466d5807bf26e8",
+  "record_count": 25,
+  "corpus_snapshot_id": "corpus_04750795e1a2d5c3",
+  "fact_coverage_snapshot_id": "fact_coverage_snapshot_e496090c2a4da212a768e53d",
+  "source_gold": "work/domain-seed/seed-gold-promotion-candidates.v0.17.jsonl",
+  "source_coverage": "work/domain-seed/seed-fact-coverage-verified.v0.6.json",
+  "forbidden_runtime_fields": [
+    "expected_answer",
+    "scoring_spec",
+    "required_evidence_slots"
+  ]
+}

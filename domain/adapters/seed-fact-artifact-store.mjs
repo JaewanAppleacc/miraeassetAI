@@ -4,10 +4,9 @@
 // its Fact Coverage Snapshot (a single domain/interfaces/
 // fact-coverage-snapshot.schema.json document).
 //
-// No real Fact artifact or Coverage Snapshot exists in this repo yet --
-// VERIFIED Fact/Event generation and Coverage Snapshot generation are both
-// out of scope for this module. It only knows how to safely SERVE
-// whichever pinned artifacts a caller explicitly supplies.
+// This module does not choose a Fact artifact or Coverage Snapshot. Real
+// Seed artifacts may be constructed elsewhere, but it only SERVES the
+// exact paths and hashes a caller explicitly supplies.
 //
 // Construction accepts ONLY explicit pins -- unlike
 // seed-canonical-document-ir-store.mjs / seed-evidence-artifact-store.mjs,

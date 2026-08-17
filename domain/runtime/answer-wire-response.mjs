@@ -38,13 +38,7 @@
 // never reads execution_trace at all (see its own header comment), so
 // there is nothing of that shape for this module to accidentally encode.
 
-import Ajv2020 from "ajv/dist/2020.js";
-import addFormats from "ajv-formats";
-import answerWireResponseSchema from "../interfaces/answer-wire-response.schema.json" with { type: "json" };
-
-const ajv = new Ajv2020({ allErrors: true, strict: true });
-addFormats(ajv);
-const validateAnswerWireResponseSchema = ajv.compile(answerWireResponseSchema);
+import { validateAnswerWireResponseSchema } from "../generated/runtime-schema-validators.mjs";
 
 // Mirrors final-response-validator.mjs's safeSchemaCheck: the compiled
 // validator can itself throw (a circular object, a throwing getter), so

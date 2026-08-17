@@ -34,7 +34,14 @@ function documentIR(overrides = {}) {
         file_id: FILE_ID,
         source_locator: "section.2.table.1",
         text: null,
-        table: { header_rows: [["항목", "금액"]], body_rows: [["계약금액", "1,000,000,000"], ["보증금", "100,000,000"]] },
+        table: {
+          header_rows: [["항목", "금액"]],
+          body_rows: [["계약금액", "1,000,000,000"], ["보증금", "100,000,000"]],
+          raw_rows: [
+            [{ row: 0, col: 0, text: "계약금액" }, { row: 0, col: 1, text: "1,000,000,000" }],
+            [{ row: 1, col: 0, text: "보증금" }, { row: 1, col: 1, text: "100,000,000" }],
+          ],
+        },
       },
     ],
     ...overrides,
@@ -189,6 +196,37 @@ test("a non-existent source_locator in the real DocumentIR is rejected as LOCATO
   const evidenceRecords = [evidenceRecord({ source_locator: "section.9.para.9" })];
   const bundle = evidenceBundle({ source_locator: "section.9.para.9" });
   const result = await newValidator({ evidenceRecords }).check(bundle);
+  assert.deepEqual(result, { ok: false, code: "LOCATOR_NOT_FOUND" });
+});
+
+test("a cell-qualified locator resolves only the selected table cell", async () => {
+  const source_locator = "section.2.table.1#node=3&row=0&col=1";
+  const doc = documentIR();
+  doc.blocks[2].source_locator = "section.2.table.1#node=3";
+  const record = evidenceRecord({ source_locator, quoted_text: "1,000,000,000" });
+  const result = await newValidator({ documents: [doc], evidenceRecords: [record] }).check(
+    evidenceBundle({ source_locator, quoted_text: "1,000,000,000" }),
+  );
+  assert.deepEqual(result, { ok: true });
+});
+
+test("a cell-qualified locator cannot borrow identical text from another table cell", async () => {
+  const source_locator = "section.2.table.1#node=3&row=1&col=1";
+  const doc = documentIR();
+  doc.blocks[2].source_locator = "section.2.table.1#node=3";
+  const record = evidenceRecord({ source_locator, quoted_text: "1,000,000,000" });
+  const result = await newValidator({ documents: [doc], evidenceRecords: [record] }).check(
+    evidenceBundle({ source_locator, quoted_text: "1,000,000,000" }),
+  );
+  assert.deepEqual(result, { ok: false, code: "QUOTE_MISMATCH" });
+});
+
+test("partial or malformed cell selectors fail closed", async () => {
+  const source_locator = "section.2.table.1#node=3&row=0";
+  const record = evidenceRecord({ source_locator, quoted_text: "1,000,000,000" });
+  const result = await newValidator({ evidenceRecords: [record] }).check(
+    evidenceBundle({ source_locator, quoted_text: "1,000,000,000" }),
+  );
   assert.deepEqual(result, { ok: false, code: "LOCATOR_NOT_FOUND" });
 });
 

@@ -12,13 +12,7 @@
 // function (or compile the schema file itself) instead of hand-rolling its
 // own response validation rules.
 
-import Ajv2020 from "ajv/dist/2020.js";
-import addFormats from "ajv-formats";
-import finalResponseSchema from "../interfaces/final-response.schema.json" with { type: "json" };
-
-const ajv = new Ajv2020({ allErrors: true, strict: true });
-addFormats(ajv);
-const validateFinalResponseSchema = ajv.compile(finalResponseSchema);
+import { validateFinalResponseSchema } from "../generated/runtime-schema-validators.mjs";
 
 // Trust-boundary hardening: `candidate` is caller-controlled, adversarial
 // input, not data we already trust. Three independent failure modes have to

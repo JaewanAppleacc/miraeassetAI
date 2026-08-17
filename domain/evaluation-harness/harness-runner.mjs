@@ -427,7 +427,11 @@ async function executeRun(config, runId, gold, usesLedger, lifecycle) {
       const httpOk = typeof api.httpStatus === "number" && api.httpStatus >= 200 && api.httpStatus < 300;
       const responseUsable = httpOk && contractValid && questionEchoMatches === true;
 
-      const metrics = responseUsable
+      // Seed drafts may retain blocked questions for transport/fail-closed
+      // regression coverage while explicitly excluding them from answer-
+      // quality scoring. They are still called and contract/echo checked.
+      const metricEligible = item.extensions?.e2e_usage_status !== "E2E_EXCLUDED";
+      const metrics = responseUsable && metricEligible
         ? item.answer_mode === "CLOSED"
           ? scoreClosed(item, restored)
           : scoreOpen(item, restored)
@@ -450,6 +454,7 @@ async function executeRun(config, runId, gold, usesLedger, lifecycle) {
         contract_errors: contractErrors,
         question_echo_matches: questionEchoMatches,
         response_usable: responseUsable,
+        metric_evaluation_status: metricEligible ? "ELIGIBLE" : "E2E_EXCLUDED",
         answerability_actual: restored?.think_trace?.validation?.answerability ?? null,
         execution_mode_actual: restored?.think_trace?.execution_mode ?? null,
         metric_results: metrics,
@@ -472,6 +477,8 @@ async function executeRun(config, runId, gold, usesLedger, lifecycle) {
     api_success: results.filter((r) => typeof r.http_status === "number" && r.http_status >= 200 && r.http_status < 300).length,
     contract_success: results.filter((r) => r.response_contract_valid).length,
     response_usable: results.filter((r) => r.response_usable).length,
+    metric_eligible: results.filter((r) => r.metric_evaluation_status === "ELIGIBLE").length,
+    metric_excluded: results.filter((r) => r.metric_evaluation_status === "E2E_EXCLUDED").length,
     metric_pass: metricTally.metric_pass,
     metric_fail: metricTally.metric_fail,
     not_scored: metricTally.not_scored,

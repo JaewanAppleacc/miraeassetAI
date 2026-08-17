@@ -1,5 +1,5 @@
 import { createAnswerHandler } from "../../domain/runtime/answer-handler.mjs";
-import { createNoFlowConnectedRunner } from "../../domain/runtime/no-flow-connected-runner.mjs";
+import { configuredSeedRuntime } from "../../domain/runtime/configured-seed-runtime.mjs";
 
 // GET /answer?question_id=...&question=... -- the fixed official route and
 // query parameters (organizer API notice). createAnswerHandler already
@@ -9,12 +9,11 @@ import { createNoFlowConnectedRunner } from "../../domain/runtime/no-flow-connec
 // no shaping of its own, just JSON.stringify + headers. No authorization
 // header is required or checked anywhere in this path.
 //
-// The only piece of Flow wiring in this file: no real AgentFlow exists yet
-// (CLAUDE.md section 19), so the fail-closed placeholder runner is used.
-// Swapping in a real Flow later only means passing a different `runner`
-// here — domain/runtime/answer-handler.mjs itself never imports or knows
-// about any specific Flow.
-const handleAnswerRequest = createAnswerHandler({ runner: createNoFlowConnectedRunner() });
+// Lazy Thin Flow A wiring. It serves only the explicitly pinned VERIFIED
+// Seed subset; an unknown question/question_id pair or a deployment missing
+// those immutable artifacts falls back to the existing honest EARLY_EXIT.
+// answer-handler.mjs remains Flow-agnostic.
+const handleAnswerRequest = createAnswerHandler({ runner: configuredSeedRuntime.run });
 
 const JSON_HEADERS = {
   "Content-Type": "application/json; charset=utf-8",

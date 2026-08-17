@@ -1,0 +1,52 @@
+{
+  "schema_version": "0.1.0",
+  "decision_id": "seed-release-v0.20-r3-candidate-owner-decision-approved",
+  "status": "APPROVED",
+  "owner_disposition": "APPROVE",
+  "reviewer": "최재완",
+  "reviewed_at": "2026-08-17T13:20:10Z",
+  "owner_instruction": "5개 항목 모두 승인할게 이어서 작업해줘",
+  "supersedes_template": {
+    "path": "domain/releases/seed-release.v0.20-r3.candidate.owner-decision-template.json",
+    "sha256": "4433932f1d1bc9b7101e1db1f527d1205482afc34e51f59417f8fcc2e3c79693"
+  },
+  "subject_release_manifest": {
+    "path": "domain/releases/seed-release.v0.20-r3.candidate.manifest.json",
+    "raw_sha256": "05ad4f70e23c44411be02a2eacdf710bab65b7683416c4f6c7250ee9b7008007",
+    "canonical_binding_sha256": "1d601ecf971d1b76fc97fdf173290b6af83974a23182ed678da52a7157904c37",
+    "release_id": "seed-release-v0.20-r3-candidate",
+    "release_status": "CANDIDATE"
+  },
+  "subject_bundle_manifest": {
+    "path": "domain/releases/bundles/seed-release-v0.20-r3.candidate/bundle-manifest.json",
+    "sha256": "5158b001df5c2a2119f66f1b00fbdf92ac79311a9a73c4ef7013981f86640726",
+    "status": "CANDIDATE",
+    "entry_count": 21
+  },
+  "subject_preapproval_gate_status": {
+    "path": "domain/releases/seed-release.v0.20-r3.candidate.RELEASE_GATE_STATUS.json",
+    "sha256": "5d581afcf44aa7ff53fd18960560db17377894dc13b4d8734ffe5a67dc2f9379"
+  },
+  "subject_closure_report": {
+    "path": "work/handoff/seed-final-response-owner-review/results/seed-response-turn-m101-closure-report.v0.1.json",
+    "sha256": "cf45066a8e2db40883eacd3ec8d62766f3d95c9e9c48fb63797a1502db6be84d"
+  },
+  "subject_owner_review_summary": {
+    "path": "domain/releases/seed-release.v0.20-r3.candidate.owner-review.md",
+    "sha256": "d2c24f2528faede718caf3afeb6f7e3bf2bf812df7cd33d6c6e590f06ef5f0c3"
+  },
+  "checklist": {
+    "clean_plan_lineage_confirmed": true,
+    "q18_information_limit_wording_acceptable": true,
+    "turn_m101_seven_changed_questions_closure_confirmed": true,
+    "no_unexpected_regression_vs_r14": true,
+    "owner_batch_decision_and_merged_decision_agree": true
+  },
+  "authorization_scope": {
+    "candidate_content_and_bundle_approved": true,
+    "final_release_manifest_authorized": false,
+    "production_runtime_switch_authorized": false,
+    "commit_or_push_authorized": false
+  },
+  "notes": "Owner가 최종 5개 검수 항목을 모두 명시적으로 승인했다. 이 결정은 v0.20-r3 Candidate의 내용과 portable bundle을 승인하지만, 별도 final release manifest 생성·production Runtime 전환·commit/push를 자동으로 허가하지 않는다."
+}

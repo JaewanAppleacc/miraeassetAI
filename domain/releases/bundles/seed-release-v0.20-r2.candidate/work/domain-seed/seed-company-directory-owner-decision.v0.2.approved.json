@@ -1,0 +1,21 @@
+{
+  "schema_version": "0.1.0",
+  "decision_id": "seed-company-directory-owner-decision-v0.2-approved",
+  "artifact_path": "work/domain-seed/seed-company-directory.v0.2.approved.jsonl",
+  "artifact_sha256": "6d91c4a8dcef9f7953d9e2797ab3e346dec748882161108b52677ed1fec16b3a",
+  "manifest_path": "work/domain-seed/seed-company-directory.v0.2.approved.manifest.json",
+  "manifest_sha256": "b4c600b1b8caa7e88098722106a3d4a1255666bc783d5c41069e249fbe3e2e5f",
+  "record_count": 70,
+  "corpus_snapshot_id": "corpus_04750795e1a2d5c3",
+  "independent_verification_report_path": "work/domain-seed/seed-company-directory-independent-verification.v0.1.md",
+  "independent_verification_report_sha256": "4b528e37cb1338bb4216a019101d879357c69df7d1ada3ed12d42c42d0c2c0a7",
+  "independent_verification_summary": "70/70 records cross-checked byte-for-byte against work/domain-seed/companies.jsonl, 0 mismatches; corpus_snapshot_id confirmed identical to the approved v0.19 release's corpus_snapshot_id; corp_code/format/duplicate checks all pass; Q13/Q16-related 4 corp_codes (01390344=HD현대중공업, 00126478=삼성중공업, 00164645=HMM, 00164788=현대모비스) individually re-confirmed.",
+  "promoted_from_decision": {
+    "path": "work/domain-seed/seed-company-directory-owner-decision.v0.1.approved.json",
+    "sha256": "2d8766ba4c5c1da42758b7823feca96cbbab58e844dac6e68c580709f5c22a20"
+  },
+  "owner_disposition": "APPROVED",
+  "reviewer": "최재완",
+  "reviewed_at": "2026-08-16T08:02:39.545Z",
+  "notes": "v0.1 candidate 승인 결정(2d8766ba...)의 재승인이 아니라, 동일 내용을 승인된 명칭(APPROVED_REVISION)으로 재발행. 독립 검증은 v0.1과 동일 -- 내용이 바뀌지 않았으므로 새 검증을 다시 수행하지 않고 그대로 인용함. v0.1 candidate 파일/manifest/decision은 변경하지 않고 그대로 보존됨."
+}

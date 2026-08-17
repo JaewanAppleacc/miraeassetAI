@@ -1,0 +1,40 @@
+{
+  "schema_version": "0.1.0",
+  "release_id": "seed-release-v0.18",
+  "release_status": "APPROVED",
+  "corpus_snapshot_id": "corpus_04750795e1a2d5c3",
+  "artifacts": [
+    {
+      "role": "CANONICAL_DOCUMENT_IR_BASE",
+      "path": "work/domain-seed/seed-canonical-document-ir.v0.6.jsonl",
+      "sha256": "4539cceb239b69f05a9c38239680926e32c13367e9c870dc509c528f785fbcda",
+      "bytes": 121338555,
+      "record_count": 54
+    },
+    {
+      "role": "CANONICAL_DOCUMENT_IR_DELTA",
+      "path": "work/domain-seed/seed-canonical-document-ir.v0.15.delta.jsonl",
+      "sha256": "94f0f24a29cd0233f2f2be7f74e7549f0c4320f3d75a0008e6cb94dc127f54f6",
+      "bytes": 216700,
+      "record_count": 14
+    },
+    {
+      "role": "SEED_GOLD",
+      "path": "work/domain-seed/seed-gold-promotion-candidates.v0.17.jsonl",
+      "sha256": "a9a4c23be632df40b2409660ef34e21347b33b32a1f7be407bf55dfe92491d2c",
+      "bytes": 261444,
+      "record_count": 25
+    }
+  ],
+  "approved_revision": "seed-structured-artifacts-v0.6",
+  "supersedes": "domain/releases/seed-release.v0.17.manifest.json",
+  "supersession_note": "v0.17 감사(domain/releases/seed-release.v0.17.BLOCKED.audit-report.json)에서 지적된 자동 self-approval 결함을 실제 Owner 승인으로 대체: 6건(Q02/Q04/Q05/Q10) 모두 Owner(최재완)가 work/domain-seed/seed-structured-owner-decision.v0.7-batch.decision.jsonl로 직접 APPROVE하고 scripts/promote-seed-fact-batch-v06.mjs가 그 결정 artifact의 path/SHA-256/6개 ID 집합/disposition/reviewer/reviewed_at을 검증한 뒤 승격했다. Q10 두 Fact의 기간 의미 결함(CUMULATIVE -> POINT_IN_TIME, as_of_date/known_at 분리)도 함께 수정됨. Thin plan release binding과 CHAIN_MANIFEST binding(v0.17에서 도입)은 그대로 유지됨. v0.17/v0.5(자동 승인, 폐기)는 이 계보에 포함되지 않고 감사 이력으로 보존됨. 주의: 이 release는 v0.17 감사 결함만 해소한다 -- Q07/Q21/Q24 metric_fail(4건)과 REVIEW_REQUIRED(17건)는 여전히 미해결이며, 전체 Release Gate는 domain/releases/seed-release.v0.18.RELEASE_GATE_STATUS.json 기준으로 BLOCKED로 유지된다.",
+  "release_authorization": {
+    "status": "APPROVED",
+    "approved_by": "최재완",
+    "approved_at": "2026-08-13T16:25:26.655Z",
+    "decision_artifact_path": "domain/releases/seed-release.v0.18.decision.json",
+    "decision_artifact_sha256": "917ac5770a4c84caeaacaaf399437d2012481e315fbc70861f042fdff8d6bf63",
+    "signing_note": "Repository-internal procedural Owner assertion, not a cryptographic signature -- see domain/releases/README.md."
+  }
+}

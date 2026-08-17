@@ -1,0 +1,40 @@
+{
+  "schema_version": "0.1.0",
+  "release_id": "seed-release-v0.17",
+  "release_status": "APPROVED",
+  "corpus_snapshot_id": "corpus_04750795e1a2d5c3",
+  "artifacts": [
+    {
+      "role": "CANONICAL_DOCUMENT_IR_BASE",
+      "path": "work/domain-seed/seed-canonical-document-ir.v0.6.jsonl",
+      "sha256": "4539cceb239b69f05a9c38239680926e32c13367e9c870dc509c528f785fbcda",
+      "bytes": 121338555,
+      "record_count": 54
+    },
+    {
+      "role": "CANONICAL_DOCUMENT_IR_DELTA",
+      "path": "work/domain-seed/seed-canonical-document-ir.v0.15.delta.jsonl",
+      "sha256": "94f0f24a29cd0233f2f2be7f74e7549f0c4320f3d75a0008e6cb94dc127f54f6",
+      "bytes": 216700,
+      "record_count": 14
+    },
+    {
+      "role": "SEED_GOLD",
+      "path": "work/domain-seed/seed-gold-promotion-candidates.v0.17.jsonl",
+      "sha256": "a9a4c23be632df40b2409660ef34e21347b33b32a1f7be407bf55dfe92491d2c",
+      "bytes": 261444,
+      "record_count": 25
+    }
+  ],
+  "approved_revision": "seed-structured-artifacts-v0.5",
+  "supersedes": "domain/releases/seed-release.v0.16.manifest.json",
+  "supersession_note": "Codex 독립 검수 결함 2건 보완: (1) Thin plan을 release decision에 결합(경로+SHA+record_count+corpus/coverage snapshot id+source_gold/source_coverage 고정), (2) Chain artifact(16건)를 structured manifest에 포함하고 Event/Relation chain_id 참조 무결성을 Runtime 구성 시 검증. Fact/Coverage/Evidence는 Q02/Q04/Q05/Q10 metric-fail 원인조사로 식별된 6건 신규 grounding 데이터 포함(seed-structured-owner-decision.v0.5).",
+  "release_authorization": {
+    "status": "APPROVED",
+    "approved_by": "최재완",
+    "approved_at": "2026-08-13T14:51:32.084Z",
+    "decision_artifact_path": "domain/releases/seed-release.v0.17.decision.json",
+    "decision_artifact_sha256": "e35f2fac896dfad86d9c7cc477a679a77f547c9f000566d6ce3a82a12b791fb0",
+    "signing_note": "Repository-internal procedural Owner assertion, not a cryptographic signature -- see domain/releases/README.md."
+  }
+}

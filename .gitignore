@@ -43,5 +43,20 @@ next-env.d.ts
 /outputs/
 /work/
 /tmp/
+# Generated release bundles are machine-generated Seed data -- same
+# policy as /work/ above for anything NOT explicitly deterministically
+# gzip-compressed and size-bounded (CLAUDE.md: 대용량 work/, 원본 데이터...
+# Git에 추가하지 않는다). Turn L2: the whole directory is no longer
+# blanket-ignored -- the deterministic-gzip candidate bundle at
+# seed-release-v0.20/ is deliberately small (~13MB, every single file
+# under 100MiB -- see domain/adapters/seed-release-bundle-builder.mjs's
+# GZIP_ROLES) and is meant to be Git-trackable so a real clone can
+# reproduce a deployable bundle without needing the full work/ tree. Any
+# OTHER (future) bundle directory here defaults back to ignored until it
+# is explicitly negated the same way.
+/domain/releases/bundles/*
+!/domain/releases/bundles/seed-release-v0.20/
+!/domain/releases/bundles/seed-release-v0.20-r2.candidate/
+!/domain/releases/bundles/seed-release-v0.20-r3.candidate/
 /.vscode/
 /.claude/settings.local.json

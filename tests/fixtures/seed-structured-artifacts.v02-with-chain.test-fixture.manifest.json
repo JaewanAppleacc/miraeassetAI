@@ -1,0 +1,79 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_set_id": "seed-structured-artifacts-v0.2",
+  "status": "VERIFIED_SEED_SUBSET",
+  "generated_at": "2026-08-13T04:00:00.000Z",
+  "corpus_snapshot_id": "corpus_04750795e1a2d5c3",
+  "fact_coverage_snapshot_id": "fact_coverage_snapshot_3b76f5bf79a87b196f7a31b4",
+  "semantic_bundle_schema_version": "0.2.0",
+  "artifacts": [
+    {
+      "role": "VERIFIED_EVIDENCE",
+      "path": "work/domain-seed/seed-evidence-verified.v0.4.jsonl",
+      "sha256": "e184bd2c87f48fd38f76ca9bacde3e5c3ca6e18e15f869090cdfa9957688832b",
+      "bytes": 350369,
+      "record_count": 160
+    },
+    {
+      "role": "VERIFIED_EVIDENCE_MANIFEST",
+      "path": "work/domain-seed/seed-evidence-verified.v0.4.manifest.json",
+      "sha256": "f6b92f4ff929002da5f6da7c59e5470e3153c8d33934b1bacc10fc141410a266",
+      "bytes": 7323,
+      "record_count": null
+    },
+    {
+      "role": "VERIFIED_EVENT",
+      "path": "work/domain-seed/seed-events-verified.v0.1.jsonl",
+      "sha256": "b13ed9f1b7c2a9b9bcab48d01841edc20acee685012333ec629f2fa6d5035396",
+      "bytes": 20487,
+      "record_count": 24
+    },
+    {
+      "role": "VERIFIED_RELATION",
+      "path": "work/domain-seed/seed-relation-gold.v0.1.jsonl",
+      "sha256": "b6d294b2f245d766ebb6e05e9d6a2d65869e7b012cc737a55f03169777447ac8",
+      "bytes": 48450,
+      "record_count": 40
+    },
+    {
+      "role": "OWNER_DECISION",
+      "path": "work/domain-seed/seed-structured-owner-decision.v0.1.json",
+      "sha256": "f8c1879271fd2c6ea3eb0b3a0cb55f1c332572734f5701a3eacd39f79fc7f559",
+      "bytes": 824,
+      "record_count": null
+    },
+    {
+      "role": "VERIFIED_FACT",
+      "path": "work/domain-seed/seed-facts-verified.v0.2.jsonl",
+      "sha256": "803a3392dd5870064bc4556e97ba51996f242dba38e56ac24e2745c13a69c3af",
+      "bytes": 76878,
+      "record_count": 54
+    },
+    {
+      "role": "FACT_COVERAGE_SNAPSHOT",
+      "path": "work/domain-seed/seed-fact-coverage-verified.v0.2.json",
+      "sha256": "8e350fe295a07ca76eb54522c0209a9cc2c5808e473378d4ceaa8940af01d2e7",
+      "bytes": 34655,
+      "record_count": 69
+    },
+    {
+      "role": "FACT_NORMALIZATION_DECISION",
+      "path": "work/domain-seed/seed-fact-normalization-v0.2.owner-decision.jsonl",
+      "sha256": "2039259088b6229b73c4d167155216db5607d5bf08ecd41cb1b4a523c171e13a",
+      "bytes": 4398,
+      "record_count": 16
+    },
+    {
+      "role": "CHAIN_MANIFEST",
+      "path": "work/domain-seed/seed-chain-manifest.v0.1.jsonl",
+      "sha256": "9c9a0bcfdc446a390d0dac830f44a1b5eb28414c2d8060e8918d5b66250a12e6",
+      "bytes": 14222,
+      "record_count": 16
+    }
+  ],
+  "excluded_question_ids": [
+    "question_seed_v07_03",
+    "question_seed_v07_22"
+  ],
+  "release_status": "DRAFT_UNTIL_V02_PLANS_AND_HARNESS_E2E"
+}

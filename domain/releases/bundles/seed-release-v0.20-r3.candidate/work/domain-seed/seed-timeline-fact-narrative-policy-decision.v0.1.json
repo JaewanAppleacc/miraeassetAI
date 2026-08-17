@@ -1,0 +1,21 @@
+{
+  "schema_version": "0.1.0",
+  "decision_id": "seed-timeline-fact-narrative-policy-decision-v0.1",
+  "policy_scope": "GENERIC -- applies to any TRACE_TIMELINE sub_request whose VERIFIED Event count is insufficient AND a VERIFIED Fact narrative (e.g. correction_timeline/decision-content-shaped Facts) covering the same slots exists. Not scoped to any specific question_id; question_seed_v07_17/19/21 are the currently-known instances this applies to, not an enumerated allowlist.",
+  "policy_statement_ko": "VERIFIED Fact에 정정·계약·해지 이력 서술이 있으면 답변 합성 재료로 사용할 수 있다. 그러나 이를 VERIFIED Event로 재분류하거나 Event 충족 건수로 계산해서는 안 된다. 검증된 Event가 요구 수보다 부족하면 '확인된 공시 기준 이력' 또는 동등한 정보한계 표현을 사용하고, '전체 이력', '완전한 타임라인'이라고 단정하지 않는다.",
+  "resolves_review_document": {
+    "path": "work/domain-seed/seed-q22-timeline-policy-review.v0.1.md",
+    "sha256": "964a8e0c50cb55fc2f0ce4c7588b077959905fafa09b96a8e5d15071ac885973",
+    "resolution": "Alternative B, with an explicit carve-out: Fact-encoded timeline narrative MAY still be used as synthesis material (rendered in the answer), but MUST NOT be reclassified as VERIFIED Event or counted toward minimum_event_count satisfaction. This is a distinct, more precise position than the review document's original Alternative A/B framing -- Alternative A (allow Fact-encoded timeline as full Event-count-equivalent authority) is explicitly REJECTED; pure Alternative B (never even mention the Fact-encoded narrative) is also rejected in favor of using it as material with honest information-limit framing."
+  },
+  "runtime_consequences": [
+    "gap-classification.mjs: PLAN_REQUIREMENT_POLICY_CONFLICT no longer classifies as OWNER_POLICY_DECISION_REQUIRED -- this policy decision resolves that open question generically, so matching cases now classify as STRUCTURED_DATA_GAP (a real Event-count shortfall, Fact narrative notwithstanding).",
+    "sub-request-coverage-v2.mjs: detection logic (INSUFFICIENT_VERIFIED_EVENTS + a NARRATIVE claim from a required slot) is UNCHANGED -- it already generically detects this pattern without question_id branching.",
+    "response-composer.mjs: renderEventCompletenessLines already renders a conservative, non-completeness-claiming caveat whenever a TRACE_TIMELINE-shaped conclusion is shown; wording aligned to explicitly say '확인된 공시 기준' framing per this policy.",
+    "No new Fact/Event created. No question_id-specific Runtime branching added."
+  ],
+  "owner_disposition": "APPROVED",
+  "reviewer": "최재완",
+  "reviewed_at": "2026-08-14T16:20:37.000Z",
+  "notes": "Q17 sr_01 remains a separate, pure STRUCTURED_DATA_GAP (2/4 real Events, no policy-conflict signal ever fired for it) -- this decision does not change its classification, only Q19 sr_02 / Q21 sr_01 (and any future sub_request matching the same generic pattern, e.g. Q22 sr_01 if that sub_request is ever re-run under Candidate authority)."
+}

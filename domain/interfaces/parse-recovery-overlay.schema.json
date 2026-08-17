@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://disclosure-analyst.local/schema/parse-recovery-overlay.v0.1.json",
+  "title": "Non-destructive Parse Recovery Overlay v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "document_id", "source_corpus_snapshot_id",
+    "canonical_parser_version", "recovery_method", "review_status",
+    "failed_source_files", "metrics", "nodes", "overlay_sha256"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.1.0" },
+    "document_id": { "type": "string", "pattern": "^(periodic|major|exchange|holding)_[0-9]{14}$" },
+    "source_corpus_snapshot_id": { "type": "string", "minLength": 1 },
+    "canonical_parser_version": { "type": "string", "minLength": 1 },
+    "recovery_method": { "enum": ["C_TOLERANT_XML", "PDF_TEXT_LAYER"] },
+    "review_status": {
+      "enum": [
+        "HUMAN_REVIEW_REQUIRED", "KEEP_A_NO_RECOVERY",
+        "KEEP_A_NO_MEASURABLE_GAIN", "REJECT_DUPLICATE_HEAVY",
+        "VERIFIED", "REJECTED"
+      ]
+    },
+    "failed_source_files": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "a_text_chars", "candidate_text_chars", "text_gain_ratio",
+        "candidate_node_count", "candidate_table_count", "duplicate_node_ratio"
+      ],
+      "properties": {
+        "a_text_chars": { "type": "integer", "minimum": 0 },
+        "candidate_text_chars": { "type": "integer", "minimum": 0 },
+        "text_gain_ratio": { "type": ["number", "null"], "minimum": 0 },
+        "candidate_node_count": { "type": "integer", "minimum": 0 },
+        "candidate_table_count": { "type": "integer", "minimum": 0 },
+        "duplicate_node_ratio": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/recoveryNode" }
+    },
+    "overlay_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  },
+  "$defs": {
+    "recoveryNode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "recovery_node_id", "document_id", "recovery_method", "recovery_status",
+        "source_locator", "block_type", "section_path", "raw_text", "table_rows",
+        "provenance"
+      ],
+      "properties": {
+        "recovery_node_id": { "type": "string", "pattern": "^recovery_node_[0-9a-f]{24}$" },
+        "document_id": { "type": "string" },
+        "recovery_method": { "enum": ["C_TOLERANT_XML", "PDF_TEXT_LAYER"] },
+        "recovery_status": { "const": "CANDIDATE" },
+        "source_locator": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["source_type", "rel_path", "order_index", "page"],
+          "properties": {
+            "source_type": { "enum": ["DOCUMENT_NODE", "PDF_PAGE"] },
+            "rel_path": { "type": "string", "minLength": 1 },
+            "order_index": { "type": "integer", "minimum": 0 },
+            "page": { "type": ["integer", "null"], "minimum": 1 }
+          }
+        },
+        "block_type": { "type": "string", "minLength": 1 },
+        "section_path": { "type": "array", "items": { "type": "string" } },
+        "raw_text": { "type": "string" },
+        "table_rows": { "type": "array" },
+        "provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["producer", "producer_version", "upstream_node_id", "upstream_mode"],
+          "properties": {
+            "producer": { "type": "string", "minLength": 1 },
+            "producer_version": { "type": "string", "minLength": 1 },
+            "upstream_node_id": { "type": ["string", "null"] },
+            "upstream_mode": { "type": ["string", "null"] }
+          }
+        }
+      }
+    }
+  }
+}

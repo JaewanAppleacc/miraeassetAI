@@ -144,6 +144,36 @@ function quoteResolvesInBlock(block, quote) {
   return false;
 }
 
+// A canonical block locator may be narrowed to one physical table cell.
+// The base DocumentIR remains immutable and keeps its block-level locator;
+// the suffix is an Evidence occurrence selector used when identical text
+// appears in multiple cells of the same table (for example, "before" and
+// "after" values that happen to be equal).
+//
+//   document/file.xml#node=1&row=4&col=1
+//
+// Unknown/partial suffixes are not silently treated as block locators.
+function parseEvidenceLocator(locator) {
+  if (typeof locator !== "string") return null;
+  if (!locator.includes("&row=") && !locator.includes("&col=")) {
+    return { blockLocator: locator, row: null, col: null };
+  }
+  const marker = locator.match(/^(.*#node=\d+)&row=(\d+)&col=(\d+)$/);
+  if (!marker) return null;
+  return {
+    blockLocator: marker[1],
+    row: marker[2] === undefined ? null : Number(marker[2]),
+    col: marker[3] === undefined ? null : Number(marker[3]),
+  };
+}
+
+function quoteResolvesAtLocator(block, parsedLocator, quote) {
+  if (parsedLocator.row === null) return quoteResolvesInBlock(block, quote);
+  const cells = block?.table?.raw_rows?.flat?.() ?? [];
+  const cell = cells.find((candidate) => candidate?.row === parsedLocator.row && candidate?.col === parsedLocator.col);
+  return typeof cell?.text === "string" && cell.text.includes(quote);
+}
+
 export function createCitationValidator(documentStore, evidenceStore) {
   return {
     // Returns { ok: true } or { ok: false, code }.
@@ -186,12 +216,14 @@ export function createCitationValidator(documentStore, evidenceStore) {
       const doc = await documentStore.resolve(evidenceBundle.document_id);
       if (!doc.ok) return doc;
 
+      const parsedLocator = parseEvidenceLocator(evidenceBundle.source_locator);
+      if (!parsedLocator) return { ok: false, code: "LOCATOR_NOT_FOUND" };
       const block = (doc.documentIR.blocks ?? []).find(
-        (candidate) => candidate.file_id === evidenceBundle.file_id && candidate.source_locator === evidenceBundle.source_locator,
+        (candidate) => candidate.file_id === evidenceBundle.file_id && candidate.source_locator === parsedLocator.blockLocator,
       );
       if (!block) return { ok: false, code: "LOCATOR_NOT_FOUND" };
 
-      if (!evidenceBundle.quoted_text || !quoteResolvesInBlock(block, evidenceBundle.quoted_text)) {
+      if (!evidenceBundle.quoted_text || !quoteResolvesAtLocator(block, parsedLocator, evidenceBundle.quoted_text)) {
         return { ok: false, code: "QUOTE_MISMATCH" };
       }
 

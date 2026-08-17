@@ -1,0 +1,17 @@
+{
+  "schema_version": "0.1.0",
+  "artifact": "work/domain-seed/seed-company-directory.v0.2.approved.jsonl",
+  "artifact_sha256": "6d91c4a8dcef9f7953d9e2797ab3e346dec748882161108b52677ed1fec16b3a",
+  "record_count": 70,
+  "corp_code_set_sha256": "2e6c5ed7da8d5090f9344be4de5101a48745c1da376014534bd2c9d949eac062",
+  "corpus_snapshot_id": "corpus_04750795e1a2d5c3",
+  "generated_at": "2026-08-15T04:54:05.383Z",
+  "status": "APPROVED_REVISION",
+  "promoted_from": {
+    "path": "work/domain-seed/seed-company-directory.v0.1.candidate.jsonl",
+    "manifest_path": "work/domain-seed/seed-company-directory.v0.1.candidate.manifest.json",
+    "artifact_sha256": "6d91c4a8dcef9f7953d9e2797ab3e346dec748882161108b52677ed1fec16b3a",
+    "manifest_sha256": "64e6d49e26325fc99396a28f465ff6e4da2bb9054b56bff94550f3b8855c36e0",
+    "note": "Verbatim byte copy -- semantic fields (corp_code/corp_name/listed_name) are byte-equivalent to the v0.1 candidate by construction; only status/naming/revision metadata changed."
+  }
+}

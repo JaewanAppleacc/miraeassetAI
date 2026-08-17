@@ -1,0 +1,197 @@
+{
+  "schema_version": "0.2.0",
+  "decision_id": "test-fixture-decision-v02-structured",
+  "status": "APPROVED",
+  "approved_by": "test-fixture-owner",
+  "approved_at": "2026-08-13T00:00:00Z",
+  "release_id": "seed-release-v0.11",
+  "approved_revision": "seed-structured-artifacts-v0.2",
+  "corpus_snapshot_id": "corpus_04750795e1a2d5c3",
+  "fact_coverage_snapshot_id": "fact_coverage_snapshot_3b76f5bf79a87b196f7a31b4",
+  "canonical_release_manifest": {
+    "path": "tests/fixtures/seed-release.v0.11.approved-for-v02-structured.manifest.json",
+    "sha256": "eb9cdf6614c026a20a759ee59edd020f88220fc183a43d09ab5c5dc98143ac7e"
+  },
+  "structured_manifest": {
+    "path": "tests/fixtures/seed-structured-artifacts.v02-with-chain.test-fixture.manifest.json",
+    "sha256": "ef4653911c000f702cbfabbe5729cd8987ffe1ebebda1eb03826c30bbafcfb46"
+  },
+  "canonical_artifacts": [
+    {
+      "role": "CORPUS_SNAPSHOT",
+      "path": "work/domain-seed/corpus-snapshot.json",
+      "sha256": "947952d5e98cd09fd097aa807e6125ccc1b8b7872bebd2183447f53a4fa5d14d",
+      "record_count": null
+    },
+    {
+      "role": "CANONICAL_DOCUMENT_IR_BASE",
+      "path": "work/domain-seed/seed-canonical-document-ir.v0.6.jsonl",
+      "sha256": "4539cceb239b69f05a9c38239680926e32c13367e9c870dc509c528f785fbcda",
+      "record_count": 54
+    },
+    {
+      "role": "CANONICAL_DOCUMENT_IR_DELTA",
+      "path": "work/domain-seed/seed-canonical-document-ir.v0.7.delta.jsonl",
+      "sha256": "fefb41fa99434e7791a3bca51e42673b98fd0d5e5874fa15792e7f1af7dcb3fc",
+      "record_count": 1
+    },
+    {
+      "role": "VERIFIED_EVIDENCE",
+      "path": "work/domain-seed/seed-evidence-verified.v0.2.jsonl",
+      "sha256": "fc0e6e21b6ace82ff4e41f5e4318852b54962a4a1b684eb029fbc39eaf555acb",
+      "record_count": 121
+    },
+    {
+      "role": "VERIFIED_EVIDENCE_MANIFEST",
+      "path": "work/domain-seed/seed-evidence-verified.v0.2.manifest.json",
+      "sha256": "3f7f363179a2a89adf6c0cd78d3b66530768bef1e7ef80f3423e4756435cce0c",
+      "record_count": null
+    },
+    {
+      "role": "EVIDENCE_REVIEW_DECISION",
+      "path": "work/domain-seed/seed-evidence-v10-review-decision.json",
+      "sha256": "de47d774db64047a50a336f4a4a1a8905ab30dcbbbd9492f3f6ed01c4ee04afb",
+      "record_count": null
+    },
+    {
+      "role": "EVIDENCE_VERIFICATION_REPORT",
+      "path": "work/domain-seed/seed-evidence-v10-verification-report.v0.2.md",
+      "sha256": "b52759e8703888243e442126a43deaf4a76d15b0a3c7bc87237e1de6e7d6fd06",
+      "record_count": null
+    },
+    {
+      "role": "RELATION_REVIEW_SOURCE",
+      "path": "work/domain-seed/seed-relation-integration-review.v0.1.jsonl",
+      "sha256": "e8fa281b26b099c47beb02b8449e95273d3d185cacb6ced2d0ce35399f70e827",
+      "record_count": 43
+    },
+    {
+      "role": "RELATION_GOLD",
+      "path": "work/domain-seed/seed-relation-gold.v0.1.jsonl",
+      "sha256": "b6d294b2f245d766ebb6e05e9d6a2d65869e7b012cc737a55f03169777447ac8",
+      "record_count": 40
+    },
+    {
+      "role": "RELATION_GOLD_MANIFEST",
+      "path": "work/domain-seed/seed-relation-gold.v0.1.manifest.json",
+      "sha256": "9a2aede30f7ebd4cb1d69c6ee3f36bd768aabbcb297d9805e03a18689165e1ad",
+      "record_count": null
+    },
+    {
+      "role": "CHAIN_MANIFEST",
+      "path": "work/domain-seed/seed-chain-manifest.v0.1.jsonl",
+      "sha256": "9c9a0bcfdc446a390d0dac830f44a1b5eb28414c2d8060e8918d5b66250a12e6",
+      "record_count": 16
+    },
+    {
+      "role": "SEED_GOLD",
+      "path": "work/domain-seed/seed-gold-promotion-candidates.v0.11.jsonl",
+      "sha256": "11eb2be246b42b654e5d8c509fa25c52bd863b489e64acf9dd979e3225bb5403",
+      "record_count": 25
+    },
+    {
+      "role": "SEED_GOLD_SUMMARY",
+      "path": "work/domain-seed/seed-gold-promotion-candidates.v0.11.summary.json",
+      "sha256": "acfec747505fa49c267ff9ace88fb3edcf0ce4beb14b9bfcc4f52e5d340bb84f",
+      "record_count": null
+    },
+    {
+      "role": "SEED_GOLD_REVIEW",
+      "path": "work/domain-seed/seed-gold-promotion-candidates.v0.11.review.md",
+      "sha256": "9760ca9f1b73e8d1efa81f845d4ca547cb0d14a9017336adaec18a81bf1ac114",
+      "record_count": null
+    },
+    {
+      "role": "SEED_GOLD_UNRESOLVED_QUEUE",
+      "path": "work/domain-seed/seed-gold-promotion-candidates.v0.11.unresolved-queue.jsonl",
+      "sha256": "b2b9799518570bb46acaa1ec00bbc15b90706ed89ea8519d3d1ad01ec94ae952",
+      "record_count": 9
+    },
+    {
+      "role": "SEED_V10_TO_V11_MAPPING",
+      "path": "work/domain-seed/seed-v10-to-v11-mapping.jsonl",
+      "sha256": "8ee1de55b4bb75ea895470a5cdf268c57f647024c35987a9180ec1ae5dda1438",
+      "record_count": 25
+    },
+    {
+      "role": "RELATION_CHAIN_VERIFICATION_REPORT",
+      "path": "work/domain-seed/seed-relation-chain-verification-report.v0.1.md",
+      "sha256": "2c244b94235371554b212140854d784e0d56a4b4a88025fd96de99d003c8dad5",
+      "record_count": null
+    }
+  ],
+  "structured_artifacts": [
+    {
+      "role": "VERIFIED_EVIDENCE",
+      "path": "work/domain-seed/seed-evidence-verified.v0.4.jsonl",
+      "sha256": "e184bd2c87f48fd38f76ca9bacde3e5c3ca6e18e15f869090cdfa9957688832b",
+      "record_count": 160
+    },
+    {
+      "role": "VERIFIED_EVIDENCE_MANIFEST",
+      "path": "work/domain-seed/seed-evidence-verified.v0.4.manifest.json",
+      "sha256": "f6b92f4ff929002da5f6da7c59e5470e3153c8d33934b1bacc10fc141410a266",
+      "record_count": null
+    },
+    {
+      "role": "VERIFIED_EVENT",
+      "path": "work/domain-seed/seed-events-verified.v0.1.jsonl",
+      "sha256": "b13ed9f1b7c2a9b9bcab48d01841edc20acee685012333ec629f2fa6d5035396",
+      "record_count": 24
+    },
+    {
+      "role": "VERIFIED_RELATION",
+      "path": "work/domain-seed/seed-relation-gold.v0.1.jsonl",
+      "sha256": "b6d294b2f245d766ebb6e05e9d6a2d65869e7b012cc737a55f03169777447ac8",
+      "record_count": 40
+    },
+    {
+      "role": "OWNER_DECISION",
+      "path": "work/domain-seed/seed-structured-owner-decision.v0.1.json",
+      "sha256": "f8c1879271fd2c6ea3eb0b3a0cb55f1c332572734f5701a3eacd39f79fc7f559",
+      "record_count": null
+    },
+    {
+      "role": "VERIFIED_FACT",
+      "path": "work/domain-seed/seed-facts-verified.v0.2.jsonl",
+      "sha256": "803a3392dd5870064bc4556e97ba51996f242dba38e56ac24e2745c13a69c3af",
+      "record_count": 54
+    },
+    {
+      "role": "FACT_COVERAGE_SNAPSHOT",
+      "path": "work/domain-seed/seed-fact-coverage-verified.v0.2.json",
+      "sha256": "8e350fe295a07ca76eb54522c0209a9cc2c5808e473378d4ceaa8940af01d2e7",
+      "record_count": 69
+    },
+    {
+      "role": "FACT_NORMALIZATION_DECISION",
+      "path": "work/domain-seed/seed-fact-normalization-v0.2.owner-decision.jsonl",
+      "sha256": "2039259088b6229b73c4d167155216db5607d5bf08ecd41cb1b4a523c171e13a",
+      "record_count": 16
+    },
+    {
+      "role": "CHAIN_MANIFEST",
+      "path": "work/domain-seed/seed-chain-manifest.v0.1.jsonl",
+      "sha256": "9c9a0bcfdc446a390d0dac830f44a1b5eb28414c2d8060e8918d5b66250a12e6",
+      "record_count": 16
+    }
+  ],
+  "thin_plan": {
+    "path": "work/domain-seed/seed-thin-flow-plans.v0.2.jsonl",
+    "sha256": "fbc517c93aeba5f40c6749f36901322fa13aebc80c4c349604ade389c4d13f89",
+    "record_count": 23
+  },
+  "thin_plan_manifest": {
+    "path": "work/domain-seed/seed-thin-flow-plans.v0.2.manifest.json",
+    "sha256": "75b939ae339ee713acc48f4ae6b21c04fbc69c5e1a243876e926847cf6309d50"
+  },
+  "thin_plan_source_gold": {
+    "path": "work/domain-seed/seed-gold-promotion-candidates.v0.14.jsonl",
+    "sha256": "84be6251314d49720d02711c2df4211bf6992c2aad6ec7c03b0f18643998dea5"
+  },
+  "thin_plan_source_coverage": {
+    "path": "work/domain-seed/seed-fact-coverage-verified.v0.2.json",
+    "sha256": "8e350fe295a07ca76eb54522c0209a9cc2c5808e473378d4ceaa8940af01d2e7"
+  },
+  "note": "TEST-ONLY decision fixture (v02-structured). Machine-verified JSON. Binds one exact approved release bundle including Thin plan + (empty, test-only) Chain artifact. Never a real Owner approval."
+}

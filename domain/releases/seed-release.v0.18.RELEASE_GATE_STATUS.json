@@ -1,0 +1,47 @@
+{
+  "schema_version": "0.1.0",
+  "report_type": "RELEASE_GATE_STATUS",
+  "subject_release": "domain/releases/seed-release.v0.18.manifest.json",
+  "subject_structured_manifest": "work/domain-seed/seed-structured-artifacts.v0.6.manifest.json",
+  "generated_at": "2026-08-13T16:30:00.000Z",
+  "supersedes_finding": "domain/releases/seed-release.v0.17.BLOCKED.audit-report.json",
+  "resolved_in_this_release": {
+    "finding": "v0.17's 6-item Fact/Evidence batch (Q02/Q04/Q05/Q10) had a self-minted Owner approval (script-generated APPROVE/reviewer/reviewed_at).",
+    "resolution": "Owner (최재완) reviewed work/domain-seed/seed-structured-owner-decision.v0.7-batch.template.jsonl in-conversation and issued an explicit APPROVE instruction for all 6 items. That decision was transcribed into work/domain-seed/seed-structured-owner-decision.v0.7-batch.decision.jsonl (sha256 49d75a9f60b2e1af88ba5931135b2ca2c3f4f463e4dc73b6d25e30583943a6f8) -- a file the candidate-authoring script never touches -- and scripts/promote-seed-fact-batch-v06.mjs independently validated its path/SHA-256/6-item ID set/disposition/reviewer/reviewed_at before promoting. The two Q10 facts' period-semantics defect (CUMULATIVE with a mismatched as_of_date) was also fixed to POINT_IN_TIME with as_of_date/known_at correctly separated, before Owner review.",
+    "status": "RESOLVED"
+  },
+  "gates": {
+    "data_promotion_gate": {
+      "status": "PASS",
+      "detail": "88/88 Owner-approved (82 carried from v0.4 + 6 from the real v0.7-batch decision). Evidence v0.9 (219), Fact v0.7 (73), Coverage v0.6 (88 slots) all schema-valid and referentially closed."
+    },
+    "release_authorization_gate": {
+      "status": "PASS",
+      "detail": "domain/releases/seed-release.v0.18.manifest.json + .decision.json bind canonical/structured manifest path+hash, Thin plan (v0.6) path+hash+source_gold/source_coverage, and CHAIN_MANIFEST -- verified via createSeedRuntimeServiceAdapters against the real hardened gate (FACT:73, EVENT:24, RELATION:40, EVIDENCE:219)."
+    },
+    "runtime_api_gate": {
+      "status": "PASS",
+      "detail": "Construction succeeds against the real v0.18/v0.6 bundle; configured-seed-runtime.mjs now defaults to it."
+    },
+    "automatic_metric_gate": {
+      "status": "BLOCKED",
+      "detail": "metric_fail=4 across Q07 (1), Q21 (2), Q24 (1) -- unchanged from the last real Harness run. NOT touched or claimed resolved by this release; these need ~25 additional Facts this session cannot ground without $A_DOCUMENT_IR_DIR access."
+    },
+    "manual_review_gate": {
+      "status": "BLOCKED",
+      "detail": "17 REVIEW_REQUIRED items across 13 questions (claim_coverage / explicit_fact_value_slots) remain unresolved -- no human has adjudicated them. NOT touched or claimed resolved by this release."
+    },
+    "deployment_gate": {
+      "status": "BLOCKED",
+      "detail": "Downstream of automatic_metric_gate and manual_review_gate. The known 5-document Chain->DocumentIR gap remains advisory/tracked (unchanged, unaffected by this release)."
+    }
+  },
+  "overall_release_gate": "BLOCKED",
+  "overall_release_gate_note": "This release closes the v0.17 audit finding (self-approved batch + Q10 period defect) ONLY. It does not resolve, and does not claim to resolve, Q07/Q21/Q24 metric_fail or the 17 REVIEW_REQUIRED items. The overall Release Gate stays BLOCKED until those are independently addressed and a human has adjudicated the REVIEW_REQUIRED items.",
+  "known_limitations_carried_forward": [
+    "Q07/Q21/Q24 metric_fail (4 total) -- open, source-data access gap.",
+    "17 REVIEW_REQUIRED items (13 questions) -- open, needs human adjudication.",
+    "5-document Chain->DocumentIR gap -- advisory/tracked, unaffected by this release.",
+    "approved_by is a repository-internal procedural Owner assertion, not a cryptographic signature (domain/releases/README.md)."
+  ]
+}

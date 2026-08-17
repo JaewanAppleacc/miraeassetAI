@@ -1,0 +1,84 @@
+{
+  "schema_version": "0.1.0",
+  "decision_id": "seed-release-v0.16-decision",
+  "status": "APPROVED",
+  "approved_by": "최재완",
+  "approved_at": "2026-08-13T14:16:09.655Z",
+  "release_id": "seed-release-v0.16",
+  "approved_revision": "seed-structured-artifacts-v0.4",
+  "corpus_snapshot_id": "corpus_04750795e1a2d5c3",
+  "fact_coverage_snapshot_id": "fact_coverage_snapshot_468477cf28224146080c50f4",
+  "canonical_release_manifest": {
+    "path": "domain/releases/seed-release.v0.16.manifest.json",
+    "sha256": "d3994d759de125015c46fbfaab2a016516a5ea17aa3686d65064112cd3b0a3dd"
+  },
+  "structured_manifest": {
+    "path": "work/domain-seed/seed-structured-artifacts.v0.4.manifest.json",
+    "sha256": "330617aa3ff30be579ae680222e28f405a9f5b7d69288175145e88fafba47bdc"
+  },
+  "canonical_artifacts": [
+    {
+      "role": "CANONICAL_DOCUMENT_IR_BASE",
+      "path": "work/domain-seed/seed-canonical-document-ir.v0.6.jsonl",
+      "sha256": "4539cceb239b69f05a9c38239680926e32c13367e9c870dc509c528f785fbcda",
+      "record_count": 54
+    },
+    {
+      "role": "CANONICAL_DOCUMENT_IR_DELTA",
+      "path": "work/domain-seed/seed-canonical-document-ir.v0.15.delta.jsonl",
+      "sha256": "94f0f24a29cd0233f2f2be7f74e7549f0c4320f3d75a0008e6cb94dc127f54f6",
+      "record_count": 14
+    },
+    {
+      "role": "SEED_GOLD",
+      "path": "work/domain-seed/seed-gold-promotion-candidates.v0.17.jsonl",
+      "sha256": "a9a4c23be632df40b2409660ef34e21347b33b32a1f7be407bf55dfe92491d2c",
+      "record_count": 25
+    }
+  ],
+  "structured_artifacts": [
+    {
+      "role": "VERIFIED_EVIDENCE",
+      "path": "work/domain-seed/seed-evidence-verified.v0.6.jsonl",
+      "sha256": "6353abe94727b511aaa39acc5b84982ccf38f34f42fa26fa533c1937cd85b085",
+      "record_count": 213
+    },
+    {
+      "role": "VERIFIED_EVIDENCE_MANIFEST",
+      "path": "work/domain-seed/seed-evidence-verified.v0.6.manifest.json",
+      "sha256": "d9fbc530be7b6abdab58f27efb9691f2974ac59e0c3816bb072123080cf35219",
+      "record_count": null
+    },
+    {
+      "role": "VERIFIED_EVENT",
+      "path": "work/domain-seed/seed-events-verified.v0.1.jsonl",
+      "sha256": "b13ed9f1b7c2a9b9bcab48d01841edc20acee685012333ec629f2fa6d5035396",
+      "record_count": 24
+    },
+    {
+      "role": "VERIFIED_RELATION",
+      "path": "work/domain-seed/seed-relation-gold.v0.2.jsonl",
+      "sha256": "66543d26e8e6fd99e6c8ea26e364774006f8b15d6bc70839295b2baff54eb399",
+      "record_count": 40
+    },
+    {
+      "role": "VERIFIED_FACT",
+      "path": "work/domain-seed/seed-facts-verified.v0.4.jsonl",
+      "sha256": "f59862b6fd86321390d05dc1a61fed19f9b88603ccdccf331c9ca8887fbc5d99",
+      "record_count": 67
+    },
+    {
+      "role": "FACT_COVERAGE_SNAPSHOT",
+      "path": "work/domain-seed/seed-fact-coverage-verified.v0.4.json",
+      "sha256": "5ef48b6c738c0af428910c6e3ff3b4df842dfc62d4f503a85afc9b80823d0f67",
+      "record_count": 82
+    },
+    {
+      "role": "OWNER_DECISION",
+      "path": "work/domain-seed/seed-structured-owner-decision.v0.4.jsonl",
+      "sha256": "7bf076fc61c7ff6d4ce7e41b135428d1a33499d4a5c4bf852237c58cb51cec7d",
+      "record_count": 82
+    }
+  ],
+  "basis": "seed-structured-owner-decision-v0.4 (82/82 APPROVE, Owner: 최재완) + scripts/promote-seed-structured-artifacts-v04.mjs promotion (referential closure verified, official schema validation passed for Evidence/Fact/Event/Coverage). signing_limitation: approved_by는 암호학적 서명이 아니라 저장소 내부 절차적 Owner assertion이다 (domain/releases/README.md 'Release Gate: 승인 신원의 한계와 최종 신뢰 anchor' 절 참조). 최종 배포 신뢰 anchor는 protected branch 리뷰 또는 서명된 release tag/commit이며 이 decision artifact가 아니다."
+}

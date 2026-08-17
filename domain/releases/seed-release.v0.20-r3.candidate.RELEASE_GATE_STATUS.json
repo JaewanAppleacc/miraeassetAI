@@ -1,0 +1,56 @@
+{
+  "schema_version": "0.1.0",
+  "report_type": "RELEASE_GATE_STATUS",
+  "subject_release": "domain/releases/seed-release.v0.20-r3.candidate.manifest.json",
+  "subject_structured_manifest": "work/domain-seed/seed-structured-artifacts.v0.7.manifest.json",
+  "generated_at": "2026-08-17T00:06:27.452Z",
+  "gates": {
+    "data_promotion": {
+      "status": "PASS",
+      "detail": "Fact v0.8 (87, 14 promoted this Turn) / Coverage v0.7 (102 slots) / Evidence v0.9 / 병합 Owner decision v0.10 (102, 최재완, 전원 APPROVE) -- structured manifest v0.7로 schema-valid 및 참조 무결."
+    },
+    "ontology_owner_review": {
+      "status": "PASS",
+      "detail": "Ontology Owner decision v0.2 재확인 완료 (sha256 9503cc79b2bd63c2ac6b52e6da1e4ffbb01c72232781ef33b296fa0f840d49ee)."
+    },
+    "candidate_owner_review": {
+      "status": "PASS",
+      "detail": "Final Candidate Owner decision v0.1 재확인 완료 (sha256 99a0394b63a2e073c984bcd525fb6c7e78c4d523a07a952743201d662375a8f6). Turn M7 Q18 정책(APPROVE_INFORMATION_LIMIT_FOR_V020) release_blocking:false."
+    },
+    "q18_information_limit_policy": {
+      "status": "PASS",
+      "detail": "새 information_limits Plan 계약(구조/의미 검증기, Composer 렌더링, Validator 무결성 검사, PARTIAL 강제 규칙)이 TDD로 구현/검증됨. Q18 r13 답변이 2,198,873,250원을 발행총액으로 주장하지 않음(자동 검증 통과)."
+    },
+    "clean_plan_lineage": {
+      "status": "PASS",
+      "detail": "clean Plan v0.13 lineage verified through Plan v0.6. changed_question_ids=[\"question_seed_v07_18\"]. sub_request_authority_present=false."
+    },
+    "runtime_candidate_e2e": {
+      "status": "PASS",
+      "detail": "Wire seed-harness-v07-wire.r16: api_success=25/25, metric_pass=110, metric_fail=5, review_required=17. metric_fail/review_required는 출력 통일 작업으로 최적화하지 않음."
+    },
+    "final_integration_owner_review": {
+      "status": "PENDING",
+      "detail": "Turn M9 Owner 결정의 FIX_REQUIRED 항목은 Turn M10/M10.1 공통 규칙으로 기계 검증됐지만, 최종 release Owner 승인은 아직 생성하지 않음."
+    },
+    "official_clean_clone": {
+      "status": "BLOCKED_BY_UNCOMMITTED_SOURCE",
+      "detail": "이번 Turn의 소스 변경(domain/adapters, domain/flows/synthesis, scripts, tests)이 아직 커밋되지 않았다 -- 이 Turn은 stage/commit/push를 하지 않는다는 명시적 제약이 있다."
+    },
+    "deployment": {
+      "status": "BLOCKED",
+      "detail": "final_integration_owner_review PENDING + official_clean_clone BLOCKED_BY_UNCOMMITTED_SOURCE에 종속."
+    },
+    "portable_bundle_integrity": {
+      "status": "PASS",
+      "detail": "Actual bundle-manifest.json is externally pinned by the PENDING Owner template (sha256 5158b001df5c2a2119f66f1b00fbdf92ac79311a9a73c4ef7013981f86640726); all declared bundle entries passed directory/hash verification."
+    }
+  },
+  "overall": "BLOCKED",
+  "overall_note": "이 Gate는 v0.20-r2.candidate가 배선/정책/lineage 측면에서 PASS하는 항목이 많다는 것을 보여주지만, final_integration_owner_review(PENDING)와 official_clean_clone(BLOCKED_BY_UNCOMMITTED_SOURCE) 때문에 overall은 BLOCKED다. 이번 Turn은 v0.20 APPROVED decision을 생성하지 않으며, configured-seed-runtime.mjs를 재지정하지 않으며, stage/commit/push를 하지 않는다.",
+  "known_limitations_carried_forward": [
+    "Q07/Q21/Q24 등 기존 metric_fail -- 이번 Turn 범위 밖, 미해결.",
+    "17건 REVIEW_REQUIRED -- 이번 Turn 범위 밖, 미해결.",
+    "approved_by는 암호학적 서명이 아니라 저장소 내부 절차적 Owner assertion이다."
+  ]
+}

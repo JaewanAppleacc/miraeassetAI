@@ -1,0 +1,40 @@
+{
+  "schema_version": "0.1.0",
+  "release_id": "seed-release-v0.20-r3-candidate",
+  "release_status": "CANDIDATE",
+  "corpus_snapshot_id": "corpus_04750795e1a2d5c3",
+  "artifacts": [
+    {
+      "role": "CANONICAL_DOCUMENT_IR_BASE",
+      "path": "work/domain-seed/seed-canonical-document-ir.v0.6.jsonl",
+      "sha256": "4539cceb239b69f05a9c38239680926e32c13367e9c870dc509c528f785fbcda",
+      "bytes": 121338555,
+      "record_count": 54
+    },
+    {
+      "role": "CANONICAL_DOCUMENT_IR_DELTA",
+      "path": "work/domain-seed/seed-canonical-document-ir.v0.15.delta.jsonl",
+      "sha256": "94f0f24a29cd0233f2f2be7f74e7549f0c4320f3d75a0008e6cb94dc127f54f6",
+      "bytes": 216700,
+      "record_count": 14
+    },
+    {
+      "role": "SEED_GOLD",
+      "path": "work/domain-seed/seed-gold-promotion-candidates.v0.17.jsonl",
+      "sha256": "a9a4c23be632df40b2409660ef34e21347b33b32a1f7be407bf55dfe92491d2c",
+      "bytes": 261444,
+      "record_count": 25
+    }
+  ],
+  "approved_revision": "seed-structured-artifacts-v0.7",
+  "supersedes": null,
+  "supersession_note": "이 파일은 v0.20 최종 승인 release가 아니다 -- release_status는 CANDIDATE로 유지된다. domain/releases/bundles/seed-release-v0.20/ (Turn L2, Fact v0.7/Plan v0.6 기준)은 수정하지 않고 감사 이력으로 보존한다. 이 revision(v0.20-r3.candidate)은 Fact v0.8(14건 신규)/Coverage v0.7/Evidence v0.9/병합 Owner decision v0.10(102)/clean Plan v0.13(Plan v0.6 clean 계보, sub_request 계보 미상속)/승인된 Company Directory v0.2를 대상으로 한다. domain/runtime/configured-seed-runtime.mjs는 이 파일을 참조하지 않으며 계속 v0.19를 가리킨다. 최종 v0.20 승인 여부는 별도 owner-decision-template.json(PENDING)에서 사람이 판단한다.",
+  "release_authorization": {
+    "status": "APPROVED",
+    "approved_by": "최재완",
+    "approved_at": "2026-08-17T00:06:27.452Z",
+    "decision_artifact_path": "domain/releases/seed-release.v0.20-r3.candidate.binding-decision.json",
+    "decision_artifact_sha256": "90d4318cadd68797037329fcdc3eea4eda975f47fa0164d6e1fad3d635907376",
+    "signing_note": "Repository-internal procedural Owner assertion binding this manifest to its decision -- NOT a claim that v0.20-r2.candidate is approved for production. See owner-decision-template.json (status PENDING) for the actual release disposition."
+  }
+}

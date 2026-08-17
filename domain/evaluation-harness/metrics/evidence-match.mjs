@@ -47,6 +47,24 @@ function relevantEvidenceVerifications(goldExtensions, slotName) {
   return map;
 }
 
+function allEvidenceVerifications(goldExtensions) {
+  const map = new Map();
+  for (const entry of Array.isArray(goldExtensions?.evidence_verification) ? goldExtensions.evidence_verification : []) {
+    if (entry && typeof entry.evidence_id === "string") map.set(entry.evidence_id, entry);
+  }
+  return map;
+}
+
+function verificationMatchesAcceptableSource(verification, slot) {
+  if (!verification) return false;
+  return slot.acceptable_sources.some((source) =>
+    source.document_id === verification.document_id
+    && source.source_locator === verification.canonical_source_locator
+    && typeof source.evidence_span === "string"
+    && sha256Hex(source.evidence_span) === verification.quote_sha256
+  );
+}
+
 // Returns true if the wire context's own document_id/source_locator/
 // quoted_text (only the fields it actually provides) contradict the Gold
 // record for this evidence_id. Missing fields on the wire are not treated
@@ -72,11 +90,21 @@ function contradictsProvenance(ctx, verification) {
 export function slotIsGrounded(slot, contexts, goldExtensions) {
   if (!slot || !Array.isArray(slot.acceptable_sources) || slot.acceptable_sources.length === 0) return false;
   const verifications = relevantEvidenceVerifications(goldExtensions, slot.slot_name);
+  const allVerifications = allEvidenceVerifications(goldExtensions);
   for (const ctx of Array.isArray(contexts) ? contexts : []) {
     if (!ctx || typeof ctx !== "object") continue;
     if (typeof ctx.evidence_id === "string" && ctx.evidence_id !== "") {
-      const verification = verifications.get(ctx.evidence_id);
-      if (verification && !contradictsProvenance(ctx, verification)) return true;
+      // Prefer the semantic slot link, but permit a recognized Evidence ID
+      // linked under a lower-level Fact slot when its immutable provenance
+      // exactly matches one of this higher-level Gold slot's acceptable
+      // sources. This is not a name-based fallback: document, locator and
+      // quote hash all have to agree.
+      const verification = verifications.get(ctx.evidence_id) ?? allVerifications.get(ctx.evidence_id);
+      if (
+        verification
+        && (verifications.has(ctx.evidence_id) || verificationMatchesAcceptableSource(verification, slot))
+        && !contradictsProvenance(ctx, verification)
+      ) return true;
       continue; // evidence_id present (unrecognized OR self-contradicting) -> never fall through to the weaker check
     }
     const quotedText = typeof ctx.quoted_text === "string" ? ctx.quoted_text : ctx.evidence_span;
