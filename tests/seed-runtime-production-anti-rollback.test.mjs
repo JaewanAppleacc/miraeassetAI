@@ -179,35 +179,35 @@ test("adapter: approved_revision mismatch (declared expectedApprovedRevision dis
 // override surface -- the exact repro path from the audit.
 // ---------------------------------------------------------------------------
 
-test("configured runtime: injecting v0.17 canonical/structured/plan paths via env vars still fails closed", async () => {
+test("configured runtime: legacy per-artifact v0.17 env overrides are ignored; production still boots the pinned v0.20 bundle", async () => {
   const result = await initializeConfiguredRuntimeWithEnv({
     SEED_STRUCTURED_MANIFEST_PATH: V17_PATHS.structuredManifestPath,
     SEED_CANONICAL_RELEASE_MANIFEST_PATH: V17_PATHS.canonicalReleaseManifestPath,
     SEED_PLAN_PATH: V17_PATHS.planPath,
     SEED_PLAN_MANIFEST_PATH: V17_PATHS.planManifestPath,
   });
-  assert.equal(result.ok, false);
-  assert.deepEqual(result.readiness, { status: "FAILED", ready: false, error_code: "SEED_RUNTIME_INIT_FAILED" });
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.readiness, { status: "READY", ready: true, error_code: null });
 });
 
-test("configured runtime: injecting v0.18 paths via env vars fails closed (production policy pins exactly v0.19)", async () => {
+test("configured runtime: legacy per-artifact v0.18 env overrides cannot redirect the pinned v0.20 bundle", async () => {
   const result = await initializeConfiguredRuntimeWithEnv({
     SEED_STRUCTURED_MANIFEST_PATH: V18_PATHS.structuredManifestPath,
     SEED_CANONICAL_RELEASE_MANIFEST_PATH: V18_PATHS.canonicalReleaseManifestPath,
     SEED_PLAN_PATH: V18_PATHS.planPath,
     SEED_PLAN_MANIFEST_PATH: V18_PATHS.planManifestPath,
   });
-  assert.equal(result.ok, false);
-  assert.deepEqual(result.readiness, { status: "FAILED", ready: false, error_code: "SEED_RUNTIME_INIT_FAILED" });
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.readiness, { status: "READY", ready: true, error_code: null });
 });
 
-test("configured runtime: no override at all (the real default) succeeds -- v0.19 is READY", async () => {
+test("configured runtime: no override at all succeeds -- final v0.20 is READY", async () => {
   const result = await initializeConfiguredRuntimeWithEnv({});
   assert.equal(result.ok, true);
   assert.deepEqual(result.readiness, { status: "READY", ready: true, error_code: null });
 });
 
-test("configured runtime: explicitly injecting the SAME v0.19 paths via env vars also succeeds (a normal deployment override, not a downgrade)", async () => {
+test("configured runtime: legacy v0.19 per-artifact env values do not alter the final v0.20 selection", async () => {
   const result = await initializeConfiguredRuntimeWithEnv({
     SEED_STRUCTURED_MANIFEST_PATH: "work/domain-seed/seed-structured-artifacts.v0.6.manifest.json",
     SEED_CANONICAL_RELEASE_MANIFEST_PATH: "domain/releases/seed-release.v0.19.manifest.json",
@@ -285,7 +285,7 @@ test("adapter: the same v0.19 bundle, byte-identical, mounted at a completely di
   assert.deepEqual(bundle.serviceAdapters.structuredStoreAdapter.recordCounts(), { FACT: 73, EVENT: 24, RELATION: 40, EVIDENCE: 219 });
 });
 
-test("configured runtime: SEED_RUNTIME_ROOT pointed at the same v0.19 bundle mounted elsewhere succeeds (normal deployment, not a rollback)", async (t) => {
+test("configured runtime: SEED_RUNTIME_ROOT containing only the old v0.19 loose-file layout fails closed", async (t) => {
   const mountRoot = await freshMountRoot("seed-v019-mount-env-");
   t.after(() => rm(mountRoot, { recursive: true, force: true }));
   for (const relative of MOUNT_RELATIVE_FILES) {
@@ -296,6 +296,6 @@ test("configured runtime: SEED_RUNTIME_ROOT pointed at the same v0.19 bundle mou
   }
 
   const result = await initializeConfiguredRuntimeWithEnv({ SEED_RUNTIME_ROOT: mountRoot });
-  assert.equal(result.ok, true);
-  assert.deepEqual(result.readiness, { status: "READY", ready: true, error_code: null });
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.readiness, { status: "FAILED", ready: false, error_code: "SEED_RUNTIME_INIT_FAILED" });
 });

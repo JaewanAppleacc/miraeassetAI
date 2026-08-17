@@ -38,17 +38,18 @@ const BASE_URL = `http://${HOST}:${PORT}`;
 const ESSENTIAL_TRACKED_PATHS = Object.freeze([
   "package.json",
   "package-lock.json",
-  "scripts/start-agent-server-v020-r2-candidate.mjs",
+  "scripts/start-agent-server.mjs",
   "domain/runtime/node-agent-server.mjs",
   "domain/runtime/configured-seed-runtime.mjs",
+  "domain/runtime/bundle-backed-seed-runtime.mjs",
   "domain/runtime/seed-thin-runner.mjs",
   "domain/adapters/seed-runtime-service-adapters.mjs",
   "domain/adapters/seed-company-resolver.mjs",
   "domain/adapters/seed-release-bundle-unpack.mjs",
   "domain/adapters/deterministic-gzip.mjs",
   "domain/releases/bundles/seed-release-v0.20-r3.candidate/bundle-manifest.json",
-  "domain/releases/seed-release.v0.20-r3.candidate.manifest.json",
-  "domain/releases/seed-release.v0.20-r3.candidate.binding-decision.json",
+  "domain/releases/seed-release.v0.20.manifest.json",
+  "domain/releases/seed-release.v0.20.decision.json",
   "domain/releases/seed-release.v0.20-r3.candidate.owner-decision.approved.json",
 ]);
 
@@ -97,20 +98,12 @@ test.before(async () => {
   // no hand-copied node_modules subset in this tier.
   await execFileAsync("npm", ["ci", "--omit=dev"], { cwd: extractDir, maxBuffer: 64 * 1024 * 1024 });
 
-  // Materialize only the Git-tracked, Owner-approved r3 candidate bundle.
-  // This proves that no gitignored work/ source tree is needed. The normal
-  // configured production singleton remains pinned to v0.19; this test uses
-  // the explicit candidate entrypoint and therefore is not a production
-  // switch or final v0.20 release authorization.
-  const { unpackReleaseBundle } = await import(path.join(extractDir, "domain/adapters/seed-release-bundle-unpack.mjs"));
-  await unpackReleaseBundle({
-    bundleDir: path.join(extractDir, "domain/releases/bundles/seed-release-v0.20-r3.candidate"),
-    destRoot: extractDir,
-  });
-
-  child = spawn(process.execPath, [path.join(extractDir, "scripts/start-agent-server-v020-r2-candidate.mjs")], {
+  // The real configured production singleton must find, verify, and unpack
+  // the Git-tracked r3 bundle itself. The archive intentionally has no work/
+  // source tree and this test does not pre-materialize one for it.
+  child = spawn(process.execPath, [path.join(extractDir, "scripts/start-agent-server.mjs")], {
     cwd: extractDir,
-    env: { PATH: process.env.PATH, PORT: String(PORT), AGENT_HOST: HOST, SEED_V020_CANDIDATE_REVISION: "r3" },
+    env: { PATH: process.env.PATH, PORT: String(PORT), AGENT_HOST: HOST },
     stdio: ["ignore", "pipe", "pipe"],
   });
   await waitForReady(BASE_URL);

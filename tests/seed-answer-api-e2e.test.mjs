@@ -66,7 +66,7 @@ test("Q3 and Q22 answer directly with the corrected (row=17) grounding, never th
   }
 });
 
-test("GET /ready attests the v0.18 configured runtime (v0.17 audit finding resolved)", async () => {
+test("GET /ready attests the final bundle-backed v0.20 configured runtime", async () => {
   const { GET: getReady } = await import("../app/ready/route.ts");
   const response = await getReady();
   assert.equal(response.status, 200);

@@ -873,7 +873,11 @@ export async function createSeedRuntimeServiceAdapters({
   };
 
   const [documentStoreAdapter, evidenceStoreAdapter, factStoreAdapter, structuredStoreAdapter, eventRecords, relationRecords, chainRecords] = await Promise.all([
-    createSeedCanonicalDocumentIrStore(canonicalReleaseManifestPath),
+    // The release manifest stores bundle-relative artifact paths. Respect
+    // this adapter construction's explicit root instead of falling back to
+    // process.cwd(); otherwise a materialized portable bundle can appear to
+    // work only when an unrelated loose work/ tree happens to exist there.
+    createSeedCanonicalDocumentIrStore(canonicalReleaseManifestPath, { root }),
     createSeedEvidenceArtifactStore({ evidencePath: resolveArtifact(evidence), manifestPath: resolveArtifact(evidenceManifest) }),
     createSeedFactArtifactStore({
       factArtifactPath: resolveArtifact(facts), factArtifactSha256: facts.sha256, factRecordCount: facts.record_count,

@@ -48,20 +48,9 @@ test("initialization failure is visible as a stable safe code while answer execu
   assert.equal(JSON.stringify(runtime.readiness()).includes(ROOT), false);
 });
 
-// v0.18 (resolves the v0.17 audit finding): the process-wide
-// configuredSeedRuntime singleton now defaults to domain/releases/
-// seed-release.v0.18.manifest.json / seed-structured-artifacts.v0.6.manifest.json
-// -- the v0.17 self-approval defect (domain/releases/
-// seed-release.v0.17.BLOCKED.audit-report.json) is resolved by a real,
-// externally authored Owner decision (work/domain-seed/seed-structured-
-// owner-decision.v0.7-batch.decision.jsonl, 6/6 APPROVE by 최재완),
-// independently validated by scripts/promote-seed-fact-batch-v06.mjs
-// before promotion, plus the Thin-plan/CHAIN_MANIFEST hardening carried
-// over unchanged from v0.17. GET /ready correctly reports READY again.
-// This does NOT mean the overall Release Gate is open -- see
-// domain/releases/seed-release.v0.18.RELEASE_GATE_STATUS.json: Q07/Q21/Q24
-// metric_fail and 17 REVIEW_REQUIRED items remain BLOCKED.
-test("GET /ready attests the v0.18 configured runtime (v0.17 audit finding resolved)", async () => {
+// The configured singleton now verifies and materializes the final v0.20
+// portable bundle before reporting readiness.
+test("GET /ready attests the final bundle-backed v0.20 configured runtime", async () => {
   const response = await getReady();
   assert.equal(response.status, 200);
   assert.equal(response.headers.get("Cache-Control"), "no-store");

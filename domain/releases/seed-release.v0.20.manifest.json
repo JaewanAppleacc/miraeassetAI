@@ -1,0 +1,40 @@
+{
+  "schema_version": "0.1.0",
+  "release_id": "seed-release-v0.20",
+  "release_status": "APPROVED",
+  "corpus_snapshot_id": "corpus_04750795e1a2d5c3",
+  "artifacts": [
+    {
+      "role": "CANONICAL_DOCUMENT_IR_BASE",
+      "path": "work/domain-seed/seed-canonical-document-ir.v0.6.jsonl",
+      "sha256": "4539cceb239b69f05a9c38239680926e32c13367e9c870dc509c528f785fbcda",
+      "bytes": 121338555,
+      "record_count": 54
+    },
+    {
+      "role": "CANONICAL_DOCUMENT_IR_DELTA",
+      "path": "work/domain-seed/seed-canonical-document-ir.v0.15.delta.jsonl",
+      "sha256": "94f0f24a29cd0233f2f2be7f74e7549f0c4320f3d75a0008e6cb94dc127f54f6",
+      "bytes": 216700,
+      "record_count": 14
+    },
+    {
+      "role": "SEED_GOLD",
+      "path": "work/domain-seed/seed-gold-promotion-candidates.v0.17.jsonl",
+      "sha256": "a9a4c23be632df40b2409660ef34e21347b33b32a1f7be407bf55dfe92491d2c",
+      "bytes": 261444,
+      "record_count": 25
+    }
+  ],
+  "approved_revision": "seed-structured-artifacts-v0.7",
+  "supersedes": "domain/releases/seed-release.v0.19.manifest.json",
+  "supersession_note": "Owner가 검수한 v0.20-r3 Candidate의 데이터·clean Plan v0.13·응답 출력·Q18 정보한계 정책을 그대로 최종 승인한다. r3 bundle bytes는 변경하지 않으며 별도 final decision이 bundle manifest, Candidate Owner decision, official clean-clone gate를 외부 pin한다. v0.19 이하와 모든 Candidate 감사 이력은 수정하지 않는다.",
+  "release_authorization": {
+    "status": "APPROVED",
+    "approved_by": "최재완",
+    "approved_at": "2026-08-17T23:07:20Z",
+    "decision_artifact_path": "domain/releases/seed-release.v0.20.decision.json",
+    "decision_artifact_sha256": "d1b6b9a0ea426e5eb2ade8f9aa0dd1458f92e7b384e07d97fccf02e48925ba1d",
+    "signing_note": "Repository-internal procedural Owner assertion; the decision also pins the portable r3 bundle manifest externally."
+  }
+}

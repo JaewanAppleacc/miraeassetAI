@@ -55,7 +55,7 @@
     "evaluation-harness:test": "node --test tests/evaluation-harness.test.mjs",
     "evaluation-harness:run": "node scripts/run-evaluation-harness.mjs",
     "typecheck": "tsc --noEmit",
-    "verify:contracts": "npm run schema:validate && npm run test:domain && node --test tests/seed-release-v020-r3-owner-decision.test.mjs && npm run typecheck",
+    "verify:contracts": "npm run schema:validate && npm run test:domain && node --test tests/seed-release-v020-r3-owner-decision.test.mjs tests/seed-release-v020-final.test.mjs && npm run typecheck",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate"
   },

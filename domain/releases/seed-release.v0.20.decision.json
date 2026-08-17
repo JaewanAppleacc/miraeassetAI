@@ -1,0 +1,135 @@
+{
+  "schema_version": "0.3.0",
+  "decision_id": "seed-release-v0.20-decision",
+  "status": "APPROVED",
+  "approved_by": "최재완",
+  "approved_at": "2026-08-17T23:07:20Z",
+  "release_id": "seed-release-v0.20",
+  "approved_revision": "seed-structured-artifacts-v0.7",
+  "corpus_snapshot_id": "corpus_04750795e1a2d5c3",
+  "fact_coverage_snapshot_id": "fact_coverage_snapshot_87ad2fa54e8ab7f7543c1ce3",
+  "canonical_release_manifest": {
+    "path": "domain/releases/seed-release.v0.20.manifest.json",
+    "sha256": "70cd6209ad6d92b664a7af9587210a1f3431254aa837be15858cf4ba0e4d04bb"
+  },
+  "structured_manifest": {
+    "path": "work/domain-seed/seed-structured-artifacts.v0.7.manifest.json",
+    "sha256": "2e9ebd60503af366d8cbc7e079ee6fd0eedecc81a69a2d2cc154983680ee3c29"
+  },
+  "canonical_artifacts": [
+    {
+      "role": "CANONICAL_DOCUMENT_IR_BASE",
+      "path": "work/domain-seed/seed-canonical-document-ir.v0.6.jsonl",
+      "sha256": "4539cceb239b69f05a9c38239680926e32c13367e9c870dc509c528f785fbcda",
+      "record_count": 54
+    },
+    {
+      "role": "CANONICAL_DOCUMENT_IR_DELTA",
+      "path": "work/domain-seed/seed-canonical-document-ir.v0.15.delta.jsonl",
+      "sha256": "94f0f24a29cd0233f2f2be7f74e7549f0c4320f3d75a0008e6cb94dc127f54f6",
+      "record_count": 14
+    },
+    {
+      "role": "SEED_GOLD",
+      "path": "work/domain-seed/seed-gold-promotion-candidates.v0.17.jsonl",
+      "sha256": "a9a4c23be632df40b2409660ef34e21347b33b32a1f7be407bf55dfe92491d2c",
+      "record_count": 25
+    }
+  ],
+  "structured_artifacts": [
+    {
+      "role": "VERIFIED_EVIDENCE",
+      "path": "work/domain-seed/seed-evidence-verified.v0.9.jsonl",
+      "sha256": "e25271abe264337d54d1209e0515e2fdba01844a2f2fc52232afa16d1923f02e",
+      "record_count": 219
+    },
+    {
+      "role": "VERIFIED_EVIDENCE_MANIFEST",
+      "path": "work/domain-seed/seed-evidence-verified.v0.9.manifest.json",
+      "sha256": "b1a22db61b690ef94623f731666c62e3dd32656b75abf193b90b88fdf119ea93",
+      "record_count": null
+    },
+    {
+      "role": "VERIFIED_EVENT",
+      "path": "work/domain-seed/seed-events-verified.v0.1.jsonl",
+      "sha256": "b13ed9f1b7c2a9b9bcab48d01841edc20acee685012333ec629f2fa6d5035396",
+      "record_count": 24
+    },
+    {
+      "role": "VERIFIED_RELATION",
+      "path": "work/domain-seed/seed-relation-gold.v0.2.jsonl",
+      "sha256": "66543d26e8e6fd99e6c8ea26e364774006f8b15d6bc70839295b2baff54eb399",
+      "record_count": 40
+    },
+    {
+      "role": "CHAIN_MANIFEST",
+      "path": "work/domain-seed/seed-chain-manifest.v0.2.jsonl",
+      "sha256": "14564122fb733dec5950bda8d4495a01551fe7a93018af125037ebca514cf0f7",
+      "record_count": 16
+    },
+    {
+      "role": "VERIFIED_FACT",
+      "path": "work/domain-seed/seed-facts-verified.v0.8.jsonl",
+      "sha256": "0492ece83ea65f08cc030ce5f4a1cf3cc408a3041b3c778975aa63f8ecbe057c",
+      "record_count": 87
+    },
+    {
+      "role": "FACT_COVERAGE_SNAPSHOT",
+      "path": "work/domain-seed/seed-fact-coverage-verified.v0.7.json",
+      "sha256": "690b34bda825b7bebd9c975cdc77b3a55121e860b6cb54cb49c01aa1924b4a5d",
+      "record_count": 102
+    },
+    {
+      "role": "OWNER_DECISION",
+      "path": "work/domain-seed/seed-structured-owner-decision.v0.10.jsonl",
+      "sha256": "9921417b1b0c26eef02dea3b32cb7fabcc0db2fae45c52883f3edeab20b75bcc",
+      "record_count": 102
+    }
+  ],
+  "thin_plan": {
+    "path": "work/domain-seed/seed-thin-flow-plans.v0.13.clean.candidate.jsonl",
+    "sha256": "efe9e689ad94cd24ca4bc1262a6c320885caee0433e8d19a991634fdd96b54e8",
+    "record_count": 25
+  },
+  "thin_plan_manifest": {
+    "path": "work/domain-seed/seed-thin-flow-plans.v0.13.clean.candidate.manifest.json",
+    "sha256": "ca295e443378f09f958c16bd9b00c72d4127d2f562108d9d3db404ecd8ded867"
+  },
+  "thin_plan_source_gold": {
+    "path": "work/domain-seed/seed-gold-promotion-candidates.v0.17.jsonl",
+    "sha256": "a9a4c23be632df40b2409660ef34e21347b33b32a1f7be407bf55dfe92491d2c"
+  },
+  "thin_plan_source_coverage": {
+    "path": "work/domain-seed/seed-fact-coverage-verified.v0.7.json",
+    "sha256": "690b34bda825b7bebd9c975cdc77b3a55121e860b6cb54cb49c01aa1924b4a5d"
+  },
+  "owner_batch_decision": {
+    "path": "work/domain-seed/seed-structured-owner-decision.v0.7-batch.decision.jsonl",
+    "sha256": "49d75a9f60b2e1af88ba5931135b2ca2c3f4f463e4dc73b6d25e30583943a6f8",
+    "record_count": 6,
+    "approved_by": "최재완",
+    "all_approve": true
+  },
+  "basis": "The reviewed r3 Candidate, five-item Owner approval, and official clean-clone gate all pass. This decision authorizes final v0.20 construction and local production binding, but not push or deployment.",
+  "signing_note": "Repository-internal procedural Owner assertion, not a cryptographic signature. The external bundle-manifest SHA pin prevents the Candidate bundle from approving itself.",
+  "bundle_manifest": {
+    "path": "domain/releases/bundles/seed-release-v0.20-r3.candidate/bundle-manifest.json",
+    "sha256": "5158b001df5c2a2119f66f1b00fbdf92ac79311a9a73c4ef7013981f86640726"
+  },
+  "candidate_owner_decision": {
+    "path": "domain/releases/seed-release.v0.20-r3.candidate.owner-decision.approved.json",
+    "sha256": "b21007a677ada36ba293b9288fd924d10fdbf9b5f13e0e677b4c8c8623230f26"
+  },
+  "official_clean_clone_gate": {
+    "path": "domain/releases/seed-release.v0.20-r3.candidate.RELEASE_GATE_STATUS.v0.3.json",
+    "sha256": "8e45a95c7da7b0fbd472e85e7344d95cc6907a84848aeb7e56ee6d55773d0085",
+    "source_commit": "aa1f16e1c920ce71f255185391e0bdd0ff2ad23d",
+    "status": "PASS"
+  },
+  "owner_authorization": {
+    "instruction": "이어서작업해줘",
+    "scope": "CREATE_FINAL_V020_AND_BIND_LOCAL_PRODUCTION_RUNTIME",
+    "push_authorized": false,
+    "deployment_authorized": false
+  }
+}

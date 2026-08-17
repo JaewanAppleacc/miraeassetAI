@@ -1,0 +1,55 @@
+{
+  "schema_version": "0.1.0",
+  "report_type": "FINAL_RELEASE_LOCAL_BINDING_PRECOMMIT_GATE",
+  "subject_release": {
+    "manifest_path": "domain/releases/seed-release.v0.20.manifest.json",
+    "manifest_sha256": "2539103a1709b4fba0622b3a0ded887df17efe0f6f5345131e72cc51ca3843c9",
+    "decision_path": "domain/releases/seed-release.v0.20.decision.json",
+    "decision_sha256": "d1b6b9a0ea426e5eb2ade8f9aa0dd1458f92e7b384e07d97fccf02e48925ba1d",
+    "release_id": "seed-release-v0.20",
+    "release_status": "APPROVED"
+  },
+  "subject_bundle_manifest": {
+    "path": "domain/releases/bundles/seed-release-v0.20-r3.candidate/bundle-manifest.json",
+    "sha256": "5158b001df5c2a2119f66f1b00fbdf92ac79311a9a73c4ef7013981f86640726"
+  },
+  "production_binding": {
+    "entrypoint": "domain/runtime/configured-seed-runtime.mjs",
+    "loader": "domain/runtime/bundle-backed-seed-runtime.mjs",
+    "loose_work_path_loading": false,
+    "local_ready_status": "READY",
+    "q18_information_limit_verified": true,
+    "status": "PASS"
+  },
+  "validation": {
+    "verify_contracts": {
+      "tests_passed": 1608,
+      "tests_failed": 0,
+      "tests_skipped": 3,
+      "skip_reason": "Expected pre-commit official clean-clone checks; the new production source and final release artifacts are not yet present in git archive HEAD.",
+      "status": "PASS_WITH_EXPECTED_PRECOMMIT_SKIPS"
+    },
+    "build": "PASS",
+    "git_diff_check": "PASS"
+  },
+  "gates": {
+    "final_release_authorization": "PASS",
+    "portable_bundle_integrity": "PASS",
+    "production_runtime_local_binding": "PASS",
+    "production_runtime_local_e2e": "PASS",
+    "official_clean_clone_postcommit": "BLOCKED_BY_UNCOMMITTED_SOURCE",
+    "push": "NOT_AUTHORIZED",
+    "deployment": "NOT_AUTHORIZED"
+  },
+  "overall": "READY_FOR_LOCAL_COMMIT_AND_POSTCOMMIT_CLEAN_CLONE",
+  "remaining_actions": [
+    "Commit the exact final-release and production-binding source set without unrelated user files.",
+    "Run the official git-archive clean-clone test against the resulting commit.",
+    "Record a separate post-commit gate revision; do not push or deploy."
+  ],
+  "authorization_boundary": {
+    "local_commit_authorized": true,
+    "push_authorized": false,
+    "deployment_authorized": false
+  }
+}
