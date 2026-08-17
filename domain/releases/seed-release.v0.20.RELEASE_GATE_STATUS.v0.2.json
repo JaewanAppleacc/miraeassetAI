@@ -1,0 +1,52 @@
+{
+  "schema_version": "0.2.0",
+  "report_type": "FINAL_RELEASE_LOCAL_BINDING_POSTCOMMIT_GATE",
+  "subject_source_commit": "7726d0163371b692f328616a4f9976f50e158129",
+  "subject_release": {
+    "manifest_path": "domain/releases/seed-release.v0.20.manifest.json",
+    "manifest_sha256": "2539103a1709b4fba0622b3a0ded887df17efe0f6f5345131e72cc51ca3843c9",
+    "decision_path": "domain/releases/seed-release.v0.20.decision.json",
+    "decision_sha256": "d1b6b9a0ea426e5eb2ade8f9aa0dd1458f92e7b384e07d97fccf02e48925ba1d",
+    "release_id": "seed-release-v0.20",
+    "release_status": "APPROVED"
+  },
+  "official_clean_clone_verification": {
+    "command": "node --test tests/seed-release-isolated-deployment-official-clean-clone.test.mjs",
+    "method": "git archive HEAD + npm ci --omit=dev + configured production bootstrap + bundle verification/unpack + HTTP checks",
+    "tests_passed": 4,
+    "tests_failed": 0,
+    "tests_skipped": 0,
+    "ready_http_status": 200,
+    "answer_http_status": 200,
+    "workspace_open_file_leaks": 0,
+    "hardcoded_workspace_path_matches": 0,
+    "q18_information_limit_verified": true,
+    "status": "PASS"
+  },
+  "portability_defect_resolved": {
+    "symptom": "The first post-commit archive run returned /ready 503 while the loose local worktree returned READY.",
+    "cause": "Canonical DocumentIR store construction defaulted to process.cwd() instead of the Runtime adapter's explicit materialized bundle root.",
+    "resolution": "createSeedRuntimeServiceAdapters now passes its explicit root to createSeedCanonicalDocumentIrStore.",
+    "scope": "One common root-propagation correction; no question/company/document/value branch and no data artifact change."
+  },
+  "gates": {
+    "final_release_authorization": "PASS",
+    "portable_bundle_integrity": "PASS",
+    "production_runtime_local_binding": "PASS",
+    "production_runtime_local_e2e": "PASS",
+    "official_clean_clone_postcommit": "PASS",
+    "push": "NOT_AUTHORIZED",
+    "deployment": "NOT_AUTHORIZED"
+  },
+  "overall": "LOCAL_RELEASE_COMPLETE_PUSH_AND_DEPLOYMENT_NOT_AUTHORIZED",
+  "remaining_actions": [
+    "Do not push or deploy without a separate explicit authorization."
+  ],
+  "authorization_boundary": {
+    "final_release_created": true,
+    "production_runtime_switched_locally": true,
+    "local_commits_created": true,
+    "push_performed": false,
+    "deployment_performed": false
+  }
+}
