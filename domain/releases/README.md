@@ -13,6 +13,42 @@ Release lock은 데이터 자체의 외부 백업을 대신하지 않는다. 다
 `release_status=BLOCKED_FOR_E2E`는 바이트 정본이 잠겼지만 의미 검수·Fact Coverage·Flow A
 등 E2E 선행 조건이 남았다는 뜻이다. 이를 `READY_FOR_E2E`나 최종 Gold로 해석하지 않는다.
 
+## 현재 상태 요약 (Turn M11 기준)
+
+아래 두 절("v0.20 release-binding checklist"와 "Turn L2")은 v0.20이 아직 생성되지
+않았던 시점에 작성된 **historical/pre-v0.20 사전 설계 문서**다. 감사 이력으로
+보존하며 삭제하지 않지만, 현재 상태를 확인하려면 이 절을 먼저 읽는다.
+
+- **release 상태**: `seed-release-v0.20`은 `domain/releases/seed-release.v0.20.decision.json`
+  기준 `status: "APPROVED"`다(더 이상 미생성이 아니다). `supersession_note`는 Owner가
+  검수한 v0.20-r3 Candidate의 데이터·clean Plan v0.13·응답 출력·Q18 정보한계 정책을
+  그대로 최종 승인했다고 기록한다.
+- **Company Directory**: production은 `seed-company-directory.v0.1.candidate.*`가
+  아니라 **v0.2 approved**(`seed-company-directory.v0.2.approved.jsonl`/`.manifest.json`/
+  `-owner-decision.v0.2.approved.json`)를 사용한다. v0.1 candidate는 감사 이력으로만
+  남는다.
+- **portable bundle**: `domain/releases/bundles/seed-release-v0.20-r3.candidate/`가
+  Git에 추적돼 있으며(더 이상 untracked가 아니다), `domain/runtime/configured-seed-runtime.mjs`가
+  이 r3 bundle 디렉터리와 `seed-release.v0.20.manifest.json`/`.decision.json`을 직접
+  가리킨다(`EXPECTED_RELEASE_ID = "seed-release-v0.20"`). production runtime은 이제
+  bundle-backed v0.20에 결합돼 있다.
+- **bundle 경로 안전성**: Turn M11에서 `seed-release-bundle-unpack.mjs`에 절대경로·`..`·
+  symlink escape·duplicate/unknown role에 대한 fail-closed 검증을 추가했다(독립 검수가
+  재현한 실제 경로 traversal 결함의 수정) — 자세한 내용은
+  `domain/adapters/bundle-manifest-path-safety.mjs`.
+- **GitHub 인계**: 이 브랜치(`codex/common-baseline-v020-handoff`)는 GitHub에 push
+  완료됐다. 단, 이는 사용자의 명시적 별도 지시로 이루어진 것이며, v0.20 decision
+  자체의 `release_authorization.push_authorized`/`deployment_authorized` 필드는 여전히
+  둘 다 `false`다 — 이 decision은 release **데이터 내용**만 승인했을 뿐, GitHub push나
+  실제 production deployment를 승인한 것이 아니다. `push_authorized`/`deployment_authorized`는
+  release 데이터 승인과는 별도의 정책 경계이며, 실제 public deployment는 **아직
+  수행되지 않았다.**
+- **clean-clone 재현성**: production runtime 경로(git clone → `npm ci --omit=dev` →
+  `/ready`/`/answer`)는 새 clone에서 독립적으로 재현·검증됐다
+  (`tests/seed-release-isolated-deployment-official-clean-clone.test.mjs`). 반면 과거
+  `work/domain-seed/` 산출물을 직접 참조하는 개발/audit 테스트 다수는 그 디렉터리
+  전체가 Git에 없어 새 clone에서 재현되지 않는다 — 자세한 내용은 `PROJECT_NEXT_STEPS.md`.
+
 ## Release authorization: decision artifact 계약
 
 `domain/adapters/seed-runtime-service-adapters.mjs`는 canonical release manifest의
@@ -68,7 +104,13 @@ Release lock은 데이터 자체의 외부 백업을 대신하지 않는다. 다
 실제 배포 승인 여부는 여전히 protected branch·코드 리뷰·release tag 서명 등 Git
 플랫폼 계층의 통제에 의존한다.
 
-## v0.20 release-binding checklist (Turn K: 사전 설계 문서, v0.20 미생성)
+## [HISTORICAL/PRE-v0.20] v0.20 release-binding checklist (Turn K: 사전 설계 문서)
+
+> **이 절은 v0.20이 실제로 생성·승인되기 이전(Turn K)에 작성된 사전 설계 문서다.**
+> v0.20은 이후 실제로 생성되어 APPROVED됐다(위 "현재 상태 요약" 참고). 아래 본문은
+> 그 시점의 "아직 생성되지 않았다"는 서술을 그대로 보존한 감사 이력이며, 현재
+> 상태를 설명하지 않는다. Company Directory 경로도 v0.1 candidate를 가리키는 채로
+> 남아 있다 — 실제 production은 v0.2 approved를 쓴다.
 
 이 절은 아직 생성되지 않은 v0.20 manifest/decision을 위한 필수 결합 목록만 기록한다.
 v0.19는 이 절 때문에 수정하지 않으며, 이 절 자체도 실제 v0.20 파일을 생성하지 않는다.
@@ -109,23 +151,32 @@ Timeline Fact Narrative Policy decision (3번)은 현재 코드 경계에서 강
 가능성을 위해 이 정책의 SHA-256을 pin하지만, 이는 Runtime 구성 성공/실패 조건이
 아니라 release 이력 기록이다.
 
-### Turn L2: portable bundle의 Git 추적 상태와 CANDIDATE/OFFICIAL 검증 분리
+### [HISTORICAL/PRE-v0.20] Turn L2: portable bundle의 Git 추적 상태와 CANDIDATE/OFFICIAL 검증 분리
+
+> **이 절도 v0.20 최종 승인 이전(Turn L2) 시점의 기록이다.** "아직 git add/commit을
+> 하지 않았다", "untracked(`??`)로 보이는 상태" 서술은 현재 상태가 아니다 — 지금은
+> `seed-release-v0.20-r3.candidate/` bundle이 실제로 Git에 추적돼 있고
+> `configured-seed-runtime.mjs`가 그것을 직접 가리킨다(위 "현재 상태 요약" 참고).
+> Isolated portability 검증(CANDIDATE/OFFICIAL 계층 분리 자체)에 대한 아래 설명은
+> 여전히 유효하다.
 
 `domain/releases/bundles/`는 더 이상 전체가 gitignore되지 않는다. `.gitignore`는
 `/domain/releases/bundles/*` 뒤에 `!/domain/releases/bundles/seed-release-v0.20/`
 negate rule을 두어, 결정론적으로 gzip 압축된(모든 개별 파일 100MiB 미만, 원본
 비압축 121MB DocumentIR 없음) `seed-release-v0.20/` bundle만 Git 추적 대상으로
-남긴다. 다른 미래 bundle 디렉터리는 기본적으로 계속 ignore된다. 아직
-`git add`/commit은 하지 않았다 -- `git status --short -uall`에서 개별 파일이
-untracked(`??`)로 보이는 상태다.
+남긴다. 다른 미래 bundle 디렉터리는 기본적으로 계속 ignore된다. (이후 실제로
+`git add`/commit됐다 -- 이 절 작성 시점에는 `git status --short -uall`에서 개별
+파일이 untracked(`??`)로 보이는 상태였다.)
 
 이 bundle은 `scripts/build-seed-release-v020-candidate-bundle.mjs`로 재현 가능하게
 생성되며, Company Directory는 `seed-company-directory.v0.2.approved.*`
 (Turn K item F의 byte-equivalent 승격본)만 참조한다. v0.1 candidate는 감사 이력
-으로만 남는다. `domain/runtime/configured-seed-runtime.mjs`는 이번 Turn에도 여전히
-v0.1을 가리키며 수정되지 않았다 -- v0.2 bundle 검증은
+으로만 남는다. (이 절 작성 시점에는 `domain/runtime/configured-seed-runtime.mjs`가
+여전히 v0.1을 가리키며 수정되지 않은 상태였다 -- v0.2 bundle 검증은
 `scripts/start-agent-server-v020-candidate.mjs`(운영 진입점이 아닌, 테스트 전용
-config-injection 스크립트)를 통해서만 이루어진다.
+config-injection 스크립트)를 통해서만 이루어졌다. 이후 v0.20 최종 승인과 함께
+`configured-seed-runtime.mjs` 자체가 bundle-backed v0.20을 직접 가리키도록
+바뀌었다 -- 위 "현재 상태 요약" 참고.)
 
 Isolated portability 검증은 서로 다른 주장을 하는 두 계층으로 분리되어 있다:
 

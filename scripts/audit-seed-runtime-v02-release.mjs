@@ -1,3 +1,16 @@
+// Turn M11 note (no functional change): this script's PATHS are
+// intentionally hardcoded to the seed-structured-artifacts-v0.2 /
+// seed-thin-flow-plans-v0.2 lineage -- it is a HISTORICAL, pinned audit
+// for that specific past release cycle (see its own report title, "Seed
+// Runtime v0.2 release audit"), not a general-purpose or current-release
+// checker. It has no CLI argument handling and none is added here: adding
+// one would misleadingly imply this script could audit a DIFFERENT
+// (e.g. v0.20) release, which it cannot -- its evaluator function reads
+// v0.2-shaped fields (artifact_set_id, a hardcoded record_count of 23,
+// etc.) that the current v0.19+/v0.20 manifest+decision shape does not
+// have. For CURRENT v0.20 release verification, see this repo's
+// tests/seed-release-v020-final.test.mjs and
+// tests/seed-runtime-production-anti-rollback.test.mjs instead.
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";

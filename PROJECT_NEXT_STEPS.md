@@ -49,10 +49,28 @@
 ### 배포 재현 기반
 
 - 결정론적 gzip과 portable release bundle
-- bundle manifest의 encoded/decoded SHA-256 및 record count pin
+- bundle manifest의 encoded/decoded SHA-256 및 record count pin, 그리고 경로
+  traversal·symlink escape·duplicate/unknown role에 대한 fail-closed 검증
+  (Turn M11)
 - 승인 decision과 production runtime 결합
-- `git archive + npm ci --omit=dev` 기반 clean-clone 실행 검증
-- 현재 로컬 검증 기준: 1,611 PASS / 0 FAIL / 0 SKIP, schema/typecheck/build 통과
+- `git archive + npm ci --omit=dev` 기반 **production runtime** clean-clone
+  실행 검증 — 아래 두 항목을 명확히 구분한다(Turn M11, 독립 검수로 실측 확인):
+  - **공식 production clean-clone(완료)**: Git 추적 코드와 portable v0.20
+    bundle만으로 `npm ci --omit=dev` → production Node 서버 초기화 →
+    `/ready` → `/answer` → `tests/seed-release-isolated-deployment-official-clean-clone.test.mjs`가
+    새 clone에서 4/4 PASS.
+  - **과거 개발·감사(work/domain-seed) 기반 테스트 전체 재현(미지원)**: 과거
+    `work/domain-seed/` 산출물을 직접 참조하는 다수의 개발/감사 테스트는 그
+    디렉터리 전체가 Git에 없어(`/work/`가 gitignore 대상, portable bundle 3개
+    디렉터리만 예외) 새 clone에서 재현되지 않는다. "새 clone에서 전체 계약
+    테스트가 모두 통과한다"는 표현은 사용하지 않는다.
+- 로컬 장기 workspace(수 주간 누적된 `work/domain-seed/` 포함) 기준:
+  Turn M11.1에서 domain 계약 테스트 1,641개와 별도 v0.20 최종 테스트 9개가
+  모두 통과했고(0 FAIL / 0 SKIP), schema/typecheck/build도 통과했다. 이 수치는
+  **로컬 workspace 전용**이며 새 clone 재현성의 증거가 아니다.
+- Reference DB/Loader(§4)의 입력 정본은 `work/domain-seed`가 아니라 portable
+  v0.20 bundle(Git 추적)이다 — loader 자신도 fresh clone에서 bundle만으로 재현
+  가능해야 한다(§6 Phase 1 참고).
 
 ## 3. 통일하지 않은 영역 — 작업자 자율 설계 범위
 
@@ -117,7 +135,18 @@ DB 작업은 이제 시작한다. 두 계층을 구분한다.
 - [ ] release tag/commit 서명 또는 Owner 승인 이력 확정
 - [ ] 비밀값·개인 절대경로·불필요한 로컬 파일이 없는지 확인
 
-완료 기준: 새 clone에서 `npm ci --omit=dev`, `/ready`, `/answer`와 전체 계약 테스트가 통과한다.
+완료 기준(Turn M11 정정 — 독립 검수로 실측 확인한 대로 두 가지를 분리):
+- production runtime clean-clone 재현: **완료.** 새 clone에서 `npm ci --omit=dev`
+  → production Node 서버 초기화 → `/ready` → `/answer`가 통과한다
+  (`tests/seed-release-isolated-deployment-official-clean-clone.test.mjs` 4/4 PASS).
+- 과거 `work/domain-seed` 기반 개발/audit test suite 전체 재현: **미지원.**
+  `work/` 전체가 Git에 없어 새 clone에서 재현되지 않는다. 로컬 장기
+  workspace에서는 전체 suite가 통과한다(위 §2 참고). "새 clone에서 전체
+  계약 테스트가 모두 통과한다"거나 "모든 과거 work artifact가 Git에서
+  복원된다"는 표현은 쓰지 않는다.
+과거 `work/` 전체를 Git에 추가하거나 산발적으로 누적된 개발 산출물을
+복구하는 것은 이번 Turn과 다음 Phase 모두의 목표가 아니다 — Phase 1의 입력
+정본은 portable v0.20 bundle이다.
 
 ### Phase 1 — Reference DB와 Loader
 

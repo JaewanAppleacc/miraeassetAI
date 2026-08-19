@@ -34,17 +34,19 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { createSeedRuntimeServiceAdapters } from "./seed-runtime-service-adapters.mjs";
 import { assertNoSymlink } from "./seed-company-resolver.mjs";
+// Turn M11: this closure calculator's own root-escape check is now the
+// SHARED implementation (also used by seed-release-bundle-unpack.mjs's
+// consume-side validation) rather than a private local copy -- see
+// bundle-manifest-path-safety.mjs's header for why the two sides must not
+// be able to silently diverge.
+import { toRootRelative as sharedToRootRelative } from "./bundle-manifest-path-safety.mjs";
 
 function sha256(buffer) {
   return createHash("sha256").update(buffer).digest("hex");
 }
 
 function toRootRelative(root, absPath) {
-  const rel = path.relative(root, absPath);
-  if (rel.startsWith("..") || path.isAbsolute(rel)) {
-    throw new Error(`computeReleaseBundleClosure: ${absPath} resolves outside root ${root}`);
-  }
-  return rel.split(path.sep).join("/");
+  return sharedToRootRelative(root, absPath, "computeReleaseBundleClosure");
 }
 
 async function readVerifiedFile(root, relativePath, label) {

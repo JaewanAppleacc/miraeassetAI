@@ -1,3 +1,24 @@
+// Turn M11: this validator's schema (a flat manifest.artifacts[] array
+// with CORPUS_SNAPSHOT/RELATION_GOLD roles and expected_invariants) is
+// the LEGACY pre-v0.19 release-manifest shape. It cannot validate the
+// current v0.19+/v0.20 manifest+decision split shape (canonical_artifacts/
+// structured_artifacts declared separately in a *.decision.json) -- an
+// independent review confirmed that pointing it at
+// domain/releases/seed-release.v0.20.manifest.json throws
+// "expected exactly one CORPUS_SNAPSHOT artifact, found 0", never a false
+// PASS. For CURRENT v0.20 verification, use
+// tests/seed-release-v020-final.test.mjs,
+// tests/seed-runtime-production-anti-rollback.test.mjs, or
+// domain/adapters/seed-release-bundle-closure.mjs's
+// computeReleaseBundleClosure (which independently re-derives and
+// re-hashes the full v0.20 artifact set from the real release decision).
+//
+// This script previously defaulted to silently verifying the ancient
+// v0.11 manifest when run with no arguments -- producing output that
+// looked like a real "release verified" result (a JSON object with
+// ok:true and a release_id) without the caller ever having asked for
+// v0.11 specifically. manifestPath is now REQUIRED: running this with no
+// argument fails closed with a usage message instead.
 import { createHash } from "node:crypto";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
@@ -5,7 +26,6 @@ import { fileURLToPath } from "node:url";
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = path.resolve(scriptDirectory, "..");
-const defaultManifestPath = path.join(repositoryRoot, "domain/releases/seed-release.v0.11.manifest.json");
 
 function sha256(buffer) {
   return createHash("sha256").update(buffer).digest("hex");
@@ -33,8 +53,20 @@ function setDifference(left, right) {
   return [...left].filter((value) => !right.has(value));
 }
 
-export async function verifySeedRelease({ manifestPath = defaultManifestPath, root = repositoryRoot } = {}) {
-  const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+export async function verifySeedRelease({ manifestPath, root = repositoryRoot } = {}) {
+  if (typeof manifestPath !== "string" || manifestPath === "") {
+    throw new Error(
+      "verifySeedRelease: manifestPath is required (this validator never silently defaults to any specific release -- "
+      + "pass the exact legacy-shaped manifest you intend to check, e.g. domain/releases/seed-release.v0.11.manifest.json)",
+    );
+  }
+  let manifestText;
+  try {
+    manifestText = await readFile(manifestPath, "utf8");
+  } catch (error) {
+    throw new Error(`verifySeedRelease: could not read manifest at ${manifestPath}: ${error.message}`);
+  }
+  const manifest = JSON.parse(manifestText);
   if (manifest.schema_version !== "0.1.0") throw new Error(`unsupported release manifest ${manifest.schema_version}`);
   if (!Array.isArray(manifest.artifacts) || manifest.artifacts.length === 0) throw new Error("release has no artifacts");
 
@@ -125,11 +157,20 @@ export async function verifySeedRelease({ manifestPath = defaultManifestPath, ro
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const manifestPath = process.argv[2] ? path.resolve(process.argv[2]) : defaultManifestPath;
-  verifySeedRelease({ manifestPath })
-    .then((result) => console.log(JSON.stringify({ ok: true, ...result }, null, 2)))
-    .catch((error) => {
-      console.error(JSON.stringify({ ok: false, error: error.message }, null, 2));
-      process.exitCode = 1;
-    });
+  if (!process.argv[2]) {
+    console.error(
+      "usage: node scripts/verify-seed-release.mjs <path-to-legacy-shaped-release-manifest.json>\n"
+      + "This validator only understands the legacy (pre-v0.19) flat manifest.artifacts[] shape.\n"
+      + "It does NOT verify the current v0.20 release -- see this file's header comment for where that lives.",
+    );
+    process.exitCode = 1;
+  } else {
+    const manifestPath = path.resolve(process.argv[2]);
+    verifySeedRelease({ manifestPath })
+      .then((result) => console.log(JSON.stringify({ ok: true, manifest_path: manifestPath, ...result }, null, 2)))
+      .catch((error) => {
+        console.error(JSON.stringify({ ok: false, manifest_path: manifestPath, error: error.message }, null, 2));
+        process.exitCode = 1;
+      });
+  }
 }
