@@ -54,16 +54,20 @@
     "seed:audit-runtime-v02-release": "node scripts/audit-seed-runtime-v02-release.mjs",
     "evaluation-harness:test": "node --test tests/evaluation-harness.test.mjs",
     "evaluation-harness:run": "node scripts/run-evaluation-harness.mjs",
+    "test:reference-db": "node --test tests/reference-release-contract.test.mjs tests/reference-release-v020-bundle.test.mjs",
+    "test:reference-db:postgres16": "node --test tests/reference-release-postgres16-integration.test.mjs",
     "typecheck": "tsc --noEmit",
-    "verify:contracts": "npm run schema:validate && npm run test:domain && node --test tests/seed-release-v020-r3-owner-decision.test.mjs tests/seed-release-v020-final.test.mjs && npm run typecheck",
+    "verify:contracts": "npm run schema:validate && npm run test:domain && npm run test:reference-db && node --test tests/seed-release-v020-r3-owner-decision.test.mjs tests/seed-release-v020-final.test.mjs && npm run typecheck",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "db:reference:load": "node scripts/load-reference-postgres.mjs"
   },
   "dependencies": {
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
     "drizzle-orm": "0.45.2",
     "next": "16.2.6",
+    "pg": "8.23.0",
     "react": "19.2.6",
     "react-dom": "19.2.6"
   },

@@ -150,12 +150,20 @@ DB 작업은 이제 시작한다. 두 계층을 구분한다.
 
 ### Phase 1 — Reference DB와 Loader
 
-- [ ] PostgreSQL 최소 schema 및 migration 작성
-- [ ] v0.20 bundle streaming loader 작성
-- [ ] snapshot/SHA/record count/외래키 검증 추가
+- [x] PostgreSQL 최소 reference schema 및 migration 작성
+- [x] v0.20 bundle streaming loader 작성
+- [x] snapshot/SHA/record count/외래키 검증 추가
 - [ ] 읽기 전용 common schema와 작업자별 namespace 분리
 - [ ] 빈 DB 복원·중복 적재·손상 bundle 부정 테스트
 - [ ] 최소 조회 API 또는 repository adapter 제공
+
+현재 N1 구현은 portable v0.20 Seed bundle을 대상으로 하며 PostgreSQL 16만 허용한다.
+격리된 PostgreSQL 16.15 인스턴스에서 빈 DB 복원, bundle 21-role/792-record 적재,
+재적재 멱등성, 실패 시 rollback, READY 불변성 및 최소 권한을 실제 SQL로 검증했다.
+이 bundle의 Canonical DocumentIR는 68 records(54 base + 14 delta)이며 전체
+4,204문서가 아니다. 전체 검색 DB를 만들기 전 4,204문서 portable snapshot 승격과
+지속적인 PostgreSQL 16 CI 통합 검증이 추가로 필요하다. 상세 계약은
+`domain/postgres/README.md`를 따른다.
 
 완료 기준: 새 서버의 빈 DB를 v0.20 bundle만으로 동일하게 복원하고 동일 질의 결과를 재현한다.
 
