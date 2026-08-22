@@ -10,7 +10,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import test from "node:test";
-import { launchHeadlessChromePage } from "./lib/headless-chrome-cdp.mjs";
+import { launchHeadlessChromePage, waitForDownloadCompletion } from "./lib/headless-chrome-cdp.mjs";
 
 const execFileAsync = promisify(execFile);
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -62,8 +62,15 @@ test("v0.2 provides a manual v0.1-export-JSONL paste-import path", () => {
   assert.match(htmlText, /import-btn/);
 });
 
-let page; let cardCount; let progressAfterAll; let exportMessage; let exportOutputLength; let finalRecords; let importedCount;
+let page; let cardCount; let progressAfterAll; let exportMessage; let exportOutputLength; let finalRecords; let importedCount; let downloadedFile;
 
+// Turn N4.1a: a real, hung headless-Chrome process for this exact test file
+// was found stuck for 3+ hours (and a second, older one for 11+ hours). The
+// per-hook timeout below is an outer safety net on top of the real fix
+// (bounded CDP command timeouts + a dedicated downloadDir in
+// tests/lib/headless-chrome-cdp.mjs) -- if anything unforeseen still
+// blocks here, this hook now fails loudly within a bounded time instead of
+// hanging indefinitely under --test-timeout=0.
 test.before(async () => {
   page = await launchHeadlessChromePage({ url: `file://${V02_HTML_PATH}` });
   cardCount = await page.evaluate("document.querySelectorAll('.card').length");
@@ -77,18 +84,21 @@ test.before(async () => {
   await page.evaluate("document.getElementById('export-final-btn').click()");
   exportMessage = await page.evaluate("document.getElementById('export-message').textContent");
   exportOutputLength = await page.evaluate("document.getElementById('export-output').value.length");
+  // Prove the FINAL export is a real, COMPLETE file in this page's own
+  // dedicated downloadDir -- not just a UI success message -- and that it
+  // never touched the OS default Downloads folder.
+  downloadedFile = await waitForDownloadCompletion({ downloadDir: page.downloadDir, timeoutMs: 10_000 });
   const finalJson = await page.evaluate("JSON.stringify(window.__seedFinalIntegrationReviewV02.buildExportLines('final'))");
   finalRecords = JSON.parse(finalJson).map((l) => JSON.parse(l));
 
   // import mechanism: reset then import the just-exported text
   await page.evaluate("document.getElementById('reset-btn').click()");
-  const exportText = await page.evaluate("document.getElementById('export-output').value || ''");
   // reset clears the textarea display too in some flows -- re-derive from finalRecords instead
   const linesJson = JSON.stringify(finalRecords.map((r) => JSON.stringify(r)).join("\n"));
   importedCount = await page.evaluate(`window.__seedFinalIntegrationReviewV02.importFromExportText(${linesJson})`);
-});
+}, { timeout: 30_000 });
 
-test.after(async () => { if (page) await page.close(); });
+test.after(async () => { if (page) await page.close(); }, { timeout: 10_000 });
 
 test("headless: 6 cards render", () => { assert.equal(cardCount, 6); });
 test("headless: judging all 6 reaches 6/6", () => { assert.equal(progressAfterAll, "6/6"); });
@@ -96,6 +106,10 @@ test("headless: FINAL export shows a real download success message with the corr
   assert.match(exportMessage, /seed-v020-final-integration-owner-decision\.v0\.1\.jsonl 다운로드를 시작했습니다/);
 });
 test("headless: FINAL export output is non-empty JSONL", () => { assert.ok(exportOutputLength > 0); });
+test("headless: FINAL export actually completed as a real file in the page's dedicated downloadDir, with the correct name and non-zero size", () => {
+  assert.equal(downloadedFile.filename, "seed-v020-final-integration-owner-decision.v0.1.jsonl");
+  assert.ok(downloadedFile.bytes > 0);
+});
 test("headless: FINAL export never auto-approves -- Q18 requires information_limit_accepted:true", () => {
   const q18 = finalRecords.find((r) => r.question_id === "question_seed_v07_18");
   assert.equal(q18.owner_disposition, "APPROVE_RESPONSE");

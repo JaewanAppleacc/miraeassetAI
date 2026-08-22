@@ -9,7 +9,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import test from "node:test";
-import { launchHeadlessChromePage } from "./lib/headless-chrome-cdp.mjs";
+import { launchHeadlessChromePage, waitForDownloadCompletion } from "./lib/headless-chrome-cdp.mjs";
 
 const execFileAsync = promisify(execFile);
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -65,7 +65,7 @@ test.before(async () => {
   q18InfoLimitInPayload = await page.evaluate("window.__seedFinalRemediationReview.getState()['question_seed_v07_18'].information_limit_accepted");
 });
 
-test.after(async () => { if (page) await page.close(); });
+test.after(async () => { if (page) await page.close(); }, { timeout: 10_000 });
 
 test("headless: 6 cards render, all PENDING initially", () => {
   assert.equal(cardCount, 6);
@@ -86,9 +86,17 @@ test("headless: judging all 6 and exporting FINAL succeeds with real download me
   await page.evaluate("document.getElementById('export-final-btn').click()");
   const msg = await page.evaluate("document.getElementById('export-message').textContent");
   assert.match(msg, /다운로드를 시작했습니다/);
+  // Turn N4.1a: this is the exact button click a real, 3-11+ hour hung
+  // process was found stuck on. Prove the download actually completed as a
+  // real file in this page's own dedicated downloadDir -- not just that the
+  // UI printed a success message -- and never touched the OS Downloads
+  // folder.
+  const downloadedFile = await waitForDownloadCompletion({ downloadDir: page.downloadDir, timeoutMs: 10_000 });
+  assert.equal(downloadedFile.filename, "seed-v020-final-remediation-owner-decision.v0.1.jsonl");
+  assert.ok(downloadedFile.bytes > 0);
   const finalJson = await page.evaluate("JSON.stringify(window.__seedFinalRemediationReview.buildExportLines('final'))");
   const finalRecords = JSON.parse(finalJson).map((l) => JSON.parse(l));
   assert.equal(finalRecords.length, 6);
   const q18 = finalRecords.find((r) => r.question_id === "question_seed_v07_18");
   assert.equal(q18.information_limit_accepted, true);
-});
+}, { timeout: 30_000 });
