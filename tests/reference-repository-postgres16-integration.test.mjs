@@ -20,6 +20,7 @@
 // If DATABASE_URL is not set, this suite FAILS CLOSED with
 // POSTGRESQL_16_INTEGRATION_NOT_RUN (never a silent skip).
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import test from "node:test";
@@ -32,7 +33,11 @@ import {
   createPostgresEvidenceStoreAdapter,
   createPostgresStructuredStoreAdapter,
 } from "../domain/postgres/reference-runtime-adapters.mjs";
+import { compareRecordSets, compareSingleRecord, assertParity } from "../domain/postgres/shadow-parity-comparator.mjs";
+import { createCoverageAuthorizedFactView } from "../domain/postgres/coverage-authorized-fact-view.mjs";
 import { createSeedStructuredQueryAdapter } from "../domain/adapters/seed-structured-query-adapter.mjs";
+import { createSeedFactArtifactStore } from "../domain/adapters/seed-fact-artifact-store.mjs";
+import { createSeedEvidenceArtifactStore } from "../domain/adapters/seed-evidence-artifact-store.mjs";
 import { createFactStore } from "../domain/runtime/fact-store.mjs";
 import { createEvidenceStore } from "../domain/runtime/citation-validator.mjs";
 import { createStructuredStore } from "../domain/runtime/structured-store.mjs";
@@ -100,7 +105,19 @@ function assertEquivalentRecordSets(dbRecords, portableRecords, label) {
   }
 }
 
-let client, repository, portableAdapter;
+// Turn N3: resolves the SAME structured-manifest role pins the portable
+// query adapter already loads, so productionFactStore/productionEvidenceStore
+// below are the REAL production-shaped bundle read path (createSeedFactArtifactStore/
+// createSeedEvidenceArtifactStore, exactly as domain/adapters/seed-runtime-service-adapters.mjs
+// wires them) -- not a stand-in built from the broader structured-query
+// adapter's query() results. This is the accurate "existing bundle read
+// path" comparison target for getFact/getEvidence single-ID parity.
+async function loadStructuredManifestRoles() {
+  const manifest = JSON.parse(await readFile(STRUCTURED_MANIFEST_PATH, "utf8"));
+  return new Map((manifest.artifacts ?? []).map((artifact) => [artifact.role, artifact]));
+}
+
+let client, repository, portableAdapter, productionFactStore, productionEvidenceStore;
 test.before(async () => {
   client = new Client({ connectionString: requireDatabaseUrl() });
   await client.connect();
@@ -123,6 +140,20 @@ test.before(async () => {
     expectedFactCoverageSnapshotId: FACT_COVERAGE_SNAPSHOT_ID,
   });
   portableAdapter = await createSeedStructuredQueryAdapter({ manifestPath: STRUCTURED_MANIFEST_PATH, root: ROOT });
+
+  const roles = await loadStructuredManifestRoles();
+  const resolveRolePath = (role) => path.resolve(ROOT, roles.get(role).path);
+  productionFactStore = await createSeedFactArtifactStore({
+    factArtifactPath: resolveRolePath("VERIFIED_FACT"),
+    factArtifactSha256: roles.get("VERIFIED_FACT").sha256,
+    factRecordCount: roles.get("VERIFIED_FACT").record_count,
+    factCoverageSnapshotPath: resolveRolePath("FACT_COVERAGE_SNAPSHOT"),
+    factCoverageSnapshotSha256: roles.get("FACT_COVERAGE_SNAPSHOT").sha256,
+  });
+  productionEvidenceStore = await createSeedEvidenceArtifactStore({
+    evidencePath: resolveRolePath("VERIFIED_EVIDENCE"),
+    manifestPath: resolveRolePath("VERIFIED_EVIDENCE_MANIFEST"),
+  });
 });
 test.after(async () => {
   if (client) {
@@ -343,5 +374,253 @@ test("Postgres 16: repository works end-to-end through a real least-privilege re
     );
   } finally {
     await readerClient.end();
+  }
+});
+
+// -- Turn N3: shadow/read-parity hardening on top of Turn N2's equivalence
+// suite above. Uses domain/postgres/shadow-parity-comparator.mjs (the
+// bundle result is always the baseline, the DB result is always the
+// shadow) so every failure here reports role/query/id/field path instead
+// of an opaque assert.deepEqual diff. --------------------------------------
+
+test("Postgres 16 shadow parity: explicit ID-set completeness (0 missing, 0 extra, 0 duplicate) for all four roles", async () => {
+  const queryByTarget = {
+    FACT: (filters) => repository.queryFacts(filters), EVIDENCE: (filters) => repository.queryEvidence(filters),
+    EVENT: (filters) => repository.queryEvents(filters), RELATION: (filters) => repository.queryRelations(filters),
+  };
+  for (const target of ["FACT", "EVIDENCE", "EVENT", "RELATION"]) {
+    const role = target;
+    const dbRecords = await queryByTarget[target](baseFilters({}));
+    const portableResult = await portableAdapter.query(baseQuery({ targets: [target] }));
+    const result = compareRecordSets({ role, query: "full-set", baseline: portableResult.records, shadow: dbRecords });
+    assert.equal(result.idSetResult.missing.length, 0, `${role}: DB is missing IDs the bundle has`);
+    assert.equal(result.idSetResult.extra.length, 0, `${role}: DB has extra IDs the bundle does not`);
+    assert.equal(result.idSetResult.baselineDuplicateCount, 0, `${role}: bundle result contains a duplicate ID`);
+    assert.equal(result.idSetResult.shadowDuplicateCount, 0, `${role}: DB result contains a duplicate ID`);
+    assertParity(result);
+  }
+});
+
+test("Postgres 16 shadow parity: native (non-re-sorted) return order matches exactly for a combined multi-target query -- order IS part of the contract here (both implementations mirror the same known_at/type/id sort)", async () => {
+  const structuredStoreAdapter = createPostgresStructuredStoreAdapter(repository);
+  const dbResult = await structuredStoreAdapter.query(baseQuery({ targets: ["FACT", "EVENT", "RELATION", "EVIDENCE"], limit: 50 }));
+  const portableResult = await portableAdapter.query(baseQuery({ targets: ["FACT", "EVENT", "RELATION", "EVIDENCE"], limit: 50 }));
+  assert.equal(dbResult.records.length, 50);
+  assertParity(compareRecordSets({
+    role: "MIXED", query: "combined-order", baseline: portableResult.records, shadow: dbResult.records, orderMatters: true,
+  }));
+});
+
+test("Postgres 16 shadow parity: event_type filter (dynamically drawn from real data, never hardcoded) matches the portable adapter", async () => {
+  const anyEvent = (await repository.queryEvents(baseFilters({ limit: 1 })))[0];
+  assert.ok(anyEvent, "sanity: at least one real Event must exist");
+  const eventType = anyEvent.payload.event_type;
+  const dbRecords = await repository.queryEvents(baseFilters({ event_types: [eventType] }));
+  const portableResult = await portableAdapter.query(baseQuery({
+    targets: ["EVENT"], predicates: { ...baseQuery({}).predicates, event_types: [eventType] },
+  }));
+  assert.ok(dbRecords.length > 0);
+  assertParity(compareRecordSets({ role: "EVENT", query: `event_types=[${eventType}]`, baseline: portableResult.records, shadow: dbRecords }));
+});
+
+test("Postgres 16 shadow parity: relation_type filter (dynamically drawn from real data) matches the portable adapter", async () => {
+  const anyRelation = (await repository.queryRelations(baseFilters({ limit: 1 })))[0];
+  assert.ok(anyRelation, "sanity: at least one real Relation must exist");
+  const relationType = anyRelation.payload.relation_type;
+  const dbRecords = await repository.queryRelations(baseFilters({ relation_types: [relationType] }));
+  const portableResult = await portableAdapter.query(baseQuery({
+    targets: ["RELATION"], predicates: { ...baseQuery({}).predicates, relation_types: [relationType] },
+  }));
+  assert.ok(dbRecords.length > 0);
+  assertParity(compareRecordSets({ role: "RELATION", query: `relation_types=[${relationType}]`, baseline: portableResult.records, shadow: dbRecords }));
+});
+
+test("Postgres 16 shadow parity: compound filter (corp_code + document_ids + period_filter together, drawn from one real Fact) matches the portable adapter", async () => {
+  // Turn N3 note: queryFacts()/query() both return the TRIMMED descriptor
+  // shape (record_type/record_id/verification_status/known_at/
+  // source_document_ids/evidence_ids/payload only -- see trimmedRecord()
+  // in reference-repository.mjs and the equivalent inline .map() in
+  // seed-structured-query-adapter.mjs). corp_code/period_start/period_end/
+  // period_type are filter-internal fields, NOT part of the returned
+  // shape -- they must be re-derived from the raw payload, exactly the way
+  // descriptor() computes them, not read off the trimmed result.
+  const anyFact = (await repository.queryFacts(baseFilters({ limit: 1 })))[0];
+  const payload = anyFact.payload;
+  const periodStart = payload.period_start ?? payload.as_of_date;
+  const periodEnd = payload.period_end ?? payload.as_of_date;
+  const periodFilter = { start: periodStart, end: periodEnd, period_types: payload.period_type ? [payload.period_type] : [] };
+  const compoundFilters = baseFilters({
+    corp_codes: [payload.corp_code], document_ids: [payload.source_document_id], period_filter: periodFilter,
+  });
+  const dbRecords = await repository.queryFacts(compoundFilters);
+  const portableResult = await portableAdapter.query(baseQuery({
+    targets: ["FACT"], corp_codes: [payload.corp_code],
+    predicates: { ...baseQuery({}).predicates, document_ids: [payload.source_document_id] },
+    period_filter: periodFilter,
+  }));
+  assert.ok(dbRecords.length > 0, "sanity: the compound filter drawn from a real Fact must match at least itself");
+  assertParity(compareRecordSets({ role: "FACT", query: "compound", baseline: portableResult.records, shadow: dbRecords }));
+});
+
+test("Postgres 16 shadow parity: limit edge cases (limit=1 and limit=exact-total-count) both match the portable adapter's own sort+slice", async () => {
+  for (const limit of [1, 87]) {
+    const dbRecords = await repository.queryFacts(baseFilters({ limit }));
+    const portableResult = await portableAdapter.query(baseQuery({ targets: ["FACT"], limit }));
+    assert.equal(dbRecords.length, limit);
+    assertParity(compareRecordSets({ role: "FACT", query: `limit=${limit}`, baseline: portableResult.records, shadow: dbRecords, orderMatters: true }));
+  }
+});
+
+test("Postgres 16 shadow parity: an empty result (a corp_code that matches nothing) is empty on both sides, not silently substituted with unrelated data", async () => {
+  const filters = baseFilters({ corp_codes: ["__n3_shadow_parity_nonexistent_corp_code__"] });
+  const dbRecords = await repository.queryFacts(filters);
+  const portableResult = await portableAdapter.query(baseQuery({ targets: ["FACT"], corp_codes: ["__n3_shadow_parity_nonexistent_corp_code__"] }));
+  assert.equal(dbRecords.length, 0);
+  assert.equal(portableResult.records.length, 0);
+  assert.equal(portableResult.status, "NOT_FOUND");
+});
+
+test("Postgres 16 shadow parity: repeated identical queries are deterministic (same content AND same order) on both sides", async () => {
+  const filters = baseFilters({ limit: 20 });
+  const first = await repository.queryFacts(filters);
+  const second = await repository.queryFacts(filters);
+  assertParity(compareRecordSets({ role: "FACT", query: "determinism-db", baseline: first, shadow: second, orderMatters: true }));
+
+  const portableFirst = (await portableAdapter.query(baseQuery({ targets: ["FACT"], limit: 20 }))).records;
+  const portableSecond = (await portableAdapter.query(baseQuery({ targets: ["FACT"], limit: 20 }))).records;
+  assertParity(compareRecordSets({ role: "FACT", query: "determinism-portable", baseline: portableFirst, shadow: portableSecond, orderMatters: true }));
+});
+
+test("Postgres 16 shadow parity: returned records are frozen, independent copies on both sides -- mutating one can never affect a later call", async () => {
+  const dbFact = (await repository.queryFacts(baseFilters({ limit: 1 })))[0];
+  assert.throws(() => { dbFact.payload.corp_code = "MUTATED"; }, TypeError);
+  const dbFactAgain = (await repository.queryFacts(baseFilters({ limit: 1 })))[0];
+  assert.notEqual(dbFactAgain.payload.corp_code, "MUTATED");
+
+  const portableFact = (await portableAdapter.query(baseQuery({ targets: ["FACT"], limit: 1 }))).records[0];
+  assert.throws(() => { portableFact.payload.corp_code = "MUTATED"; }, TypeError);
+  const portableFactAgain = (await portableAdapter.query(baseQuery({ targets: ["FACT"], limit: 1 }))).records[0];
+  assert.notEqual(portableFactAgain.payload.corp_code, "MUTATED");
+});
+
+// -- Turn N3: NOT_FOUND / value parity against the REAL production bundle
+// read path (createSeedFactArtifactStore/createSeedEvidenceArtifactStore,
+// exactly as domain/adapters/seed-runtime-service-adapters.mjs wires them
+// for GET /answer) -- not just the broader structured-query adapter used
+// above. -------------------------------------------------------------------
+
+test("Postgres 16 shadow parity: getFact/getEvidence match the REAL production artifact stores for every real ID (not just the structured-query adapter)", async () => {
+  const portableFacts = (await portableAdapter.query(baseQuery({ targets: ["FACT"] }))).records;
+  for (const record of portableFacts) {
+    const dbPayload = await repository.getFact(record.record_id);
+    const productionEnvelope = await productionFactStore.getFact(record.record_id);
+    assertParity(compareSingleRecord({
+      role: "FACT", query: `getFact(${record.record_id})`, baseline: productionEnvelope?.record ?? null, shadow: dbPayload,
+    }));
+  }
+
+  const portableEvidence = (await portableAdapter.query(baseQuery({ targets: ["EVIDENCE"] }))).records;
+  for (const record of portableEvidence) {
+    const dbPayload = await repository.getEvidence(record.record_id);
+    const productionEnvelope = await productionEvidenceStore.getEvidence(record.record_id);
+    assertParity(compareSingleRecord({
+      role: "EVIDENCE", query: `getEvidence(${record.record_id})`, baseline: productionEnvelope?.record ?? null, shadow: dbPayload,
+    }));
+  }
+});
+
+test("Postgres 16 shadow parity: NOT_FOUND is identical (null) on both sides for a non-existent ID, across getFact/getEvidence/getEvent/getRelation", async () => {
+  const missingId = "__n3_shadow_parity_nonexistent_id__";
+  assertParity(compareSingleRecord({
+    role: "FACT", query: `getFact(${missingId})`,
+    baseline: (await productionFactStore.getFact(missingId))?.record ?? null, shadow: await repository.getFact(missingId),
+  }));
+  assertParity(compareSingleRecord({
+    role: "EVIDENCE", query: `getEvidence(${missingId})`,
+    baseline: (await productionEvidenceStore.getEvidence(missingId))?.record ?? null, shadow: await repository.getEvidence(missingId),
+  }));
+  // Turn N3 finding: the portable bundle path has NO dedicated getEvent/
+  // getRelation single-ID store (see domain/adapters/seed-runtime-service-adapters.mjs --
+  // Event/Relation records are only consumed as plain arrays, never through
+  // a Runtime Store `{ getEvent }`/`{ getRelation }` contract). The only
+  // bundle-side mechanism able to answer "does this Event/Relation ID
+  // exist" at all is the structured query() path, so that is what NOT_FOUND
+  // parity is checked against for these two roles -- documented in
+  // domain/postgres/README.md's Turn N3 comparison table, not silently
+  // glossed over as if a symmetric bundle-side store existed.
+  const eventQueryResult = await portableAdapter.query(baseQuery({
+    targets: ["EVENT"], predicates: { ...baseQuery({}).predicates, event_ids: [missingId] },
+  }));
+  assert.equal(eventQueryResult.records.length, 0);
+  assert.equal(await repository.getEvent(missingId), null);
+
+  const relationQueryResult = await portableAdapter.query(baseQuery({
+    targets: ["RELATION"], predicates: { ...baseQuery({}).predicates, relation_ids: [missingId] },
+  }));
+  assert.equal(relationQueryResult.records.length, 0);
+  assert.equal(await repository.getRelation(missingId), null);
+});
+
+// -- Turn N3: release/snapshot pin fail-closed against a REAL second
+// release row (not a fake client) -- a LOADING release genuinely present
+// in the same database as the READY one under test must never be servable,
+// and must never cause any kind of fallback onto the READY release. -------
+
+test("Postgres 16: a genuinely LOADING (non-READY) release row in the same database is rejected, not served and not confused with the READY release under test", async () => {
+  const probeReleaseId = "seed-release-v0.20-n3-loading-probe";
+  const probeCorpusSnapshotId = "n3_probe_corpus_snapshot";
+  const probeApprovedRevision = "n3_probe_revision";
+  const probeCoverageSnapshotId = "n3_probe_coverage_snapshot";
+  const dummySha256 = "0".repeat(64);
+  await client.query(
+    `INSERT INTO disclosure_reference.releases
+       (release_id, status, approved_revision, corpus_snapshot_id, fact_coverage_snapshot_id,
+        bundle_manifest_sha256, final_manifest_sha256, final_decision_sha256, bundle_entry_count,
+        record_counts, bundle_manifest, final_manifest, final_decision, imported_at)
+     VALUES ($1, 'LOADING', $2, $3, $4, $5, $5, $5, 1, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, NULL)`,
+    [probeReleaseId, probeApprovedRevision, probeCorpusSnapshotId, probeCoverageSnapshotId, dummySha256],
+  );
+  try {
+    await assert.rejects(
+      createPostgresReferenceRepository({
+        client, expectedReleaseId: probeReleaseId, expectedCorpusSnapshotId: probeCorpusSnapshotId,
+        expectedApprovedRevision: probeApprovedRevision, expectedFactCoverageSnapshotId: probeCoverageSnapshotId,
+      }),
+      /is not READY/,
+    );
+    // The READY release under test must still resolve to itself alone --
+    // the LOADING probe row existing alongside it must never leak into or
+    // replace the pinned RELEASE_ID's own results.
+    const facts = await repository.queryFacts(baseFilters({}));
+    assert.equal(facts.length, 87);
+  } finally {
+    await client.query("DELETE FROM disclosure_reference.releases WHERE release_id = $1", [probeReleaseId]);
+  }
+});
+
+// -- Turn N3.1: three-way v0.20-r3 parity -- raw Repository (audit,
+// unfiltered), Coverage-authorized Agent view (new this Turn), and the
+// REAL production bundle FactStore (createSeedFactArtifactStore) -- must
+// all agree on the same 87 IDs/payloads, because the real v0.20-r3 Coverage
+// Snapshot happens to authorize all 87 real Facts today. This is the
+// specific "current results must not change" guarantee this Turn requires. -
+
+test("Postgres 16 Turn N3.1: raw Repository, Coverage-authorized Agent view, and the REAL production FactStore all agree on the same 87 Facts for v0.20-r3", async () => {
+  const authorizedView = await createCoverageAuthorizedFactView({
+    client, repository, expectedFactCoverageSnapshotId: FACT_COVERAGE_SNAPSHOT_ID,
+  });
+  assert.equal(authorizedView.authorizedFactCount(), 87, "v0.20-r3's real Coverage Snapshot authorizes all 87 real Facts");
+
+  const rawFacts = await repository.queryFacts(baseFilters({}));
+  const authorizedFacts = await authorizedView.queryFacts(baseFilters({}));
+  assert.equal(rawFacts.length, 87);
+  assertParity(compareRecordSets({ role: "FACT", query: "N3.1-raw-vs-authorized", baseline: rawFacts, shadow: authorizedFacts }));
+
+  for (const record of rawFacts) {
+    const rawPayload = await repository.getFact(record.record_id);
+    const authorizedPayload = await authorizedView.getFact(record.record_id);
+    const productionEnvelope = await productionFactStore.getFact(record.record_id);
+    assertParity(compareSingleRecord({ role: "FACT", query: `N3.1 raw-vs-authorized getFact(${record.record_id})`, baseline: rawPayload, shadow: authorizedPayload }));
+    assertParity(compareSingleRecord({ role: "FACT", query: `N3.1 authorized-vs-production getFact(${record.record_id})`, baseline: productionEnvelope?.record ?? null, shadow: authorizedPayload }));
   }
 });

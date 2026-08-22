@@ -134,3 +134,70 @@ export function createPostgresStructuredStoreAdapter(repository) {
     },
   });
 }
+
+// Turn N3.1: Coverage-authorized counterparts of createPostgresFactStoreAdapter/
+// createPostgresStructuredStoreAdapter above, for callers who want the
+// PostgreSQL path to serve the SAME Coverage-authorized subset of Facts the
+// portable bundle's production seed-fact-artifact-store.mjs already serves
+// (see domain/postgres/coverage-authorized-fact-view.mjs for the
+// authorization boundary itself, and domain/postgres/README.md's "raw
+// Repository vs Agent adapter" section for which one an Agent should use).
+// EVENT/RELATION/EVIDENCE behavior is byte-identical to the unauthorized
+// adapters above -- only FACT is routed through the authorized view.
+//
+// PRODUCTION WIRING: constructing one of these here does NOT wire it into
+// configured-seed-runtime.mjs or GET /answer -- same "independently tested,
+// not yet connected" status as every other export in this file.
+export function createCoverageAuthorizedPostgresFactStoreAdapter(authorizedFactView) {
+  if (!authorizedFactView) throw new TypeError("authorizedFactView is required");
+  return Object.freeze({
+    async getFact(factId, { signal } = {}) {
+      const record = await authorizedFactView.getFact(factId, { signal });
+      if (!record) return null;
+      return Object.freeze({
+        corpus_snapshot_id: authorizedFactView.corpusSnapshotId,
+        fact_coverage_snapshot_id: authorizedFactView.factCoverageSnapshotId,
+        record,
+      });
+    },
+  });
+}
+
+export function createCoverageAuthorizedPostgresStructuredStoreAdapter({ authorizedFactView, repository }) {
+  if (!authorizedFactView) throw new TypeError("authorizedFactView is required");
+  if (!repository) throw new TypeError("repository is required");
+  const queryByTarget = Object.freeze({
+    FACT: (filters, opts) => authorizedFactView.queryFacts(filters, opts),
+    EVENT: (filters, opts) => repository.queryEvents(filters, opts),
+    RELATION: (filters, opts) => repository.queryRelations(filters, opts),
+    EVIDENCE: (filters, opts) => repository.queryEvidence(filters, opts),
+  });
+  return Object.freeze({
+    async query(structuredQuery, { signal } = {}) {
+      const filters = translateQueryToFilters(structuredQuery);
+      const targets = Array.isArray(structuredQuery.targets) ? structuredQuery.targets : [];
+      // Same sequential-not-parallel rationale as createPostgresStructuredStoreAdapter
+      // above -- authorizedFactView.queryFacts itself issues a second
+      // repository.queryFacts call internally, so overlapping targets here
+      // would risk the same single-connection concurrency hazard twice over.
+      const groups = [];
+      for (const target of targets) {
+        groups.push(queryByTarget[target] ? await queryByTarget[target](filters, { signal }) : []);
+      }
+      // limit is applied HERE, after every target (including the already
+      // authorization-filtered FACT group) has been combined and sorted --
+      // never before, and never per-target -- so an unauthorized Fact
+      // dropped by authorizedFactView.queryFacts can never be the reason a
+      // legitimate EVENT/RELATION/EVIDENCE record gets pushed out of a
+      // combined multi-target result.
+      const combined = sortRecords(groups.flat()).slice(0, structuredQuery.limit);
+      return Object.freeze({
+        corpus_snapshot_id: repository.corpusSnapshotId,
+        fact_coverage_snapshot_id: repository.factCoverageSnapshotId,
+        status: combined.length > 0 ? "OK" : "NOT_FOUND",
+        error_codes: [],
+        records: combined,
+      });
+    },
+  });
+}
