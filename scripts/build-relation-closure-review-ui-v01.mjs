@@ -19,6 +19,18 @@ const ANCHOR_MANIFEST_PATH = path.join(PACKET_DIR, "anchor-selection.v0.1.manife
 const OUT_DIR = path.join(PACKET_DIR, "ui/v0.1");
 const OUT_HTML_PATH = path.join(OUT_DIR, "relation-closure-review.html");
 const OUT_REPORT_PATH = path.join(OUT_DIR, "review-ui-build-report.json");
+// Turn N4.2: two additional, reviewer-scoped entry points -- each is a
+// self-contained HTML file with reviewer_role baked into the embedded
+// payload at BUILD time (never chosen at runtime), so Reviewer A and
+// Reviewer B get physically separate files/localStorage partitions/export
+// filenames and can never see or overwrite each other's judgments, even if
+// both happen to use the same browser profile. The original shared
+// OUT_HTML_PATH above is unchanged and still built, for quick audit/preview
+// use without any judging identity attached.
+const REVIEWER_VARIANTS = [
+  { role: "REVIEWER_A", htmlPath: path.join(OUT_DIR, "relation-closure-review.reviewer-a.html") },
+  { role: "REVIEWER_B", htmlPath: path.join(OUT_DIR, "relation-closure-review.reviewer-b.html") },
+];
 
 function sha256(bytes) { return createHash("sha256").update(bytes).digest("hex"); }
 
@@ -74,6 +86,21 @@ async function main() {
   await mkdir(OUT_DIR, { recursive: true });
   await writeFile(OUT_HTML_PATH, html, "utf8");
 
+  const reviewerOutputs = [];
+  for (const variant of REVIEWER_VARIANTS) {
+    const variantPayload = { ...embeddedPayload, reviewer_role: variant.role };
+    const variantHtml = buildHtml(variantPayload);
+    await writeFile(variant.htmlPath, variantHtml, "utf8");
+    const variantBytes = Buffer.from(variantHtml, "utf8");
+    reviewerOutputs.push({
+      reviewer_role: variant.role,
+      output_html_path: path.relative(REPO, variant.htmlPath).split(path.sep).join("/"),
+      output_html_sha256: sha256(variantBytes),
+      final_export_filename: variant.role === "REVIEWER_A" ? "relation-closure-reviewer-a-decision.v0.1.jsonl" : "relation-closure-reviewer-b-decision.v0.1.jsonl",
+      draft_export_filename: variant.role === "REVIEWER_A" ? "relation-closure-reviewer-a-decision-draft.jsonl" : "relation-closure-reviewer-b-decision-draft.jsonl",
+    });
+  }
+
   const after = {
     packet: await readAndHash(PACKET_PATH),
     anchorManifest: await readAndHash(ANCHOR_MANIFEST_PATH),
@@ -83,7 +110,7 @@ async function main() {
 
   const htmlBytes = Buffer.from(html, "utf8");
   const report = {
-    schema_version: "0.1.0",
+    schema_version: "0.2.0",
     generated_at: embeddedPayload.generated_at,
     output_html_path: path.relative(REPO, OUT_HTML_PATH).split(path.sep).join("/"),
     output_html_sha256: sha256(htmlBytes),
@@ -100,10 +127,19 @@ async function main() {
     inputs_unchanged: inputsUnchanged,
     final_export_filename: "relation-closure-owner-decision.v0.1.jsonl",
     scope_note: "This UI reviews AMENDS/TERMINATES relation candidates. It is NOT a Gold answer review UI -- it writes no expected_answer, Evidence locator, or Fact/Event/Relation data.",
+    // Turn N4.2: independent double-review entry points. Each reviewer
+    // variant embeds a DIFFERENT reviewer_role at build time, giving each
+    // its own localStorage partition and export filenames -- see
+    // scripts/lib/relation-closure-review-ui-dom.mjs's STORAGE_KEY/
+    // ROLE_FINAL_EXPORT_FILENAME derivation.
+    reviewer_variants: reviewerOutputs,
   };
   await writeFile(OUT_REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`, "utf8");
 
-  console.log(JSON.stringify({ output_html_path: report.output_html_path, output_html_sha256: report.output_html_sha256, row_count: report.row_count }, null, 2));
+  console.log(JSON.stringify({
+    output_html_path: report.output_html_path, output_html_sha256: report.output_html_sha256, row_count: report.row_count,
+    reviewer_variants: reviewerOutputs,
+  }, null, 2));
 }
 
 function buildHtml(payload) {
@@ -114,7 +150,7 @@ function buildHtml(payload) {
     "<head>",
     '<meta charset="utf-8" />',
     '<meta name="viewport" content="width=device-width, initial-scale=1" />',
-    "<title>Relation Closure 검수 (AMENDS/TERMINATES 후보)</title>",
+    "<title>Relation Closure 검수 (AMENDS/TERMINATES 후보)" + (payload.reviewer_role ? " -- " + payload.reviewer_role : "") + "</title>",
     "<style>",
     CSS_TEXT,
     "</style>",

@@ -1,13 +1,26 @@
 // Turn N4.1: verifies the offline relation closure review UI
 // (scripts/build-relation-closure-review-ui-v01.mjs): embedded data shape,
 // pure-logic behavior (extracted and run in an isolated vm context -- NO
-// real browser, and deliberately never exercises the FINAL-export Blob
-// download path, which real headless-Chrome E2E tests elsewhere in this
-// repo already do via tests/lib/headless-chrome-cdp.mjs), and a static
-// scan of the generated HTML for any external resource dependency or
-// innerHTML usage. Never modifies the packet; only reads it (running the
-// real build in test.before proves the build itself is reproducible and
-// side-effect-free on its input).
+// real browser for the ORIGINAL shared file, and deliberately never
+// exercises the FINAL-export Blob download path, which real headless-
+// Chrome E2E tests elsewhere in this repo already do via
+// tests/lib/headless-chrome-cdp.mjs), and a static scan of the generated
+// HTML for any external resource dependency or innerHTML usage. Never
+// modifies the packet; only reads it (running the real build in
+// test.before proves the build itself is reproducible and side-effect-
+// free on its input).
+//
+// Turn N4.2.1: ONE real-browser test is added specifically for the
+// Reviewer A/B independent-double-review guarantee -- whether one
+// reviewer's saved judgment is genuinely invisible to (and never
+// overwritten by) the other WHEN BOTH SHARE THE SAME BROWSER PROFILE/
+// SESSION is not provable by static analysis or two separate
+// launchHeadlessChromePage() calls (those always get fresh, already-
+// isolated profiles, which would trivially pass even if the
+// reviewer_role-based storage-key partitioning were broken). It requires
+// actually navigating one real page between both files and checking
+// localStorage directly. This does not click FINAL export / trigger any
+// download, so it does not need the download-isolation infrastructure.
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
@@ -18,6 +31,7 @@ import { promisify } from "node:util";
 import vm from "node:vm";
 import test from "node:test";
 import { LOGIC_SCRIPT } from "../scripts/lib/relation-closure-review-ui-logic.mjs";
+import { launchHeadlessChromePage } from "./lib/headless-chrome-cdp.mjs";
 
 const execFileAsync = promisify(execFile);
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -26,10 +40,20 @@ const PACKET_PATH = path.join(PACKET_DIR, "relation-closure-review-packet.v0.1.j
 const ANCHOR_MANIFEST_PATH = path.join(PACKET_DIR, "anchor-selection.v0.1.manifest.json");
 const HTML_PATH = path.join(PACKET_DIR, "ui/v0.1/relation-closure-review.html");
 const BUILD_REPORT_PATH = path.join(PACKET_DIR, "ui/v0.1/review-ui-build-report.json");
+// Turn N4.2: independent double-review entry points -- see A/B section D.
+const REVIEWER_A_HTML_PATH = path.join(PACKET_DIR, "ui/v0.1/relation-closure-review.reviewer-a.html");
+const REVIEWER_B_HTML_PATH = path.join(PACKET_DIR, "ui/v0.1/relation-closure-review.reviewer-b.html");
 
 function sha256(bytes) { return createHash("sha256").update(bytes).digest("hex"); }
 
+function extractPayload(html) {
+  const match = html.match(/<script type="application\/json" id="review-data">([\s\S]*?)<\/script>/);
+  assert.ok(match, "embedded review-data script tag not found");
+  return JSON.parse(match[1]);
+}
+
 let htmlText; let embeddedPayload; let buildReport;
+let reviewerAHtml; let reviewerAPayload; let reviewerBHtml; let reviewerBPayload;
 let inputHashesBefore;
 
 test.before(async () => {
@@ -40,9 +64,11 @@ test.before(async () => {
   await execFileAsync(process.execPath, [path.join(ROOT, "scripts/build-relation-closure-review-ui-v01.mjs")], { cwd: ROOT });
   htmlText = await readFile(HTML_PATH, "utf8");
   buildReport = JSON.parse(await readFile(BUILD_REPORT_PATH, "utf8"));
-  const match = htmlText.match(/<script type="application\/json" id="review-data">([\s\S]*?)<\/script>/);
-  assert.ok(match, "embedded review-data script tag not found");
-  embeddedPayload = JSON.parse(match[1]);
+  embeddedPayload = extractPayload(htmlText);
+  reviewerAHtml = await readFile(REVIEWER_A_HTML_PATH, "utf8");
+  reviewerAPayload = extractPayload(reviewerAHtml);
+  reviewerBHtml = await readFile(REVIEWER_B_HTML_PATH, "utf8");
+  reviewerBPayload = extractPayload(reviewerBHtml);
 });
 
 test("build does not modify the input packet/anchor-manifest files (byte-identical before and after)", async () => {
@@ -111,7 +137,7 @@ test("build report explicitly scopes this UI to relation review, not Gold answer
 function loadLogicApi() {
   const context = vm.createContext({ console });
   vm.runInContext(
-    `${LOGIC_SCRIPT}\nglobalThis.__api = { FINAL_EXPORT_FILENAME, DRAFT_EXPORT_FILENAME, buildInitialReviewState, applyDecision, allJudged, judgedCount, buildFinalRecord, buildExportLines };`,
+    `${LOGIC_SCRIPT}\nglobalThis.__api = { FINAL_EXPORT_FILENAME, DRAFT_EXPORT_FILENAME, buildInitialReviewState, applyDecision, allJudged, judgedCount, buildFinalRecord, buildExportLines, resolveExportFilenames };`,
     context,
   );
   return context.__api;
@@ -166,7 +192,7 @@ test("logic: applyDecision preserves prior notes across a disposition change", (
   assert.equal(state.r1.notes, "review note");
 });
 
-test("logic: buildExportLines produces well-formed JSONL with all 10 required fields per row", () => {
+test("logic: buildExportLines produces well-formed JSONL with all 11 required fields per row (Turn N4.2: +reviewer_role, additive, null when sourceMeta omits it)", () => {
   const api = loadLogicApi();
   let state = api.buildInitialReviewState(["r1"]);
   state = api.applyDecision(state, "r1", "CONFIRM", "doc_x", "2026-01-01T00:00:00Z", "reviewer_a");
@@ -176,8 +202,19 @@ test("logic: buildExportLines produces well-formed JSONL with all 10 required fi
   const parsed = JSON.parse(lines[0]);
   assert.deepEqual(Object.keys(parsed).sort(), [
     "confirmed_target_document_id", "notes", "owner_disposition", "relation_candidate_id",
-    "relation_type", "reviewed_at", "reviewer", "source_document_id", "source_packet_path", "source_packet_sha256",
+    "relation_type", "reviewed_at", "reviewer", "reviewer_role", "source_document_id", "source_packet_path", "source_packet_sha256",
   ].sort());
+  assert.equal(parsed.reviewer_role, null, "sourceMeta without reviewer_role must yield null, never a fabricated value");
+});
+
+test("logic: buildExportLines carries sourceMeta.reviewer_role through into every exported record when present", () => {
+  const api = loadLogicApi();
+  let state = api.buildInitialReviewState(["r1"]);
+  state = api.applyDecision(state, "r1", "REJECT", null, "2026-01-01T00:00:00Z", "reviewer_b");
+  const rowsById = { r1: { source_document_id: "doc_src", relation_type: "TERMINATES" } };
+  const lines = api.buildExportLines(state, rowsById, { source_packet_path: "p", source_packet_sha256: "s", reviewer_role: "REVIEWER_B" }, ["r1"]).trim().split("\n");
+  const parsed = JSON.parse(lines[0]);
+  assert.equal(parsed.reviewer_role, "REVIEWER_B");
 });
 
 test("logic: FINAL_EXPORT_FILENAME and DRAFT_EXPORT_FILENAME are distinct, versioned constants", () => {
@@ -185,3 +222,156 @@ test("logic: FINAL_EXPORT_FILENAME and DRAFT_EXPORT_FILENAME are distinct, versi
   assert.equal(api.FINAL_EXPORT_FILENAME, "relation-closure-owner-decision.v0.1.jsonl");
   assert.notEqual(api.FINAL_EXPORT_FILENAME, api.DRAFT_EXPORT_FILENAME);
 });
+
+// -- Turn N4.2: independent double-review support. Investigation found the
+// original single shared HTML file partitions localStorage/export
+// filenames ONLY by packet SHA, not by reviewer -- so two reviewers using
+// the same browser profile would silently share (and overwrite) one
+// another's judgments. Fixed minimally: reviewer_role is baked into the
+// embedded payload at BUILD time (never chosen at runtime), producing two
+// physically separate HTML files whose storage key and export filenames
+// are provably different. No new relation lifecycle/status enum is
+// introduced -- CONFIRM/REJECT/NEEDS_MORE_REVIEW is unchanged; only a
+// provenance field (reviewer_role) and two extra build outputs are added.
+
+test("logic: resolveExportFilenames maps REVIEWER_A/REVIEWER_B to distinct, correctly-named filenames, and falls back to the original shared names otherwise", () => {
+  const api = loadLogicApi();
+  const a = api.resolveExportFilenames("REVIEWER_A");
+  const b = api.resolveExportFilenames("REVIEWER_B");
+  assert.equal(a.final, "relation-closure-reviewer-a-decision.v0.1.jsonl");
+  assert.equal(a.draft, "relation-closure-reviewer-a-decision-draft.jsonl");
+  assert.equal(b.final, "relation-closure-reviewer-b-decision.v0.1.jsonl");
+  assert.equal(b.draft, "relation-closure-reviewer-b-decision-draft.jsonl");
+  assert.notEqual(a.final, b.final);
+  assert.notEqual(a.draft, b.draft);
+  const none = api.resolveExportFilenames(null);
+  assert.equal(none.final, api.FINAL_EXPORT_FILENAME);
+  assert.equal(none.draft, api.DRAFT_EXPORT_FILENAME);
+  const unknown = api.resolveExportFilenames("SOMETHING_ELSE");
+  assert.equal(unknown.final, api.FINAL_EXPORT_FILENAME, "an unrecognized role must fall back to the original shared filename, never fabricate a third variant");
+});
+
+test("build: two additional reviewer-scoped HTML files are produced, each embedding a different reviewer_role and the SAME 326 PENDING rows", async () => {
+  assert.equal(reviewerAPayload.reviewer_role, "REVIEWER_A");
+  assert.equal(reviewerBPayload.reviewer_role, "REVIEWER_B");
+  assert.notEqual(reviewerAPayload.reviewer_role, reviewerBPayload.reviewer_role);
+  for (const payload of [reviewerAPayload, reviewerBPayload]) {
+    assert.equal(payload.rows.length, embeddedPayload.rows.length);
+    assert.ok(payload.rows.every((r) => r.owner_disposition === "PENDING"));
+    assert.equal(payload.source_packet_sha256, embeddedPayload.source_packet_sha256);
+  }
+});
+
+test("build: the original shared HTML file embeds no reviewer_role (backward compatible, unscoped preview build)", () => {
+  assert.equal(embeddedPayload.reviewer_role, undefined);
+});
+
+test("build: reviewer-a and reviewer-b HTML files are byte-different (different embedded role -> different content), and each references only its OWN export filenames as data, not the other's", () => {
+  assert.notEqual(reviewerAHtml, reviewerBHtml);
+  assert.match(reviewerAHtml, /"reviewer_role":"REVIEWER_A"/);
+  assert.match(reviewerBHtml, /"reviewer_role":"REVIEWER_B"/);
+});
+
+test("build report lists both reviewer variants with filenames matching resolveExportFilenames, and SHAs matching the real written files", async () => {
+  assert.equal(buildReport.reviewer_variants.length, 2);
+  const byRole = Object.fromEntries(buildReport.reviewer_variants.map((v) => [v.reviewer_role, v]));
+  assert.equal(byRole.REVIEWER_A.final_export_filename, "relation-closure-reviewer-a-decision.v0.1.jsonl");
+  assert.equal(byRole.REVIEWER_B.final_export_filename, "relation-closure-reviewer-b-decision.v0.1.jsonl");
+  const realABytes = await readFile(REVIEWER_A_HTML_PATH);
+  const realBBytes = await readFile(REVIEWER_B_HTML_PATH);
+  assert.equal(byRole.REVIEWER_A.output_html_sha256, sha256(realABytes));
+  assert.equal(byRole.REVIEWER_B.output_html_sha256, sha256(realBBytes));
+});
+
+test("static scan: reviewer-a/reviewer-b HTML files have no innerHTML and no external resource pattern, same discipline as the original file", () => {
+  for (const html of [reviewerAHtml, reviewerBHtml]) {
+    assert.doesNotMatch(html, /innerHTML/);
+    assert.doesNotMatch(html, /https?:\/\//i);
+    assert.doesNotMatch(html, /<link[^>]+href/i);
+  }
+});
+
+test("static scan: reviewer_role has no runtime override path -- no query-string/prompt/select input for it anywhere in the DOM script", async () => {
+  const domScriptSource = await readFile(path.join(ROOT, "scripts/lib/relation-closure-review-ui-dom.mjs"), "utf8");
+  assert.doesNotMatch(domScriptSource, /location\.search/);
+  assert.doesNotMatch(domScriptSource, /URLSearchParams/);
+  assert.doesNotMatch(domScriptSource, /prompt\(/);
+  assert.doesNotMatch(domScriptSource, /reviewer-role/i, "no id/class implies an editable reviewer-ROLE control exists (the free-text reviewer NAME input is a separate, unrelated field)");
+  for (const html of [reviewerAHtml, reviewerBHtml]) {
+    assert.doesNotMatch(html, /<select/i);
+  }
+});
+
+async function waitForDomReady(page, timeoutMs = 10_000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const state = await page.evaluate("document.readyState");
+    if (state === "complete") return;
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  throw new Error("page did not finish loading in time");
+}
+
+test("headless (real browser): Reviewer A's saved judgment is invisible to Reviewer B in the SAME browser session, never leaks or gets overwritten, and survives navigating back", async () => {
+  let page = null;
+  try {
+    page = await launchHeadlessChromePage({ url: `file://${REVIEWER_A_HTML_PATH}` });
+
+    // Confirm the live page really did resolve REVIEWER_A (not just the
+    // file we asked to build -- the embedded payload is what the running
+    // script actually reads).
+    const aRoleInPage = await page.evaluate("JSON.parse(document.getElementById('review-data').textContent).reviewer_role");
+    assert.equal(aRoleInPage, "REVIEWER_A");
+
+    // Reviewer A rejects the currently-shown (first) row.
+    await page.evaluate("document.querySelector('.row-decision-btn.REJECT').click()");
+    const aBadgeAfterReject = await page.evaluate("document.querySelector('.disposition-badge').textContent");
+    assert.equal(aBadgeAfterReject, "REJECT");
+
+    const aStorageProbe = await page.evaluate(`
+      (function () {
+        var data = JSON.parse(document.getElementById('review-data').textContent);
+        var key = 'relation-closure-review-ui-v0.1-state-' + data.source_packet_sha256 + '-' + data.reviewer_role;
+        var raw = localStorage.getItem(key);
+        return { key: key, hasState: !!raw, firstRowDisposition: raw ? JSON.parse(raw)[data.rows[0].relation_candidate_id].owner_disposition : null };
+      })()
+    `);
+    assert.match(aStorageProbe.key, /-REVIEWER_A$/);
+    assert.ok(aStorageProbe.hasState, "Reviewer A's decision must actually be persisted to localStorage under its own key");
+    assert.equal(aStorageProbe.firstRowDisposition, "REJECT");
+
+    // Same page, same profile/session -- navigate to Reviewer B's file.
+    await page.send("Page.navigate", { url: `file://${REVIEWER_B_HTML_PATH}` });
+    await waitForDomReady(page);
+
+    const bRoleInPage = await page.evaluate("JSON.parse(document.getElementById('review-data').textContent).reviewer_role");
+    assert.equal(bRoleInPage, "REVIEWER_B");
+
+    // Reviewer B must see a completely fresh, all-PENDING page -- no trace
+    // of Reviewer A's REJECT, even though this is the exact same browser
+    // session/profile that just made that decision seconds ago.
+    const bFirstBadge = await page.evaluate("document.querySelector('.disposition-badge').textContent");
+    assert.equal(bFirstBadge, "PENDING", "Reviewer B must never see Reviewer A's judgment leak in via a shared storage key");
+
+    const bStorageProbe = await page.evaluate(`
+      (function () {
+        var data = JSON.parse(document.getElementById('review-data').textContent);
+        var keyA = 'relation-closure-review-ui-v0.1-state-' + data.source_packet_sha256 + '-REVIEWER_A';
+        var keyB = 'relation-closure-review-ui-v0.1-state-' + data.source_packet_sha256 + '-REVIEWER_B';
+        var rawA = localStorage.getItem(keyA);
+        return { aStillIntact: rawA ? JSON.parse(rawA)[data.rows[0].relation_candidate_id].owner_disposition : null, bKeyDiffersFromA: keyB !== keyA };
+      })()
+    `);
+    assert.equal(bStorageProbe.aStillIntact, "REJECT", "Reviewer B's page must not have overwritten or cleared Reviewer A's own storage key");
+    assert.ok(bStorageProbe.bKeyDiffersFromA);
+
+    // Navigate back to Reviewer A -- the REJECT must still be there
+    // (proves persistence AND that B's visit never touched A's key).
+    await page.send("Page.navigate", { url: `file://${REVIEWER_A_HTML_PATH}` });
+    await waitForDomReady(page);
+    const aBadgeAfterReturning = await page.evaluate("document.querySelector('.disposition-badge').textContent");
+    assert.equal(aBadgeAfterReturning, "REJECT");
+  } finally {
+    if (page) await page.close();
+  }
+}, { timeout: 30_000 });

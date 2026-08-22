@@ -8,6 +8,7 @@
 // service beyond the local CDP loopback port).
 import { spawn } from "node:child_process";
 import { mkdtemp, readdir, rm, stat } from "node:fs/promises";
+import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 
@@ -209,11 +210,40 @@ export async function waitForDownloadCompletion({ downloadDir, timeoutMs = DEFAU
   );
 }
 
+// Turn N4.2.1 (found while verifying this turn's own port-1 fix, via a
+// real, reproduced cross-contaminated download): the OLD default port
+// picker (`9333 + random(500)`) had no collision detection across only
+// 500 possible values. When multiple test FILES launch Chrome
+// concurrently (as node --test's default file-level parallelism does),
+// two independently-picked random ports could coincide. waitForCdp() only
+// checks that SOMETHING answers CDP on a port -- not that it's the
+// process THIS call itself spawned -- so a collision silently attaches
+// this call to a SIBLING run's already-listening Chrome instance instead
+// of its own (which fails to bind and is invisible). Because
+// Browser.setDownloadBehavior is BROWSER-WIDE (not per-tab), the two
+// callers then fight over one shared download destination -- reproduced
+// directly: seed-final-remediation-owner-review-ui.test.mjs's own
+// downloadDir received a file named after
+// seed-final-integration-owner-review-ui-v02.test.mjs's export. Fixed by
+// reserving a real, OS-assigned, genuinely free port via a temporary
+// listen(0) probe for every launch that doesn't explicitly request one --
+// the OS never hands the same port to two concurrent listen(0) calls, so
+// two of THIS function's own concurrent callers can never collide.
+export async function reserveEphemeralPort() {
+  const probe = net.createServer();
+  const reservedPort = await new Promise((resolve, reject) => {
+    probe.once("error", reject);
+    probe.listen(0, "127.0.0.1", () => resolve(probe.address().port));
+  });
+  await new Promise((resolve) => probe.close(resolve));
+  return reservedPort;
+}
+
 export async function launchHeadlessChromePage({ url, port, cdpTimeoutMs = DEFAULT_CDP_TIMEOUT_MS } = {}) {
   const chromePath = CHROME_CANDIDATES[0];
   const userDataDir = await mkdtemp(path.join(os.tmpdir(), "seed-headless-cdp-"));
   const downloadDir = await mkdtemp(path.join(os.tmpdir(), "seed-headless-download-"));
-  const resolvedPort = port ?? 9333 + Math.floor(Math.random() * 500);
+  const resolvedPort = port ?? await reserveEphemeralPort();
 
   let proc;
   try {

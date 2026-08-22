@@ -13,12 +13,13 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { chmod, mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
+import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import test from "node:test";
 import {
-  createPendingRequests, killAndCleanup, launchHeadlessChromePage, waitForDownloadCompletion,
+  createPendingRequests, killAndCleanup, launchHeadlessChromePage, reserveEphemeralPort, waitForDownloadCompletion,
 } from "./lib/headless-chrome-cdp.mjs";
 
 const execFileAsync = promisify(execFile);
@@ -105,6 +106,22 @@ test("killAndCleanup: a directory recreated 50ms after the first rm() (simulatin
   await assert.rejects(readdir(dir), { code: "ENOENT" }, "the recheck-and-retry pass must catch and remove the recreated directory");
 });
 
+// Turn N4.2.1 (found while verifying the port-1 fix, via a real
+// reproduced cross-contaminated download between two DIFFERENT test
+// files' Chrome launches): launchHeadlessChromePage's default port picker
+// used to be `9333 + random(500)` with no collision detection. Many
+// concurrent callers (this is exactly what node --test's default file-
+// level parallelism produces) picking from only 500 values can and did
+// collide, silently attaching one caller to a SIBLING's already-running
+// Chrome instance instead of its own. reserveEphemeralPort() is the fix:
+// every call asks the OS for a genuinely free port via listen(0), which
+// the OS guarantees is never handed to two concurrent callers at once.
+test("reserveEphemeralPort: 50 concurrent calls all return distinct ports (the OS-level guarantee the old random(500) picker lacked)", async () => {
+  const ports = await Promise.all(Array.from({ length: 50 }, () => reserveEphemeralPort()));
+  assert.equal(new Set(ports).size, ports.length, "every concurrently-reserved port must be unique");
+  for (const p of ports) assert.ok(Number.isInteger(p) && p > 0 && p < 65536);
+});
+
 // -- End-to-end: a genuine Chrome CDP handshake failure (unreachable
 // debugging port) forces launchHeadlessChromePage's own catch block to
 // run killAndCleanup for real. Verifies (1) the ORIGINAL setup error
@@ -112,50 +129,86 @@ test("killAndCleanup: a directory recreated 50ms after the first rm() (simulatin
 // referencing this test's unique port is left running afterward. -------
 
 test("launchHeadlessChromePage: a real CDP handshake failure preserves the original setup error and leaves no Chrome process behind", async () => {
-  // Port 1 is a privileged port (<1024) an unprivileged process cannot
-  // bind -- Chrome's own --remote-debugging-port=1 reliably fails to
-  // serve CDP, so waitForCdp() genuinely times out (~10s) and
-  // launchHeadlessChromePage's catch block genuinely runs
-  // killAndCleanup() for real.
-  //
-  // Turn N2.4 (Codex-reported defect): the previous version used
-  // `await assert.rejects(promise.then(page => { unexpectedPage = page; ... }))`
-  // -- if the promise unexpectedly RESOLVED, assert.rejects itself threw
-  // "Missing expected rejection" from INSIDE that awaited call, which
-  // skipped the `if (unexpectedPage) await unexpectedPage.close()` line
-  // entirely (it never ran), leaking a real Chrome process/userDataDir.
-  // Reproduced directly: pointing this same call at an ordinary
-  // (non-privileged) port that Chrome CAN bind made exactly this happen.
-  // Fixed with an explicit try/finally so page.close() is unconditionally
-  // attempted whenever `page` was ever assigned, regardless of what the
-  // assertion logic below does with the outcome.
-  const port = 1;
+  // Turn N4.2.1 (user-reported defect, actually observed): this test used
+  // to hardcode port 1 (a privileged port an unprivileged process cannot
+  // bind) to force a reliable CDP handshake failure. But port 1 is a
+  // SHARED, GUESSABLE constant -- when two copies of this test file ran
+  // concurrently (a real verify:contracts collided with the Stop hook's
+  // own automatic re-verification), the ps-aux check below could match
+  // the OTHER run's still-alive --remote-debugging-port=1 Chrome process
+  // and mistake it for this run's own leftover, failing a genuinely clean
+  // run. Fixed by reserving a real, OS-assigned, per-run-unique loopback
+  // port via a temporary TCP server BEFORE launching Chrome on that same
+  // port number -- the OS guarantees no two concurrently-bound listeners
+  // can share a port, so this test's own port can never collide with a
+  // sibling run's port, and the process check below only ever looks for
+  // THIS run's own unique port, never a shared/guessable one.
+  const reservation = net.createServer();
+  // net.Server.close() waits for every ACCEPTED connection to end before
+  // its callback fires -- it does not forcibly drop them. waitForCdp()'s
+  // own polling fetch() calls will genuinely complete a TCP handshake
+  // against this bare listener (Chrome's real bind() failure gives an
+  // instant ECONNREFUSED with nothing listening; a held port gives a
+  // real, silently-never-answered connection instead), and neither side
+  // ever closes that socket on its own -- so reservation.close() in the
+  // finally block below would hang forever without this. Track and force-
+  // destroy every accepted socket before closing.
+  const reservationSockets = new Set();
+  reservation.on("connection", (socket) => {
+    reservationSockets.add(socket);
+    socket.on("close", () => reservationSockets.delete(socket));
+  });
+  await new Promise((resolve, reject) => {
+    reservation.once("error", reject);
+    reservation.listen(0, "127.0.0.1", resolve);
+  });
+  const port = reservation.address().port;
+
   let page = null;
   let thrown = null;
   try {
-    page = await launchHeadlessChromePage({ port });
-  } catch (error) {
-    thrown = error;
+    // The reservation server still holds `port`, so Chrome's own bind()
+    // on the identical port number genuinely fails -- the same real
+    // handshake-failure path as the old privileged-port trick, but now
+    // exercised on a port no other concurrent process can also be using.
+    //
+    // Turn N2.4 (Codex-reported defect): the previous version used
+    // `await assert.rejects(promise.then(page => { unexpectedPage = page; ... }))`
+    // -- if the promise unexpectedly RESOLVED, assert.rejects itself threw
+    // "Missing expected rejection" from INSIDE that awaited call, which
+    // skipped the `if (unexpectedPage) await unexpectedPage.close()` line
+    // entirely (it never ran), leaking a real Chrome process/userDataDir.
+    // Fixed with an explicit try/finally so page.close() is unconditionally
+    // attempted whenever `page` was ever assigned, regardless of what the
+    // assertion logic below does with the outcome.
+    try {
+      page = await launchHeadlessChromePage({ port });
+    } catch (error) {
+      thrown = error;
+    } finally {
+      if (page) await page.close();
+    }
+
+    if (thrown) {
+      assert.match(thrown.message, /did not become ready in time/i, `unexpected error shape: ${thrown.message}`);
+    } else {
+      // The reserved port unexpectedly became bindable (e.g. the
+      // reservation server somehow released it, or a sandbox permits
+      // SO_REUSEPORT-style sharing) -- the real page was still safely
+      // closed above. Fail explicitly rather than silently passing, so
+      // this environment difference stays visible.
+      assert.fail(
+        "the reserved port unexpectedly became bindable by Chrome in this environment -- the bind-failure this test relies on did not occur here "
+        + "(the real Chrome page/process/userDataDir were still closed safely above via the try/finally)",
+      );
+    }
+
+    const { stdout } = await execFileAsync("ps", ["aux"]).catch(() => ({ stdout: "" }));
+    assert.doesNotMatch(stdout, new RegExp(`remote-debugging-port=${port}\\b`), "no Chrome process for this test's own unique port must remain running");
   } finally {
-    if (page) await page.close();
+    for (const socket of reservationSockets) socket.destroy();
+    await new Promise((resolve) => reservation.close(resolve));
   }
-
-  if (thrown) {
-    assert.match(thrown.message, /did not become ready in time/i, `unexpected error shape: ${thrown.message}`);
-  } else {
-    // Port 1 unexpectedly succeeded in this environment (e.g. running as
-    // root, or a sandbox that permits privileged-port binds) -- the real
-    // page was still safely closed above. Fail explicitly rather than
-    // silently passing or skipping, so this environment difference stays
-    // visible instead of being hidden behind a green checkmark.
-    assert.fail(
-      "port 1 unexpectedly succeeded in this environment -- the privileged-port failure this test relies on did not occur here "
-      + "(the real Chrome page/process/userDataDir were still closed safely above via the try/finally)",
-    );
-  }
-
-  const { stdout } = await execFileAsync("ps", ["aux"]).catch(() => ({ stdout: "" }));
-  assert.doesNotMatch(stdout, new RegExp(`remote-debugging-port=${port}\\b`), "no Chrome process for this test's port must remain running");
 });
 
 // -- Turn N4.1a: two real, independently-confirmed hung process trees (one
