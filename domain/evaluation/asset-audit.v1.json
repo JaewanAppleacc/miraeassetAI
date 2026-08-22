@@ -1,0 +1,67 @@
+{
+  "schema_version": "0.1.0",
+  "status": "AUDIT_SNAPSHOT",
+  "turn": "N4.0",
+  "audited_at": "2026-08-22",
+  "note": "This is a factual inventory of existing evaluation assets, not a Gold set and not a decision record. Every count below was measured directly against the files listed (or the real, ungitted 4,204-doc corpus at DISCLOSURE_CORPUS_ROOT), not recalled from memory.",
+  "assets": {
+    "seed_25": {
+      "role": "wiring_and_regression_only",
+      "location": "domain/releases (v0.20-r3 bundle, VERIFIED_FACT/EVIDENCE/EVENT/RELATION 87/219/24/40) + tests/seed-answer-api-e2e.test.mjs",
+      "count": 25,
+      "is_official_gold": false,
+      "excluded_from_target_size_counts": true
+    },
+    "retrieval_seed_5": {
+      "role": "interface_smoke_only",
+      "location": "domain/retrieval/retrieval-evaluation-seed.v0.1.jsonl",
+      "count": 5,
+      "is_official_gold": false,
+      "excluded_from_target_size_counts": true
+    },
+    "authoring_queue_150": {
+      "role": "authoring_candidates_not_gold",
+      "location": "work/domain-seed/evaluation-authoring-queue.jsonl (built by scripts/build-evaluation-authoring-queue.mjs)",
+      "count": 150,
+      "is_official_gold": false,
+      "known_defect": "group_key for correction/termination assignments is keyed on the document's OWN doc_id only, with no reference to the document it amends/terminates -- see domain/evaluation/CHAIN_SAFE_GROUPING_CONTRACT.v1.md for the reproduced counterexample and the fix."
+    },
+    "official_approved_gold": {
+      "role": "none_yet",
+      "count": 0,
+      "note": "domain/HANDOFF.md explicitly states the 150-item queue is an authoring PLAN, not Gold: 'source locator·Fact/Event ID·정답을 채우고 2인 검수해야 Gold가 됩니다.' No file in this repository is marked GOLD_LOCKED under evaluation-gold.v0.2.schema.json at full-corpus scale."
+    },
+    "not_yet_reviewed_candidates": {
+      "seed_gold_promotion_candidates_v0_1_through_v0_17": "iterative Seed-25-only authoring history under work/domain-seed/ (gitignored), fully superseded by the promoted seed-structured-artifacts.v0.7 used in v0.20-r3 -- not part of the 300/500-scale effort this Turn plans for",
+      "relation_review_queue": {
+        "location": "work/domain-seed/relation-review-queue.jsonl",
+        "AMENDS_candidates": 1004,
+        "TERMINATES_candidates": 20,
+        "CONFIRMS_candidates": 0,
+        "review_status": "PENDING (none reviewed/confirmed at full-corpus scale)"
+      }
+    },
+    "corpus_document_counts_by_group": {
+      "periodic": 1054,
+      "major": 598,
+      "exchange": 1469,
+      "holding": 1083,
+      "total": 4204,
+      "source": "real manifest.jsonl at DISCLOSURE_CORPUS_ROOT, measured directly (matches CLAUDE.md's stated figures exactly)"
+    },
+    "correction_document_counts_by_group": {
+      "periodic_is_correction": 159,
+      "major_is_correction": 173,
+      "exchange_is_correction": 631,
+      "holding_is_correction": 41,
+      "source": "real manifest.jsonl, is_correction=true, measured directly"
+    },
+    "parse_status_distribution": {
+      "PRESENT": 4123,
+      "PARTIAL_PARSE_FAILURE": 79,
+      "PARSE_FAILED": 2,
+      "total": 4204,
+      "source": "work/domain-seed/document-parse-coverage.jsonl, measured directly (matches domain/HANDOFF.md's stated B parse coverage exactly)"
+    }
+  }
+}

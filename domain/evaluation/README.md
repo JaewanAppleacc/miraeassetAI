@@ -1,5 +1,12 @@
 # Evaluation Gold Authoring Guide
 
+> **STATUS: HISTORICAL (목표 규모만).** 아래 "Dataset roles" 표의 500 목표는
+> [`TARGET_SIZE.v1.md`](./TARGET_SIZE.v1.md)(CURRENT)의 300 목표로 대체됐다
+> (Turn N4.0). 이 문서의 나머지 내용(split-before-authoring 금지,
+> `PROVISIONAL_UNTIL_CHAIN_CLOSURE` 등 usage freeze 규칙, critical slice 목록,
+> `CONFLICTING_EVIDENCE` 정책, two-person review)은 여전히 CURRENT다 — 목표
+> 규모 숫자만 `TARGET_SIZE.v1.md`를 대신 참고한다.
+
 ## Dataset roles
 
 평가 질문 500개는 독립된 세 세트로 관리합니다.
