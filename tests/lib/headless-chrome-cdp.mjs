@@ -7,8 +7,7 @@
 // itself is launched with no default browser check and no network
 // service beyond the local CDP loopback port).
 import { spawn } from "node:child_process";
-import { mkdtemp, readdir, rm, stat } from "node:fs/promises";
-import net from "node:net";
+import { mkdtemp, readdir, readFile, rm, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -224,26 +223,74 @@ export async function waitForDownloadCompletion({ downloadDir, timeoutMs = DEFAU
 // callers then fight over one shared download destination -- reproduced
 // directly: seed-final-remediation-owner-review-ui.test.mjs's own
 // downloadDir received a file named after
-// seed-final-integration-owner-review-ui-v02.test.mjs's export. Fixed by
-// reserving a real, OS-assigned, genuinely free port via a temporary
-// listen(0) probe for every launch that doesn't explicitly request one --
-// the OS never hands the same port to two concurrent listen(0) calls, so
-// two of THIS function's own concurrent callers can never collide.
-export async function reserveEphemeralPort() {
-  const probe = net.createServer();
-  const reservedPort = await new Promise((resolve, reject) => {
-    probe.once("error", reject);
-    probe.listen(0, "127.0.0.1", () => resolve(probe.address().port));
-  });
-  await new Promise((resolve) => probe.close(resolve));
-  return reservedPort;
+// seed-final-integration-owner-review-ui-v02.test.mjs's export.
+//
+// Turn N4.2.2 (Codex-reported defect in the N4.2.1 fix itself): the first
+// attempt at a fix ("reserveEphemeralPort()": listen(0), read the OS-
+// assigned port, then immediately close that probe server and hand the
+// bare port NUMBER to Chrome) is not actually atomic. Between this
+// process's own probe.close() and Chrome's own bind() a moment later, ANY
+// other process on the machine -- including a sibling launch of this same
+// function -- can claim that exact port number; the "two concurrent
+// callers of THIS function can never collide" claim in the old comment
+// (and its own "50 concurrent calls" test) overstated what listen(0)-
+// then-release actually guarantees. Fixed properly by never pre-picking a
+// port at all for ordinary launches: Chrome is started with
+// `--remote-debugging-port=0` and asked to pick its OWN port atomically
+// (the OS hands Chrome's own bind() call a genuinely free port with no
+// release-then-reuse window, because nothing else ever touches that
+// number first). Chrome then writes the port it actually bound, as the
+// first line of a `DevToolsActivePort` file inside its own --user-data-
+// dir, once its debug HTTP server is truly ready to accept connections.
+// readDevToolsActivePort() below reads that file with bounded polling
+// (the file does not exist until Chrome finishes starting) and validates
+// its first line strictly before trusting it as a real port number.
+export async function readDevToolsActivePort(userDataDir, timeoutMs) {
+  const filePath = path.join(userDataDir, "DevToolsActivePort");
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    let raw;
+    try {
+      raw = await readFile(filePath, "utf8");
+    } catch (error) {
+      if (error.code === "ENOENT") { await new Promise((r) => setTimeout(r, 50)); continue; }
+      throw error;
+    }
+    const firstLine = raw.split("\n")[0]?.trim() ?? "";
+    if (firstLine === "") {
+      // File exists but hasn't been flushed with content yet -- a brief,
+      // genuinely transient state (not a malformed value), so this alone
+      // is still worth one more bounded retry rather than an immediate
+      // fail-closed.
+      await new Promise((r) => setTimeout(r, 50));
+      continue;
+    }
+    const parsedPort = Number(firstLine);
+    if (!Number.isInteger(parsedPort) || parsedPort < 1 || parsedPort > 65535) {
+      // A non-empty but genuinely invalid first line is a real problem,
+      // not a transient race -- fail closed immediately rather than
+      // retrying against garbage until the deadline.
+      throw new Error(`DevToolsActivePort's first line is not a valid port number (1-65535): ${JSON.stringify(firstLine)}`);
+    }
+    return parsedPort;
+  }
+  throw new Error(`DevToolsActivePort did not appear with a valid port within ${timeoutMs}ms at ${filePath}`);
 }
 
 export async function launchHeadlessChromePage({ url, port, cdpTimeoutMs = DEFAULT_CDP_TIMEOUT_MS } = {}) {
   const chromePath = CHROME_CANDIDATES[0];
   const userDataDir = await mkdtemp(path.join(os.tmpdir(), "seed-headless-cdp-"));
   const downloadDir = await mkdtemp(path.join(os.tmpdir(), "seed-headless-download-"));
-  const resolvedPort = port ?? await reserveEphemeralPort();
+  // Turn N4.2.2: an explicit `port` (only the deliberate CDP-handshake-
+  // failure test in tests/headless-chrome-cdp-cleanup.test.mjs passes
+  // one, pointing at a port IT ITSELF still holds open) intentionally
+  // forces Chrome's own bind() to fail -- Chrome never starts a debug
+  // server in that case and therefore never writes DevToolsActivePort, so
+  // that path keeps talking to the literal requested port directly.
+  // Every ordinary launch (no explicit port) asks for `0` and lets
+  // Chrome/the OS assign a real port atomically -- see
+  // readDevToolsActivePort() above.
+  const explicitPortRequested = typeof port === "number";
 
   let proc;
   try {
@@ -255,7 +302,7 @@ export async function launchHeadlessChromePage({ url, port, cdpTimeoutMs = DEFAU
       // recreating an empty userDataDir after cleanup. Disabling it
       // removes the need for it to exist at all in test automation.
       "--disable-crash-reporter",
-      `--remote-debugging-port=${resolvedPort}`, `--user-data-dir=${userDataDir}`,
+      `--remote-debugging-port=${explicitPortRequested ? port : 0}`, `--user-data-dir=${userDataDir}`,
     ], {
       stdio: "ignore",
       // Turn N4.1a: makes this process its own process-GROUP leader (its
@@ -265,6 +312,7 @@ export async function launchHeadlessChromePage({ url, port, cdpTimeoutMs = DEFAU
       detached: true,
     });
 
+    const resolvedPort = explicitPortRequested ? port : await readDevToolsActivePort(userDataDir, DEFAULT_SETUP_TIMEOUT_MS);
     await waitForCdp(resolvedPort);
 
     const createRes = await withDeadline(
@@ -337,7 +385,7 @@ export async function launchHeadlessChromePage({ url, port, cdpTimeoutMs = DEFAU
       await waitForLoad(send);
     }
 
-    return buildPage({ ws, proc, userDataDir, downloadDir, send, evaluate, pendingRequests });
+    return buildPage({ ws, proc, userDataDir, downloadDir, send, evaluate, pendingRequests, debugPort: resolvedPort });
   } catch (error) {
     const cleanupErrors = await killAndCleanup(proc, [userDataDir, downloadDir]);
     if (cleanupErrors.length > 0) {
@@ -350,7 +398,7 @@ export async function launchHeadlessChromePage({ url, port, cdpTimeoutMs = DEFAU
   }
 }
 
-function buildPage({ ws, proc, userDataDir, downloadDir, send, evaluate, pendingRequests }) {
+function buildPage({ ws, proc, userDataDir, downloadDir, send, evaluate, pendingRequests, debugPort }) {
   async function close() {
     pendingRequests.rejectAll(new Error("CDP page closed while this command was still pending"));
     try { ws.close(); } catch { /* ignore */ }
@@ -367,7 +415,11 @@ function buildPage({ ws, proc, userDataDir, downloadDir, send, evaluate, pending
     }
   }
 
-  return { evaluate, send, close, userDataDir, downloadDir };
+  // debugPort is test-only: it lets a caller verify that two concurrently
+  // launched instances actually ended up on two DIFFERENT real ports
+  // (the guarantee this whole file exists to provide), not a UI/runtime
+  // dependency of the page itself.
+  return { evaluate, send, close, userDataDir, downloadDir, debugPort };
 }
 
 async function waitForCdp(port) {

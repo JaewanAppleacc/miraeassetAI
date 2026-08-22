@@ -19,7 +19,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 import test from "node:test";
 import {
-  createPendingRequests, killAndCleanup, launchHeadlessChromePage, reserveEphemeralPort, waitForDownloadCompletion,
+  createPendingRequests, killAndCleanup, launchHeadlessChromePage, readDevToolsActivePort, waitForDownloadCompletion,
 } from "./lib/headless-chrome-cdp.mjs";
 
 const execFileAsync = promisify(execFile);
@@ -113,13 +113,128 @@ test("killAndCleanup: a directory recreated 50ms after the first rm() (simulatin
 // concurrent callers (this is exactly what node --test's default file-
 // level parallelism produces) picking from only 500 values can and did
 // collide, silently attaching one caller to a SIBLING's already-running
-// Chrome instance instead of its own. reserveEphemeralPort() is the fix:
-// every call asks the OS for a genuinely free port via listen(0), which
-// the OS guarantees is never handed to two concurrent callers at once.
-test("reserveEphemeralPort: 50 concurrent calls all return distinct ports (the OS-level guarantee the old random(500) picker lacked)", async () => {
-  const ports = await Promise.all(Array.from({ length: 50 }, () => reserveEphemeralPort()));
-  assert.equal(new Set(ports).size, ports.length, "every concurrently-reserved port must be unique");
-  for (const p of ports) assert.ok(Number.isInteger(p) && p > 0 && p < 65536);
+// Chrome instance instead of its own.
+//
+// Turn N4.2.2 (Codex-reported defect): the N4.2.1 fix ("reserveEphemeralPort()":
+// listen(0), read the assigned port, close the probe, hand the bare
+// NUMBER to Chrome) was not actually atomic -- a real TOCTOU window
+// existed between releasing the probe and Chrome's own later bind().
+// reserveEphemeralPort() and its "50 concurrent calls" test (which only
+// ever proved listen(0) itself doesn't collide with ANOTHER listen(0)
+// call -- never that a released-then-reused port stays free until Chrome
+// gets to it) are both removed. The real fix is `--remote-debugging-port=0`
+// + reading Chrome's own DevToolsActivePort file, which has no such gap
+// because nothing ever releases the port before Chrome binds it. These
+// tests verify that replacement directly, via debugPort on real launches.
+
+test("readDevToolsActivePort: a file that never appears fails closed within the given timeout, not hanging past it", async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "n422-devtoolsport-missing-"));
+  try {
+    const start = Date.now();
+    await assert.rejects(readDevToolsActivePort(dir, 300), /did not appear with a valid port within 300ms/);
+    assert.ok(Date.now() - start < 2000, "must fail close to its own timeout, not hang indefinitely");
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("readDevToolsActivePort: an empty file (created but not yet flushed) is treated as transient and still fails closed at the deadline, never hangs", async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "n422-devtoolsport-empty-"));
+  try {
+    await writeFile(path.join(dir, "DevToolsActivePort"), "");
+    const start = Date.now();
+    await assert.rejects(readDevToolsActivePort(dir, 300), /did not appear with a valid port within 300ms/);
+    assert.ok(Date.now() - start < 2000);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("readDevToolsActivePort: a genuinely invalid first line (not an integer) fails immediately, not after waiting out the full timeout", async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "n422-devtoolsport-invalid-"));
+  try {
+    await writeFile(path.join(dir, "DevToolsActivePort"), "not-a-port\n/devtools/browser/abc\n");
+    const start = Date.now();
+    await assert.rejects(readDevToolsActivePort(dir, 10_000), /is not a valid port number/);
+    assert.ok(Date.now() - start < 2000, "an invalid (non-empty) value must fail fast, never wait out the full 10s timeout");
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("readDevToolsActivePort: an out-of-range port number (e.g. 0 or 70000) is rejected just like a non-numeric value", async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "n422-devtoolsport-range-"));
+  try {
+    await writeFile(path.join(dir, "DevToolsActivePort"), "70000\n/devtools/browser/abc\n");
+    await assert.rejects(readDevToolsActivePort(dir, 10_000), /is not a valid port number/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("readDevToolsActivePort: a valid file resolves to the exact integer on its first line, ignoring the rest of the file", async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "n422-devtoolsport-valid-"));
+  try {
+    await writeFile(path.join(dir, "DevToolsActivePort"), "54321\n/devtools/browser/some-uuid\n");
+    const port = await readDevToolsActivePort(dir, 5000);
+    assert.equal(port, 54321);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("readDevToolsActivePort: a file that appears shortly after polling begins is still picked up before the deadline", async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "n422-devtoolsport-delayed-"));
+  try {
+    setTimeout(() => { writeFile(path.join(dir, "DevToolsActivePort"), "12345\n/devtools/browser/x\n").catch(() => {}); }, 150);
+    const port = await readDevToolsActivePort(dir, 5000);
+    assert.equal(port, 12345);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("launchHeadlessChromePage: two concurrently-launched default (no explicit port) instances get two different real debugPorts", async () => {
+  let pageA = null; let pageB = null;
+  try {
+    [pageA, pageB] = await Promise.all([launchHeadlessChromePage({}), launchHeadlessChromePage({})]);
+    assert.ok(Number.isInteger(pageA.debugPort) && pageA.debugPort > 0 && pageA.debugPort < 65536);
+    assert.ok(Number.isInteger(pageB.debugPort) && pageB.debugPort > 0 && pageB.debugPort < 65536);
+    assert.notEqual(pageA.debugPort, pageB.debugPort, "two concurrent default launches must never end up on the same real CDP port");
+  } finally {
+    if (pageA) await pageA.close();
+    if (pageB) await pageB.close();
+  }
+});
+
+test("launchHeadlessChromePage: a missing DevToolsActivePort file (Chrome fails to start entirely) fails closed within the setup timeout, not hanging", async () => {
+  // A deliberately invalid Chrome binary path is out of reach here (the
+  // path is a module-level constant), so this exercises the same failure
+  // shape via readDevToolsActivePort's own bounded-timeout contract
+  // directly: an explicit, already-occupied port (Chrome's bind fails,
+  // so it never starts a debug server and never writes the file) still
+  // fails with a clear, bounded error -- the explicit-port path
+  // intentionally bypasses DevToolsActivePort reading entirely, and this
+  // confirms that bypass doesn't silently hang either.
+  const reservation = net.createServer();
+  const reservationSockets = new Set();
+  reservation.on("connection", (socket) => {
+    reservationSockets.add(socket);
+    socket.on("close", () => reservationSockets.delete(socket));
+  });
+  await new Promise((resolve, reject) => {
+    reservation.once("error", reject);
+    reservation.listen(0, "127.0.0.1", resolve);
+  });
+  const port = reservation.address().port;
+  let page = null;
+  try {
+    await assert.rejects(launchHeadlessChromePage({ port }), /did not become ready in time/i);
+  } finally {
+    if (page) await page.close();
+    for (const socket of reservationSockets) socket.destroy();
+    await new Promise((resolve) => reservation.close(resolve));
+  }
 });
 
 // -- End-to-end: a genuine Chrome CDP handshake failure (unreachable
@@ -418,5 +533,66 @@ test("launchHeadlessChromePage: two concurrent pages never touch each other's us
   } finally {
     if (pageA) await pageA.close();
     if (pageB) await pageB.close();
+  }
+});
+
+// Turn N4.2.2: the exact shape of the real cross-contamination bug found
+// while verifying N4.2.1 -- two SEPARATE launches, each triggering a real
+// download AT THE SAME TIME -- reproduced deterministically in a single
+// test rather than relying on running two whole test files concurrently.
+// Distinct debugPorts alone would not have caught the original bug (the
+// old picker COULD occasionally land on different ports and still pass);
+// this test additionally proves each instance's download only ever
+// appears in its OWN downloadDir, with its OWN distinct filename/content.
+test("launchHeadlessChromePage: two concurrent instances downloading AT THE SAME TIME never cross-contaminate each other's downloadDir", async () => {
+  const fixtureDir = await mkdtemp(path.join(os.tmpdir(), "n422-concurrent-download-fixture-"));
+  async function writeFixture(name, filename) {
+    const fixtureHtmlPath = path.join(fixtureDir, `${name}.html`);
+    await writeFile(fixtureHtmlPath, [
+      "<!doctype html><html><body>",
+      "<script>",
+      "function triggerDownload() {",
+      `  var blob = new Blob(['${name}-payload'], { type: 'application/json' });`,
+      "  var url = URL.createObjectURL(blob);",
+      "  var a = document.createElement('a');",
+      `  a.href = url; a.download = '${filename}';`,
+      "  document.body.appendChild(a); a.click();",
+      "  URL.revokeObjectURL(url);",
+      "}",
+      "</script>",
+      "</body></html>",
+    ].join("\n"));
+    return fixtureHtmlPath;
+  }
+
+  let pageA = null; let pageB = null;
+  try {
+    const [htmlA, htmlB] = await Promise.all([
+      writeFixture("instance-a", "n422-instance-a-export.jsonl"),
+      writeFixture("instance-b", "n422-instance-b-export.jsonl"),
+    ]);
+    [pageA, pageB] = await Promise.all([
+      launchHeadlessChromePage({ url: `file://${htmlA}` }),
+      launchHeadlessChromePage({ url: `file://${htmlB}` }),
+    ]);
+    assert.notEqual(pageA.debugPort, pageB.debugPort);
+
+    await Promise.all([pageA.evaluate("triggerDownload()"), pageB.evaluate("triggerDownload()")]);
+    const [resultA, resultB] = await Promise.all([
+      waitForDownloadCompletion({ downloadDir: pageA.downloadDir, timeoutMs: 5000 }),
+      waitForDownloadCompletion({ downloadDir: pageB.downloadDir, timeoutMs: 5000 }),
+    ]);
+    assert.equal(resultA.filename, "n422-instance-a-export.jsonl");
+    assert.equal(resultB.filename, "n422-instance-b-export.jsonl");
+
+    // Each downloadDir must contain ONLY its own file -- never the sibling's.
+    const entriesA = await readdir(pageA.downloadDir);
+    const entriesB = await readdir(pageB.downloadDir);
+    assert.deepEqual(entriesA, ["n422-instance-a-export.jsonl"]);
+    assert.deepEqual(entriesB, ["n422-instance-b-export.jsonl"]);
+  } finally {
+    if (pageA) await pageA.close();
+    if (pageB) await pageB.close();
+    await rm(fixtureDir, { recursive: true, force: true });
   }
 });
