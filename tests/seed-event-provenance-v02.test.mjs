@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -54,22 +54,29 @@ test("table composite Evidence shares one row and every review item has new prov
 });
 
 test("writes a review packet and leaves all source artifacts byte-identical", async () => {
+  // Turn N2.2: this test previously never removed its own mkdtemp scratch
+  // directory -- try/finally guarantees removal whether the assertions
+  // pass or throw.
   const temp = await mkdtemp(path.join(os.tmpdir(), "seed-event-v02-"));
-  const inputs = [
-    "work/domain-seed/seed-event-candidates.v0.1.jsonl",
-    "work/domain-seed/seed-evidence-verified.v0.3.jsonl",
-    "work/domain-seed/seed-canonical-document-ir.v0.6.jsonl",
-    "work/domain-seed/seed-canonical-document-ir.v0.7.delta.jsonl",
-  ];
-  const before = await Promise.all(inputs.map((file) => readFile(file)));
-  const paths = {
-    eventsV01: inputs[0], evidenceV03: inputs[1], canonicalBase: inputs[2], canonicalDelta: inputs[3],
-    eventsV02: path.join(temp, "events.jsonl"), evidenceDelta: path.join(temp, "evidence.jsonl"), mapping: path.join(temp, "mapping.jsonl"),
-    reviewQueue: path.join(temp, "queue.jsonl"), summary: path.join(temp, "summary.json"), report: path.join(temp, "report.md"), claudePrompt: path.join(temp, "prompt.md"),
-  };
-  await buildSeedEventProvenanceV02({ root: process.cwd(), paths });
-  assert.deepEqual(await Promise.all(inputs.map((file) => readFile(file))), before);
-  for (const key of ["eventsV02", "evidenceDelta", "mapping", "reviewQueue", "summary", "report", "claudePrompt"]) {
-    assert.ok((await readFile(paths[key])).length > 0);
+  try {
+    const inputs = [
+      "work/domain-seed/seed-event-candidates.v0.1.jsonl",
+      "work/domain-seed/seed-evidence-verified.v0.3.jsonl",
+      "work/domain-seed/seed-canonical-document-ir.v0.6.jsonl",
+      "work/domain-seed/seed-canonical-document-ir.v0.7.delta.jsonl",
+    ];
+    const before = await Promise.all(inputs.map((file) => readFile(file)));
+    const paths = {
+      eventsV01: inputs[0], evidenceV03: inputs[1], canonicalBase: inputs[2], canonicalDelta: inputs[3],
+      eventsV02: path.join(temp, "events.jsonl"), evidenceDelta: path.join(temp, "evidence.jsonl"), mapping: path.join(temp, "mapping.jsonl"),
+      reviewQueue: path.join(temp, "queue.jsonl"), summary: path.join(temp, "summary.json"), report: path.join(temp, "report.md"), claudePrompt: path.join(temp, "prompt.md"),
+    };
+    await buildSeedEventProvenanceV02({ root: process.cwd(), paths });
+    assert.deepEqual(await Promise.all(inputs.map((file) => readFile(file))), before);
+    for (const key of ["eventsV02", "evidenceDelta", "mapping", "reviewQueue", "summary", "report", "claudePrompt"]) {
+      assert.ok((await readFile(paths[key])).length > 0);
+    }
+  } finally {
+    await rm(temp, { recursive: true, force: true });
   }
 });

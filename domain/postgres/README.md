@@ -81,7 +81,7 @@ role 이름을 `domain/postgres/reference-release-grants.mjs`에 명시적으로
 import { applyReferenceReaderGrant, applyReferenceWriterGrant } from "./reference-release-grants.mjs";
 
 await applyReferenceReaderGrant({ client, roleName: "agent_runtime_reader" }); // SELECT만
-await applyReferenceWriterGrant({ client, roleName: "reference_loader_writer" }); // SELECT/INSERT/UPDATE/DELETE
+await applyReferenceWriterGrant({ client, roleName: "reference_loader_writer" }); // releases/artifacts: SELECT/INSERT/UPDATE, records: SELECT/INSERT만 (DELETE는 어디에도 없음)
 ```
 
 writer role도 GRANT만으로는 READY release를 바꿀 수 없다 — 위 immutability trigger가
@@ -124,14 +124,87 @@ env:
 
 이 통합 스위트는 빈 DB migration, 실제 v0.20-r3 bundle 적재(21 artifact/792
 record/READY), 재적재 `ALREADY_LOADED`, 실패 시 rollback(0 rows), READY mutation의
-실제 SQL 거부, reader/writer role의 실제 GRANT 동작까지 검증한다. 이 세션 환경에는
-`psql`/`docker`/`podman`/로컬 PostgreSQL 16이 전혀 없어 이번 Turn에서는 실행하지
-못했다 — `POSTGRESQL_16_INTEGRATION_NOT_RUN`으로 별도 보고한다.
+실제 SQL 거부, reader/writer role의 실제 GRANT 동작까지 검증한다. Turn N1.2에서 이
+환경에 Homebrew PostgreSQL 16.15를 직접 설치해(`brew services`는 사용하지 않고
+`pg_ctl`로 격리된 scratch 인스턴스만 기동) 실제로 실행했고, 12/12 PASS로 통과했다
+(카스케이드 삭제 트리거 가시성 버그와 `declared_record_count` 의미 불일치라는 두 실제
+결함을 이 과정에서 발견·수정함 — 자세한 내용은 커밋 이력 참고).
+
+`npm run test:reference-repository:postgres16`(Turn N2, 아래 "Repository/Adapter"
+절 참고)도 동일한 방식으로 실행해 13개 항목이 모두 통과했다.
 
 ## 다음 단계
 
-1. 실제 PostgreSQL 16 서버(CI service 또는 로컬 Docker)에서 위 통합 테스트 실행
-2. 전체 4,204 DocumentIR portable snapshot 준비
-3. `001_core.sql`의 정규화 projection과 Reference record 간 변환 확정
-4. 작업자별 검색 namespace/schema는 공통 migration 밖에서 각자 생성
-5. BM25 기준선부터 동일 Harness로 측정
+1. 전체 4,204 DocumentIR portable snapshot 준비
+2. `001_core.sql`의 정규화 projection과 Reference record 간 변환 확정
+3. 작업자별 검색 namespace/schema는 공통 migration 밖에서 각자 생성
+4. BM25 기준선부터 동일 Harness로 측정
+5. Repository/Adapter를 실제 production Runtime(`configured-seed-runtime.mjs`)에
+   연결할지 여부와 시점 결정 (이번 Turn 범위 밖)
+
+## Repository/Adapter (Turn N2)
+
+`domain/postgres/reference-repository.mjs`는 pinned·READY release 하나를 읽기
+전용으로 제공하는 공통 Repository다. `domain/postgres/reference-runtime-adapters.mjs`는
+이 Repository 하나를 공유하며 기존 Runtime Store 계약 3개(`domain/runtime/fact-store.mjs`,
+`domain/runtime/citation-validator.mjs`, `domain/runtime/structured-store.mjs`)에
+연결하는 얇은 adapter 3개를 제공한다. SQL과 검증 로직은 Repository 한 곳에만 있고,
+세 adapter는 호출 규약만 번역한다.
+
+역할:
+
+- **Repository**: `getFact`/`getEvidence`/`getEvent`/`getRelation`(ID 단건 조회)과
+  `queryFacts`/`queryEvents`/`queryRelations`/`queryEvidence`(StructuredQuery와 동일한
+  필터 — corp_codes, metric_codes/event_types/relation_types, document_ids, 기간/scope,
+  verification_statuses, as_of_date, limit)를 제공한다.
+- **Adapter**: Repository를 감싸 각 Runtime Store가 기대하는 envelope(`{ corpus_snapshot_id,
+  record }` 등)과 StructuredResult 모양으로만 번역한다. status/code 판정은 여전히
+  fact-store.mjs/citation-validator.mjs/structured-store.mjs 자신이 한다.
+
+필수 release/snapshot pin:
+
+```js
+import { createPostgresReferenceRepository } from "./reference-repository.mjs";
+
+const repo = await createPostgresReferenceRepository({
+  client, // 또는 pool -- lifecycle은 호출자 소유, 이 모듈은 절대 end()/release()하지 않음
+  expectedReleaseId: "seed-release-v0.20",
+  expectedCorpusSnapshotId: "corpus_04750795e1a2d5c3",
+  expectedApprovedRevision: "seed-structured-artifacts-v0.7",
+  expectedFactCoverageSnapshotId: "fact_coverage_snapshot_87ad2fa54e8ab7f7543c1ce3",
+});
+```
+
+다섯 인자 모두 필수다(하나라도 빠지면 `TypeError`). 생성 시점에 실제
+`disclosure_reference.releases` row를 조회해 `status='READY'`와 네 pin을 전부 검증하고,
+release가 없거나 LOADING이거나 어느 pin이라도 다르면 즉시 실패한다 — 가장 최신
+READY release로 자동 대체하지 않고, `ORDER BY imported_at DESC LIMIT 1` 같은 코드는
+이 파일에 없다. `get*`/`query*`는 매 호출마다 새로 parameter-bound SELECT를 실행한다
+(구성 시점 캐시 없음 -- READY release는 트리거로 불변이 보장되므로 안전하다).
+
+일반 개발용 사용 예(Runtime Store에 연결):
+
+```js
+import { createPostgresFactStoreAdapter, createPostgresStructuredStoreAdapter } from "./reference-runtime-adapters.mjs";
+import { createFactStore } from "../runtime/fact-store.mjs";
+import { createStructuredStore } from "../runtime/structured-store.mjs";
+
+const context = { corpus_snapshot_id: repo.corpusSnapshotId, fact_coverage_snapshot_id: repo.factCoverageSnapshotId };
+const factStore = createFactStore(createPostgresFactStoreAdapter(repo), context);
+const structuredStore = createStructuredStore(createPostgresStructuredStoreAdapter(repo), context);
+```
+
+**production Runtime에는 아직 연결되지 않았다.** `configured-seed-runtime.mjs`와
+`GET /answer`는 이번 Turn에서 수정하지 않았고, 여전히 portable bundle-backed Runtime
+그대로 동작한다 — 이 Repository/Adapter는 독립적으로 테스트된 새 계층일 뿐, 아직 어떤
+production 경로에도 배선되지 않았다.
+
+**pgvector/BM25/embedding/reranker는 이번 Turn 범위 밖이다.** 이 Repository는
+`disclosure_reference.records`의 정확한 매치 필터(corp_code/metric_code/document_id
+등)만 지원하며, 유사도 검색이나 랭킹은 구현하지 않는다.
+
+동일성 검증: `tests/reference-repository-postgres16-integration.test.mjs`가 실제
+PostgreSQL 16에서 v0.20-r3 bundle을 적재한 뒤, 이 Repository의 결과와 portable
+`domain/adapters/seed-structured-query-adapter.mjs`의 결과를 VERIFIED_FACT 87건,
+VERIFIED_EVIDENCE 219건, VERIFIED_EVENT 24건, VERIFIED_RELATION 40건 **전량**에 대해
+레코드 단위로 완전히 비교한다(대표 필터 조합 포함).

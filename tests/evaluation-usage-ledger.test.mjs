@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -1281,26 +1281,44 @@ test("USAGE_LEDGER_CODES enumerates every code this module can return", () => {
 
 // --- minimal disk persistence: atomic append + corruption detection -------
 
+// Turn N2.2: each of the three tests below previously created its own
+// mkdtempSync() scratch directory and never removed it -- neither on a
+// clean pass nor (more importantly) if the assertion in between threw.
+// try/finally guarantees removal on both paths, matching the established
+// convention used elsewhere in this test suite (e.g.
+// reference-release-contract.test.mjs's mkdtemp/finally pattern).
 test("readLedgerFile returns [] for a missing file", () => {
   const dir = mkdtempSync(join(tmpdir(), "usage-ledger-"));
-  assert.deepEqual(readLedgerFile(join(dir, "does-not-exist.jsonl")), []);
+  try {
+    assert.deepEqual(readLedgerFile(join(dir, "does-not-exist.jsonl")), []);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test("appendEventLineAtomic + readLedgerFile round-trip a valid ledger", () => {
   const dir = mkdtempSync(join(tmpdir(), "usage-ledger-"));
-  const filePath = join(dir, "ledger.jsonl");
-  const log = threeEventLedger();
-  for (const event of log) appendEventLineAtomic(filePath, event);
-  const loaded = readLedgerFile(filePath);
-  assert.deepEqual(loaded, log);
-  assert.deepEqual(validateUsageLedger(loaded), []);
+  try {
+    const filePath = join(dir, "ledger.jsonl");
+    const log = threeEventLedger();
+    for (const event of log) appendEventLineAtomic(filePath, event);
+    const loaded = readLedgerFile(filePath);
+    assert.deepEqual(loaded, log);
+    assert.deepEqual(validateUsageLedger(loaded), []);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test("readLedgerFile throws on a corrupt (non-JSON) line instead of silently skipping it", () => {
   const dir = mkdtempSync(join(tmpdir(), "usage-ledger-"));
-  const filePath = join(dir, "ledger.jsonl");
-  writeFileSync(filePath, '{"valid": "json"}\nthis is not json\n', "utf8");
-  assert.throws(() => readLedgerFile(filePath), /corrupt ledger file/);
+  try {
+    const filePath = join(dir, "ledger.jsonl");
+    writeFileSync(filePath, '{"valid": "json"}\nthis is not json\n', "utf8");
+    assert.throws(() => readLedgerFile(filePath), /corrupt ledger file/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 // --- source hygiene: no stray raw NUL bytes in the module's own source ---

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -54,24 +54,31 @@ test("all Fact/Event/Coverage references resolve within the promoted artifact se
 
 test("the promoted artifacts construct the real fail-closed Evidence and Fact Store adapters", async () => {
   const result = await promoteSeedStructuredArtifacts({ writeOutputs: false });
+  // Turn N2.2: this test previously never removed its own mkdtemp scratch
+  // directory -- try/finally guarantees removal whether the assertions
+  // pass or throw.
   const temp = await mkdtemp(path.join(os.tmpdir(), "seed-promoted-"));
-  const evidencePath = path.join(temp, "evidence.jsonl");
-  const evidenceManifestPath = path.join(temp, "evidence.manifest.json");
-  const factPath = path.join(temp, "facts.jsonl");
-  const coveragePath = path.join(temp, "coverage.json");
-  await Promise.all([
-    writeFile(evidencePath, result.contents.evidenceContent), writeFile(evidenceManifestPath, result.contents.evidenceManifestContent),
-    writeFile(factPath, result.contents.factContent), writeFile(coveragePath, result.contents.coverageContent),
-  ]);
-  const evidenceStore = await createSeedEvidenceArtifactStore({ evidencePath, manifestPath: evidenceManifestPath });
-  assert.equal(evidenceStore.recordCount(), 160);
-  const factStore = await createSeedFactArtifactStore({
-    factArtifactPath: factPath, factArtifactSha256: hash(result.contents.factContent), factRecordCount: 54,
-    factCoverageSnapshotPath: coveragePath, factCoverageSnapshotSha256: hash(result.contents.coverageContent),
-  });
-  assert.equal(factStore.factCount(), 54);
-  assert.equal(factStore.slotCount(), 69);
-  assert.equal(factStore.authorizedFactCount(), 54);
+  try {
+    const evidencePath = path.join(temp, "evidence.jsonl");
+    const evidenceManifestPath = path.join(temp, "evidence.manifest.json");
+    const factPath = path.join(temp, "facts.jsonl");
+    const coveragePath = path.join(temp, "coverage.json");
+    await Promise.all([
+      writeFile(evidencePath, result.contents.evidenceContent), writeFile(evidenceManifestPath, result.contents.evidenceManifestContent),
+      writeFile(factPath, result.contents.factContent), writeFile(coveragePath, result.contents.coverageContent),
+    ]);
+    const evidenceStore = await createSeedEvidenceArtifactStore({ evidencePath, manifestPath: evidenceManifestPath });
+    assert.equal(evidenceStore.recordCount(), 160);
+    const factStore = await createSeedFactArtifactStore({
+      factArtifactPath: factPath, factArtifactSha256: hash(result.contents.factContent), factRecordCount: 54,
+      factCoverageSnapshotPath: coveragePath, factCoverageSnapshotSha256: hash(result.contents.coverageContent),
+    });
+    assert.equal(factStore.factCount(), 54);
+    assert.equal(factStore.slotCount(), 69);
+    assert.equal(factStore.authorizedFactCount(), 54);
+  } finally {
+    await rm(temp, { recursive: true, force: true });
+  }
 });
 
 test("Q3 and Q22 never leak into promoted structured artifacts", async () => {

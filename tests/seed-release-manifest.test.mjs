@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -20,15 +20,22 @@ test("Seed v0.11 release lock verifies hashes, counts, and cross references", as
 });
 
 test("release verification fails closed when an artifact hash is changed", async () => {
+  // Turn N2.2: this test previously never removed its own mkdtemp scratch
+  // directory -- try/finally guarantees removal whether the assertion
+  // passes or throws.
   const temporaryDirectory = await mkdtemp(path.join(os.tmpdir(), "seed-release-test-"));
-  const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
-  manifest.artifacts[0].sha256 = "0".repeat(64);
-  const tamperedManifestPath = path.join(temporaryDirectory, "manifest.json");
-  await writeFile(tamperedManifestPath, `${JSON.stringify(manifest)}\n`);
-  await assert.rejects(
-    verifySeedRelease({ manifestPath: tamperedManifestPath, root: repositoryRoot }),
-    /sha256/,
-  );
+  try {
+    const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+    manifest.artifacts[0].sha256 = "0".repeat(64);
+    const tamperedManifestPath = path.join(temporaryDirectory, "manifest.json");
+    await writeFile(tamperedManifestPath, `${JSON.stringify(manifest)}\n`);
+    await assert.rejects(
+      verifySeedRelease({ manifestPath: tamperedManifestPath, root: repositoryRoot }),
+      /sha256/,
+    );
+  } finally {
+    await rm(temporaryDirectory, { recursive: true, force: true });
+  }
 });
 
 // -- Turn M11: no silent default to an old release ------------------------

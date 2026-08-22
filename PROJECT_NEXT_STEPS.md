@@ -154,8 +154,8 @@ DB 작업은 이제 시작한다. 두 계층을 구분한다.
 - [x] v0.20 bundle streaming loader 작성
 - [x] snapshot/SHA/record count/외래키 검증 추가
 - [ ] 읽기 전용 common schema와 작업자별 namespace 분리
-- [ ] 빈 DB 복원·중복 적재·손상 bundle 부정 테스트
-- [ ] 최소 조회 API 또는 repository adapter 제공
+- [x] 빈 DB 복원·중복 적재·손상 bundle 부정 테스트 (실제 PostgreSQL 16으로 검증)
+- [x] 최소 조회 API 또는 repository adapter 제공 (Turn N2)
 
 현재 N1 구현은 portable v0.20 Seed bundle을 대상으로 하며 PostgreSQL 16만 허용한다.
 격리된 PostgreSQL 16.15 인스턴스에서 빈 DB 복원, bundle 21-role/792-record 적재,
@@ -164,6 +164,18 @@ DB 작업은 이제 시작한다. 두 계층을 구분한다.
 4,204문서가 아니다. 전체 검색 DB를 만들기 전 4,204문서 portable snapshot 승격과
 지속적인 PostgreSQL 16 CI 통합 검증이 추가로 필요하다. 상세 계약은
 `domain/postgres/README.md`를 따른다.
+
+Turn N2는 이 위에 읽기 전용 Repository(`domain/postgres/reference-repository.mjs`)와
+기존 Runtime Store 계약 3개(FactStore/EvidenceStore/StructuredStore)용 얇은
+adapter(`domain/postgres/reference-runtime-adapters.mjs`)를 추가했다. 실제
+PostgreSQL 16에서 v0.20-r3 bundle을 적재한 뒤, 이 Repository의 조회 결과를 portable
+`seed-structured-query-adapter.mjs`와 VERIFIED_FACT 87 / VERIFIED_EVIDENCE 219 /
+VERIFIED_EVENT 24 / VERIFIED_RELATION 40 **전량**에 대해 레코드 단위로 비교해
+동일함을 확인했다(`npm run test:reference-repository:postgres16`, 13/13 PASS).
+**이 Repository/Adapter는 아직 production Runtime(`configured-seed-runtime.mjs`,
+`GET /answer`)에 연결되지 않았다** — 여전히 portable bundle-backed Runtime만
+production 경로다. pgvector/BM25/embedding/reranker, 전체 4,204문서 확장, 작업자별
+검색 namespace는 이번 Turn 범위 밖이며 손대지 않았다.
 
 완료 기준: 새 서버의 빈 DB를 v0.20 bundle만으로 동일하게 복원하고 동일 질의 결과를 재현한다.
 
