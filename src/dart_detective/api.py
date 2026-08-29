@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 
 from .errors import CaseNotFoundError, SessionNotFoundError
 from .graph import GameServer
+from .qa_service import qa_ready, router as qa_router
 from .state import ACTION_COST
 
 app = FastAPI(
@@ -31,6 +32,10 @@ server = GameServer(
     max_sessions=int(os.environ.get("DART_DETECTIVE_MAX_SESSIONS", "50")),
     session_ttl_sec=int(os.environ.get("DART_DETECTIVE_SESSION_TTL", "1800")),
 )
+
+
+# 코퍼스 QA(/qa) — 게임 세션과 무관한 단발 질의응답. 배선은 qa_service에 있다.
+app.include_router(qa_router)
 
 
 class StartRequest(BaseModel):
@@ -57,6 +62,7 @@ def health() -> dict[str, Any]:
         "llm_enabled": server.use_llm,
         "action_cost": ACTION_COST,
         "cases": len(server.list_cases()),
+        "qa_index_ready": qa_ready(),
         **server.stats(),
     }
 
