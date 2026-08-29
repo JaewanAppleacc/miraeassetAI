@@ -118,6 +118,50 @@ def test_baseline_without_conditions_pulls_wrong_company(documents, corp_dict):
     assert "periodic_sdi_2025" in got
 
 
+# ---------- 기업명 토큰 (15차) ----------
+
+def two_corp_docs():
+    """질문이 회사 둘을 부르는 상황. 한쪽 공시만 본문에 자기 이름을 반복해 적는다 —
+    실제 코퍼스의 비대칭이다(거래소공시는 기업명이 metadata에만 있는 경우가 많다)."""
+    boilerplate = "계약금액 최근매출액 매출액대비 대규모법인여부 계약상대 계약기간"
+    return [
+        doc("exchange_hdc_gold", "현대건설", "exchange", subtype="단일판매공급계약체결",
+            report="단일판매ㆍ공급계약체결", rcept="20230602",
+            text=boilerplate + " 원유운반선 계약금액 227,500,000,000"),
+        doc("exchange_sdi_noise", "삼성SDI", "exchange", subtype="단일판매공급계약체결",
+            report="단일판매ㆍ공급계약체결", rcept="20240101",
+            text=boilerplate + " 삼성SDI 삼성SDI 삼성SDI 삼성SDI 삼성SDI 삼성SDI"),
+    ]
+
+
+QUESTION_TWO_CORPS = "현대건설과 삼성SDI의 원유운반선 계약금액을 비교해줘"
+
+
+def test_corp_name_tokens_are_dropped_from_bm25_query(index, corp_dict):
+    """기업을 hard로 이미 잘랐으면 같은 조건을 어휘로 또 세지 않는다."""
+    cond = extract_conditions("HMM의 2025년 연결 매출액은?", corp_dict)
+    got = index._query_tokens("HMM의 2025년 연결 매출액은?", cond)
+    assert "hmm" not in got
+    assert "매출" in got            # 나머지 어휘는 그대로다
+
+
+def test_corp_name_tokens_are_kept_when_corp_filter_is_not_hard(documents, corp_dict):
+    """corp를 hard로 안 자르면 기업명은 유일한 기업 신호다 — 빼면 안 된다."""
+    soft = DocumentIndex(documents, corp_dict, corp_mode="soft")
+    cond = extract_conditions("HMM의 2025년 연결 매출액은?", corp_dict)
+    assert "hmm" in soft._query_tokens("HMM의 2025년 연결 매출액은?", cond)
+
+
+def test_corp_name_tokens_do_not_decide_between_two_named_companies(corp_dict):
+    """15차 회귀 — 회사를 둘 부르는 질문에서, 본문에 이름을 반복한 쪽이 그 이유만으로
+    이기면 안 된다. Q17에서 삼성중공업 gold가 55/91위로 밀린 원인이다."""
+    docs = two_corp_docs()
+    dropped = DocumentIndex(docs, corp_dict)                       # 기본값 drop
+    kept = DocumentIndex(docs, corp_dict, corp_query="keep")       # ablation
+    assert ids(dropped.search(QUESTION_TWO_CORPS, k=2))[0] == "exchange_hdc_gold"
+    assert ids(kept.search(QUESTION_TWO_CORPS, k=2))[0] == "exchange_sdi_noise"
+
+
 def test_filer_name_matches_holding_report(index):
     """지분공시는 발행사(고려아연)로도 보고자(영풍)로도 찾을 수 있어야 한다."""
     assert "holding_koreazinc" in ids(index.search("고려아연 대량보유 보고서의 지분율", k=5))

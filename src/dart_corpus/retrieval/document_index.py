@@ -112,6 +112,7 @@ class DocumentIndex:
     def __init__(self, documents: list[IndexedDocument], corp_dict: CorpDictionary,
                  weights: Weights | None = None,
                  corp_mode: str = "hard", period_mode: str = "hard",
+                 corp_query: str = "drop",
                  use_doctype_boost: bool = True, use_salient_boost: bool = True,
                  chain_mode: str = "rank_only", chain_recency: bool = True,
                  score_mode: str = "maxnorm"):
@@ -120,6 +121,9 @@ class DocumentIndex:
         self.weights = weights or Weights()
         self.corp_mode = corp_mode
         self.period_mode = period_mode
+        # "drop"(기본) | "keep" — BM25 쿼리에서 기업명 토큰을 뺄지. _query_tokens 참고.
+        # 15차 실측에서 drop이 회귀 없이 P1을 하나 줄여 기본값으로 뒀다. keep은 ablation용.
+        self.corp_query = corp_query
         self.use_doctype_boost = use_doctype_boost
         self.use_salient_boost = use_salient_boost
         # 점수 결합 방식: "maxnorm"(기본) | "minmax" | "fixed" | "rrf"
@@ -283,10 +287,25 @@ class DocumentIndex:
         return ceiling
 
     # ---------- 검색 ----------
+    def _query_tokens(self, question: str, c: QueryConditions) -> list[str]:
+        """BM25에 넣을 질문 토큰.
+
+        corp_query="drop"이면 기업명 토큰을 뺀다. 기업을 hard로 이미 잘랐다면 같은
+        조건을 어휘로 한 번 더 세는 셈인데, 그 점수는 기업을 가르지 못하고 **본문에
+        회사 이름이 우연히 적힌 문서**만 밀어 올린다(15차 진단: 효성중공업 공시는
+        본문에 자기 이름이 3회 있어 기업명 bigram으로만 ~25점을 얻고, 같은 질문의
+        삼성중공업 gold 공시는 본문에 이름이 0회라 그 점수가 없다).
+        """
+        qt = tokenize(question)
+        if self.corp_query != "drop" or self.corp_mode != "hard" or not c.corps:
+            return qt
+        drop = {t for corp in c.corps for t in tokenize(corp)}
+        return [t for t in qt if t not in drop]
+
     def search(self, question: str, k: int = 10, *,
                conditions: QueryConditions | None = None) -> list[RetrievalHit]:
         c = conditions or extract_conditions(question, self.corp_dict)
-        qt = tokenize(question)
+        qt = self._query_tokens(question, c)
         salient = self.salient_terms(c) if self.use_salient_boost else []
         w = self.weights
 
