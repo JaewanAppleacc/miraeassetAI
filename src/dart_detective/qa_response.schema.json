@@ -7,7 +7,7 @@
   "required": [
     "question", "answer", "evidence", "evidence_matches", "slots",
     "conditions", "uncertainty", "validation", "llm", "timings",
-    "prompt_version", "n_retrieved"
+    "prompt_version", "n_retrieved", "evidence_corps", "warnings"
   ],
   "additionalProperties": false,
   "properties": {
@@ -48,6 +48,11 @@
     "slots": {"type": "array", "items": {"type": "string"}},
     "conditions": {"type": "object"},
     "uncertainty": {"type": "string"},
+    "evidence_corps": {"type": "array", "items": {"type": "string"}},
+    "warnings": {
+      "type": "array",
+      "items": {"enum": ["corp_unspecified", "corp_mismatch"]}
+    },
     "validation": {
       "type": "object",
       "required": ["status", "checks", "n_sources", "n_citations"],

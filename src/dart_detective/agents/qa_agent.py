@@ -125,6 +125,9 @@ class AgentState:
     evidence_matches: list[EvidenceMatch] = field(default_factory=list)
     llm_context_chunk_ids: tuple[str, ...] = ()
     prompt_chars: int = 0
+    # 근거로 쓴 청크들이 실제로 어느 회사 공시인가. 질문이 부른 회사와 다를 수 있다.
+    evidence_corps: tuple[str, ...] = ()
+    warnings: list[str] = field(default_factory=list)
     answer: str = ""
     uncertainty: str = ""
     validation: dict[str, Any] = field(default_factory=dict)
@@ -151,6 +154,8 @@ class AgentState:
             "timings": dict(self.timings),
             "prompt_version": PROMPT_VERSION,
             "prompt_chars": self.prompt_chars,
+            "evidence_corps": list(self.evidence_corps),
+            "warnings": list(self.warnings),
         }
 
 
@@ -256,6 +261,49 @@ def match_evidence(slots: Sequence[str], chunks: Sequence[RetrievedChunk],
     return matches
 
 
+# ---------- 2-1. 근거의 기업 확인 ----------
+
+WARN_CORP_UNSPECIFIED = "corp_unspecified"
+WARN_CORP_MISMATCH = "corp_mismatch"
+
+
+def evidence_corps_of(matches: Sequence[EvidenceMatch],
+                      chunks: Sequence[RetrievedChunk]) -> tuple[str, ...]:
+    """근거로 쓴 청크가 어느 회사 공시인지."""
+    by_id = {c.chunk_id: c for c in chunks}
+    corps = [str(by_id[m.chunk_id].metadata.get("corp_name") or "")
+             for m in matches if m.chunk_id in by_id]
+    return tuple(sorted({c for c in corps if c}))
+
+
+def corp_warnings(conditions: QueryConditions | None,
+                  evidence_corps: Sequence[str]) -> list[str]:
+    """질문의 기업과 근거의 기업이 어긋날 수 있는 경우를 표시한다.
+
+    답변을 막지는 않는다 — 기업 사전에 없는 이름(비상장·표기 차이)이면 조건으로 잡히지
+    않아 기업 필터가 걸리지 않고, 어휘가 겹치는 **다른 회사** 공시가 근거로 올라온다.
+    이때 답 자체는 근거에 충실하지만 질문이 물은 회사가 아닐 수 있으므로 그 사실을 알린다.
+    """
+    if not evidence_corps:
+        return []
+    wanted = set(conditions.corps) if conditions else set()
+    if not wanted:
+        return [WARN_CORP_UNSPECIFIED]
+    if not (wanted & set(evidence_corps)):
+        return [WARN_CORP_MISMATCH]
+    return []
+
+
+def corp_warning_text(warnings: Sequence[str], evidence_corps: Sequence[str]) -> str:
+    corps = ", ".join(evidence_corps)
+    if WARN_CORP_UNSPECIFIED in warnings:
+        return (f"질문에서 기업을 특정하지 못했다 — 아래 근거는 {corps} 공시다. "
+                "의도한 기업이 아니면 회사명을 정확히 넣어 다시 물어라.")
+    if WARN_CORP_MISMATCH in warnings:
+        return f"근거로 찾은 공시({corps})가 질문의 기업과 다를 수 있다."
+    return ""
+
+
 # ---------- 3. 답변 ----------
 
 def fallback_answer(matches: Sequence[EvidenceMatch]) -> tuple[str, str]:
@@ -325,6 +373,9 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
     state.llm_context_chunk_ids = tuple(c.chunk_id for c in context)
     user_prompt = build_user_prompt(question, state.evidence_matches, context)
     state.prompt_chars = len(user_prompt)
+    state.evidence_corps = evidence_corps_of(state.evidence_matches,
+                                             state.retrieval_results)
+    state.warnings = corp_warnings(state.conditions, state.evidence_corps)
 
     sources = [c.as_source() for c in state.retrieval_results]
     answer, uncertainty = fallback_answer(state.evidence_matches)
@@ -356,6 +407,10 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
             state.llm = {"used": False, "error": f"{type(exc).__name__}: {exc}"}
         state.timings["llm_ms"] = int((time.perf_counter() - t_llm) * 1000)
 
+    note = corp_warning_text(state.warnings, state.evidence_corps)
+    if note:
+        # 답변은 막지 않는다 — 다만 기업이 어긋날 수 있다는 사실을 답과 함께 내보낸다.
+        uncertainty = f"{note} {uncertainty}".strip()
     state.answer = answer
     state.uncertainty = uncertainty
     state.validation = validator.validate(answer, citations, sources)

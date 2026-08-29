@@ -207,6 +207,51 @@ def test_clova_non_json_content_becomes_llm_unavailable(monkeypatch):
         client.complete_json("s", "u", {})
 
 
+# ---------- 4-1. usage / 비용 ----------
+
+def test_usage_keys_are_passed_through_unchanged(monkeypatch):
+    """청구 단위는 provider가 정한다 — 키 이름을 우리가 바꾸지 않는다."""
+    client = llm_mod.ClovaLLM(api_key="test-key")
+    monkeypatch.setattr(client, "_post", lambda payload: {
+        "result": {"message": {"content": '{"answer": "ok"}'},
+                   "usage": {"promptTokens": 1200, "completionTokens": 300,
+                             "totalTokens": 1500}}})
+    usage = client.complete_json("s", "u", {}).usage
+    assert usage["promptTokens"] == 1200 and usage["totalTokens"] == 1500
+    assert usage["max_tokens_requested"] == 2048
+
+
+def test_truncated_output_is_flagged(monkeypatch):
+    """출력이 maxTokens에서 잘리면 표시한다 — JSON이 깨진 원인을 구분해야 한다."""
+    client = llm_mod.ClovaLLM(api_key="test-key")
+    monkeypatch.setattr(client, "_post", lambda payload: {
+        "result": {"message": {"content": '{"answer": "ok"}'},
+                   "stopReason": "length"}})
+    usage = client.complete_json("s", "u", {}).usage
+    assert usage["truncated"] is True and usage["stop_reason"] == "length"
+
+
+def test_normal_stop_reason_is_not_flagged_as_truncated(monkeypatch):
+    client = llm_mod.ClovaLLM(api_key="test-key")
+    monkeypatch.setattr(client, "_post", lambda payload: {
+        "result": {"message": {"content": '{"answer": "ok"}'}, "stopReason": "end_turn"}})
+    usage = client.complete_json("s", "u", {}).usage
+    assert "truncated" not in usage
+
+
+def test_request_body_carries_the_output_cap(monkeypatch):
+    client = llm_mod.ClovaLLM(api_key="test-key")
+    sent: dict = {}
+
+    def fake_post(payload):
+        sent.update(payload)
+        return {"result": {"message": {"content": '{"answer": "ok"}'}}}
+
+    monkeypatch.setattr(client, "_post", fake_post)
+    client.complete_json("s", "u", {})
+    assert sent["maxTokens"] == 2048 and sent["temperature"] == 0.0
+
+
 # ---------- 5. 경계 질문 ----------
 
 BOUNDARY = [
@@ -242,6 +287,40 @@ def test_prompt_injection_answer_stays_grounded(retriever):
                                      retriever, llm=llm)
     assert "12,345,678" not in state.answer
     assert state.validation["status"] != "UNSUPPORTED"
+
+
+def test_unknown_company_is_flagged_but_not_blocked(retriever):
+    """기업 사전에 없는 이름은 조건으로 안 잡혀 다른 회사 공시가 근거로 올라온다.
+    답변을 막지는 않되, 근거의 회사와 경고를 함께 내보낸다."""
+    state = qa_agent.answer_question("없는회사의 2025년 매출액은?", retriever)
+    assert state.conditions.corps == frozenset()
+    assert state.warnings == [qa_agent.WARN_CORP_UNSPECIFIED]
+    assert state.evidence_corps == ("HMM",)
+    assert "HMM" in state.uncertainty and "기업을 특정하지 못했다" in state.uncertainty
+    assert state.answer                                   # 차단하지 않는다
+    assert state.validation["status"] != "UNSUPPORTED"
+
+
+def test_known_company_has_no_corp_warning(retriever):
+    state = qa_agent.answer_question(QUESTION, retriever)
+    assert state.warnings == []
+    assert state.evidence_corps == ("HMM",)
+
+
+def test_corp_mismatch_is_flagged():
+    """조건의 기업과 근거의 기업이 겹치지 않으면 따로 표시한다(방어적 검사)."""
+    from dart_corpus.retrieval.conditions import QueryConditions
+    cond = QueryConditions(corps=frozenset({"현대모비스"}))
+    assert qa_agent.corp_warnings(cond, ["HMM"]) == [qa_agent.WARN_CORP_MISMATCH]
+    assert qa_agent.corp_warnings(cond, ["현대모비스"]) == []
+    assert qa_agent.corp_warnings(cond, []) == []          # 근거가 없으면 경고도 없다
+
+
+def test_api_exposes_evidence_corps_and_warnings(client):
+    body = client.post("/qa", json={"question": "없는회사의 2025년 매출액은?"}).json()
+    jsonschema.validate(body, response_schema())
+    assert body["warnings"] == ["corp_unspecified"]
+    assert body["evidence_corps"] == ["HMM"]
 
 
 def test_unknown_company_still_returns_traceable_evidence(retriever):

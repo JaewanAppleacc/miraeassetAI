@@ -204,13 +204,23 @@ class ClovaLLM:
         text = message.get("content") or ""
         if not text:
             raise LLMUnavailable(f"CLOVA 응답이 비어 있다: {body.get('status')}")
+        # usage 키 이름은 계정/모델에 따라 다를 수 있어 **그대로** 들고 간다.
+        # 여기서 이름을 정규화하면 실제 청구 단위와 어긋날 수 있다.
+        usage = dict(result.get("usage") or {})
+        stop_reason = result.get("stopReason") or result.get("finishReason")
+        if stop_reason:
+            usage["stop_reason"] = stop_reason
+        if stop_reason in {"length", "stop_before", "max_tokens"}:
+            # 출력이 상한에서 잘렸다 — JSON이 깨져 파싱이 실패할 수 있다.
+            usage["truncated"] = True
+        usage.setdefault("max_tokens_requested", self.max_tokens)
         return LLMResult(
             data=extract_json(text),
             provider=self.provider,
             model=self.model,
             latency_ms=latency_ms,
             raw_text=text,
-            usage=result.get("usage") or {},
+            usage=usage,
         )
 
 

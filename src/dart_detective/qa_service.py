@@ -33,6 +33,13 @@ DEFAULT_EXP_DIR = REPO_ROOT / "experiments" / "gold25_retrieval"
 
 router = APIRouter(tags=["qa"])
 logger = logging.getLogger("dart_detective.qa")
+# uvicorn은 자기 로거만 설정하고 루트는 WARNING으로 둔다 — 그대로면 아래 요청 로그가
+# 한 줄도 안 나온다. 레벨을 직접 올리고, 붙일 핸들러가 없을 때만 하나 만든다.
+logger.setLevel(os.environ.get("DART_QA_LOG_LEVEL", "INFO").upper())
+if not logger.handlers and not logging.getLogger().handlers:
+    _handler = logging.StreamHandler()
+    _handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+    logger.addHandler(_handler)
 RESPONSE_SCHEMA_PATH = Path(__file__).resolve().parent / "qa_response.schema.json"
 _lock = threading.Lock()
 _retriever: CorpusRetriever | None = None
@@ -118,6 +125,8 @@ def qa(req: QARequest,
         "slots": out["slots"],
         "conditions": out["conditions"],
         "uncertainty": out["uncertainty"],
+        "evidence_corps": out["evidence_corps"],
+        "warnings": out["warnings"],
         "validation": out["validation"],
         "llm": out["llm"],
         "timings": out["timings"],
@@ -127,11 +136,12 @@ def qa(req: QARequest,
     # 한 줄 요약 로그. 질문 원문과 키는 남기지 않는다.
     logger.info(
         "qa question_chars=%d retrieved=%d evidence=%d slots=%d validation=%s "
-        "llm=%s provider=%s retrieval_ms=%s llm_ms=%s total_ms=%s prompt=%s",
+        "llm=%s provider=%s retrieval_ms=%s llm_ms=%s total_ms=%s prompt=%s warnings=%s",
         len(req.question), response["n_retrieved"], len(response["evidence"]),
         len(response["slots"]), (response["validation"] or {}).get("status"),
         (response["llm"] or {}).get("used"), (response["llm"] or {}).get("provider"),
         out["timings"].get("retrieval_ms"), out["timings"].get("llm_ms"),
         out["timings"].get("total_ms"), response["prompt_version"],
+        ",".join(response["warnings"]) or "-",
     )
     return response

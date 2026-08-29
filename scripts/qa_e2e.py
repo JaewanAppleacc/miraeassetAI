@@ -20,10 +20,17 @@
 CLOVA_API_KEY가 있으면 HyperCLOVA X를 실제로 부르고, 없으면 결정론적 fallback으로 같은
 검사를 한다. 키가 없다고 임의 호출하거나 가짜 키를 만들지 않는다.
 
+크레딧을 쓰는 순서(권장):
+    1) --set demo            5문항 — 연결·형식 확인 (프롬프트 약 4만자)
+    2) --set demo --limit 1  한 문항만 더 좁게 보고 싶을 때
+    3) --set all             25문항 (프롬프트 합계 약 18만자)
+    4) 실패한 문항만 --qids Q08,Q17 로 재실행 — 전체를 다시 돌리지 않는다
+
 실행:
     PYTHONIOENCODING=utf-8 python scripts/qa_e2e.py --set smoke
     PYTHONIOENCODING=utf-8 python scripts/qa_e2e.py --set all --out work/qa_e2e_all.json
     PYTHONIOENCODING=utf-8 python scripts/qa_e2e.py --set demo --url http://localhost:8000
+    PYTHONIOENCODING=utf-8 python scripts/qa_e2e.py --set all --qids Q08,Q17
 """
 from __future__ import annotations
 
@@ -97,23 +104,26 @@ def score(item: dict, result: dict) -> dict:
         picked_docs = {ev["doc_id"] for ev in evidence}
         gold_docs = set(gold["expected_documents"])
         blob = "\n".join(ev["text"] for ev in evidence)
-        # LLM에 실제로 넘어가는 발췌(상위 청크)에 gold 근거가 들어 있는지 — 답변 품질의 상한이다.
-        context_ids = set(result.get("llm_context") or [])
-        context_blob = "\n".join(
-            c["evidence_text"] for c in (result.get("retrieval") or [])
-            if c["chunk_id"] in context_ids)
         hit = [g for g in gold["expected_evidence"] if g["quote"] and g["quote"] in blob]
-        in_context = [g for g in gold["expected_evidence"]
-                      if g["quote"] and g["quote"] in context_blob]
         gold_stats = {
             "gold_documents": len(gold_docs),
             "documents_used": len(picked_docs),
             "gold_document_hit": len(picked_docs & gold_docs),
             "gold_evidence_total": len(gold["expected_evidence"]),
             "gold_evidence_hit": len(hit),
-            "gold_evidence_in_llm_context": len(in_context),
-            "llm_context_chunks": len(context_ids),
         }
+        # LLM에 실제로 넘어가는 발췌에 gold 근거가 들어 있는지 — 답변 품질의 상한이다.
+        # HTTP 응답에는 retrieval 본문이 없다(응답 스키마 고정). 그때는 재지 않는다 —
+        # 0으로 적으면 "회수 못 함"과 "못 잼"이 구분되지 않는다.
+        if result.get("retrieval") is not None:
+            context_ids = set(result.get("llm_context") or [])
+            context_blob = "\n".join(
+                c["evidence_text"] for c in result["retrieval"]
+                if c["chunk_id"] in context_ids)
+            gold_stats["gold_evidence_in_llm_context"] = sum(
+                1 for g in gold["expected_evidence"]
+                if g["quote"] and g["quote"] in context_blob)
+            gold_stats["llm_context_chunks"] = len(context_ids)
     llm = result.get("llm") or {}
     timings = result.get("timings") or {}
     return {"ok": not problems, "problems": problems, "validation": status,
@@ -149,6 +159,10 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--set", dest="qset", default="smoke",
                     choices=("smoke", "demo", "multi", "all"))
+    ap.add_argument("--limit", type=int, default=0,
+                    help="앞에서 N문항만 — 크레딧을 조금씩 쓰며 확인할 때")
+    ap.add_argument("--qids", default="",
+                    help="쉼표로 구분한 문항만 재실행(실패 케이스만 다시 돌릴 때)")
     ap.add_argument("--url", default="", help="지정하면 HTTP로 POST /qa를 부른다")
     ap.add_argument("--k", type=int, default=None, help="Stage 2에서 볼 청크 수")
     ap.add_argument("--out", type=Path, default=None)
@@ -156,6 +170,13 @@ def main() -> int:
     args = ap.parse_args()
 
     items = question_set(args.qset)
+    if args.qids:
+        wanted = {q.strip() for q in args.qids.split(",") if q.strip()}
+        items = [i for i in items if i["qid"] in wanted]
+        if not items:
+            raise SystemExit(f"해당 문항이 이 질문셋에 없다: {sorted(wanted)}")
+    if args.limit:
+        items = items[:args.limit]
     llm = get_llm()
     provider = getattr(llm, "provider", None)
     print(f"질문셋 {args.qset} · {len(items)}문항 · "
@@ -174,8 +195,9 @@ def main() -> int:
         head = f"[{item['qid']}] {'OK' if card['ok'] else 'FAIL ' + ', '.join(card['problems'])}"
         gold_note = ""
         if "gold_evidence_hit" in card:
-            gold_note = (f" gold근거 답변 {card['gold_evidence_hit']}"
-                         f"/문맥 {card['gold_evidence_in_llm_context']}"
+            ctx = (f"/문맥 {card['gold_evidence_in_llm_context']}"
+                   if "gold_evidence_in_llm_context" in card else "")
+            gold_note = (f" gold근거 답변 {card['gold_evidence_hit']}{ctx}"
                          f"/전체 {card['gold_evidence_total']}"
                          f" 문서 {card['gold_document_hit']}/{card['gold_documents']}")
         print(f"\n{head}  validation={card['validation']} "
@@ -195,7 +217,8 @@ def main() -> int:
 
     total_gold = sum(r.get("gold_evidence_total", 0) for r in rows)
     hit_gold = sum(r.get("gold_evidence_hit", 0) for r in rows)
-    ctx_gold = sum(r.get("gold_evidence_in_llm_context", 0) for r in rows)
+    measured_ctx = [r for r in rows if "gold_evidence_in_llm_context" in r]
+    ctx_gold = sum(r["gold_evidence_in_llm_context"] for r in measured_ctx)
     print(f"\n{len(items) - failed}/{len(items)} passed")
 
     def stat(key: str) -> str:
@@ -211,6 +234,24 @@ def main() -> int:
         print(f"LLM 답변 폐기(근거 불일치/빈 답): {degraded}")
     if errored:
         print(f"LLM 호출 실패 → fallback: {errored}")
+    if degraded or errored:
+        print(f"  재실행: --set {args.qset} --qids "
+              f"{','.join(sorted(set(degraded) | set(errored)))}")
+
+    # usage는 provider가 준 키를 그대로 합산한다 — 이름을 우리가 정하지 않는다.
+    usage_total: dict[str, Any] = {}
+    for r in rows:
+        for key, value in (r.get("usage") or {}).items():
+            if isinstance(value, (int, float)):
+                usage_total[key] = usage_total.get(key, 0) + value
+            elif value is True:
+                usage_total[key] = usage_total.get(key, 0) + 1
+    if usage_total:
+        print("usage 합계 — " + " · ".join(f"{k} {v:,}" for k, v in
+                                          sorted(usage_total.items())))
+    truncated = [r["qid"] for r in rows if (r.get("usage") or {}).get("truncated")]
+    if truncated:
+        print(f"출력 잘림(maxTokens 상한): {truncated}")
     versions = {r.get("prompt_version") for r in rows}
     chars = [r["prompt_chars"] for r in rows if r.get("prompt_chars")]
     if chars:
@@ -220,8 +261,9 @@ def main() -> int:
               f"(대략 {sum(chars) // 1500:,}K 토큰 규모)")
     print(f"prompt_version {versions.pop() if len(versions) == 1 else versions}")
     if total_gold:
-        print(f"gold 근거 — LLM 발췌에 포함 {ctx_gold}/{total_gold} "
-              f"({ctx_gold / total_gold:.3f}) · slot으로 지목 {hit_gold}/{total_gold}")
+        ctx_note = (f"LLM 발췌에 포함 {ctx_gold}/{total_gold} ({ctx_gold / total_gold:.3f})"
+                    if measured_ctx else "LLM 발췌 포함률 — HTTP 응답으로는 측정 불가")
+        print(f"gold 근거 — {ctx_note} · slot으로 지목 {hit_gold}/{total_gold}")
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_text(json.dumps(rows, ensure_ascii=False, indent=2),
