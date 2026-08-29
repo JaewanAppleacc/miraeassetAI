@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dart-detective/qa-response.v1",
+  "title": "POST /qa 응답",
+  "description": "프론트엔드·평가 스크립트가 의존하는 계약. 필드를 빼거나 이름을 바꾸면 스키마 버전을 올린다.",
+  "type": "object",
+  "required": [
+    "question", "answer", "evidence", "evidence_matches", "slots",
+    "conditions", "uncertainty", "validation", "llm", "timings",
+    "prompt_version", "n_retrieved"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "question": {"type": "string"},
+    "answer": {"type": "string"},
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["chunk_id", "text", "section_path", "doc_id"],
+        "additionalProperties": false,
+        "properties": {
+          "chunk_id": {"type": "string"},
+          "text": {"type": "string"},
+          "section_path": {"type": "array", "items": {"type": "string"}},
+          "doc_id": {"type": "string"}
+        }
+      }
+    },
+    "evidence_matches": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["slot", "chunk_id", "doc_id", "evidence_text",
+                     "section_path", "confidence", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "slot": {"type": "string"},
+          "chunk_id": {"type": "string"},
+          "doc_id": {"type": "string"},
+          "evidence_text": {"type": "string"},
+          "section_path": {"type": "array", "items": {"type": "string"}},
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "reason": {"type": "string"}
+        }
+      }
+    },
+    "slots": {"type": "array", "items": {"type": "string"}},
+    "conditions": {"type": "object"},
+    "uncertainty": {"type": "string"},
+    "validation": {
+      "type": "object",
+      "required": ["status", "checks", "n_sources", "n_citations"],
+      "properties": {
+        "status": {"enum": ["SUPPORTED", "PARTIALLY_SUPPORTED", "UNSUPPORTED"]},
+        "checks": {"type": "array"},
+        "n_sources": {"type": "integer", "minimum": 0},
+        "n_citations": {"type": "integer", "minimum": 0}
+      }
+    },
+    "llm": {
+      "type": "object",
+      "required": ["used"],
+      "properties": {
+        "used": {"type": "boolean"},
+        "provider": {"type": ["string", "null"]},
+        "model": {"type": ["string", "null"]},
+        "latency_ms": {"type": "integer", "minimum": 0},
+        "usage": {"type": "object"},
+        "prompt_version": {"type": "string"},
+        "prompt_chars": {"type": "integer", "minimum": 0},
+        "degraded": {"type": "boolean"},
+        "degraded_reason": {"type": "string"},
+        "degraded_answer": {"type": "string"},
+        "error": {"type": "string"}
+      }
+    },
+    "timings": {
+      "type": "object",
+      "properties": {
+        "retrieval_ms": {"type": "integer", "minimum": 0},
+        "llm_ms": {"type": "integer", "minimum": 0},
+        "total_ms": {"type": "integer", "minimum": 0}
+      }
+    },
+    "prompt_version": {"type": "string"},
+    "n_retrieved": {"type": "integer", "minimum": 0}
+  }
+}

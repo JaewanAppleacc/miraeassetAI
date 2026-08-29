@@ -15,6 +15,7 @@
 """
 from __future__ import annotations
 
+import logging
 import os
 import threading
 from pathlib import Path
@@ -31,6 +32,8 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_EXP_DIR = REPO_ROOT / "experiments" / "gold25_retrieval"
 
 router = APIRouter(tags=["qa"])
+logger = logging.getLogger("dart_detective.qa")
+RESPONSE_SCHEMA_PATH = Path(__file__).resolve().parent / "qa_response.schema.json"
 _lock = threading.Lock()
 _retriever: CorpusRetriever | None = None
 
@@ -107,7 +110,7 @@ def qa(req: QARequest,
        retriever: CorpusRetriever = Depends(get_retriever)) -> dict[str, Any]:
     state = qa_agent.answer_question(req.question, retriever, llm=get_llm(), k=req.k)
     out = state.to_dict()
-    return {
+    response = {
         "question": req.question,
         "answer": out["answer"],
         "evidence": out["evidence"],
@@ -117,5 +120,18 @@ def qa(req: QARequest,
         "uncertainty": out["uncertainty"],
         "validation": out["validation"],
         "llm": out["llm"],
+        "timings": out["timings"],
+        "prompt_version": out["prompt_version"],
         "n_retrieved": len(out["retrieval"]),
     }
+    # 한 줄 요약 로그. 질문 원문과 키는 남기지 않는다.
+    logger.info(
+        "qa question_chars=%d retrieved=%d evidence=%d slots=%d validation=%s "
+        "llm=%s provider=%s retrieval_ms=%s llm_ms=%s total_ms=%s prompt=%s",
+        len(req.question), response["n_retrieved"], len(response["evidence"]),
+        len(response["slots"]), (response["validation"] or {}).get("status"),
+        (response["llm"] or {}).get("used"), (response["llm"] or {}).get("provider"),
+        out["timings"].get("retrieval_ms"), out["timings"].get("llm_ms"),
+        out["timings"].get("total_ms"), response["prompt_version"],
+    )
+    return response

@@ -114,9 +114,17 @@ def score(item: dict, result: dict) -> dict:
             "gold_evidence_in_llm_context": len(in_context),
             "llm_context_chunks": len(context_ids),
         }
+    llm = result.get("llm") or {}
+    timings = result.get("timings") or {}
     return {"ok": not problems, "problems": problems, "validation": status,
-            "llm_used": (result.get("llm") or {}).get("used"),
-            "llm_provider": (result.get("llm") or {}).get("provider"),
+            "llm_used": llm.get("used"), "llm_provider": llm.get("provider"),
+            "llm_model": llm.get("model"), "llm_degraded": llm.get("degraded"),
+            "llm_degraded_reason": llm.get("degraded_reason"),
+            "llm_error": llm.get("error"), "usage": llm.get("usage"),
+            "prompt_version": result.get("prompt_version"),
+            "prompt_chars": result.get("prompt_chars") or llm.get("prompt_chars"),
+            "retrieval_ms": timings.get("retrieval_ms"),
+            "llm_ms": timings.get("llm_ms"), "total_ms": timings.get("total_ms"),
             "n_evidence": len(evidence), **gold_stats}
 
 
@@ -171,7 +179,11 @@ def main() -> int:
                          f"/전체 {card['gold_evidence_total']}"
                          f" 문서 {card['gold_document_hit']}/{card['gold_documents']}")
         print(f"\n{head}  validation={card['validation']} "
-              f"evidence={card['n_evidence']} llm={card['llm_used']}{gold_note}")
+              f"evidence={card['n_evidence']} llm={card['llm_used']}"
+              f"{' degraded=' + str(card['llm_degraded_reason']) if card.get('llm_degraded') else ''}"
+              f" {card['total_ms']}ms(검색 {card['retrieval_ms']}"
+              f"{' · LLM ' + str(card['llm_ms']) if card.get('llm_ms') is not None else ''})"
+              f"{gold_note}")
         print(f"  {item['question'][:96]}")
         if not args.quiet:
             for ev in (result.get("evidence") or [])[:3]:
@@ -185,6 +197,28 @@ def main() -> int:
     hit_gold = sum(r.get("gold_evidence_hit", 0) for r in rows)
     ctx_gold = sum(r.get("gold_evidence_in_llm_context", 0) for r in rows)
     print(f"\n{len(items) - failed}/{len(items)} passed")
+
+    def stat(key: str) -> str:
+        vals = sorted(r[key] for r in rows if r.get(key) is not None)
+        if not vals:
+            return "-"
+        return (f"중앙값 {vals[len(vals) // 2]}ms · 최대 {vals[-1]}ms")
+    print(f"latency — 전체 {stat('total_ms')} / 검색 {stat('retrieval_ms')} "
+          f"/ LLM {stat('llm_ms')}")
+    degraded = [r["qid"] for r in rows if r.get("llm_degraded")]
+    errored = [r["qid"] for r in rows if r.get("llm_error")]
+    if degraded:
+        print(f"LLM 답변 폐기(근거 불일치/빈 답): {degraded}")
+    if errored:
+        print(f"LLM 호출 실패 → fallback: {errored}")
+    versions = {r.get("prompt_version") for r in rows}
+    chars = [r["prompt_chars"] for r in rows if r.get("prompt_chars")]
+    if chars:
+        # 크레딧 견적용 — 한국어는 대략 1토큰 ≈ 1.5자로 잡고 하한을 본다.
+        print(f"프롬프트 크기 — 중앙값 {sorted(chars)[len(chars) // 2]:,}자 · "
+              f"최대 {max(chars):,}자 · 합계 {sum(chars):,}자 "
+              f"(대략 {sum(chars) // 1500:,}K 토큰 규모)")
+    print(f"prompt_version {versions.pop() if len(versions) == 1 else versions}")
     if total_gold:
         print(f"gold 근거 — LLM 발췌에 포함 {ctx_gold}/{total_gold} "
               f"({ctx_gold / total_gold:.3f}) · slot으로 지목 {hit_gold}/{total_gold}")
