@@ -32,6 +32,14 @@ from . import validator
 
 MAX_EVIDENCE = 5
 ANSWER_SLOT = "answer"
+# LLM에 넘길 청크 수. slot으로 고른 근거 줄만 주면 문맥이 너무 좁다 — 25문항 실측에서
+# 검색이 gold 근거 140건 중 132건을 후보에 담아 오는데, slot 줄만 넘기면 9건만 전달됐다.
+# 그래서 근거 선택(출처 추적용)과 별개로, 상위 청크를 통째로 문맥으로 준다.
+# 청크 수별 gold 근거 회수(25문항 실측, 괄호는 문항당 평균 문자수):
+#     3 → 0.621 (1,386)   5 → 0.679 (2,203)   8 → 0.807 (3,357)
+#    12 → 0.850 (4,702)  16 → 0.921 (6,077)  20 → 0.943 (7,443)
+# 16을 쓴다 — 상한(0.943)에 근접하면서 20보다 문맥이 18% 짧다.
+LLM_CONTEXT_CHUNKS = 16
 
 ANSWER_SCHEMA: dict[str, Any] = {
     "type": "object",
@@ -92,6 +100,7 @@ class AgentState:
     slots: tuple[str, ...] = ()
     retrieval_results: list[RetrievedChunk] = field(default_factory=list)
     evidence_matches: list[EvidenceMatch] = field(default_factory=list)
+    llm_context_chunk_ids: tuple[str, ...] = ()
     answer: str = ""
     uncertainty: str = ""
     validation: dict[str, Any] = field(default_factory=dict)
@@ -109,6 +118,7 @@ class AgentState:
             "slots": list(self.slots),
             "conditions": self.conditions.as_dict() if self.conditions else {},
             "retrieval": [c.to_dict() for c in self.retrieval_results],
+            "llm_context": list(self.llm_context_chunk_ids),
             "uncertainty": self.uncertainty,
             "validation": self.validation,
             "llm": self.llm,
@@ -172,13 +182,20 @@ def match_evidence(slots: Sequence[str], chunks: Sequence[RetrievedChunk],
         for rank, chunk in enumerate(chunks, start=1):
             reasons: list[str] = []
             weight = 0.0
+            metric_hit = False
             if metric != ANSWER_SLOT:
                 if metric in chunk.row_labels:
                     weight += 0.5
+                    metric_hit = True
                     reasons.append(f"행 레이블 '{metric}' 일치")
                 elif metric in chunk.evidence_text:
                     weight += 0.25
+                    metric_hit = True
                     reasons.append(f"본문에 '{metric}' 등장")
+                else:
+                    # 연도만 맞는 청크로 지표 자리를 채우면 근거를 잘못 귀속한다.
+                    # 지표 신호가 없으면 그 자리는 비운다.
+                    continue
             if year is not None:
                 if str(year) in chunk.evidence_text:
                     weight += 0.25
@@ -186,7 +203,7 @@ def match_evidence(slots: Sequence[str], chunks: Sequence[RetrievedChunk],
                 elif chunk.metadata.get("period_year") == year:
                     weight += 0.15
                     reasons.append(f"문서 기준연도 {year}")
-            if metric != ANSWER_SLOT and not reasons:
+            if metric != ANSWER_SLOT and not metric_hit:
                 continue
             rank_score = 1.0 / rank
             score = weight + rank_score
@@ -227,15 +244,26 @@ def fallback_answer(matches: Sequence[EvidenceMatch]) -> tuple[str, str]:
             "위 줄은 원문 발췌 그대로다. 출처는 evidence의 doc_id/section_path에 있다.")
 
 
-def _llm_answer(llm: Any, question: str, matches: Sequence[EvidenceMatch]
+def llm_context(chunks: Sequence[RetrievedChunk],
+                limit: int = LLM_CONTEXT_CHUNKS) -> list[RetrievedChunk]:
+    """LLM에 넘길 발췌. 검색 상위 청크를 순서대로 자른다."""
+    return list(chunks)[:limit]
+
+
+def _llm_answer(llm: Any, question: str, matches: Sequence[EvidenceMatch],
+                context: Sequence[RetrievedChunk]
                 ) -> tuple[dict[str, Any], dict[str, Any]]:
     excerpts = "\n\n".join(
-        f"[{m.doc_id}] slot={m.slot}"
-        + (f" · {' > '.join(m.section_path)}" if m.section_path else "")
-        + f"\n{m.evidence_text}"
-        for m in matches
+        f"[{c.doc_id}]" + (f" · {' > '.join(c.section_path)}" if c.section_path else "")
+        + f"\n{c.evidence_text}"
+        for c in context
     )
-    user = (f"질문: {question}\n\n=== 공시 발췌 ===\n{excerpts}\n=== 발췌 끝 ===")
+    wanted = "\n".join(f"- {m.slot}: {m.evidence_text}" for m in matches)
+    user = (
+        f"질문: {question}\n\n"
+        + (f"=== 질문이 요구하는 항목과 찾아둔 줄 ===\n{wanted}\n\n" if wanted else "")
+        + f"=== 공시 발췌 ===\n{excerpts}\n=== 발췌 끝 ==="
+    )
     result: LLMResult = llm.complete_json(SYSTEM_PROMPT, user, ANSWER_SCHEMA)
     meta = {"provider": result.provider, "model": result.model,
             "latency_ms": result.latency_ms, "usage": result.usage}
@@ -246,7 +274,8 @@ def _llm_answer(llm: Any, question: str, matches: Sequence[EvidenceMatch]
 
 def answer_question(question: str, retriever: CorpusRetriever, *,
                     llm: Any | None = None, k: int | None = None,
-                    max_evidence: int = MAX_EVIDENCE) -> AgentState:
+                    max_evidence: int = MAX_EVIDENCE,
+                    llm_context_chunks: int = LLM_CONTEXT_CHUNKS) -> AgentState:
     """질문 하나를 끝까지 처리한다. 반환은 AgentState — 중간 단계가 전부 남는다."""
     state = AgentState(question=question)
     state.conditions = retriever.conditions(question)
@@ -254,6 +283,9 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
     state.retrieval_results = retriever.retrieve(question, state.conditions, k=k)
     state.evidence_matches = match_evidence(state.slots, state.retrieval_results,
                                             limit=max_evidence)
+    # LLM 유무와 무관하게 기록한다 — 키가 없어도 "무엇을 넘겼을 것인가"를 측정할 수 있어야 한다.
+    state.llm_context_chunk_ids = tuple(
+        c.chunk_id for c in llm_context(state.retrieval_results, llm_context_chunks))
 
     sources = [c.as_source() for c in state.retrieval_results]
     answer, uncertainty = fallback_answer(state.evidence_matches)
@@ -262,7 +294,9 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
 
     if llm is not None and state.evidence_matches:
         try:
-            payload, meta = _llm_answer(llm, question, state.evidence_matches)
+            payload, meta = _llm_answer(llm, question, state.evidence_matches,
+                                        llm_context(state.retrieval_results,
+                                                    llm_context_chunks))
             state.llm = {"used": True, **meta}
             llm_citations = payload.get("evidence", []) or []
             check = validator.validate(payload.get("answer", ""), llm_citations, sources)

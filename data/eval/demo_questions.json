@@ -1,0 +1,53 @@
+{
+  "schema_version": "0.1.0",
+  "purpose": "시연용 질문 5개. gold25 전 문항을 실제로 돌린 결과에서 골랐다 — 임의 선정이 아니다.",
+  "selection_criteria": [
+    "Validator 판정이 SUPPORTED",
+    "gold 근거가 LLM 발췌 안에 대부분/전부 들어옴(측정치는 llm_context_chunks=8 기준, 16에서는 같거나 더 높음)",
+    "질문 유형이 겹치지 않을 것 — 단일 문서 추출 / 다중 문서 비교계산 / 정정 추적 / 사건 체인"
+  ],
+  "measured_with": {
+    "run": "scripts/qa_e2e.py --set all",
+    "llm": "none (결정론적 fallback) — CLOVA 키 발급 후 재측정 필요",
+    "stage1_k": 50,
+    "section_alpha": 0.5,
+    "llm_context_chunks_at_measurement": 8
+  },
+  "questions": [
+    {
+      "qid": "Q01",
+      "label": "단일 문서 · 계약 숫자 추출",
+      "question": "HMM이 2023년 4월 GS칼텍스와 체결한 공급계약의 계약금액과 계약기간은 얼마인가?",
+      "why": "가장 단순한 형태. 문서 1건에서 숫자 두 개를 집어내는 것을 보여준다.",
+      "measured": {"gold_evidence_in_context": 3, "gold_evidence_total": 3, "documents": 1, "validation": "SUPPORTED"}
+    },
+    {
+      "qid": "Q05",
+      "label": "단일 문서 · 자기주식 처분",
+      "question": "KT가 2026년 1월 20일 결정한 자기주식 처분 수량과 예정금액은 얼마인가?",
+      "why": "근거 6건이 한 문서 안에 흩어져 있다. 표 행 단위로 근거를 집는 것을 보여준다.",
+      "measured": {"gold_evidence_in_context": 6, "gold_evidence_total": 6, "documents": 1, "validation": "SUPPORTED"}
+    },
+    {
+      "qid": "Q12",
+      "label": "다중 문서 · 재무 비교",
+      "question": "현대모비스의 2023년과 2025년 연결 실적을 비교했을 때 매출액과 영업이익은 각각 몇 퍼센트 증가했는가?",
+      "why": "연도별로 다른 사업보고서 2건이 필요하다. slot이 지표×연도로 갈리는 것을 보여준다.",
+      "measured": {"gold_evidence_in_context": 4, "gold_evidence_total": 4, "documents": 2, "validation": "SUPPORTED"}
+    },
+    {
+      "qid": "Q18",
+      "label": "다중 문서 · 정정 추적",
+      "question": "한화오션이 2024년 6월 14일 결정한 유상증자는 7월 10일 정정 후 실제로 발행까지 완료됐는가? 정정 후 발행 주식 수와 금액도 알려줘.",
+      "why": "원공시와 정정공시를 이어야 답이 된다. '언제 기준 값인가'를 근거로 보여준다.",
+      "measured": {"gold_evidence_in_context": 5, "gold_evidence_total": 5, "documents": 2, "validation": "SUPPORTED"}
+    },
+    {
+      "qid": "Q21",
+      "label": "다중 문서 · 사건 체인",
+      "question": "에스엠의 자기주식취득 신탁계약이 체결, 연장, 해지, 소각까지 어떤 과정을 거쳤는지 공시를 연결해 설명해줘.",
+      "why": "주요사항보고서와 분기보고서를 넘나든다. 14차 섹션 규칙 개선으로 정답 청크가 304위에서 2위로 올라온 사례라 개선 효과를 함께 보여줄 수 있다.",
+      "measured": {"gold_evidence_in_context": 4, "gold_evidence_total": 6, "documents": 3, "validation": "SUPPORTED"}
+    }
+  ]
+}

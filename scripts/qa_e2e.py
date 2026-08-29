@@ -1,0 +1,200 @@
+"""QA Agent End-to-End 실행기 — 질문셋 하나를 끝까지 돌리고 결과를 채점한다.
+
+    질문 -> 조건 추출 -> Stage 1/2 검색 -> evidence 선택 -> LLM(또는 fallback)
+    -> Validator -> 답변 + 근거
+
+질문셋(--set):
+    smoke  3문항 — 단일 문서 숫자 / 일반 재무 / 다중 문서. 배선 확인용.
+    demo   시연용 5문항 (data/eval/demo_questions.json)
+    multi  gold25 중 여러 문서가 필요한 문항
+    all    gold25 전 문항
+
+문항마다 확인하는 것:
+    · Retrieval 후보가 나왔는가
+    · 근거가 붙었는가, provenance(doc_id/chunk_id/section_path)가 남는가
+    · 근거가 원문 그대로인가(발췌가 후보 청크의 부분문자열인가)
+    · Validator 판정 (UNSUPPORTED = 근거 없는 수치/인용 -> 실패)
+    · gold 문항이면 gold 문서/근거를 실제로 집었는가(evidence_hit)
+    · LLM을 실제로 썼는지 / fallback으로 내려갔는지
+
+CLOVA_API_KEY가 있으면 HyperCLOVA X를 실제로 부르고, 없으면 결정론적 fallback으로 같은
+검사를 한다. 키가 없다고 임의 호출하거나 가짜 키를 만들지 않는다.
+
+실행:
+    PYTHONIOENCODING=utf-8 python scripts/qa_e2e.py --set smoke
+    PYTHONIOENCODING=utf-8 python scripts/qa_e2e.py --set all --out work/qa_e2e_all.json
+    PYTHONIOENCODING=utf-8 python scripts/qa_e2e.py --set demo --url http://localhost:8000
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO / "src"))
+
+from dart_detective import qa_service  # noqa: E402
+from dart_detective.agents import qa_agent  # noqa: E402
+from dart_detective.llm import get_llm  # noqa: E402
+
+GOLD_QA = REPO / "data" / "eval" / "gold25_qa.jsonl"
+DEMO = REPO / "data" / "eval" / "demo_questions.json"
+
+SMOKE = [
+    {"qid": "SMOKE-1", "label": "단일 문서 숫자",
+     "question": "신한지주의 2025년 반기보고서에 나온 자기주식 소각 주식수는?"},
+    {"qid": "SMOKE-2", "label": "일반 재무/공시",
+     "question": "HMM의 2025년 연결 매출액과 영업이익은 얼마인가?"},
+    {"qid": "SMOKE-3", "label": "다중 문서",
+     "question": "에스엠의 자기주식취득 신탁계약이 체결부터 소각까지 어떻게 진행됐는지 설명해줘."},
+]
+
+
+def load_gold_qa() -> list[dict]:
+    if not GOLD_QA.exists():
+        raise SystemExit(f"{GOLD_QA} 없음 — scripts/build_gold25_qa.py를 먼저 실행하라")
+    return [json.loads(l) for l in GOLD_QA.open(encoding="utf-8") if l.strip()]
+
+
+def question_set(name: str) -> list[dict]:
+    if name == "smoke":
+        return SMOKE
+    gold = {g["qid"]: g for g in load_gold_qa()}
+    if name == "all":
+        return [{"qid": g["qid"], "label": g["cell"], "question": g["question"],
+                 "gold": g} for g in gold.values()]
+    if name == "multi":
+        return [{"qid": g["qid"], "label": "다중 문서", "question": g["question"],
+                 "gold": g} for g in gold.values() if g["multi_document"]]
+    if name == "demo":
+        if not DEMO.exists():
+            raise SystemExit(f"{DEMO} 없음 — --set all을 먼저 돌려 선정하라")
+        picked = json.loads(DEMO.read_text(encoding="utf-8"))["questions"]
+        return [{"qid": p["qid"], "label": p["label"], "question": p["question"],
+                 "gold": gold.get(p["qid"])} for p in picked]
+    raise SystemExit(f"모르는 질문셋: {name}")
+
+
+def score(item: dict, result: dict) -> dict:
+    problems: list[str] = []
+    evidence = result.get("evidence") or []
+    if not evidence:
+        problems.append("근거 없음")
+    for ev in evidence:
+        if not (ev.get("doc_id") and ev.get("chunk_id")):
+            problems.append("provenance 누락")
+    status = (result.get("validation") or {}).get("status")
+    if status == "UNSUPPORTED":
+        problems.append("validator=UNSUPPORTED")
+    if not result.get("answer"):
+        problems.append("답변 없음")
+
+    gold = item.get("gold")
+    gold_stats: dict = {}
+    if gold:
+        picked_docs = {ev["doc_id"] for ev in evidence}
+        gold_docs = set(gold["expected_documents"])
+        blob = "\n".join(ev["text"] for ev in evidence)
+        # LLM에 실제로 넘어가는 발췌(상위 청크)에 gold 근거가 들어 있는지 — 답변 품질의 상한이다.
+        context_ids = set(result.get("llm_context") or [])
+        context_blob = "\n".join(
+            c["evidence_text"] for c in (result.get("retrieval") or [])
+            if c["chunk_id"] in context_ids)
+        hit = [g for g in gold["expected_evidence"] if g["quote"] and g["quote"] in blob]
+        in_context = [g for g in gold["expected_evidence"]
+                      if g["quote"] and g["quote"] in context_blob]
+        gold_stats = {
+            "gold_documents": len(gold_docs),
+            "documents_used": len(picked_docs),
+            "gold_document_hit": len(picked_docs & gold_docs),
+            "gold_evidence_total": len(gold["expected_evidence"]),
+            "gold_evidence_hit": len(hit),
+            "gold_evidence_in_llm_context": len(in_context),
+            "llm_context_chunks": len(context_ids),
+        }
+    return {"ok": not problems, "problems": problems, "validation": status,
+            "llm_used": (result.get("llm") or {}).get("used"),
+            "llm_provider": (result.get("llm") or {}).get("provider"),
+            "n_evidence": len(evidence), **gold_stats}
+
+
+def run_local(question: str, llm, k: int | None) -> dict:
+    return qa_agent.answer_question(question, qa_service.get_retriever(),
+                                    llm=llm, k=k).to_dict()
+
+
+def run_http(url: str, question: str, k: int | None) -> dict:
+    import urllib.request
+    body = {"question": question}
+    if k:
+        body["k"] = k
+    req = urllib.request.Request(
+        f"{url.rstrip('/')}/qa", data=json.dumps(body).encode("utf-8"),
+        headers={"Content-Type": "application/json"}, method="POST")
+    with urllib.request.urlopen(req, timeout=300) as res:
+        return json.loads(res.read().decode("utf-8"))
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--set", dest="qset", default="smoke",
+                    choices=("smoke", "demo", "multi", "all"))
+    ap.add_argument("--url", default="", help="지정하면 HTTP로 POST /qa를 부른다")
+    ap.add_argument("--k", type=int, default=None, help="Stage 2에서 볼 청크 수")
+    ap.add_argument("--out", type=Path, default=None)
+    ap.add_argument("--quiet", action="store_true", help="문항별 근거 출력 생략")
+    args = ap.parse_args()
+
+    items = question_set(args.qset)
+    llm = get_llm()
+    provider = getattr(llm, "provider", None)
+    print(f"질문셋 {args.qset} · {len(items)}문항 · "
+          f"LLM {provider or 'none (결정론적 fallback)'}"
+          f"{' · HTTP ' + args.url if args.url else ''}")
+    if not args.url and qa_service.missing_paths():
+        print(f"코퍼스 인덱스 없음: {qa_service.missing_paths()}", file=sys.stderr)
+        return 2
+
+    rows, failed = [], 0
+    for item in items:
+        result = (run_http(args.url, item["question"], args.k) if args.url
+                  else run_local(item["question"], llm, args.k))
+        card = score(item, result)
+        failed += 0 if card["ok"] else 1
+        head = f"[{item['qid']}] {'OK' if card['ok'] else 'FAIL ' + ', '.join(card['problems'])}"
+        gold_note = ""
+        if "gold_evidence_hit" in card:
+            gold_note = (f" gold근거 답변 {card['gold_evidence_hit']}"
+                         f"/문맥 {card['gold_evidence_in_llm_context']}"
+                         f"/전체 {card['gold_evidence_total']}"
+                         f" 문서 {card['gold_document_hit']}/{card['gold_documents']}")
+        print(f"\n{head}  validation={card['validation']} "
+              f"evidence={card['n_evidence']} llm={card['llm_used']}{gold_note}")
+        print(f"  {item['question'][:96]}")
+        if not args.quiet:
+            for ev in (result.get("evidence") or [])[:3]:
+                path = " > ".join(ev.get("section_path") or [])
+                print(f"    - {ev['doc_id']}{(' · ' + path) if path else ''}")
+                print(f"      {ev['text'][:100]}")
+        rows.append({"qid": item["qid"], "label": item.get("label"),
+                     "question": item["question"], **card, "result": result})
+
+    total_gold = sum(r.get("gold_evidence_total", 0) for r in rows)
+    hit_gold = sum(r.get("gold_evidence_hit", 0) for r in rows)
+    ctx_gold = sum(r.get("gold_evidence_in_llm_context", 0) for r in rows)
+    print(f"\n{len(items) - failed}/{len(items)} passed")
+    if total_gold:
+        print(f"gold 근거 — LLM 발췌에 포함 {ctx_gold}/{total_gold} "
+              f"({ctx_gold / total_gold:.3f}) · slot으로 지목 {hit_gold}/{total_gold}")
+    if args.out:
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_text(json.dumps(rows, ensure_ascii=False, indent=2),
+                            encoding="utf-8")
+        print(f"-> {args.out}")
+    return 1 if failed else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

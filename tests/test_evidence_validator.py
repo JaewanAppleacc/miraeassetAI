@@ -73,3 +73,82 @@ def test_unsupported_year_is_flagged():
     assert result["status"] == "PARTIALLY_SUPPORTED"
     check = next(c for c in result["checks"] if c["check"] == "period_grounded")
     assert "2026" in check["unsupported_years"]
+
+
+# ---------- edge case ----------
+
+def test_no_sources_makes_any_number_unsupported():
+    """근거를 하나도 못 찾았는데 숫자가 있는 답이 나오면 그건 지어낸 것이다."""
+    result = validator.validate("현금은 239,036,839,774원이다.", [], [])
+    assert result["status"] == "UNSUPPORTED"
+    assert result["n_sources"] == 0
+
+
+def test_answer_without_numbers_or_judgment_is_supported():
+    assert _v("공시에 현금및현금성자산 항목이 있다.")["status"] == "SUPPORTED"
+
+
+def test_empty_quote_is_treated_as_ungrounded():
+    result = _v("자료에 따르면 그렇다.", [{"document_id": "D02", "quote_or_fact": ""}])
+    assert result["status"] == "UNSUPPORTED"
+
+
+def test_quote_matches_across_whitespace_differences():
+    """청크는 줄바꿈/공백이 원문과 다를 수 있다 — 공백만 다른 인용은 통과해야 한다."""
+    result = _v(
+        "현금및현금성자산 항목이 있다.",
+        [{"document_id": "D02",
+          "quote_or_fact": "현금및현금성자산   |  239,036,839,774 |   320,363,496,754"}],
+    )
+    assert result["status"] == "SUPPORTED"
+
+
+def test_truncated_number_is_fabrication():
+    """239,036,839,774의 앞자리만 떼어 쓴 값은 원문에 없는 수치로 잡힌다."""
+    result = _v("현금은 239,036,839원이다.")
+    assert result["status"] == "UNSUPPORTED"
+    check = next(c for c in result["checks"] if c["check"] == "numbers_grounded")
+    assert check["fabricated"] == ["239036839"]
+
+
+def test_unit_divisor_values_pass_even_when_the_unit_word_is_wrong():
+    """알려진 한계: 만/백만/억/조 환산값을 통째로 허용하므로,
+    239,036,839,774를 '239,036원'이라 적어도(단위가 틀려도) 수치 검사는 통과한다.
+    단위 오기까지 잡으려면 별도 규칙이 필요하다 — 지금은 잡지 않는다."""
+    result = _v("현금은 239,036원이다.")
+    assert result["status"] == "SUPPORTED"
+
+
+def test_document_id_digits_in_answer_count_as_fabricated_numbers():
+    """답변 본문에 doc_id를 섞으면 그 숫자열이 날조로 잡힌다 —
+    그래서 Agent는 출처를 answer 문장이 아니라 evidence 구조에만 담는다."""
+    result = _v("근거: periodic_20260318000826 문서를 참고했다.")
+    assert result["status"] == "UNSUPPORTED"
+    check = next(c for c in result["checks"] if c["check"] == "numbers_grounded")
+    assert check["fabricated"] == ["20260318000826"]
+
+
+def test_year_in_source_is_not_flagged():
+    sources = [{"document_id": "D03", "document_date": "2025-08-14", "title": "t",
+                "text": "2025년 6월 26일 10,347,131주를 소각함", "score": 1.0}]
+    result = validator.validate("2025년에 10,347,131주를 소각했다.", [], sources)
+    assert result["status"] == "SUPPORTED"
+
+
+def test_multiple_failures_report_all_checks():
+    """한 답변이 여러 규칙을 동시에 어겨도 검사 결과는 전부 남는다(진단용)."""
+    result = _v("2026년 현금은 999,999,999,999원으로 부족하다.",
+                [{"document_id": "D02", "quote_or_fact": "없는 인용"}])
+    assert result["status"] == "UNSUPPORTED"
+    failed = {c["check"] for c in result["checks"] if not c["passed"]}
+    assert failed == {"quote_grounded", "numbers_grounded",
+                      "period_grounded", "no_unsupported_inference"}
+
+
+def test_decimal_and_percent_values_are_matched_verbatim():
+    sources = [{"document_id": "D04", "document_date": "2026-03-16", "title": "t",
+                "text": "해지금액(원) | 114,800,000,000 | 매출액대비(%) | 1.9", "score": 1.0}]
+    ok = validator.validate("매출액대비는 1.9%다.", [], sources)
+    bad = validator.validate("매출액대비는 2.1%다.", [], sources)
+    assert ok["status"] == "SUPPORTED"
+    assert bad["status"] == "UNSUPPORTED"

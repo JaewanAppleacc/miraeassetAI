@@ -104,6 +104,57 @@ def test_slot_falls_back_to_single_answer_slot(retriever):
     assert qa_agent.plan_slots(q, retriever.conditions(q)) == ("answer",)
 
 
+# ---------- slot 분해 ----------
+
+def plan(retriever, question):
+    return qa_agent.plan_slots(question, retriever.conditions(question))
+
+
+def test_two_years_produce_one_slot_per_metric_and_year(retriever):
+    """비교 질문은 지표 × 연도로 자리가 갈린다 — 한 자리에 두 해를 섞으면 안 된다."""
+    got = plan(retriever, "HMM의 2023년과 2025년 매출액을 비교해줘")
+    assert got == ("매출액_2023", "매출액_2025")
+
+
+def test_metric_without_year_keeps_the_metric_alone(retriever):
+    assert plan(retriever, "HMM의 영업이익은?") == ("영업이익",)
+
+
+def test_metric_synonyms_normalize_to_one_slot(retriever):
+    """'순이익'과 '당기순이익'은 같은 행 레이블이다 — 자리를 둘로 나누지 않는다."""
+    assert plan(retriever, "HMM의 순이익은?") == ("당기순이익",)
+
+
+def test_inferred_metrics_expand_a_question_without_metric_words(retriever):
+    """지표를 이름으로 부르지 않는 질문도 상위어 규칙으로 자리를 만든다."""
+    assert plan(retriever, "HMM의 2025년 실적은 어땠나") == ("매출액_2025", "영업이익_2025")
+
+
+def test_slots_are_deduplicated(retriever):
+    got = plan(retriever, "HMM의 2025년 매출과 매출액은?")
+    assert got == ("매출액_2025",)
+
+
+def test_split_slot_separates_metric_and_year():
+    assert qa_agent.split_slot("영업이익_2025") == ("영업이익", 2025)
+    assert qa_agent.split_slot("answer") == ("answer", None)
+    assert qa_agent.split_slot("자기주식_취득") == ("자기주식_취득", None)
+
+
+def test_each_slot_gets_its_own_chunk_when_possible(retriever):
+    """같은 청크로 모든 자리를 채우지 않는다 — 자리마다 근거를 따로 지목한다."""
+    state = qa_agent.answer_question("HMM의 2025년 매출액과 영업이익은?", retriever)
+    texts = [m.evidence_text for m in state.evidence_matches]
+    assert len(texts) == len(set(texts))
+
+
+def test_slot_without_matching_evidence_is_left_empty(retriever):
+    """근거가 없는 자리는 비운다 — 아무 청크나 끌어다 채우지 않는다."""
+    matches = qa_agent.match_evidence(("부채총계_2025",),
+                                      retriever.retrieve("HMM의 2025년 매출액은?"))
+    assert matches == []
+
+
 # ---------- 2. Retrieval 호출 ----------
 
 def test_agent_calls_retrieval_and_keeps_provenance(retriever):
@@ -180,6 +231,29 @@ def test_generic_question_returns_several_top_chunks(retriever):
     assert [m.slot for m in state.evidence_matches] == ["answer"] * len(
         state.evidence_matches)
     assert 1 <= len(state.evidence_matches) <= 3
+
+
+def test_llm_receives_whole_chunks_not_only_the_picked_lines(retriever):
+    """slot 줄만 넘기면 문맥이 좁다 — 25문항 실측에서 gold 근거 140건 중 9건만 전달됐다.
+    근거 선택(출처 추적)과 별개로 상위 청크를 통째로 발췌로 준다."""
+    llm = FakeLLM()
+    state = qa_agent.answer_question(QUESTION, retriever, llm=llm)
+    _, user = llm.calls[0]
+    assert "제 51 기" in user, "표 머리글이 빠져 어느 기간인지 알 수 없다"
+    assert "매출액_2025" in user, "요구 항목(slot)이 프롬프트에 없다"
+    assert state.llm_context_chunk_ids
+
+
+def test_llm_context_is_recorded_even_without_llm(retriever):
+    """키가 없어도 '무엇을 넘겼을 것인가'가 남아야 측정할 수 있다."""
+    state = qa_agent.answer_question(QUESTION, retriever)
+    assert state.llm_context_chunk_ids
+    assert state.to_dict()["llm_context"] == list(state.llm_context_chunk_ids)
+
+
+def test_llm_context_size_is_capped(retriever):
+    state = qa_agent.answer_question(QUESTION, retriever, llm_context_chunks=1)
+    assert len(state.llm_context_chunk_ids) == 1
 
 
 def test_fake_llm_answer_is_used_when_grounded(retriever):
