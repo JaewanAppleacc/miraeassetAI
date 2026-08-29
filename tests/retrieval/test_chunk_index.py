@@ -82,6 +82,51 @@ def test_route_sections_empty_when_no_trigger():
     assert route_sections("이 회사는 어디에 있나요") == ()
 
 
+def test_route_sections_covers_capital_change_and_company_history():
+    """자기주식 취득/소각의 기록은 "주주에 관한 사항"이 아니라 I. 회사의 개요 밑의
+    "자본금 변동사항"(소각 이력)과 "회사의 연혁"(신탁계약 경과)에 있다. 14차 실험."""
+    got = route_sections("신한지주 자기주식취득 신탁계약의 취득, 해지, 소각 진행 경과")
+    assert "자본금 변동사항" in got
+    assert "회사의 연혁" in got
+
+
+def treasury_periodic_doc():
+    """정기공시 — 자기주식 관련 기록이 회사의 개요 밑에 있고, 사업의 내용 쪽에
+    어휘만 겹치는 문단이 따로 있다. 섹션 신호가 없으면 뒤쪽이 먼저 올라온다."""
+    return {
+        "doc_id": "periodic_20250814002920",
+        "doc_group": "periodic",
+        "nodes": [
+            {"node_index": 0, "kind": "paragraph",
+             "section_hierarchy": ["II. 사업의 내용", "7. 기타 참고사항"],
+             "text": "자기주식 취득 소각 신탁계약 체결 해지 연혁 취득 소각 신탁계약 "
+                     "체결 해지 연혁 자기주식 취득 소각 신탁계약 관련 일반 설명."},
+            {"node_index": 1, "kind": "paragraph",
+             "section_hierarchy": ["I. 회사의 개요", "4. 자본금 변동사항"],
+             "text": "2025년 6월 26일 10,347,131주를 자기주식 취득 후 소각함."},
+            {"node_index": 2, "kind": "paragraph",
+             "section_hierarchy": ["I. 회사의 개요", "2. 회사의 연혁"],
+             "text": "2025.02 자기주식취득 신탁계약 체결, 2025.06 해지."},
+        ],
+    }
+
+
+def test_capital_change_section_outranks_lexical_lookalike():
+    """14차 회귀 — "자본금 변동사항"이 라우팅 대상이라야 소각 기록이 먼저 온다."""
+    idx = ChunkIndex.from_documents([treasury_periodic_doc()], strategy="line_window")
+    q = "신한지주 자기주식 취득과 소각은 어떻게 진행됐나"
+    top = idx.search(q, k=1, section_alpha=0.5)[0][1]
+    assert top.section_path == ("I. 회사의 개요", "4. 자본금 변동사항")
+
+
+def test_company_history_section_is_routed_for_trust_contract_question():
+    """14차 회귀 — 신탁계약 체결/해지 경과는 "회사의 연혁"에 있다."""
+    idx = ChunkIndex.from_documents([treasury_periodic_doc()], strategy="line_window")
+    q = "자기주식취득 신탁계약 체결과 해지 연혁"
+    top = idx.search(q, k=1, section_alpha=0.5)[0][1]
+    assert top.section_path == ("I. 회사의 개요", "2. 회사의 연혁")
+
+
 # ---------- 청킹 ----------
 
 def test_line_window_keeps_document_and_section_metadata():
