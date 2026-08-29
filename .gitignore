@@ -63,3 +63,6 @@ work/agent-runs/
 
 # 배포용으로 조립한 디렉터리(scripts/prepare_hf_space.py가 매번 다시 만든다)
 dist/
+
+# 로컬 자격증명 — 절대 커밋하지 않는다(.env.example만 공유)
+.env
