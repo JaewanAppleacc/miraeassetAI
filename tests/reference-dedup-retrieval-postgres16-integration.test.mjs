@@ -33,6 +33,8 @@ import {
 import { loadExactTextDedupIndex, DedupRetrievalLoaderError } from "../domain/postgres/reference-dedup-retrieval-loader.mjs";
 import { applyReferenceDedupWriterGrant, applyReferenceDedupReaderGrant } from "../domain/postgres/reference-dedup-retrieval-grants.mjs";
 import { createDeterministicFakeEmbeddingAdapter } from "../domain/agent-comparison/retrieval/fake-deterministic-embedding-adapter.mjs";
+import { createDedupRetrieverAdapter } from "../domain/agent-comparison/retrieval/dedup-retriever-adapter.mjs";
+import { createRetrieverStore } from "../domain/runtime/retriever-store.mjs";
 
 const { Client } = pg;
 const ROOT = path.resolve(import.meta.dirname, "..");
@@ -365,4 +367,216 @@ test("real PostgreSQL 16 + pgvector: document_id filter further narrows within a
   // Re-running the identical query twice yields byte-identical ordering (determinism).
   const again = await repository.search({ retrievalIndexId, queryVector, topK: 20, documentIds: ["holding_20230713000028"] });
   assert.deepEqual(results.map((h) => h.chunk_id), again.map((h) => h.chunk_id));
+});
+
+// =====================================================================
+// Turn P5.2.1: top_k overflow + distance-metric-mismatch regression tests.
+//
+// Both of these were REAL bugs, independently confirmed by running this
+// exact test file against the pre-fix code before the fix in this Turn was
+// applied (see the Turn P5.2.1 final report for the captured RED output):
+//   1. repository.search()'s SQL bounded only the CANONICAL ranking stage
+//      to topK -- expanding the top-K canonical hits out to every matching
+//      occurrence could return MORE than topK rows whenever a canonical
+//      text had multiple matching occurrences (e.g. the same boilerplate
+//      phrase repeated within one company's own filings).
+//   2. dedup-retriever-adapter.mjs hard-coded score_type="COSINE" on every
+//      result regardless of the REAL index's own distance_metric, so an
+//      l2/inner_product index's results were silently mislabeled.
+// =====================================================================
+
+const OVERFLOW_EMBEDDING_CONFIG = Object.freeze({ provider: "test-fixture", model: "deterministic-fake-embedding-v1", revision: "v1", dimension: 8 });
+
+async function loadOverflowFixture({ sourceSnapshotId, distanceMetric = "cosine" }) {
+  // A tiny, fully-controlled synthetic fixture (not the real corpus) --
+  // exactly what Section A of the Turn P5.2.1 task brief asks for: one
+  // canonical text shared by (at least) 3 occurrences across 3 different
+  // real-shaped companies, so it is trivially "similarity rank #1" (it is
+  // the ONLY canonical text in this tiny index -- no embedding luck
+  // involved), isolating the overflow bug from any ranking non-determinism.
+  const sharedText = "동일 canonical 텍스트 -- overflow 회귀 테스트 전용";
+  const chunks = [
+    fixtureChunk({ chunkId: `chunk_${"a".repeat(24)}`, docId: "exchange_20250201000001", corpCode: "00000011", text: sharedText, ordinal: 0 }),
+    fixtureChunk({ chunkId: `chunk_${"b".repeat(24)}`, docId: "exchange_20250202000002", corpCode: "00000012", text: sharedText, ordinal: 1 }),
+    fixtureChunk({ chunkId: `chunk_${"c".repeat(24)}`, docId: "exchange_20250203000003", corpCode: "00000013", text: sharedText, ordinal: 2 }),
+  ];
+  const embeddingAdapter = createDeterministicFakeEmbeddingAdapter({ dimension: 8 });
+  const result = await loadExactTextDedupIndex({
+    client, chunkSourceFactory: () => chunks, embeddingAdapter, embeddingConfig: OVERFLOW_EMBEDDING_CONFIG,
+    releaseId: RELEASE_ID, sourceSnapshotId, chunkingPolicyId: CHUNKING_POLICY_ID, chunkingPolicySha256: CHUNKING_POLICY_SHA256, distanceMetric,
+  });
+  return { retrievalIndexId: result.retrievalIndexId, chunks, embeddingAdapter };
+}
+
+test("real PostgreSQL 16 + pgvector: [P5.2.1 regression] 3 occurrences share 1 canonical text; topK=1 returns EXACTLY 1 row (previously returned 3)", async () => {
+  const { retrievalIndexId, embeddingAdapter } = await loadOverflowFixture({ sourceSnapshotId: "docsnap_overflow_1" });
+  const repository = createPostgresDedupRetrievalRepository({ client });
+  const queryVector = await embeddingAdapter.embedQuery("아무 질문");
+
+  const results = await repository.search({ retrievalIndexId, queryVector, topK: 1 });
+  assert.equal(results.length, 1, "exactly one occurrence must be returned when topK=1, even though 3 occurrences share the single ranked canonical text");
+});
+
+test("real PostgreSQL 16 + pgvector: [P5.2.1 regression] the SAME fixture with topK=2 returns EXACTLY 2 rows, stably ordered", async () => {
+  const { retrievalIndexId, embeddingAdapter } = await loadOverflowFixture({ sourceSnapshotId: "docsnap_overflow_2" });
+  const repository = createPostgresDedupRetrievalRepository({ client });
+  const queryVector = await embeddingAdapter.embedQuery("아무 질문");
+
+  const results = await repository.search({ retrievalIndexId, queryVector, topK: 2 });
+  assert.equal(results.length, 2);
+  // All 3 occurrences share the identical canonical similarity_score, so
+  // the stable tie-break (source_document_id ASC, chunk_id ASC) alone
+  // determines which 2 of the 3 survive the final LIMIT.
+  assert.deepEqual(results.map((r) => r.source_document_id), [...results.map((r) => r.source_document_id)].sort());
+  assert.ok(results[0].source_document_id < results[1].source_document_id || (results[0].source_document_id === results[1].source_document_id && results[0].chunk_id < results[1].chunk_id));
+
+  // Re-running yields byte-identical rows/order (determinism preserved by the fix).
+  const again = await repository.search({ retrievalIndexId, queryVector, topK: 2 });
+  assert.deepEqual(results.map((r) => r.chunk_id), again.map((r) => r.chunk_id));
+});
+
+test("real PostgreSQL 16 + pgvector: [P5.2.1 regression] a mixed fixture (2 canonicals, uneven occurrence counts) never returns more than topK rows total", async () => {
+  const textA = "mixed fixture canonical A -- shared by two occurrences";
+  const textB = "mixed fixture canonical B -- shared by two occurrences also";
+  const chunks = [
+    fixtureChunk({ chunkId: `chunk_${"d".repeat(24)}`, docId: "exchange_20250204000004", corpCode: "00000014", text: textA, ordinal: 0 }),
+    fixtureChunk({ chunkId: `chunk_${"e".repeat(24)}`, docId: "exchange_20250205000005", corpCode: "00000015", text: textA, ordinal: 1 }),
+    fixtureChunk({ chunkId: `chunk_${"f".repeat(24)}`, docId: "exchange_20250206000006", corpCode: "00000016", text: textB, ordinal: 2 }),
+    fixtureChunk({ chunkId: `chunk_0${"1".repeat(23)}`, docId: "exchange_20250207000007", corpCode: "00000017", text: textB, ordinal: 3 }),
+  ];
+  const embeddingAdapter = createDeterministicFakeEmbeddingAdapter({ dimension: 8 });
+  const result = await loadExactTextDedupIndex({
+    client, chunkSourceFactory: () => chunks, embeddingAdapter, embeddingConfig: OVERFLOW_EMBEDDING_CONFIG,
+    releaseId: RELEASE_ID, sourceSnapshotId: "docsnap_overflow_mixed", chunkingPolicyId: CHUNKING_POLICY_ID, chunkingPolicySha256: CHUNKING_POLICY_SHA256,
+  });
+  const repository = createPostgresDedupRetrievalRepository({ client });
+  const queryVector = await embeddingAdapter.embedQuery("아무 질문");
+
+  for (const topK of [1, 2, 3, 4]) {
+    // eslint-disable-next-line no-await-in-loop
+    const results = await repository.search({ retrievalIndexId: result.retrievalIndexId, queryVector, topK });
+    assert.ok(results.length <= topK, `topK=${topK}: got ${results.length} results, which must never exceed topK`);
+    assert.equal(new Set(results.map((r) => r.chunk_id)).size, results.length, "no duplicate chunk_id within one response");
+  }
+});
+
+test("real PostgreSQL 16 + pgvector: [P5.2.1 regression] corp_code filter narrows the candidate set, and the GLOBAL topK is still enforced afterward", async () => {
+  const sharedText = "corp-filtered overflow fixture -- same company, 3 documents";
+  const corp = "00000021";
+  const chunks = [
+    fixtureChunk({ chunkId: `chunk_${"2".repeat(23)}1`, docId: "exchange_20250211000001", corpCode: corp, text: sharedText, ordinal: 0 }),
+    fixtureChunk({ chunkId: `chunk_${"2".repeat(23)}2`, docId: "exchange_20250212000002", corpCode: corp, text: sharedText, ordinal: 1 }),
+    fixtureChunk({ chunkId: `chunk_${"2".repeat(23)}3`, docId: "exchange_20250213000003", corpCode: corp, text: sharedText, ordinal: 2 }),
+    fixtureChunk({ chunkId: `chunk_${"2".repeat(23)}4`, docId: "exchange_20250214000004", corpCode: "00000099", text: sharedText, ordinal: 3 }),
+  ];
+  const embeddingAdapter = createDeterministicFakeEmbeddingAdapter({ dimension: 8 });
+  const result = await loadExactTextDedupIndex({
+    client, chunkSourceFactory: () => chunks, embeddingAdapter, embeddingConfig: OVERFLOW_EMBEDDING_CONFIG,
+    releaseId: RELEASE_ID, sourceSnapshotId: "docsnap_overflow_corpfilter", chunkingPolicyId: CHUNKING_POLICY_ID, chunkingPolicySha256: CHUNKING_POLICY_SHA256,
+  });
+  const repository = createPostgresDedupRetrievalRepository({ client });
+  const queryVector = await embeddingAdapter.embedQuery("아무 질문");
+
+  const results = await repository.search({ retrievalIndexId: result.retrievalIndexId, queryVector, topK: 2, corpCodes: [corp] });
+  assert.equal(results.length, 2, "global topK=2 must apply even though 3 of corp's own occurrences pass the metadata filter");
+  assert.ok(results.every((r) => r.corp_code === corp));
+});
+
+test("real PostgreSQL 16 + pgvector: [P5.2.1 regression] the fixed adapter's results pass the REAL, unmodified createRetrieverStore boundary (ok:true) -- the pre-fix overflow would have produced RETRIEVER_INVALID_RESULT here", async () => {
+  const { retrievalIndexId } = await loadOverflowFixture({ sourceSnapshotId: "docsnap_overflow_retriever_boundary" });
+  const repository = createPostgresDedupRetrievalRepository({ client });
+  const embeddingAdapter = createDeterministicFakeEmbeddingAdapter({ dimension: 8 });
+  const adapter = createDedupRetrieverAdapter({ dedupRepository: repository, embeddingAdapter, embeddingConfig: OVERFLOW_EMBEDDING_CONFIG, retrievalIndexId });
+
+  const context = { corpus_snapshot_id: "corpus_test", chunking_config_id: "chunking_test", index_snapshot_id: "index_test" };
+  const store = createRetrieverStore(adapter, context);
+  const request = {
+    schema_version: "0.1.0", query_id: "query_p521_overflow_check", question: "아무 질문",
+    corpus_snapshot_id: context.corpus_snapshot_id, chunking_config_id: context.chunking_config_id, index_snapshot_id: context.index_snapshot_id,
+    metadata_filters: { corp_codes: [], document_ids: [], doc_groups: [], doc_subtypes: [], base_years: [], base_months: [], receipt_date_from: null, receipt_date_to: null, is_correction: null, retrieval_eligible: true },
+    top_k: 1, retrieval_method: "DENSE",
+  };
+  const outcome = await store.resolve(request);
+  assert.equal(outcome.ok, true, `expected ok:true, got: ${JSON.stringify(outcome)}`);
+  assert.ok(outcome.result.results.length <= 1);
+  assert.equal(outcome.result.results.length, 1);
+  assert.equal(outcome.result.results[0].rank, 1);
+});
+
+test("real PostgreSQL 16 + pgvector: [P5.2.1 regression] a cosine index's adapter wiring succeeds and reports score_type=COSINE with the real similarity_score", async () => {
+  const { retrievalIndexId } = await loadOverflowFixture({ sourceSnapshotId: "docsnap_p521_cosine_ok", distanceMetric: "cosine" });
+  const repository = createPostgresDedupRetrievalRepository({ client });
+  const embeddingAdapter = createDeterministicFakeEmbeddingAdapter({ dimension: 8 });
+  const adapter = createDedupRetrieverAdapter({ dedupRepository: repository, embeddingAdapter, embeddingConfig: OVERFLOW_EMBEDDING_CONFIG, retrievalIndexId });
+  const context = { corpus_snapshot_id: "corpus_test", chunking_config_id: "chunking_test", index_snapshot_id: "index_test" };
+  const store = createRetrieverStore(adapter, context);
+  const request = {
+    schema_version: "0.1.0", query_id: "query_p521_cosine_ok", question: "아무 질문",
+    corpus_snapshot_id: context.corpus_snapshot_id, chunking_config_id: context.chunking_config_id, index_snapshot_id: context.index_snapshot_id,
+    metadata_filters: { corp_codes: [], document_ids: [], doc_groups: [], doc_subtypes: [], base_years: [], base_months: [], receipt_date_from: null, receipt_date_to: null, is_correction: null, retrieval_eligible: true },
+    top_k: 1, retrieval_method: "DENSE",
+  };
+  const outcome = await store.resolve(request);
+  assert.equal(outcome.ok, true);
+  assert.equal(outcome.result.results[0].score_type, "COSINE");
+  assert.equal(outcome.result.results[0].component_scores.dense, outcome.result.results[0].score);
+  assert.equal(outcome.result.results[0].component_scores.bm25, null);
+});
+
+test("real PostgreSQL 16 + pgvector: [P5.2.1 regression] an l2 index is REJECTED fail-closed by the adapter's wiring -- never mislabeled as COSINE", async () => {
+  const { retrievalIndexId } = await loadOverflowFixture({ sourceSnapshotId: "docsnap_p521_l2_reject", distanceMetric: "l2" });
+  const repository = createPostgresDedupRetrievalRepository({ client });
+  const embeddingAdapter = createDeterministicFakeEmbeddingAdapter({ dimension: 8 });
+  const adapter = createDedupRetrieverAdapter({ dedupRepository: repository, embeddingAdapter, embeddingConfig: OVERFLOW_EMBEDDING_CONFIG, retrievalIndexId });
+
+  await assert.rejects(
+    () => adapter.retrieve({
+      schema_version: "0.1.0", query_id: "q", question: "아무 질문",
+      corpus_snapshot_id: "x", chunking_config_id: "y", index_snapshot_id: "z",
+      metadata_filters: {}, top_k: 1, retrieval_method: "DENSE",
+    }),
+    (error) => {
+      assert.match(error.message, /distance_metric mismatch/i);
+      assert.match(error.message, /expected "cosine"/i);
+      assert.match(error.message, /found "l2"/i);
+      // The error must never leak the query vector or any embedding output.
+      assert.doesNotMatch(error.message, /\[-?\d+\.\d+,/);
+      return true;
+    },
+  );
+});
+
+test("real PostgreSQL 16 + pgvector: [P5.2.1 regression] an inner_product index is REJECTED fail-closed by the adapter's wiring", async () => {
+  const { retrievalIndexId } = await loadOverflowFixture({ sourceSnapshotId: "docsnap_p521_ip_reject", distanceMetric: "inner_product" });
+  const repository = createPostgresDedupRetrievalRepository({ client });
+  const embeddingAdapter = createDeterministicFakeEmbeddingAdapter({ dimension: 8 });
+  const adapter = createDedupRetrieverAdapter({ dedupRepository: repository, embeddingAdapter, embeddingConfig: OVERFLOW_EMBEDDING_CONFIG, retrievalIndexId });
+
+  await assert.rejects(
+    () => adapter.retrieve({
+      schema_version: "0.1.0", query_id: "q", question: "아무 질문",
+      corpus_snapshot_id: "x", chunking_config_id: "y", index_snapshot_id: "z",
+      metadata_filters: {}, top_k: 1, retrieval_method: "DENSE",
+    }),
+    /distance_metric mismatch.*expected "cosine".*found "inner_product"/is,
+  );
+});
+
+test("real PostgreSQL 16 + pgvector: [P5.2.1 regression] a caller cannot bypass the cosine requirement by supplying its own expectedPins.distance_metric", async () => {
+  const { retrievalIndexId } = await loadOverflowFixture({ sourceSnapshotId: "docsnap_p521_l2_bypass_attempt", distanceMetric: "l2" });
+  const repository = createPostgresDedupRetrievalRepository({ client });
+  const embeddingAdapter = createDeterministicFakeEmbeddingAdapter({ dimension: 8 });
+  // The caller explicitly (and incorrectly) asserts distance_metric: "l2" is
+  // acceptable via expectedPins -- the adapter must still force "cosine"
+  // and reject, never trusting this caller-supplied claim.
+  const adapter = createDedupRetrieverAdapter({ dedupRepository: repository, embeddingAdapter, embeddingConfig: OVERFLOW_EMBEDDING_CONFIG, retrievalIndexId, expectedPins: { distance_metric: "l2" } });
+
+  await assert.rejects(
+    () => adapter.retrieve({
+      schema_version: "0.1.0", query_id: "q", question: "아무 질문",
+      corpus_snapshot_id: "x", chunking_config_id: "y", index_snapshot_id: "z",
+      metadata_filters: {}, top_k: 1, retrieval_method: "DENSE",
+    }),
+    /distance_metric mismatch/i,
+  );
 });

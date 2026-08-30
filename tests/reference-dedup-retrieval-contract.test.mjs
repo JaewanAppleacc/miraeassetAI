@@ -18,6 +18,7 @@ import {
 import {
   referenceDedupReaderGrantSql, referenceDedupWriterGrantSql,
 } from "../domain/postgres/reference-dedup-retrieval-grants.mjs";
+import { createDedupRetrieverAdapter } from "../domain/agent-comparison/retrieval/dedup-retriever-adapter.mjs";
 
 // --- id determinism ---------------------------------------------------------
 
@@ -424,4 +425,65 @@ test("an empty source is rejected fail-closed (never creates an empty dedup inde
     () => loadExactTextDedupIndex({ client: fakeLoaderClient(), chunkSourceFactory: () => [], embeddingAdapter: fakeEmbeddingAdapter(), embeddingConfig: { provider: "test", model: "fake", revision: "v1", dimension: 4 }, ...BASE_LOADER_ARGS }),
     /no chunks were found/,
   );
+});
+
+// =====================================================================
+// Turn P5.2.1: top_k overflow + distance-metric fail-closed regressions
+// =====================================================================
+
+test("[P5.2.1] search SQL structure: the final SELECT ends with a LIMIT on the SAME topK parameter used to bound canonical ranking -- the expansion join can never overflow past topK", async () => {
+  let capturedSql = null;
+  const client = fakeClient([
+    [/FROM disclosure_reference\.reference_dedup_indexes/i, () => ({ rows: [READY_INDEX_ROW] })],
+    [/WITH filtered_occurrences/i, (sql) => { capturedSql = sql; return { rows: [] }; }],
+  ]);
+  const repo = createPostgresDedupRetrievalRepository({ client });
+  await repo.search({ retrievalIndexId: "dedup_index_ready", queryVector: [0.1, 0.2, 0.3, 0.4], topK: 7 });
+
+  // Exactly two LIMIT clauses: one inside top_canonical (bounding canonical
+  // ranking work), one at the very end of the final SELECT (bounding the
+  // actual response). Both must reference the identical parameter index.
+  const limitMatches = [...capturedSql.matchAll(/LIMIT \$(\d+)/g)];
+  assert.equal(limitMatches.length, 2, `expected exactly 2 LIMIT clauses, found ${limitMatches.length}`);
+  assert.equal(limitMatches[0][1], limitMatches[1][1], "both LIMIT clauses must reference the same bound topK parameter");
+
+  const finalSelectStart = capturedSql.indexOf("SELECT fo.chunk_id");
+  const finalLimitIndex = capturedSql.lastIndexOf("LIMIT");
+  assert.ok(finalLimitIndex > finalSelectStart, "the final LIMIT must belong to the outer SELECT, after the expansion join, not only inside top_canonical");
+  const textAfterFinalOrderBy = capturedSql.slice(capturedSql.lastIndexOf("ORDER BY"));
+  assert.match(textAfterFinalOrderBy, /LIMIT \$\d+\s*$/, "LIMIT must be the very last clause of the query, applied after ORDER BY on the fully expanded+sorted set");
+});
+
+test("[P5.2.1] dedup-retriever-adapter forces distance_metric:'cosine' into expectedPins, overriding any caller-supplied value", async () => {
+  let capturedRequest = null;
+  const fakeRepository = {
+    async search(request) { capturedRequest = request; return []; },
+  };
+  const embeddingAdapter = { async embedQuery() { return [0.1, 0.2, 0.3, 0.4]; } };
+  const adapter = createDedupRetrieverAdapter({
+    dedupRepository: fakeRepository, embeddingAdapter, embeddingConfig: { dimension: 4 },
+    retrievalIndexId: "dedup_index_x", expectedPins: { distance_metric: "l2", release_id: "some-release" },
+  });
+  await adapter.retrieve({ query_id: "q", question: "test", top_k: 5, metadata_filters: {} });
+  assert.equal(capturedRequest.expectedPins.distance_metric, "cosine", "the adapter must force cosine regardless of what the caller's own expectedPins claims");
+  assert.equal(capturedRequest.expectedPins.release_id, "some-release", "other caller-supplied pins must still pass through unchanged");
+});
+
+test("[P5.2.1] dedup-retriever-adapter defensively bounds results to request.top_k even if the repository returns more rows than requested", async () => {
+  const overflowingRepository = {
+    async search() {
+      // Simulates a hypothetical repository bug (or a future regression)
+      // returning more rows than topK -- the adapter must not trust this.
+      return [1, 2, 3].map((n) => ({
+        chunk_id: `chunk_${String(n).repeat(24)}`, source_document_id: `doc_${n}`, corp_code: "00000001",
+        source_locator: `doc_${n}/a.xml#node=0`, node_id: `doc_${n}::a.xml::n0`, block_type: "PARAGRAPH",
+        chunk_ordinal: 0, similarity_score: 1 - n * 0.01, canonical_text: "shared text", metadata: {},
+      }));
+    },
+  };
+  const embeddingAdapter = { async embedQuery() { return [0.1, 0.2, 0.3, 0.4]; } };
+  const adapter = createDedupRetrieverAdapter({ dedupRepository: overflowingRepository, embeddingAdapter, embeddingConfig: { dimension: 4 }, retrievalIndexId: "dedup_index_x" });
+  const result = await adapter.retrieve({ query_id: "q", question: "test", top_k: 1, metadata_filters: {} });
+  assert.equal(result.results.length, 1, "the adapter must defensively bound its own output to top_k regardless of what the repository returned");
+  assert.equal(result.results[0].rank, 1);
 });

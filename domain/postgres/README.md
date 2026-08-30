@@ -463,3 +463,91 @@ canonical/occurrence count 정확성, 멱등성, mid-load rollback, READY
 불변성(DELETE/UPDATE 거부), 최소 권한 grant 실제 집행, 그리고 핵심
 불변식(같은 텍스트를 공유하는 두 실제 회사 중 한 회사만 필터링해도 다른
 회사의 occurrence가 절대 섞이지 않음 + stable tie-break) 증명.
+
+## Turn P5.2.1: top_k 계약 결함 수정 + 전량 적재 메모리 위험 기록
+
+독립 코드 검수에서 두 가지 실제 계약 결함이 발견되어 국소 수정했다(003/004
+스키마와 dedup 구조 자체는 무변경).
+
+**결함 1 — top_k overflow**: `reference-dedup-retrieval-repository.mjs`의
+`search()`는 canonical 랭킹 단계(`top_canonical` CTE)만 `LIMIT topK`로
+제한하고, occurrence로 확장한 최종 결과에는 LIMIT이 없었다. 하나의
+canonical text가 (같은 회사 내에서든 여러 회사 간에서든) 여러 occurrence와
+매칭되면 `results.length > topK`가 실제로 발생했고, 이 결과를 그대로
+`domain/runtime/retriever-store.mjs`의 `createRetrieverStore` 경계에
+통과시키면 `domain/contracts.mjs`의 `validateRetrievalResult`가
+`results.length (N) exceeds top_k (K)`로 `RETRIEVER_INVALID_RESULT`를
+반환했다. **수정**: 최종 SELECT 끝에 동일한 `topK` 파라미터를 재사용하는
+`LIMIT`을 추가해 "occurrence 필터 → candidate canonical → top-k canonical
+랭킹 → occurrence로 확장 → 전체 정렬(similarity DESC, document_id ASC,
+chunk_id ASC) → 최종 global LIMIT topK" 순서를 SQL 한 문장으로 강제한다.
+`dedup-retriever-adapter.mjs`에도 방어적으로 `hits.slice(0, request.top_k)`
+를 추가해 repository 구현과 무관하게 어댑터 자체가 독립적으로 이 계약을
+보장한다.
+
+**결함 2 — distance metric mismatch**: DB는 cosine/l2/inner_product 세
+metric을 모두 허용하지만, `dedup-retriever-adapter.mjs`는 실제
+`distance_metric`을 확인하지 않고 항상 `score_type="COSINE"`으로 표시했다.
+공통 retrieval-result 계약(`domain/retrieval/retrieval-result.schema.json`)과
+`domain/contracts.mjs`는 이번 수정에서 확장하지 않았으므로, **Adapter의
+공개 배선은 cosine 전용으로 fail-closed**한다. 구현은 최소 변경: 어댑터가
+`dedupRepository.search()`에 넘기는 `expectedPins`에 항상
+`distance_metric: "cosine"`을 강제로 덮어써서 넣는다 — 이미 존재하는
+`assertReadyRetrievalIndex`의 pin 비교 로직이 실제 DB의 READY index row와
+대조해 불일치 시 `DedupRetrievalRepositoryError`로 거부한다(호출자가
+`expectedPins.distance_metric`에 다른 값을 넣어도 어댑터가 덮어쓰므로
+우회 불가). repository 자체의 l2/inner_product 검색 기능은 그대로 남아있다
+(내부/향후 확장용).
+
+두 결함 모두 수정 전 코드로 실제 PostgreSQL 16 + pgvector에 대해
+회귀 테스트를 먼저 실행해 RED(9개 테스트 실패)를 확인한 뒤, 수정 후
+동일 테스트 스위트가 17/17 GREEN이 되는 것을 확인했다(자세한 수치는 해당
+Turn 최종 보고 참고).
+
+**전량 적재 메모리 위험(`FULL_LOAD_NOT_YET_VALIDATED`)**: 이번 Turn은
+대규모 loader 재설계를 하지 않았고, 723,875개 embedding·1,874,688개
+occurrence의 실제 전량 DB 적재도 수행하지 않았다. 현재 loader가 pass 1에서
+메모리에 유지하는 두 구조(`canonicalByHash`: 최대 723,875개 고유 텍스트,
+`seenChunkIds`: 최대 1,874,688개 ID)만 실제 스냅샷 전체에 대해 embedding
+없이 scan-only로 실측한 결과:
+
+| 지표 | 실측값 |
+|---|---|
+| 처리 occurrence 수 | 1,874,688 |
+| 고유 text_sha256 수 | 723,875 |
+| 소요 시간 | 약 11초 |
+| peak RSS (`/usr/bin/time -l`) | 약 1.50GB (1,568,522,240 bytes) |
+
+Scan-only는 실행 가능하고 부담스럽지 않다. 하지만 이 실측치는 **embedding
+벡터 자체를 메모리에 보관하는 세 번째 구조(`embeddingByHash`)를 포함하지
+않는다** — 현재 loader는 모든 고유 텍스트의 embedding을 계산해 트랜잭션을
+열기 전에 `embeddingByHash` Map 전체에 먼저 보관한다. 이 구조의 크기는
+차원(dimension)에 정비례한다: 723,875개 × dimension × 8바이트(JS number)
+— 예를 들어 dimension=1536이면 약 8.9GB, dimension=384면 약 2.2GB가
+scan-only 실측치(~1.5GB) 위에 추가로 필요하다. 즉 **전량 적재의 실제
+메모리 병목은 canonicalByHash/seenChunkIds가 아니라 embeddingByHash일
+가능성이 높다** — 이 구조는 실제 embedding API를 호출하지 않는 한
+실측할 수 없으므로 이번 Turn에서는 검증하지 않았다.
+
+**다음 전량 적재 전 필요한 선택지** (이번 Turn에서 구현하지 않음):
+
+1. PostgreSQL staging table — canonical text만 먼저 적재하고, embedding은
+   staging 행을 UPDATE하는 별도 배치로 분리(embeddingByHash를 메모리에
+   전량 보관할 필요 자체를 제거).
+2. disk-backed key/value 또는 external sort — `canonicalByHash`/
+   `seenChunkIds`를 메모리 Map/Set 대신 SQLite나 정렬된 임시 파일로
+   대체(진짜 disk-backed dedup).
+3. partitioned canonical discovery — corp_code/doc_group 단위로 나눠
+   pass 1을 여러 번 bounded하게 실행.
+4. resumable checkpoint — 배치 단위로 embedding→INSERT를 커밋하고
+   `manifest_sha256` pin으로 재개 가능하게 함(현재는 all-or-nothing 단일
+   트랜잭션).
+5. (신규, 이번 실측에서 발견) 배치 단위 stream-to-DB — `embeddingByHash`
+   전체를 메모리에 쌓지 않고, 배치 임베딩 직후 바로 해당 배치만 INSERT하는
+   방식으로 loader를 바꾸면 embedding 메모리 피크를 `batchSize`만큼으로
+   제한할 수 있다.
+
+**결론: `FULL_LOAD_NOT_YET_VALIDATED`.** scan-only 구조는 실측 완료(약
+1.5GB, 문제 없음)했지만, embedding 벡터 보관 구조는 실제 embedding API
+호출 없이는 측정 불가능하고 이번 Turn 범위 밖이므로, 전량 적재 준비 상태는
+검증되지 않은 것으로 명시한다.

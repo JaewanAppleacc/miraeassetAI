@@ -12,7 +12,24 @@
 // becomes a grounding decision by itself -- every returned row is a real,
 // individually-verifiable OCCURRENCE (chunk_id/source_document_id/
 // source_locator), not the canonical row.
+//
+// DISTANCE METRIC BOUNDARY (Turn P5.2.1): the common retrieval-result
+// contract requires DENSE results to carry score_type="COSINE"
+// (domain/retrieval/retrieval-result.schema.json), and this Turn does not
+// extend that shared schema or domain/contracts.mjs. 004's own DB schema
+// legitimately allows l2/inner_product indexes (repository.search() can
+// query either), but THIS adapter's public wiring only ever accepts a
+// COSINE index -- l2/inner_product results are never relabeled as
+// "COSINE", they are refused before any result is ever built. This is
+// enforced by forcing `distance_metric: "cosine"` into every
+// expectedPins passed to dedupRepository.search(), which already fails
+// closed (DedupRetrievalRepositoryError) against the REAL, DB-verified
+// index row inside assertReadyRetrievalIndex -- a caller cannot override
+// this by supplying its own `distance_metric` in expectedPins; the forced
+// value always wins.
 import { createHash } from "node:crypto";
+
+const SUPPORTED_DISTANCE_METRIC = "cosine";
 
 function sha256Hex(text) {
   return createHash("sha256").update(text, "utf8").digest("hex");
@@ -89,10 +106,22 @@ export function createDedupRetrieverAdapter({
       const corpCodes = request.metadata_filters?.corp_codes?.length ? request.metadata_filters.corp_codes : undefined;
       const documentIds = request.metadata_filters?.document_ids?.length ? request.metadata_filters.document_ids : undefined;
 
+      // The caller's own expectedPins (if any) are honored for every OTHER
+      // pin, but distance_metric is always forced to "cosine" here -- a
+      // caller claiming `expectedPins: { distance_metric: "l2" }` can never
+      // talk this adapter into accepting an l2/inner_product index.
       const hits = await dedupRepository.search(
-        { retrievalIndexId, queryVector, topK: request.top_k, corpCodes, documentIds, expectedPins },
+        { retrievalIndexId, queryVector, topK: request.top_k, corpCodes, documentIds, expectedPins: { ...expectedPins, distance_metric: SUPPORTED_DISTANCE_METRIC } },
         { signal },
       );
+
+      // Defense in depth: even though reference-dedup-retrieval-repository.mjs's
+      // own SQL now enforces a final LIMIT topK (Turn P5.2.1), this adapter
+      // never trusts that alone -- a hard slice here is a second,
+      // independent guarantee that this adapter's own public contract
+      // (results.length <= request.top_k) holds regardless of what any
+      // dedupRepository implementation (real or synthetic) returns.
+      const bounded = hits.slice(0, request.top_k);
 
       return {
         schema_version: "0.2.0",
@@ -104,7 +133,7 @@ export function createDedupRetrieverAdapter({
         applied_filters: request.metadata_filters,
         top_k: request.top_k,
         latency_ms: Date.now() - startedAt,
-        results: hits.map((hit, index) => toResultItem(hit, index + 1)),
+        results: bounded.map((hit, index) => toResultItem(hit, index + 1)),
       };
     },
   });

@@ -155,12 +155,22 @@ export function createPostgresDedupRetrievalRepository({ client }) {
   }
 
   // metadata-filter-before-top-k search. `topK` bounds the number of
-  // DISTINCT canonical texts ranked -- the number of returned ROWS can
-  // legitimately exceed topK, because one canonical hit may expand to
-  // several occurrences that all separately passed the metadata filter
-  // (e.g. the same boilerplate phrase appearing in two of the SAME
-  // company's own filings). This is intentional: every returned row is a
-  // real, independently citable occurrence, never a synthesized duplicate.
+  // DISTINCT canonical texts ranked when building the candidate set (an
+  // internal computation bound -- one canonical hit may expand to several
+  // occurrences that all separately passed the metadata filter, e.g. the
+  // same boilerplate phrase appearing in two of the SAME company's own
+  // filings). The FINAL returned row count is a SEPARATE, always-enforced
+  // bound: after expanding every top-K canonical hit out to its matching
+  // occurrences and sorting the full expanded set, a second `LIMIT` caps
+  // the actual response at `topK` rows (Turn P5.2.1 fix -- the original
+  // query only bounded the canonical ranking stage, letting the expansion
+  // join return more rows than the caller's own topK. See
+  // tests/reference-dedup-retrieval-contract.test.mjs's own regression
+  // test for the SQL-shape proof, and
+  // tests/reference-dedup-retrieval-postgres16-integration.test.mjs for
+  // the real-corpus proof). Every original chunk_id's own provenance still
+  // exists in the database regardless of this cap -- only ONE request's
+  // returned page is bounded, never what is stored.
   async function search({
     retrievalIndexId, queryVector, topK,
     corpCodes, documentIds, similarityThreshold, expectedPins,
@@ -225,6 +235,7 @@ export function createPostgresDedupRetrievalRepository({ client }) {
       FROM top_canonical tc
       JOIN filtered_occurrences fo ON fo.text_sha256 = tc.text_sha256
       ORDER BY tc.similarity_score DESC, fo.source_document_id ASC, fo.chunk_id ASC
+      LIMIT $${topKParamIndex}
     `;
     const result = await checkedQuery(client, signal, sql, params);
     return deepFreeze(result.rows.map((row) => trimmedResultRow({ ...row, release_id: index.release_id, source_snapshot_id: index.source_snapshot_id })));
