@@ -45,6 +45,13 @@ proving that snapshot's chunks are shaped correctly for Turn P4's
 writes nothing to PostgreSQL -- indexing the resulting snapshot for real is
 a future Turn's work.
 
+## Turn P5.1: retrieval index sizing/dedup/boilerplate analysis
+
+`index-planning/` (see its own README) analyzes Turn P5's snapshot to
+compare 4 candidate indexing strategies (full, exact-text-dedup,
+hierarchical, primary+cold-fallback) and recommends one, without embedding
+anything or touching PostgreSQL. It is a plan, not an index.
+
 ## No real embedding API call anywhere in this Turn
 
 Every test and script in this Turn uses `FAKE_DETERMINISTIC` only. The
