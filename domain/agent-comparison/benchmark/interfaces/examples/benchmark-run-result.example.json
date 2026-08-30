@@ -1,0 +1,102 @@
+{
+  "schema_version": "0.1.0",
+  "benchmark_run_id": "benchmark_run_synthetic_0001",
+  "variant_id": "STRUCTURED_FIRST",
+  "agent_variant_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "model_config_id": "model_fake-deterministic-v1",
+  "model_config_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "dataset_id": "dataset_synthetic_fixture_0001",
+  "dataset_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "item_count": 1,
+  "eligible_count": 1,
+  "ineligible_count": 0,
+  "outcome_category_counts": {
+    "NORMAL_ANSWER": 1,
+    "NORMAL_INFORMATION_LIMIT": 0,
+    "MODEL_NOT_ATTEMPTED_INFORMATION_LIMIT": 0,
+    "MODEL_CALL_FAILURE_FALLBACK": 0,
+    "POST_HOC_CLAIM_VALIDATION_FAILURE_FALLBACK": 0,
+    "AGENT_VARIANT_EXECUTION_FAILURE": 0,
+    "TIMEOUT": 0,
+    "ABORTED": 0,
+    "BUDGET_EXCEEDED": 0,
+    "DATASET_CONTRACT_FAILURE": 0
+  },
+  "axis_summary": {
+    "answerability": {
+      "n_scored": 1,
+      "mean": 1,
+      "median": 1,
+      "pass_count": 1,
+      "fail_count": 0,
+      "not_applicable_count": 0,
+      "skipped_count": 0
+    },
+    "numeric_claim": {
+      "n_scored": 1,
+      "mean": 1,
+      "median": 1,
+      "pass_count": 1,
+      "fail_count": 0,
+      "not_applicable_count": 0,
+      "skipped_count": 0
+    },
+    "date_claim": {
+      "n_scored": 0,
+      "mean": null,
+      "median": null,
+      "pass_count": 0,
+      "fail_count": 0,
+      "not_applicable_count": 1,
+      "skipped_count": 0
+    },
+    "fact_coverage": {
+      "n_scored": 1,
+      "mean": 1,
+      "median": 1,
+      "pass_count": 1,
+      "fail_count": 0,
+      "not_applicable_count": 0,
+      "skipped_count": 0
+    },
+    "event_relation": {
+      "n_scored": 0,
+      "mean": null,
+      "median": null,
+      "pass_count": 0,
+      "fail_count": 0,
+      "not_applicable_count": 1,
+      "skipped_count": 0
+    },
+    "citation": {
+      "n_scored": 1,
+      "mean": 1,
+      "median": 1,
+      "pass_count": 1,
+      "fail_count": 0,
+      "not_applicable_count": 0,
+      "skipped_count": 0
+    },
+    "style": {
+      "n_scored": 1,
+      "mean": 1,
+      "median": 1,
+      "pass_count": 1,
+      "fail_count": 0,
+      "not_applicable_count": 0,
+      "skipped_count": 0
+    },
+    "operational": {
+      "n_scored": 1,
+      "mean": 1,
+      "median": 1,
+      "pass_count": 1,
+      "fail_count": 0,
+      "not_applicable_count": 0,
+      "skipped_count": 0
+    }
+  },
+  "item_ids": [
+    "evaluation_item_synthetic_0001"
+  ]
+}

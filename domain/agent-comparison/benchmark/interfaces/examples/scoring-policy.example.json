@@ -1,0 +1,21 @@
+{
+  "schema_version": "0.1.0",
+  "scoring_policy_id": "scoring_policy_synthetic_v0.1",
+  "scoring_policy_version": "0.1.0",
+  "numeric_unit_conversions": [
+    { "from_unit": "THOUSAND_KRW", "to_unit": "KRW", "multiplier": 1000 },
+    { "from_unit": "MILLION_KRW", "to_unit": "KRW", "multiplier": 1000000 },
+    { "from_unit": "HUNDRED_MILLION_KRW", "to_unit": "KRW", "multiplier": 100000000 }
+  ],
+  "axis_weights": {
+    "answerability": 1,
+    "numeric_claim": 2,
+    "date_claim": 1,
+    "fact_coverage": 2,
+    "event_relation": 1,
+    "citation": 2,
+    "style": 0.5,
+    "operational": 0.5
+  },
+  "composite_score_formula_version": "weighted_mean_v1"
+}

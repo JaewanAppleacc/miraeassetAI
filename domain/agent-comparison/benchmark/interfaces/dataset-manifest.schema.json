@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://disclosure-analyst.local/schema/agent-comparison/benchmark/dataset-manifest.v0.1.json",
+  "title": "Benchmark Dataset Manifest v0.1",
+  "description": "Turn P6: summarizes a loaded set of DatasetRecords (dataset-record.schema.json) BEFORE any Agent execution -- pins dataset_sha256, per-split counts, and the result of the split/chain-leakage check (domain/agent-comparison/benchmark/dataset.mjs's checkSplitLeakage). A Benchmark Runner refuses to execute against a manifest whose leakage_check.violations is non-empty, or whose holdout_gate.unlocked is false while holdout_item_count > 0.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "dataset_id", "dataset_sha256", "item_count",
+    "split_counts", "leakage_check", "holdout_gate", "grading_policy_versions"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.1.0" },
+    "dataset_id": { "type": "string", "minLength": 1 },
+    "dataset_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "sha256 over the canonicalized (evaluation_item_id, question, split) list of every item actually loaded -- see domain/agent-comparison/benchmark/dataset.mjs's computeDatasetItemsSha256."
+    },
+    "item_count": { "type": "integer", "minimum": 0 },
+    "split_counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["DEV_TUNE", "DEV_CHECK", "HOLDOUT"],
+      "properties": {
+        "DEV_TUNE": { "type": "integer", "minimum": 0 },
+        "DEV_CHECK": { "type": "integer", "minimum": 0 },
+        "HOLDOUT": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "leakage_check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["checked", "violations"],
+      "properties": {
+        "checked": { "const": true, "description": "Always true for any manifest this module produces -- there is no code path that skips the leakage check." },
+        "violations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "key", "splits"],
+            "properties": {
+              "kind": { "enum": ["EVALUATION_GROUP_ID", "CHAIN_COMPONENT_ID"] },
+              "key": { "type": "string", "minLength": 1 },
+              "splits": { "type": "array", "items": { "enum": ["DEV_TUNE", "DEV_CHECK", "HOLDOUT"] }, "minItems": 2 }
+            }
+          }
+        }
+      }
+    },
+    "holdout_gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["holdout_item_count", "unlocked", "unlock_run_purpose"],
+      "properties": {
+        "holdout_item_count": { "type": "integer", "minimum": 0 },
+        "unlocked": {
+          "type": "boolean",
+          "description": "true only when a caller-supplied HOLDOUT unlock (domain/runtime/evaluation-usage-ledger.mjs's canUseSplit, re-used unmodified) actually returned ok:true for every HOLDOUT item in this dataset. false (the fail-closed default) means any HOLDOUT rows present were rejected at load time -- this manifest is never produced for a dataset containing HOLDOUT rows that failed the gate; the load itself throws instead (see dataset.mjs)."
+        },
+        "unlock_run_purpose": { "type": ["string", "null"], "description": "The run_purpose the unlock token was granted under (domain/contracts.mjs's RUN_PURPOSES), or null when holdout_item_count is 0." }
+      }
+    },
+    "grading_policy_versions": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true,
+      "description": "Every distinct DatasetRecord.grading_policy_version present in this dataset."
+    }
+  }
+}
