@@ -36,6 +36,15 @@ plain `runAgentFlow` call) already accepts, never by editing a variant's
 own flow file. STRUCTURED_FIRST and PLANNER (without
 `input.hints.enable_retrieval_fallback`) are unaffected by design.
 
+## Turn P5: portable DocumentIR retrieval snapshot
+
+`document-snapshot/` (see its own README) builds a portable, chunk-level
+snapshot of A's full 4,204-document DocumentIR corpus and a pure adapter
+proving that snapshot's chunks are shaped correctly for Turn P4's
+`DOCUMENT_CHUNK` source_kind. It still makes no real embedding call and
+writes nothing to PostgreSQL -- indexing the resulting snapshot for real is
+a future Turn's work.
+
 ## No real embedding API call anywhere in this Turn
 
 Every test and script in this Turn uses `FAKE_DETERMINISTIC` only. The

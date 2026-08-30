@@ -64,6 +64,8 @@
     "agent-comparison:four-variant-smoke": "node scripts/run-agent-comparison-four-variant-smoke.mjs",
     "test:vector-retrieval": "node --test tests/reference-vector-retrieval-contract.test.mjs tests/reference-vector-retrieval-repository-no-write-sql.test.mjs tests/agent-comparison-embedding-adapter.test.mjs tests/agent-comparison-vector-retrieval-smoke.test.mjs",
     "test:reference-vector-retrieval:postgres16": "node --test tests/reference-vector-retrieval-postgres16-integration.test.mjs",
+    "test:document-retrieval-snapshot": "node --test tests/document-retrieval-snapshot-chunking.test.mjs tests/document-retrieval-snapshot-portability.test.mjs tests/document-retrieval-snapshot-build.test.mjs tests/document-retrieval-snapshot-p4-compat.test.mjs",
+    "build:document-retrieval-snapshot": "node --max-old-space-size=6144 scripts/build-document-retrieval-snapshot-v01.mjs full",
     "test:reference-db:postgres16": "node --test tests/reference-release-postgres16-integration.test.mjs",
     "test:reference-repository:postgres16": "node --test tests/reference-repository-postgres16-integration.test.mjs",
     "test:coverage-authorized-fact-view:postgres16": "node --test tests/coverage-authorized-fact-view-postgres16-integration.test.mjs",
