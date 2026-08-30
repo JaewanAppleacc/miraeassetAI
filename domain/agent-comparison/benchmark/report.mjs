@@ -6,7 +6,7 @@
 // hardcoded false here, matching this Turn's own schema-level `const`
 // lock (benchmark-comparison-report.schema.json) -- this module does not
 // (and, per that schema, cannot) compute or claim otherwise.
-import { validateBenchmarkRunResult, validateBenchmarkComparisonReport, SCORING_AXES } from "./contracts.mjs";
+import { validateBenchmarkRunResult, validateBenchmarkComparisonReport, validateBenchmarkComparisonReportV0_2, SCORING_AXES } from "./contracts.mjs";
 import { OUTCOME_CATEGORIES } from "./failure-classification.mjs";
 
 function emptyOutcomeCounts() {
@@ -93,9 +93,12 @@ function setEquals(a, b) {
   return a.every((value) => setB.has(value));
 }
 
-// `allItemResults`: every BenchmarkItemResult across every variant compared
-// (runner.mjs's own flat output array) -- grouped by variant_id here.
-export function buildComparisonReport({ benchmarkRunId, datasetId, datasetSha256, codeRevision, releaseId = null, releaseManifestSha256 = null, allItemResults }) {
+// Shared by buildComparisonReport (v0.1) and buildComparisonReportV0_2:
+// groups `allItemResults` by variant_id, summarizes each into a
+// BenchmarkRunResult, and derives identical_item_set/missing_items_by_variant/
+// model_config_differences -- every field NEITHER schema version disagrees
+// about the meaning of.
+function groupIntoVariantRunResults(benchmarkRunId, allItemResults) {
   const byVariant = new Map();
   for (const item of allItemResults) {
     if (!byVariant.has(item.variant_id)) byVariant.set(item.variant_id, []);
@@ -120,6 +123,14 @@ export function buildComparisonReport({ benchmarkRunId, datasetId, datasetSha256
     variant_id: run.variant_id, model_config_id: run.model_config_id, model_config_sha256: run.model_config_sha256,
   }));
 
+  return { variantRunResults, identicalItemSet, missingItemsByVariant, modelConfigDifferences };
+}
+
+// `allItemResults`: every BenchmarkItemResult across every variant compared
+// (runner.mjs's own flat output array) -- grouped by variant_id here.
+export function buildComparisonReport({ benchmarkRunId, datasetId, datasetSha256, codeRevision, releaseId = null, releaseManifestSha256 = null, allItemResults }) {
+  const { variantRunResults, identicalItemSet, missingItemsByVariant, modelConfigDifferences } = groupIntoVariantRunResults(benchmarkRunId, allItemResults);
+
   const report = {
     schema_version: "0.1.0",
     benchmark_run_id: benchmarkRunId,
@@ -138,5 +149,108 @@ export function buildComparisonReport({ benchmarkRunId, datasetId, datasetSha256
   };
   const errors = validateBenchmarkComparisonReport(report);
   if (errors.length > 0) throw new Error(`buildComparisonReport produced an invalid BenchmarkComparisonReport: ${errors.join("; ")}`);
+  return Object.freeze(report);
+}
+
+// Turn P6.1: v0.2 report -- reads dataset_id/dataset_sha256/dataset_role/
+// holdout_accessed/official_gold_accessed directly off `datasetManifest`
+// (the { manifest } dataset.mjs's own loadDatasetRecordsV0_2 produced) --
+// deliberately NOT accepted as separate arguments the way v0.1's datasetId/
+// datasetSha256 are, so a caller cannot independently assert a provenance
+// datasetManifest itself did not honestly record.
+//
+// Pin-consistency (new in this Turn): every row's dataset/code/release pin
+// must fully agree with this report's own (datasetManifest, codeRevision,
+// releaseId, releaseManifestSha256) -- refused fail-closed BEFORE any
+// variant_run_results is assembled, never silently merged into a report
+// that would misrepresent which dataset/code/release actually produced
+// those rows. model_config is the one pin deliberately EXEMPT from a
+// report-wide match (model_config_differences exists precisely to let
+// variants run under different ModelConfigs for comparison) -- but it must
+// still be internally consistent within a single variant's own rows, and
+// evaluation_item_sha256 for the SAME evaluation_item_id must be identical
+// across every variant that ran it (same DatasetRecord content in, same
+// hash out -- a mismatch here means two variants silently scored against
+// different item content under one evaluation_item_id, never a fact this
+// report may paper over).
+function assertPinConsistency({ datasetManifest, codeRevision, releaseId, releaseManifestSha256, allItemResults }) {
+  const datasetMismatch = allItemResults.find((item) => item.dataset_id !== datasetManifest.dataset_id || item.dataset_sha256 !== datasetManifest.dataset_sha256);
+  if (datasetMismatch) {
+    throw new Error(
+      `buildComparisonReportV0_2: item ${datasetMismatch.evaluation_item_id} (variant ${datasetMismatch.variant_id}) is pinned to `
+      + `dataset_id=${datasetMismatch.dataset_id}/dataset_sha256=${datasetMismatch.dataset_sha256}, but datasetManifest is `
+      + `dataset_id=${datasetManifest.dataset_id}/dataset_sha256=${datasetManifest.dataset_sha256} -- refusing to assemble a mismatched report`,
+    );
+  }
+
+  const codeMismatch = allItemResults.find((item) => item.code_revision !== codeRevision);
+  if (codeMismatch) {
+    throw new Error(
+      `buildComparisonReportV0_2: item ${codeMismatch.evaluation_item_id} (variant ${codeMismatch.variant_id}) is pinned to `
+      + `code_revision=${codeMismatch.code_revision}, but this report is code_revision=${codeRevision} -- refusing to assemble a mismatched report`,
+    );
+  }
+
+  const releaseMismatch = allItemResults.find((item) => item.release_id !== releaseId || item.release_manifest_sha256 !== releaseManifestSha256);
+  if (releaseMismatch) {
+    throw new Error(
+      `buildComparisonReportV0_2: item ${releaseMismatch.evaluation_item_id} (variant ${releaseMismatch.variant_id}) is pinned to `
+      + `release_id=${releaseMismatch.release_id}/release_manifest_sha256=${releaseMismatch.release_manifest_sha256}, but this report is `
+      + `release_id=${releaseId}/release_manifest_sha256=${releaseManifestSha256} -- refusing to assemble a mismatched report`,
+    );
+  }
+
+  const modelConfigByVariant = new Map();
+  for (const item of allItemResults) {
+    const seen = modelConfigByVariant.get(item.variant_id);
+    if (seen !== undefined && seen !== item.model_config_sha256) {
+      throw new Error(
+        `buildComparisonReportV0_2: variant ${item.variant_id} has inconsistent model_config_sha256 across its own rows `
+        + `(${seen} vs ${item.model_config_sha256}) -- refusing to assemble a mismatched report`,
+      );
+    }
+    modelConfigByVariant.set(item.variant_id, item.model_config_sha256);
+  }
+
+  const itemShaById = new Map();
+  for (const item of allItemResults) {
+    const seen = itemShaById.get(item.evaluation_item_id);
+    if (seen !== undefined && seen !== item.evaluation_item_sha256) {
+      throw new Error(
+        `buildComparisonReportV0_2: evaluation_item_id ${item.evaluation_item_id} has inconsistent evaluation_item_sha256 across variants `
+        + `(${seen} vs ${item.evaluation_item_sha256}, variant ${item.variant_id}) -- refusing to assemble a mismatched report`,
+      );
+    }
+    itemShaById.set(item.evaluation_item_id, item.evaluation_item_sha256);
+  }
+}
+
+export function buildComparisonReportV0_2({ benchmarkRunId, datasetManifest, codeRevision, releaseId = null, releaseManifestSha256 = null, allItemResults }) {
+  if (!datasetManifest || typeof datasetManifest.dataset_id !== "string" || typeof datasetManifest.dataset_role !== "string") {
+    throw new TypeError("buildComparisonReportV0_2 requires datasetManifest: the { manifest } dataset.mjs's loadDatasetRecordsV0_2 returned");
+  }
+  assertPinConsistency({ datasetManifest, codeRevision, releaseId, releaseManifestSha256, allItemResults });
+
+  const { variantRunResults, identicalItemSet, missingItemsByVariant, modelConfigDifferences } = groupIntoVariantRunResults(benchmarkRunId, allItemResults);
+
+  const report = {
+    schema_version: "0.2.0",
+    benchmark_run_id: benchmarkRunId,
+    dataset_id: datasetManifest.dataset_id,
+    dataset_sha256: datasetManifest.dataset_sha256,
+    dataset_role: datasetManifest.dataset_role,
+    code_revision: codeRevision,
+    release_id: releaseId,
+    release_manifest_sha256: releaseManifestSha256,
+    variant_run_results: variantRunResults,
+    identical_item_set: identicalItemSet,
+    missing_items_by_variant: missingItemsByVariant,
+    model_config_differences: modelConfigDifferences,
+    ranking_performed: false,
+    holdout_accessed: datasetManifest.holdout_accessed === true,
+    official_gold_accessed: datasetManifest.official_gold_accessed === true,
+  };
+  const errors = validateBenchmarkComparisonReportV0_2(report);
+  if (errors.length > 0) throw new Error(`buildComparisonReportV0_2 produced an invalid BenchmarkComparisonReport: ${errors.join("; ")}`);
   return Object.freeze(report);
 }
