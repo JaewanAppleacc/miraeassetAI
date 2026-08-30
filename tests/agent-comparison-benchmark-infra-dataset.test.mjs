@@ -2,8 +2,8 @@
 // synthetic fixtures only, no real Gold/HOLDOUT data is ever read here.
 import assert from "node:assert/strict";
 import test from "node:test";
-import { loadDatasetRecords, checkSplitLeakage, DatasetContractError } from "../domain/agent-comparison/benchmark/dataset.mjs";
-import { validateDatasetManifest, validateDatasetRecord } from "../domain/agent-comparison/benchmark/contracts.mjs";
+import { loadDatasetRecords, loadDatasetRecordsV0_2, checkSplitLeakage, DatasetContractError } from "../domain/agent-comparison/benchmark/dataset.mjs";
+import { validateDatasetManifest, validateDatasetManifestV0_2, validateDatasetRecord } from "../domain/agent-comparison/benchmark/contracts.mjs";
 import { makeFixtureDatasetRecord } from "./lib/agent-comparison-benchmark-infra-fixture.mjs";
 
 test("DatasetRecord: the fixture record itself is schema-valid", () => {
@@ -134,4 +134,104 @@ test("loadDatasetRecords: deterministic dataset_sha256 for identical item conten
   const first = loadDatasetRecords([a, b], { datasetId: "dataset_test_order" });
   const second = loadDatasetRecords([a, b], { datasetId: "dataset_test_order" });
   assert.equal(first.manifest.dataset_sha256, second.manifest.dataset_sha256);
+});
+
+// Turn P6.1: dataset_sha256 now canonically hashes every expected_* field,
+// not just evaluation_item_id/question/split -- changing ONLY a Gold field
+// (e.g. expected_numeric_claims' value) must change the hash.
+test("loadDatasetRecords: dataset_sha256 changes when an expected_* field changes, even with identical evaluation_item_id/question/split", () => {
+  const original = makeFixtureDatasetRecord({ evaluation_item_id: "evaluation_item_hash_sensitivity" });
+  const tampered = makeFixtureDatasetRecord({
+    evaluation_item_id: "evaluation_item_hash_sensitivity",
+    expected_numeric_claims: [{ value: 999, unit: "KRW", unit_conversion_allowed: false, role: "revenue_amount" }],
+  });
+  const first = loadDatasetRecords([original], { datasetId: "dataset_test_hash_sensitivity" });
+  const second = loadDatasetRecords([tampered], { datasetId: "dataset_test_hash_sensitivity" });
+  assert.notEqual(first.manifest.dataset_sha256, second.manifest.dataset_sha256);
+});
+
+// A change to ONLY allowed_evidence_ids (every expected_* field held fixed)
+// must also change dataset_sha256 -- allowed_evidence_ids is part of the
+// hash projection (item-sha.mjs's datasetHashProjection), not an
+// incidental field a tampered dataset could vary while keeping the hash
+// unchanged.
+test("loadDatasetRecords: dataset_sha256 changes when ONLY allowed_evidence_ids changes, with every expected_* field held fixed", () => {
+  const original = makeFixtureDatasetRecord({ evaluation_item_id: "evaluation_item_evidence_hash_sensitivity" });
+  const tampered = makeFixtureDatasetRecord({
+    evaluation_item_id: "evaluation_item_evidence_hash_sensitivity",
+    allowed_evidence_ids: [...original.allowed_evidence_ids, "evidence_added_000000000000000001"],
+  });
+  const first = loadDatasetRecords([original], { datasetId: "dataset_test_evidence_hash_sensitivity" });
+  const second = loadDatasetRecords([tampered], { datasetId: "dataset_test_evidence_hash_sensitivity" });
+  assert.notEqual(first.manifest.dataset_sha256, second.manifest.dataset_sha256);
+});
+
+// Turn P6.1: loadDatasetRecordsV0_2 -- dataset_role/holdout_accessed/
+// official_gold_accessed/grading_detail_visibility (dataset-manifest.v0.2.schema.json).
+test("loadDatasetRecordsV0_2: rejects a datasetRole outside the closed enum", () => {
+  assert.throws(() => loadDatasetRecordsV0_2([makeFixtureDatasetRecord()], { datasetId: "dataset_test_v02_bad_role", datasetRole: "NOT_A_ROLE" }), (error) => {
+    assert.ok(error instanceof DatasetContractError);
+    assert.equal(error.code, "INVALID_DATASET_ROLE");
+    return true;
+  });
+});
+
+test("loadDatasetRecordsV0_2: SYNTHETIC role -> official_gold_accessed=false, grading_detail_visibility=FULL, holdout_accessed=false (no HOLDOUT rows)", () => {
+  const { manifest } = loadDatasetRecordsV0_2([makeFixtureDatasetRecord()], { datasetId: "dataset_test_v02_synthetic", datasetRole: "SYNTHETIC" });
+  assert.deepEqual(validateDatasetManifestV0_2(manifest), []);
+  assert.equal(manifest.schema_version, "0.2.0");
+  assert.equal(manifest.dataset_role, "SYNTHETIC");
+  assert.equal(manifest.official_gold_accessed, false);
+  assert.equal(manifest.grading_detail_visibility, "FULL");
+  assert.equal(manifest.holdout_accessed, false);
+});
+
+test("loadDatasetRecordsV0_2: DEV_GOLD role -> official_gold_accessed=true, grading_detail_visibility stays FULL (only HOLDOUT_GOLD is REDACTED)", () => {
+  const { manifest } = loadDatasetRecordsV0_2([makeFixtureDatasetRecord({ evaluation_item_id: "evaluation_item_v02_dev_gold" })], { datasetId: "dataset_test_v02_dev_gold", datasetRole: "DEV_GOLD" });
+  assert.deepEqual(validateDatasetManifestV0_2(manifest), []);
+  assert.equal(manifest.official_gold_accessed, true);
+  assert.equal(manifest.grading_detail_visibility, "FULL");
+  assert.equal(manifest.holdout_accessed, false);
+});
+
+test("loadDatasetRecordsV0_2: HOLDOUT_GOLD role with a REAL canUseSplit-verified HOLDOUT unlock -> holdout_accessed=true, official_gold_accessed=true, grading_detail_visibility=REDACTED", () => {
+  const holdoutItem = makeFixtureDatasetRecord({ evaluation_item_id: "evaluation_item_v02_holdout_open", split: "HOLDOUT" });
+  const holdoutUnlock = {
+    log: [],
+    runId: "run_test_v02_holdout_open",
+    runPurpose: "FINAL_HOLDOUT_EVALUATION",
+    configurationSha256: "c".repeat(64),
+    lifecycleStateByItemId: {
+      evaluation_item_v02_holdout_open: {
+        assignment_id: "evaluation_item_v02_holdout_open",
+        assigned_split: "HOLDOUT",
+        split_lock_status: "LOCKED_BY_CHAIN",
+        holdout_lifecycle_status: "OPENED",
+      },
+    },
+  };
+  const { manifest } = loadDatasetRecordsV0_2([holdoutItem], { datasetId: "dataset_test_v02_holdout_open", holdoutUnlock, datasetRole: "HOLDOUT_GOLD" });
+  assert.deepEqual(validateDatasetManifestV0_2(manifest), []);
+  assert.equal(manifest.holdout_gate.unlocked, true);
+  assert.equal(manifest.holdout_accessed, true);
+  assert.equal(manifest.official_gold_accessed, true);
+  assert.equal(manifest.grading_detail_visibility, "REDACTED");
+});
+
+// This Turn's own fix: v0.1's benchmark-comparison-report.schema.json
+// const-locked holdout_accessed to false even when holdout_gate.unlocked
+// was honestly true -- v0.2's DatasetManifest must not repeat that
+// contradiction: a real unlock with 0 HOLDOUT rows actually admitted
+// (holdout_item_count===0, e.g. an unlock token supplied but the dataset
+// itself carried no HOLDOUT rows) still reports holdout_accessed=false,
+// which is the honest, non-contradictory value (no HOLDOUT content was
+// actually read this load).
+test("loadDatasetRecordsV0_2: no HOLDOUT rows present at all -> holdout_accessed=false regardless of datasetRole", () => {
+  const { manifest } = loadDatasetRecordsV0_2([makeFixtureDatasetRecord({ evaluation_item_id: "evaluation_item_v02_no_holdout" })], { datasetId: "dataset_test_v02_no_holdout", datasetRole: "HOLDOUT_GOLD" });
+  assert.equal(manifest.holdout_gate.unlocked, false);
+  assert.equal(manifest.holdout_accessed, false);
+  // grading_detail_visibility is mechanically tied to dataset_role alone,
+  // not to whether this particular load actually touched a HOLDOUT row --
+  // a HOLDOUT_GOLD-labeled dataset's DEV_TUNE rows are still official Gold.
+  assert.equal(manifest.grading_detail_visibility, "REDACTED");
 });

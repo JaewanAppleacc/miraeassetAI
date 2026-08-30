@@ -31,6 +31,11 @@ const scoringPolicyValidator = ajv.compile(loadSchema("scoring-policy.schema.jso
 const benchmarkItemResultValidator = ajv.compile(loadSchema("benchmark-item-result.schema.json"));
 const benchmarkRunResultValidator = ajv.compile(loadSchema("benchmark-run-result.schema.json"));
 const benchmarkComparisonReportValidator = ajv.compile(loadSchema("benchmark-comparison-report.schema.json"));
+// Turn P6.1: additive v0.2 schemas -- dataset-manifest.v0.2 has its own
+// $id (distinct from v0.1's), and benchmark-comparison-report.v0.2 $refs
+// benchmark-run-result's $id, already registered by the compile above.
+const datasetManifestV0_2Validator = ajv.compile(loadSchema("dataset-manifest.v0.2.schema.json"));
+const benchmarkComparisonReportV0_2Validator = ajv.compile(loadSchema("benchmark-comparison-report.v0.2.schema.json"));
 
 function toErrorMessages(validator) {
   return (validator.errors ?? []).map((error) => `${error.instancePath || "(root)"} ${error.message}`);
@@ -64,6 +69,16 @@ export function validateBenchmarkRunResult(value) {
 export function validateBenchmarkComparisonReport(value) {
   if (benchmarkComparisonReportValidator(value)) return [];
   return toErrorMessages(benchmarkComparisonReportValidator);
+}
+
+export function validateDatasetManifestV0_2(value) {
+  if (datasetManifestV0_2Validator(value)) return [];
+  return toErrorMessages(datasetManifestV0_2Validator);
+}
+
+export function validateBenchmarkComparisonReportV0_2(value) {
+  if (benchmarkComparisonReportV0_2Validator(value)) return [];
+  return toErrorMessages(benchmarkComparisonReportV0_2Validator);
 }
 
 export const OUTCOME_CATEGORIES = Object.freeze([

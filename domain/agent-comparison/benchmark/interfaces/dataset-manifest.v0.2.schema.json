@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://disclosure-analyst.local/schema/agent-comparison/benchmark/dataset-manifest.v0.2.json",
+  "title": "Benchmark Dataset Manifest v0.2",
+  "description": "Turn P6.1: adds explicit dataset PROVENANCE (dataset_role/holdout_accessed/official_gold_accessed/grading_detail_visibility) to fix a real contradiction in v0.1 (dataset-manifest.schema.json, PRESERVED UNCHANGED, never modified by this Turn): v0.1's own holdout_gate.unlocked could legitimately be true (a real HOLDOUT unlock succeeded), while the OLDER benchmark-comparison-report.schema.json (v0.1, also preserved unchanged) locked holdout_accessed to `const: false` regardless -- a provable contradiction whenever a real HOLDOUT unlock actually happened. v0.2 does not relax v0.1's own meaning; it is a NEW, additive, explicitly-versioned contract domain/agent-comparison/benchmark/dataset.mjs now produces and validates against instead. dataset_sha256's own MEANING also changed for v0.2's caller (domain/agent-comparison/benchmark/item-sha.mjs's computeDatasetItemsSha256 now canonically hashes every expected_* field, not just evaluation_item_id/question/split) -- the pattern/shape of the field itself is unchanged (still a bare sha256 hex string), only what it is computed over.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "dataset_id", "dataset_sha256", "item_count",
+    "split_counts", "leakage_check", "holdout_gate", "grading_policy_versions",
+    "dataset_role", "holdout_accessed", "official_gold_accessed", "grading_detail_visibility"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.2.0" },
+    "dataset_id": { "type": "string", "minLength": 1 },
+    "dataset_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "sha256 over the canonicalized, evaluation_item_id-sorted projection of EVERY expected_* field (plus question/hints/split/evaluation_group_id/chain_component_id/grading_policy_version) for every item actually loaded -- see domain/agent-comparison/benchmark/item-sha.mjs's computeDatasetItemsSha256. Changing any one item's expected content changes this hash; reordering the same items does not. Only the digest is ever stored here -- raw Gold content is never copied into this manifest."
+    },
+    "item_count": { "type": "integer", "minimum": 0 },
+    "split_counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["DEV_TUNE", "DEV_CHECK", "HOLDOUT"],
+      "properties": {
+        "DEV_TUNE": { "type": "integer", "minimum": 0 },
+        "DEV_CHECK": { "type": "integer", "minimum": 0 },
+        "HOLDOUT": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "leakage_check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["checked", "violations"],
+      "properties": {
+        "checked": { "const": true },
+        "violations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "key", "splits"],
+            "properties": {
+              "kind": { "enum": ["EVALUATION_GROUP_ID", "CHAIN_COMPONENT_ID"] },
+              "key": { "type": "string", "minLength": 1 },
+              "splits": { "type": "array", "items": { "enum": ["DEV_TUNE", "DEV_CHECK", "HOLDOUT"] }, "minItems": 2 }
+            }
+          }
+        }
+      }
+    },
+    "holdout_gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["holdout_item_count", "unlocked", "unlock_run_purpose"],
+      "properties": {
+        "holdout_item_count": { "type": "integer", "minimum": 0 },
+        "unlocked": { "type": "boolean" },
+        "unlock_run_purpose": { "type": ["string", "null"] }
+      }
+    },
+    "grading_policy_versions": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "dataset_role": {
+      "enum": ["SYNTHETIC", "SEED_SMOKE", "DEV_GOLD", "HOLDOUT_GOLD"],
+      "description": "Caller-declared classification of what this dataset FILE is -- SYNTHETIC/SEED_SMOKE fixtures never carry official Gold content; DEV_GOLD/HOLDOUT_GOLD do. This is the ONE input a caller supplies about provenance; holdout_accessed/official_gold_accessed/grading_detail_visibility below are then ALL mechanically derived from it plus the real holdout_gate -- a caller cannot pass those three directly (domain/agent-comparison/benchmark/dataset.mjs's loadDatasetRecords does not even accept them as parameters)."
+    },
+    "holdout_accessed": {
+      "type": "boolean",
+      "description": "true ONLY when holdout_gate.unlocked is true AND holdout_gate.holdout_item_count > 0 (a REAL, canUseSplit-verified HOLDOUT unlock actually admitted at least one HOLDOUT row this load) -- mechanically derived, never a caller-supplied boolean."
+    },
+    "official_gold_accessed": {
+      "type": "boolean",
+      "description": "true iff dataset_role is DEV_GOLD or HOLDOUT_GOLD -- mechanically derived from dataset_role, never a caller-supplied boolean."
+    },
+    "grading_detail_visibility": {
+      "enum": ["FULL", "REDACTED"],
+      "description": "REDACTED iff dataset_role is HOLDOUT_GOLD, else FULL -- mechanically derived. domain/agent-comparison/benchmark/runner.mjs reads this to decide whether a BenchmarkItemResult's scoring.axes[*].details may carry expected_value/expected_date/expected fact-event-relation ids (FULL) or must be stripped to matched_count/expected_count/a redacted marker only (REDACTED) -- see runner.mjs's own redactAxisDetailsForHoldout."
+    }
+  }
+}

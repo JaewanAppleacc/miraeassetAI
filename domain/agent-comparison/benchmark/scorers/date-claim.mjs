@@ -1,7 +1,7 @@
-// Turn P6 section C.3: Date Claim Scorer. A date VALUE and its ROLE
-// (DECISION_DATE/CORRECTION_DATE/COMPLETION_DATE/AS_OF_DATE/...) are
-// checked together -- a correct date attached to the wrong role (e.g. the
-// correction filing date reported back as the decision date) is its own
+// Turn P6 section C.3 (hardened Turn P6.1): Date Claim Scorer. A date VALUE
+// and its ROLE (DECISION_DATE/CORRECTION_DATE/COMPLETION_DATE/AS_OF_DATE/...)
+// are checked together -- a correct date attached to the wrong role (e.g.
+// the correction filing date reported back as the decision date) is its own
 // DATE_ROLE_MISMATCH error, never silently accepted just because the date
 // value itself is present somewhere in the answer.
 //
@@ -9,12 +9,28 @@
 // NLP pass -- same "no semantic analysis" discipline
 // flows/hard-claim-grounding.mjs's own header comment documents): each
 // occurrence of an expected date's digits in the answer text is checked for
-// a role-label keyword within ROLE_WINDOW characters on either side. If the
-// correct role's own label is present in that window, the date counts as
-// PASS; if a DIFFERENT role's label is present instead (and the correct
-// one is not), it is DATE_ROLE_MISMATCH; if no role label is nearby at all,
-// the date value still counts as PASS (role is simply unverifiable from
-// free text alone, which is not itself an error).
+// a role-label keyword within ROLE_WINDOW characters on either side.
+//
+// Turn P6.1 fix: dataset-record.schema.json's expectedDateClaim.date_role is
+// a REQUIRED field -- role verification is therefore now MANDATORY, never
+// optional. The pre-fix version silently PASSed whenever no role label was
+// nearby at all ("role is simply unverifiable, which is not itself an
+// error") -- that let a bare date value with NO role context ever
+// confirmed satisfy a claim whose whole point is a SPECIFIC role. Three
+// outcomes now, closed and exhaustive:
+//   - the correct role's own label is present near SOME occurrence of the
+//     date -> PASS (an occurrence of the SAME date digits elsewhere in the
+//     answer under a DIFFERENT role does not prevent this -- section C.7:
+//     "한 답변에 같은 날짜가 여러 역할로 등장하면 올바른 occurrence가 실제로
+//     존재할 때만 해당 claim을 PASS", which is exactly "PASS if ANY
+//     occurrence is correctly labeled").
+//   - a DIFFERENT role's label is present near every occurrence (and the
+//     correct one is present near none) -> DATE_ROLE_MISMATCH.
+//   - no role label at all is present near any occurrence -> DATE_ROLE_MISSING
+//     (a new, closed-enum error code -- a bare date value is no longer
+//     enough on its own).
+//   - the date value itself is not present at all -> MISSING_DATE_CLAIM
+//     (unchanged).
 import { extractHardClaims } from "../../flows/hard-claim-grounding.mjs";
 import { pass, partial, notApplicable } from "./axis-result.mjs";
 
@@ -80,8 +96,15 @@ export function scoreDateClaim({ expectedDateClaims, answerText }) {
     }
     const occurrences = findOccurrences(answerText, expectedDigits);
     const rolesSeen = new Set(occurrences.flatMap((occurrence) => roleAtWindow(answerText, occurrence.start, occurrence.end)));
-    if (rolesSeen.size === 0 || rolesSeen.has(claim.date_role)) {
+    if (rolesSeen.has(claim.date_role)) {
       matched += 1;
+      continue;
+    }
+    if (rolesSeen.size === 0) {
+      // The date value is present, but NO occurrence has any role label
+      // nearby at all -- role is required, not optional (Turn P6.1).
+      errorCodes.push("DATE_ROLE_MISSING");
+      mismatches.push({ date_role: claim.date_role, expected_date: claim.date, roles_found: [], reason: "DATE_ROLE_MISSING" });
       continue;
     }
     errorCodes.push("DATE_ROLE_MISMATCH");

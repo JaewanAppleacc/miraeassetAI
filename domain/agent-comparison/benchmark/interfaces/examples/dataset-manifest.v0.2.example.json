@@ -1,0 +1,14 @@
+{
+  "schema_version": "0.2.0",
+  "dataset_id": "dataset_synthetic_fixture_0001",
+  "dataset_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "item_count": 1,
+  "split_counts": { "DEV_TUNE": 1, "DEV_CHECK": 0, "HOLDOUT": 0 },
+  "leakage_check": { "checked": true, "violations": [] },
+  "holdout_gate": { "holdout_item_count": 0, "unlocked": false, "unlock_run_purpose": null },
+  "grading_policy_versions": ["grading_policy_synthetic_v0.1"],
+  "dataset_role": "SYNTHETIC",
+  "holdout_accessed": false,
+  "official_gold_accessed": false,
+  "grading_detail_visibility": "FULL"
+}

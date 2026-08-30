@@ -91,6 +91,34 @@ function zeroModelUsage() {
   return { model_call_attempt_count: 0, model_call_success_count: 0, model_call_failure_count: 0, model_failure_code: null, input_tokens: 0, output_tokens: 0, estimated_cost: 0 };
 }
 
+// Turn P6.1: applied whenever the DatasetManifest this run executed against
+// has grading_detail_visibility="REDACTED" (dataset-manifest.v0.2.schema.json
+// -- true iff dataset_role is HOLDOUT_GOLD). Strips every axis's `details`
+// down to (at most) matched_count/expected_count plus a `redacted: true`
+// marker -- never expected_value/expected_date/mismatches/fact-event-relation
+// ids, which would let a HOLDOUT BenchmarkItemResult leak the actual Gold
+// content it was scored against. `status`/`raw_score`/`error_codes` are
+// left untouched -- PASS/FAIL and the numeric score are still needed for
+// aggregate axis_summary statistics; only the per-item detail payload is
+// gated by HOLDOUT status.
+const REDACTED_DETAIL_ALLOWED_KEYS = Object.freeze(["matched_count", "expected_count"]);
+
+export function redactAxisDetailsForHoldout(scoring) {
+  const axes = Object.fromEntries(Object.entries(scoring.axes).map(([axis, axisResult]) => {
+    const details = axisResult.details ?? {};
+    const redactedDetails = { redacted: true };
+    for (const key of REDACTED_DETAIL_ALLOWED_KEYS) {
+      if (typeof details[key] === "number") redactedDetails[key] = details[key];
+    }
+    return [axis, { ...axisResult, details: redactedDetails }];
+  }));
+  return { ...scoring, axes };
+}
+
+function applyGradingDetailVisibility(scoring, gradingDetailVisibility) {
+  return gradingDetailVisibility === "REDACTED" ? redactAxisDetailsForHoldout(scoring) : scoring;
+}
+
 function buildPins({ variantId, agentVariantRevisions, modelConfig, modelConfigSha256, codeRevision, releaseId, releaseManifestSha256, randomSeed, temperature, cachePolicy }) {
   const promptTemplate = VARIANT_PROMPT_TEMPLATES[variantId] ?? { id: null, sha256: null };
   return {
@@ -147,7 +175,7 @@ async function runOnePair({
   item, variantId, modelAdapterFactory, agentVariantRevisions, modelConfig, modelConfigSha256, codeRevision,
   releaseId, releaseManifestSha256, randomSeed, temperature, cachePolicy,
   context, executionScope, budgetLimits, serviceAdapters, benchmarkRunId, flowOptions,
-  datasetId, datasetSha256, scoringPolicy, actualRelationsByItemId,
+  datasetId, datasetSha256, scoringPolicy, actualRelationsByItemId, gradingDetailVisibility = "FULL",
 }) {
   const pins = buildPins({ variantId, agentVariantRevisions, modelConfig, modelConfigSha256, codeRevision, releaseId, releaseManifestSha256, randomSeed, temperature, cachePolicy });
   const startedAt = Date.now();
@@ -237,7 +265,7 @@ async function runOnePair({
     answer_sha256: computeAnswerSha256(outcome.final_response.answer),
     execution_trace_sha256: computeExecutionTraceSha256(outcome.execution_trace),
     run_status: "OK",
-    scoring,
+    scoring: applyGradingDetailVisibility(scoring, gradingDetailVisibility),
   };
   const errors = validateBenchmarkItemResult(result);
   if (errors.length > 0) throw new Error(`runner produced an invalid BenchmarkItemResult: ${errors.join("; ")}`);
@@ -276,6 +304,10 @@ export async function runBenchmark({
 
   const modelConfigSha256 = computeModelConfigSha256(modelConfig);
   const revisions = agentVariantRevisions ?? Object.fromEntries(REQUIRED_VARIANT_IDS.map((id) => [id, computeAgentVariantRevision(id)]));
+  // v0.1 DatasetManifests carry no grading_detail_visibility field at all --
+  // absence means FULL (this Turn's provenance discipline is additive, it
+  // never narrows what a v0.1-manifest run already exposed).
+  const gradingDetailVisibility = datasetManifest.grading_detail_visibility === "REDACTED" ? "REDACTED" : "FULL";
 
   const results = [];
   for (const item of datasetRecords) {
@@ -286,7 +318,7 @@ export async function runBenchmark({
         releaseId, releaseManifestSha256, randomSeed, temperature, cachePolicy,
         context, executionScope, budgetLimits, serviceAdapters, benchmarkRunId, flowOptions,
         datasetId: datasetManifest.dataset_id, datasetSha256: datasetManifest.dataset_sha256,
-        scoringPolicy, actualRelationsByItemId,
+        scoringPolicy, actualRelationsByItemId, gradingDetailVisibility,
       });
       results.push(result);
     }

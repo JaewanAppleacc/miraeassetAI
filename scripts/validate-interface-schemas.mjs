@@ -101,6 +101,17 @@ const pairs = [
     "domain/agent-comparison/benchmark/interfaces/benchmark-comparison-report.schema.json",
     "domain/agent-comparison/benchmark/interfaces/examples/benchmark-comparison-report.example.json",
   ],
+  // Turn P6.1: additive v0.2 schemas -- dataset provenance honesty fix.
+  [
+    "domain/agent-comparison/benchmark/interfaces/dataset-manifest.v0.2.schema.json",
+    "domain/agent-comparison/benchmark/interfaces/examples/dataset-manifest.v0.2.example.json",
+  ],
+  // benchmark-comparison-report.v0.2.schema.json also $refs benchmark-run-result's
+  // own $id -- already registered by the pair above.
+  [
+    "domain/agent-comparison/benchmark/interfaces/benchmark-comparison-report.v0.2.schema.json",
+    "domain/agent-comparison/benchmark/interfaces/examples/benchmark-comparison-report.v0.2.example.json",
+  ],
 ];
 
 const ajv = new Ajv2020({ allErrors: true, strict: true, allowUnionTypes: true });
