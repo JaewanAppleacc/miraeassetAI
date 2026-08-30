@@ -1,0 +1,39 @@
+{
+  "schema_version": "0.2.0",
+  "benchmark_run_id": "benchmark_run_example_0001",
+  "created_at": "2026-08-27T00:00:00.000Z",
+  "agent_variant_id": "STRUCTURED_FIRST",
+  "agent_variant_revision": "structured-first-agent-v1",
+  "model_config_id": "model_fake-deterministic-v1",
+  "model_config_sha256": "215296e0048cff5580f1785f62ae6e39aebca852875cdbbeed8935edccd1830e",
+  "prompt_template_id": "structured-first-answer-prompt-v1",
+  "prompt_template_sha256": "a13f8a33df2bddce584f574544208e9a70cbcbe009d9dbdac794155a02fbe885",
+  "execution_scope": "SANDBOX",
+  "dataset_ref": {
+    "dataset_id": "synthetic-fixture-v1",
+    "role": "SYNTHETIC_FIXTURE",
+    "item_count": 3,
+    "dataset_sha256": "005b558ef58a5184923032468e94af45897c4d58b8af56dbd1df7feca43d67e5"
+  },
+  "corpus_snapshot_id": "corpus_example",
+  "fact_coverage_snapshot_id": null,
+  "temperature": 0,
+  "max_output_tokens": 512,
+  "determinism": {
+    "seed": null,
+    "provider_deterministic_mode": null
+  },
+  "cache_policy": "NONE",
+  "code_revision": "unknown",
+  "fallback_scoring_policy": "EXCLUDE_FALLBACK_FROM_MODEL_SCORING",
+  "budget_limits": {
+    "maxHcxCalls": 0,
+    "maxRetrievals": 0,
+    "maxToolCalls": 20,
+    "timeoutMs": 30000
+  },
+  "started_at": "2026-08-27T00:00:00.000Z",
+  "completed_at": "2026-08-27T00:00:01.000Z",
+  "telemetry_event_count": 3,
+  "notes": "example manifest for schema:validate"
+}

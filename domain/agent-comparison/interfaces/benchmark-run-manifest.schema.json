@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://disclosure-analyst.local/schema/agent-comparison/benchmark-run-manifest.v0.2.json",
+  "title": "Agent Comparison Benchmark Run Manifest v0.2",
+  "description": "Pins everything held fixed for one benchmark run so a difference in results can be attributed to exactly ONE varying axis (agent_variant_id or model_config_id), never both at once -- same purpose experiment-run.schema.json serves for retrieval experiments (domain/interfaces/experiment-run.schema.json), scoped instead to Agent x Model comparison. Turn P1.1 adds reproducibility pins (agent_variant_revision, model_config_sha256, prompt_template_id/sha256, dataset_sha256, temperature, max_output_tokens, determinism, cache_policy, code_revision, fallback_scoring_policy) so a later audit can confirm exactly what produced a given telemetry set without re-reading raw prompts/responses -- this manifest never stores a raw prompt or a raw model response; only hashes/ids of them.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "benchmark_run_id", "created_at", "agent_variant_id",
+    "agent_variant_revision", "model_config_id", "model_config_sha256",
+    "prompt_template_id", "prompt_template_sha256",
+    "execution_scope", "dataset_ref", "corpus_snapshot_id",
+    "fact_coverage_snapshot_id", "temperature", "max_output_tokens",
+    "determinism", "cache_policy", "code_revision", "fallback_scoring_policy",
+    "budget_limits", "started_at"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.2.0" },
+    "benchmark_run_id": { "type": "string", "minLength": 1 },
+    "created_at": { "type": "string", "format": "date-time" },
+    "agent_variant_id": {
+      "enum": ["STRUCTURED_FIRST", "HYBRID_RETRIEVAL", "PLANNER", "DOCUMENT_FIRST_RAG"]
+    },
+    "agent_variant_revision": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Identifies exactly which version of the AgentFlow implementation produced this run -- e.g. a git revision (see code_revision) or a variant-local semantic version. Two runs with the same agent_variant_id but a different agent_variant_revision are NOT directly comparable as \"the same Agent design\"."
+    },
+    "model_config_id": { "type": "string", "pattern": "^model_[a-z0-9_.-]+$" },
+    "model_config_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "sha256 of the canonicalized ModelConfig object (domain/agent-comparison/reproducibility.mjs's computeModelConfigSha256). ModelConfig never contains the API key itself (only its env var name), so this is safe to record and never leaks a secret."
+    },
+    "prompt_template_id": {
+      "type": ["string", "null"],
+      "description": "Stable id of the fixed instructional prompt template the Agent variant used to ask the model for an answer (e.g. structured-first-agent.mjs's ANSWER_PROMPT_TEMPLATE_ID). null only for a variant/run that never calls a model at all."
+    },
+    "prompt_template_sha256": {
+      "type": ["string", "null"],
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "sha256 of the FIXED template text only (not of any per-question filled prompt, which is never stored here or anywhere as Gold/reference data)."
+    },
+    "execution_scope": { "enum": ["OFFICIAL", "SANDBOX"] },
+    "dataset_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dataset_id", "role", "item_count", "dataset_sha256"],
+      "properties": {
+        "dataset_id": { "type": "string", "minLength": 1 },
+        "role": {
+          "enum": ["SMOKE_REGRESSION", "SYNTHETIC_FIXTURE", "DEV_TUNE", "DEV_CHECK", "HOLDOUT"],
+          "description": "SMOKE_REGRESSION is Seed 25's role (wiring/regression only, not Gold -- see domain/evaluation/asset-audit.v1.json). This field records the role a dataset was actually used under for THIS run; it does not itself authorize an official DEV/HOLDOUT run."
+        },
+        "item_count": { "type": "integer", "minimum": 1 },
+        "dataset_sha256": {
+          "type": ["string", "null"],
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "sha256 over the canonicalized (question_id, question) list actually run (domain/agent-comparison/reproducibility.mjs's computeDatasetSha256). Pins WHICH questions ran without storing expected answers/Gold here."
+        }
+      }
+    },
+    "corpus_snapshot_id": { "type": "string", "minLength": 1 },
+    "fact_coverage_snapshot_id": { "type": ["string", "null"] },
+    "temperature": { "type": ["number", "null"], "minimum": 0, "maximum": 2 },
+    "max_output_tokens": { "type": ["integer", "null"], "minimum": 1 },
+    "determinism": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["seed", "provider_deterministic_mode"],
+      "properties": {
+        "seed": { "type": ["integer", "null"], "description": "A provider-supported sampling seed, if the model config set one. null when the provider has no seed concept or none was set." },
+        "provider_deterministic_mode": { "type": ["string", "null"], "description": "Free-text name of whatever provider-specific deterministic/reproducible-output setting was requested (e.g. \"temperature=0\", a provider's own \"deterministic\" flag name), or null if none is supported/requested." }
+      }
+    },
+    "cache_policy": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Free-text description of prompt/response caching in effect for this run (e.g. \"NONE\", \"PROVIDER_PROMPT_CACHE_DISABLED\"). A cache hit can change latency/cost without changing the model's own quality -- this pin lets a later comparison account for that."
+    },
+    "code_revision": {
+      "type": "string",
+      "minLength": 1,
+      "description": "git revision (optionally suffixed \"-dirty\") of the working tree that produced this run (domain/agent-comparison/reproducibility.mjs's detectCodeRevision), or \"unknown\" if it could not be determined. Never blocks a run from completing."
+    },
+    "fallback_scoring_policy": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Fixed, documented statement of how fallback-substituted answers (model_fallback_used=true telemetry rows) are treated in scoring for this run -- e.g. \"EXCLUDE_FALLBACK_FROM_MODEL_SCORING\". Recorded once per run so a later comparison never has to guess whether fallback rows were already filtered."
+    },
+    "budget_limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["maxHcxCalls", "maxRetrievals", "maxToolCalls", "timeoutMs"],
+      "properties": {
+        "maxHcxCalls": { "type": "integer", "minimum": 0 },
+        "maxRetrievals": { "type": "integer", "minimum": 0 },
+        "maxToolCalls": { "type": "integer", "minimum": 0 },
+        "timeoutMs": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "started_at": { "type": "string", "format": "date-time" },
+    "completed_at": { "type": ["string", "null"], "format": "date-time" },
+    "telemetry_event_count": { "type": ["integer", "null"], "minimum": 0 },
+    "notes": { "type": "string" }
+  }
+}

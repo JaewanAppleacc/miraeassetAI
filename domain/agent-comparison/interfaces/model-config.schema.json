@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://disclosure-analyst.local/schema/agent-comparison/model-config.v0.1.json",
+  "title": "Model Adapter Config v0.1",
+  "description": "Provider/model identity for a single benchmark arm, injected as configuration -- never hardcoded inside Agent or model-adapter code (see domain/agent-comparison/model-adapter.mjs). One ModelConfig maps to exactly one model_config_id used across all telemetry for a run.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "model_config_id", "kind", "provider", "model"],
+  "properties": {
+    "schema_version": { "const": "0.1.0" },
+    "model_config_id": {
+      "type": "string",
+      "pattern": "^model_[a-z0-9_.-]+$",
+      "description": "Stable identifier for this exact provider+model+parameter combination, used to join telemetry back to a configuration without re-deriving it from free text."
+    },
+    "kind": {
+      "enum": ["FAKE_DETERMINISTIC", "HTTP_CHAT_COMPLETIONS"],
+      "description": "Which generic adapter implementation to construct. FAKE_DETERMINISTIC never makes a network call. HTTP_CHAT_COMPLETIONS is a single generic HTTP client shape reused across providers; the provider/model/endpoint are still fully config-driven, not branched on by name in code."
+    },
+    "provider": { "type": "string", "minLength": 1, "description": "Free-text provider label for telemetry/reporting only (e.g. \"anthropic\", \"openai\", \"hcx\"). Never used to select code paths." },
+    "model": { "type": "string", "minLength": 1, "description": "Free-text model name for telemetry/reporting only (e.g. \"claude-sonnet-5\"). Never hardcoded inside Agent flow code." },
+    "endpoint_url": { "type": "string", "minLength": 1, "description": "Required when kind=HTTP_CHAT_COMPLETIONS; the full chat-completions-shaped endpoint URL." },
+    "api_key_env_var": { "type": "string", "minLength": 1, "description": "Name of the environment variable holding the API key. The key value itself is never part of this config or of any telemetry/log output." },
+    "max_output_tokens": { "type": "integer", "minimum": 1 },
+    "temperature": { "type": "number", "minimum": 0, "maximum": 2 },
+    "timeout_ms": { "type": "integer", "minimum": 1 },
+    "input_cost_per_1k_tokens": { "type": "number", "minimum": 0, "description": "Used only to derive telemetry.estimated_cost; absence means estimated_cost is always 0." },
+    "output_cost_per_1k_tokens": { "type": "number", "minimum": 0 }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "kind": { "const": "HTTP_CHAT_COMPLETIONS" } }, "required": ["kind"] },
+      "then": {
+        "required": ["endpoint_url", "api_key_env_var"],
+        "properties": {
+          "endpoint_url": { "type": "string", "minLength": 1 },
+          "api_key_env_var": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  ]
+}

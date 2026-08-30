@@ -57,6 +57,18 @@ const pairs = [
     "domain/interfaces/answer-wire-response.schema.json",
     "domain/interfaces/examples/answer-wire-response.example.json",
   ],
+  [
+    "domain/agent-comparison/interfaces/model-config.schema.json",
+    "domain/agent-comparison/interfaces/examples/model-config.example.json",
+  ],
+  [
+    "domain/agent-comparison/interfaces/telemetry-event.schema.json",
+    "domain/agent-comparison/interfaces/examples/telemetry-event.example.json",
+  ],
+  [
+    "domain/agent-comparison/interfaces/benchmark-run-manifest.schema.json",
+    "domain/agent-comparison/interfaces/examples/benchmark-run-manifest.example.json",
+  ],
 ];
 
 const ajv = new Ajv2020({ allErrors: true, strict: true, allowUnionTypes: true });
