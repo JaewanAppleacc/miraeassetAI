@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://disclosure-analyst.local/schema/agent-comparison/integration/comparison-record.v0.1.json",
+  "title": "Agent Comparison Record v0.1",
+  "description": "Turn P3: one record per (benchmark_run_id, agent_variant_id, dataset_item_id) execution inside a four-variant comparison run. Deliberately does NOT store raw answer text, raw ExecutionTrace, raw prompt, raw model response, an API key, or an internal exception message -- only content hashes (answer_sha256, execution_trace_sha256) and the already-aggregated counts/flags TelemetryEvent (domain/agent-comparison/interfaces/telemetry-event.schema.json) provides. This is a wiring/reproducibility artifact, never a Gold record and never a quality score -- a scorer reading this must exclude any row with scoring_eligible=false from a model-quality comparison. latency_ms is the one intentionally-observational field: it is excluded from execution_trace_sha256's hashed input (see determinism.mjs), so two runs over identical input produce the same execution_trace_sha256 even though real latency differs.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "benchmark_run_id", "agent_variant_id", "agent_variant_revision",
+    "model_config_sha256", "dataset_item_id", "release_id", "release_manifest_sha256",
+    "execution_mode", "structured_query_count", "document_retrieval_count",
+    "model_call_attempt_count", "model_call_success_count", "model_call_failure_count",
+    "model_fallback_used", "model_failure_code", "citation_binding_status",
+    "unsupported_claim_count", "evidence_validation_success_rate", "scoring_eligible",
+    "latency_ms", "answer_sha256", "execution_trace_sha256", "run_status"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.1.0" },
+    "benchmark_run_id": { "type": "string", "minLength": 1 },
+    "agent_variant_id": {
+      "enum": ["STRUCTURED_FIRST", "HYBRID_RETRIEVAL", "PLANNER", "DOCUMENT_FIRST_RAG"]
+    },
+    "agent_variant_revision": {
+      "type": "string",
+      "minLength": 1,
+      "description": "git blob hash of the variant's own primary flow file at the ref this run used (domain/agent-comparison/integration/variant-revisions.mjs), or \"unknown\" if it could not be determined."
+    },
+    "model_config_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "dataset_item_id": { "type": ["string", "null"] },
+    "release_id": { "type": "string", "minLength": 1 },
+    "release_manifest_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "sha256 of the approved v0.20-r3 bundle-manifest.json bytes (domain/agent-comparison/integration/release-pin.mjs) -- pins which bundle every variant in this comparison run actually read."
+    },
+    "execution_mode": { "enum": ["STRUCTURED", "RETRIEVAL", "BOTH", "EARLY_EXIT"] },
+    "structured_query_count": { "type": "integer", "minimum": 0 },
+    "document_retrieval_count": { "type": "integer", "minimum": 0 },
+    "model_call_attempt_count": { "type": "integer", "minimum": 0 },
+    "model_call_success_count": { "type": "integer", "minimum": 0 },
+    "model_call_failure_count": { "type": "integer", "minimum": 0 },
+    "model_fallback_used": { "type": "boolean" },
+    "model_failure_code": {
+      "type": ["string", "null"],
+      "description": "One of contracts.mjs's MODEL_CALL_ERROR_CODES when the failure happened inside a ModelAdapter call, or a harness-level code (e.g. AGENT_VARIANT_EXECUTION_ERROR) when run_status=\"FAILED\" because the comparison harness itself could not obtain a FinalResponse for this variant at all (unregistered variant, factory construction threw, etc.) -- never a raw exception message."
+    },
+    "citation_binding_status": { "enum": ["PASS", "FAIL", "NOT_CHECKED"] },
+    "unsupported_claim_count": { "type": "integer", "minimum": 0 },
+    "evidence_validation_success_rate": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+    "scoring_eligible": {
+      "type": "boolean",
+      "description": "false whenever model_fallback_used is true OR run_status is FAILED. A comparison/scoring pass MUST exclude any row where this is false."
+    },
+    "latency_ms": {
+      "type": "number",
+      "minimum": 0,
+      "description": "OBSERVATIONAL ONLY. Real wall-clock duration of this variant's run. Excluded from execution_trace_sha256's hashed input -- never use this field to check run-to-run determinism."
+    },
+    "answer_sha256": {
+      "type": ["string", "null"],
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "sha256 of final_response.answer's exact text. null only when run_status=\"FAILED\" and no answer was ever produced."
+    },
+    "execution_trace_sha256": {
+      "type": ["string", "null"],
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "sha256 of the canonicalized ExecutionTrace with all volatile timing fields stripped (determinism.mjs). null only when run_status=\"FAILED\"."
+    },
+    "run_status": {
+      "enum": ["OK", "FAILED"],
+      "description": "OK: the harness obtained a FinalResponse/ExecutionTrace for this variant (this says nothing about whether the ANSWER itself was grounded -- see citation_binding_status/scoring_eligible for that). FAILED: the harness itself could not run this variant at all (e.g. unregistered variant_id, or the variant's factory/constructor threw before runAgentFlow could even be invoked) -- every other count field is 0/null/false in that case, not a guess."
+    }
+  }
+}

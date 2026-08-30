@@ -69,6 +69,10 @@ const pairs = [
     "domain/agent-comparison/interfaces/benchmark-run-manifest.schema.json",
     "domain/agent-comparison/interfaces/examples/benchmark-run-manifest.example.json",
   ],
+  [
+    "domain/agent-comparison/integration/interfaces/comparison-record.schema.json",
+    "domain/agent-comparison/integration/interfaces/examples/comparison-record.example.json",
+  ],
 ];
 
 const ajv = new Ajv2020({ allErrors: true, strict: true, allowUnionTypes: true });
