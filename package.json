@@ -68,6 +68,8 @@
     "build:document-retrieval-snapshot": "node --max-old-space-size=6144 scripts/build-document-retrieval-snapshot-v01.mjs full",
     "test:retrieval-index-planning": "node --test tests/retrieval-index-planning-analysis.test.mjs tests/retrieval-index-planning-storage.test.mjs tests/retrieval-index-planning-build.test.mjs",
     "analyze:retrieval-index": "node --max-old-space-size=4096 scripts/analyze-document-retrieval-index-v01.mjs full",
+    "test:dedup-retrieval": "node --test tests/reference-dedup-retrieval-contract.test.mjs tests/reference-dedup-retrieval-repository-no-write-sql.test.mjs",
+    "test:reference-dedup-retrieval:postgres16": "node --test tests/reference-dedup-retrieval-postgres16-integration.test.mjs",
     "test:reference-db:postgres16": "node --test tests/reference-release-postgres16-integration.test.mjs",
     "test:reference-repository:postgres16": "node --test tests/reference-repository-postgres16-integration.test.mjs",
     "test:coverage-authorized-fact-view:postgres16": "node --test tests/coverage-authorized-fact-view-postgres16-integration.test.mjs",

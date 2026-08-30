@@ -427,3 +427,39 @@ chunking policy pin이 아직 별도 gate이기 때문이다.
 extension이 서버에 없으면 `BLOCKED_PGVECTOR_EXTENSION_NOT_AVAILABLE`로
 명시적으로 실패한다(무음 skip 금지, 이 프로젝트가 설치를 대신 수행하지도
 않는다).
+
+## Turn P5.2: EXACT_TEXT_DEDUP_INDEX
+
+Turn P5.1이 추천한 전략(`retrieval-index-strategy-comparison.v0.1.json`의
+`EXACT_TEXT_DEDUP_INDEX`)을 구현한다. 003을 전혀 수정하지 않고
+`004_reference_dedup_retrieval_index.sql`을 additive로 추가했다 — 219건의
+기존 VERIFIED_EVIDENCE 색인 의미는 그대로다.
+
+**왜 새 테이블 3개인가**: 003의 1-row-per-chunk 구조는 "여러 occurrence가
+embedding 하나를 공유"를 표현할 방법이 없다. `reference_dedup_canonical_texts`
+(text_sha256당 정확히 1행, corp_code/document_id 컬럼 자체가 없음)와
+`reference_dedup_occurrences`(원본 Turn P5 chunk 1건당 정확히 1행, canonical에
+대한 FK)를 진짜 외래키로 분리했다.
+
+**가장 중요한 불변식**: canonical 행에는 회사/문서 메타데이터가 아예 없으므로
+`reference-dedup-retrieval-repository.mjs`의 `search()`는 구조적으로
+"occurrence를 먼저 필터 → 그 occurrence가 참조하는 text_sha256만 candidate →
+그 candidate만 similarity 정렬/top-k → top-k canonical을 다시 필터된
+occurrence 전체에 조인"할 수밖에 없다(SQL CTE 순서 자체가 이 순서를 강제 —
+`tests/reference-dedup-retrieval-contract.test.mjs`가 CTE 텍스트 순서를
+정적으로 검증).
+
+**Loader**: `reference-dedup-retrieval-loader.mjs`는 caller가 주는
+`chunkSourceFactory()`(매번 새 async iterable을 반환하는 함수)를 2-pass로
+소비한다 — 1pass는 canonical Map(고유 text_sha256만) 구성, 2pass는 occurrence
+행 기록. 723,875개 전체를 이번 Turn에 실제 적재하는 것은 필수 조건이 아니다
+(작업 브리프 자체가 명시) — 실제 PostgreSQL 통합 테스트는 합성 fixture +
+실제 스냅샷에서 뽑은 192행(서로 다른 두 실제 회사가 실제로 공유하는
+"(단위: 백만원)" 문구 포함) bounded shard로 검증한다.
+
+**PostgreSQL 16 + pgvector 통합 테스트**: `npm run test:reference-dedup-retrieval:postgres16`
+(동일한 `DATABASE_URL`/fail-closed 관례). 8개 테스트 모두 실제 서버 대상 —
+canonical/occurrence count 정확성, 멱등성, mid-load rollback, READY
+불변성(DELETE/UPDATE 거부), 최소 권한 grant 실제 집행, 그리고 핵심
+불변식(같은 텍스트를 공유하는 두 실제 회사 중 한 회사만 필터링해도 다른
+회사의 occurrence가 절대 섞이지 않음 + stable tie-break) 증명.
