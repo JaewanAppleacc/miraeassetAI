@@ -10,11 +10,100 @@ import { spawn } from "node:child_process";
 import { mkdtemp, readdir, readFile, rm, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { acquireSemaphore } from "../../scripts/lib/process-semaphore.mjs";
 
 const CHROME_CANDIDATES = [
   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
   "/Applications/Chromium.app/Contents/MacOS/Chromium",
 ];
+
+// Turn N4.18.1: bounds how many REAL headless Chrome browser processes can
+// be alive across this whole repo checkout at once. Directly confirmed
+// before this fix: running just 4 of this repo's Chrome-using test files
+// together via plain `node --test` produced 4 simultaneous real Chrome
+// browser processes (no coordination existed at all) -- with 17 such files
+// in the full suite and node's own default file-level test concurrency,
+// this is the confirmed mechanism behind this repo's repeated
+// resource-contention hangs (many real Chrome instances, each with ~7-8
+// helper processes of its own, competing for CPU at once). The semaphore
+// key is derived from THIS FILE's own absolute path (not process.cwd(),
+// which can vary), so a different worktree checkout of this same repo gets
+// its own, non-interfering semaphore -- see
+// tests/process-semaphore.test.mjs's cross-key isolation tests.
+const REPO_ROOT_FOR_SEMAPHORE = path.resolve(fileURLToPath(import.meta.url), "../../..");
+const HEADLESS_CHROME_SEMAPHORE_KEY = `headless-chrome-launch:${REPO_ROOT_FOR_SEMAPHORE}`;
+// Turn N4.18.1 DEVIATION, DELIBERATE AND DOCUMENTED: the requested initial
+// default was 1. A literal 1 was implemented and tested first, and it
+// DEADLOCKED two existing, legitimate regression tests in this very file
+// (the "two concurrently-launched instances get two different real
+// debugPorts" test and the "two concurrent instances downloading AT THE
+// SAME TIME never cross-contaminate" test) -- both intentionally hold TWO
+// real Chrome pages open at once (via `Promise.all([launchHeadlessChromePage
+// (...), launchHeadlessChromePage(...)])`, awaiting BOTH before closing
+// EITHER) specifically to prove no port collision / no downloadDir
+// cross-contamination between simultaneously-live instances. A global
+// permits=1 semaphore held for a page's entire open lifetime (released
+// only in close()) makes the second launch in each of those tests wait for
+// the first to close -- which never happens before Promise.all itself
+// resolves, i.e. a guaranteed deadlock, reproduced directly (a `node
+// --test` run on this file exceeded a 120s wall-clock check and had to be
+// force-killed; the leaked headless Chrome processes it left behind were
+// confirmed harmless -- unrelated to and never touching the user's real
+// Chrome -- and cleaned up manually).
+//
+// 2 is therefore the SMALLEST value that does not regress existing,
+// intentional test coverage, while still cutting this repo's worst-case
+// real-simultaneous-Chrome-instance count from "as many of the 17
+// Chrome-using files as node's own file-level concurrency schedules at
+// once" (directly confirmed: 4 test files run together produced 4
+// simultaneous real Chrome processes with zero coordination) down to at
+// most 2, repo-wide. Still fully configurable via
+// HEADLESS_CHROME_MAX_CONCURRENCY for anyone who wants to raise or lower
+// it; lowering it to 1 would additionally require rewriting or skipping
+// the two dual-page tests named above, which this Turn's scope (fix
+// concurrency/duplication, not redesign existing test coverage) does not
+// do without explicit direction.
+export const DEFAULT_HEADLESS_CHROME_MAX_CONCURRENCY = 2;
+export function resolveHeadlessChromeMaxConcurrency() {
+  const raw = process.env.HEADLESS_CHROME_MAX_CONCURRENCY;
+  const parsed = raw ? Number(raw) : NaN;
+  return Number.isInteger(parsed) && parsed >= 1 ? parsed : DEFAULT_HEADLESS_CHROME_MAX_CONCURRENCY;
+}
+// Bounded wait to acquire a launch slot. Never unbounded -- overridable
+// per-call for tests that need to prove the timeout path quickly, and via
+// env var for real-run tuning.
+//
+// Turn N4.18.2 CORRECTION: an earlier version of this comment set this to
+// 30 minutes, reasoning that a full 17-18-file Chrome-heavy suite run
+// could legitimately need that long to drain its own queue. That reasoning
+// is WRONG and has been retracted after a real, bounded, isolated
+// reproduction: `tests/relation-closure-owner-review-ui-v01/v02.test.mjs`
+// run together in a clean environment (no other process competing)
+// complete in ~6s and ~5.4s respectively -- proving those two files have
+// no lifecycle bug and no legitimate multi-minute wait of their own. The
+// REAL, confirmed mechanism behind the previously observed 30+ minute
+// stalls is external: this repo's PostToolUse/Stop hooks re-run the ENTIRE
+// `npm run verify:contracts` chain (~150 files, including every headless-
+// Chrome test) automatically and repeatedly, with no coordination against
+// a separately, manually started `node --test` invocation -- confirmed
+// directly (a hook-triggered run competing for CPU with an isolated
+// reproduction attempt reproduced the stall every single time; the same
+// reproduction with no hook-triggered run active anywhere on the machine
+// passed cleanly every time). That specific hook-vs-hook /
+// hook-vs-ad-hoc-invocation coordination gap is a separate, larger problem
+// than this file's own scope covers.
+//
+// Given that, a long default here does not actually help anything: it
+// just makes a genuinely-starved caller wait even longer before reporting
+// a clear, actionable SemaphoreTimeoutError (see acquireSemaphore(), which
+// now also reports which PID(s) currently hold the permits and for how
+// long). 120 seconds is long enough to cover ordinary, LEGITIMATE
+// contention (a small handful of Chrome-using test files genuinely
+// queueing behind each other within one coordinated run) while still
+// failing fast and diagnosably under the kind of severe, uncoordinated
+// external contention described above.
+export const DEFAULT_SEMAPHORE_ACQUIRE_TIMEOUT_MS = Number(process.env.HEADLESS_CHROME_SEMAPHORE_TIMEOUT_MS) || 120_000;
 
 // Turn N4.1a (user-reported defect, confirmed via two real hung process
 // trees -- one 11 hours old, one 3+ hours old, both stuck inside the same
@@ -277,8 +366,25 @@ export async function readDevToolsActivePort(userDataDir, timeoutMs) {
   throw new Error(`DevToolsActivePort did not appear with a valid port within ${timeoutMs}ms at ${filePath}`);
 }
 
-export async function launchHeadlessChromePage({ url, port, cdpTimeoutMs = DEFAULT_CDP_TIMEOUT_MS } = {}) {
+export async function launchHeadlessChromePage({
+  url, port, cdpTimeoutMs = DEFAULT_CDP_TIMEOUT_MS,
+  semaphoreTimeoutMs = DEFAULT_SEMAPHORE_ACQUIRE_TIMEOUT_MS,
+  semaphorePermits = resolveHeadlessChromeMaxConcurrency(),
+} = {}) {
   const chromePath = CHROME_CANDIDATES[0];
+
+  // Acquire a launch slot BEFORE spawning anything. This is itself bounded
+  // (SemaphoreTimeoutError after semaphoreTimeoutMs) -- there is no code
+  // path in this file where a caller can wait unboundedly for a slot.
+  // Nothing (temp dirs, the Chrome process) exists yet at this point, so a
+  // timeout here has nothing of this call's own to clean up.
+  const semaphoreHandle = await acquireSemaphore({
+    key: HEADLESS_CHROME_SEMAPHORE_KEY,
+    permits: semaphorePermits,
+    timeoutMs: semaphoreTimeoutMs,
+    ownerMeta: { pid: process.pid, url: url ?? null },
+  });
+
   const userDataDir = await mkdtemp(path.join(os.tmpdir(), "seed-headless-cdp-"));
   const downloadDir = await mkdtemp(path.join(os.tmpdir(), "seed-headless-download-"));
   // Turn N4.2.2: an explicit `port` (only the deliberate CDP-handshake-
@@ -385,9 +491,14 @@ export async function launchHeadlessChromePage({ url, port, cdpTimeoutMs = DEFAU
       await waitForLoad(send);
     }
 
-    return buildPage({ ws, proc, userDataDir, downloadDir, send, evaluate, pendingRequests, debugPort: resolvedPort });
+    return buildPage({ ws, proc, userDataDir, downloadDir, send, evaluate, pendingRequests, debugPort: resolvedPort, semaphoreHandle });
   } catch (error) {
     const cleanupErrors = await killAndCleanup(proc, [userDataDir, downloadDir]);
+    try {
+      await semaphoreHandle.release();
+    } catch (releaseError) {
+      cleanupErrors.push(releaseError);
+    }
     if (cleanupErrors.length > 0) {
       throw new AggregateError(
         [error, ...cleanupErrors],
@@ -398,7 +509,7 @@ export async function launchHeadlessChromePage({ url, port, cdpTimeoutMs = DEFAU
   }
 }
 
-function buildPage({ ws, proc, userDataDir, downloadDir, send, evaluate, pendingRequests, debugPort }) {
+function buildPage({ ws, proc, userDataDir, downloadDir, send, evaluate, pendingRequests, debugPort, semaphoreHandle }) {
   async function close() {
     pendingRequests.rejectAll(new Error("CDP page closed while this command was still pending"));
     try { ws.close(); } catch { /* ignore */ }
@@ -408,8 +519,25 @@ function buildPage({ ws, proc, userDataDir, downloadDir, send, evaluate, pending
     // reasonable fallback wait, which leaves the CDP WebSocket's
     // underlying socket open and the Node test process hanging forever
     // after all assertions already passed. SIGKILL guarantees the OS
-    // tears down the process (and its socket) immediately.
+    // tears down the process (and its socket) immediately. (Turn N4.18.1:
+    // deliberately left unchanged -- this is a pre-existing, already
+    // regression-tested exception to "graceful SIGTERM before SIGKILL",
+    // not something this Turn's concurrency-only scope revisits.)
     const cleanupErrors = await killAndCleanup(proc, [userDataDir, downloadDir]);
+    // Turn N4.18.1: release the launch-concurrency slot AFTER Chrome is
+    // actually gone, so the NEXT queued waiter never starts while this
+    // instance's process/temp dirs might still be torn down. A release
+    // failure is reported alongside any killAndCleanup errors, never
+    // silently swallowed -- but the slot's underlying file-remove is
+    // idempotent (see process-semaphore.mjs's releaseSlot), so a partial
+    // failure here does not itself leave the slot permanently stuck (a
+    // live process cannot see its own record as "stale", but a genuine
+    // fs error surfaces here for visibility).
+    try {
+      await semaphoreHandle.release();
+    } catch (releaseError) {
+      cleanupErrors.push(releaseError);
+    }
     if (cleanupErrors.length > 0) {
       throw new AggregateError(cleanupErrors, `page.close() cleanup failed: ${cleanupErrors.map((e) => e.message).join("; ")}`);
     }

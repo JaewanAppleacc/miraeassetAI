@@ -760,3 +760,72 @@ test("listener counts are unchanged across a marker-ready failure and an outer-t
 // SPECIFIC root/wrapper/child IT created or learned about (via a direct
 // return value or the child's marker file) is gone -- there is no
 // remaining per-run property that only a directory-wide scan could prove.
+
+// Turn N4.18.3: package.json's `test:domain` script wraps its `node --test`
+// invocation in this same wrapper, and now also carries `--test-concurrency=1`
+// to serialize test-file execution -- without it, two files that legitimately
+// hold a live Chrome page open across `test.before`/`test.after` (v01/v02)
+// were repeatedly reproduced holding both headless-chrome-launch semaphore
+// permits and never progressing (0% CPU, indefinitely) whenever Node's test
+// runner scheduled them as concurrent file-level child processes. These
+// static checks only ever read package.json; they never spawn a process.
+test("Turn N4.18.3: test:domain carries --test-concurrency=1 exactly once, and no retry/skip flag was introduced alongside it", async () => {
+  const pkgPath = new URL("../package.json", import.meta.url);
+  const pkg = JSON.parse(await readFile(pkgPath, "utf8"));
+  const command = pkg.scripts["test:domain"];
+  assert.equal(typeof command, "string", "package.json must still define a test:domain script");
+
+  const concurrencyMatches = command.match(/--test-concurrency=1\b/g) || [];
+  assert.equal(concurrencyMatches.length, 1, "--test-concurrency=1 must appear exactly once in test:domain");
+
+  assert.match(command, /run-node-test-with-tmp-cleanup\.mjs -- node --test --test-concurrency=1 tests\//, "the flag must sit between `node --test` and the first test file, so the wrapper and every listed file are unaffected in position");
+
+  for (const forbidden of [/--test-only\b/, /--test-name-pattern\b/, /--test-skip-pattern\b/, /--test-timeout\b/, /\bretry\b/i]) {
+    assert.doesNotMatch(command, forbidden, `test:domain must not introduce a retry/skip/timeout-relaxing flag (matched ${forbidden})`);
+  }
+});
+
+test("Turn N4.18.3: test:domain's test-file list has no duplicates and still lists every previously-known file, including the two that hang when run concurrently", async () => {
+  const pkgPath = new URL("../package.json", import.meta.url);
+  const pkg = JSON.parse(await readFile(pkgPath, "utf8"));
+  const command = pkg.scripts["test:domain"];
+  const files = command.match(/tests\/[\w.-]+\.test\.mjs/g) || [];
+
+  // Turn N4.19: count bumped from 152 to 153 -- tests/v03-split-preservation-bundle-v0419.test.mjs
+  // was legitimately added to test:domain in that Turn. This assertion's purpose
+  // is still "no silent addition/removal drift"; it is intentionally updated
+  // alongside every deliberate, reviewed addition to the list.
+  assert.equal(files.length, 153, "the test-file count must match the current known-good list (153) -- update this alongside any deliberate addition/removal, never silently");
+  assert.equal(new Set(files).size, files.length, "no test file may be listed twice");
+
+  for (const mustHave of [
+    "tests/relation-closure-owner-review-ui-v01.test.mjs",
+    "tests/relation-closure-owner-review-ui-v02.test.mjs",
+    "tests/domain-contracts.test.mjs",
+    "tests/headless-chrome-semaphore.test.mjs",
+    "tests/process-semaphore.test.mjs",
+  ]) {
+    assert.ok(files.includes(mustHave), `test:domain must still list ${mustHave}`);
+  }
+
+  const testsDir = new URL("../tests/", import.meta.url);
+  for (const file of files) {
+    const relative = file.slice("tests/".length);
+    await assert.doesNotReject(
+      readFile(new URL(relative, testsDir)),
+      `${file} is listed in test:domain but does not exist on disk`,
+    );
+  }
+});
+
+test("Turn N4.18.3: no other package.json script gained --test-concurrency, and the headless Chrome semaphore's default concurrency (2) is unchanged", async () => {
+  const pkgPath = new URL("../package.json", import.meta.url);
+  const pkg = JSON.parse(await readFile(pkgPath, "utf8"));
+  for (const [name, command] of Object.entries(pkg.scripts)) {
+    if (name === "test:domain") continue;
+    assert.doesNotMatch(command, /--test-concurrency/, `only test:domain may carry --test-concurrency (found it in "${name}")`);
+  }
+
+  const { DEFAULT_HEADLESS_CHROME_MAX_CONCURRENCY } = await import("./lib/headless-chrome-cdp.mjs");
+  assert.equal(DEFAULT_HEADLESS_CHROME_MAX_CONCURRENCY, 2, "the headless Chrome launch semaphore's default permits must remain 2 -- file-level serialization (--test-concurrency=1) is a separate, independent fix");
+});
