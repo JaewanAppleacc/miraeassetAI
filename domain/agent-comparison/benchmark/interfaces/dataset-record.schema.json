@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://disclosure-analyst.local/schema/agent-comparison/benchmark/dataset-record.v0.1.json",
+  "title": "Benchmark Dataset Record v0.1",
+  "description": "Turn P6: the minimal contract a common Benchmark Runner accepts as ONE evaluation item, independent of which Agent variant executes it. This schema does NOT fix the real Gold's eventual shape -- domain/agent-comparison/COMPARISON_PLAN.md and the official Gold authoring process own that decision. This Turn's own schema/example use only synthetic fixture ids/values (no real question_id/document_id/expected answer text) -- see domain/agent-comparison/benchmark/README.md. expected_* fields describe what a Grading Scorer checks for, never anything shown to the ModelAdapter -- a Benchmark Runner must never place question/expected_* content directly into a model prompt as ground truth (only the question itself, and only via the SAME AgentInput.question path every variant already uses).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "evaluation_item_id", "question", "split",
+    "evaluation_group_id", "chain_component_id", "expected_answerability",
+    "expected_facts", "expected_events", "expected_relations",
+    "expected_numeric_claims", "expected_date_claims", "allowed_evidence_ids",
+    "grading_policy_version"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.1.0" },
+    "evaluation_item_id": {
+      "type": "string",
+      "pattern": "^evaluation_item_[a-z0-9_]+$",
+      "description": "This item's own stable identity -- also used as AgentInput.question_id when a Benchmark Runner executes it."
+    },
+    "question": { "type": "string", "minLength": 1 },
+    "as_of_date": { "type": ["string", "null"], "format": "date" },
+    "hints": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Optional, already-resolved AgentInput.hints passthrough (question-analysis.mjs's own hint precedence) -- lets a synthetic fixture pin corp_codes/metric_codes deterministically instead of depending on Korean text extraction.",
+      "properties": {
+        "corp_codes": { "type": "array", "items": { "type": "string", "pattern": "^[0-9]{8}$" } },
+        "metric_codes": { "type": "array", "items": { "type": "string" } },
+        "document_ids": { "type": "array", "items": { "type": "string" } },
+        "event_types": { "type": "array", "items": { "type": "string" } },
+        "period_filter": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "start": { "type": ["string", "null"] },
+            "end": { "type": ["string", "null"] },
+            "period_types": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "scope_filter": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "split": {
+      "enum": ["DEV_TUNE", "DEV_CHECK", "HOLDOUT"],
+      "description": "Must equal domain/contracts.mjs's EVALUATION_SPLITS -- reused, never redefined, so a benchmark dataset's split vocabulary never drifts from the evaluation-usage-ledger's own."
+    },
+    "evaluation_group_id": {
+      "type": ["string", "null"],
+      "description": "Groups items that must never be split across DEV_TUNE/DEV_CHECK/HOLDOUT (e.g. paraphrases of the same underlying question) -- see chain_component_id for the correction-chain analogue. null means this item belongs to no group."
+    },
+    "chain_component_id": {
+      "type": ["string", "null"],
+      "description": "The decision-respecting-graph maximal-component identity (domain/handoff artifacts) this item's source document belongs to, if any -- items sharing a chain_component_id must also never be split across splits (a later-confirmed correction relation must never let the same underlying disclosure chain leak across DEV_TUNE/DEV_CHECK/HOLDOUT). null means no known chain membership."
+    },
+    "expected_answerability": {
+      "enum": ["SUPPORTED", "WITHHELD", "NOT_APPLICABLE", "UNANSWERABLE"],
+      "description": "Must equal telemetry.mjs's ANSWERABILITY_TO_VALIDATION_STATUS domain -- the Answerability Scorer compares this against the actually-produced validation_status."
+    },
+    "expected_facts": { "type": "array", "items": { "$ref": "#/$defs/expectedFact" } },
+    "expected_events": { "type": "array", "items": { "$ref": "#/$defs/expectedEvent" } },
+    "expected_relations": { "type": "array", "items": { "$ref": "#/$defs/expectedRelation" } },
+    "expected_numeric_claims": { "type": "array", "items": { "$ref": "#/$defs/expectedNumericClaim" } },
+    "expected_date_claims": { "type": "array", "items": { "$ref": "#/$defs/expectedDateClaim" } },
+    "allowed_evidence_ids": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true,
+      "description": "The Citation Scorer's authorized set -- an Agent answer citing an evidence_id outside this set is a citation-authorization failure, independent of whether that evidence_id happened to validate structurally this run."
+    },
+    "grading_policy_version": { "type": "string", "minLength": 1 }
+  },
+  "$defs": {
+    "expectedFact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fact_id", "semantic_slot", "corp_code", "metric_code", "required"],
+      "properties": {
+        "fact_id": { "type": ["string", "null"] },
+        "semantic_slot": {
+          "type": ["string", "null"],
+          "description": "A human-stable slot name (e.g. \"revenue_fy2023\") a Fact Coverage Scorer can match on when the real fact_id is not yet known/stable -- at least one of fact_id/semantic_slot should be non-null."
+        },
+        "corp_code": { "type": ["string", "null"], "pattern": "^[0-9]{8}$" },
+        "metric_code": { "type": ["string", "null"] },
+        "required": { "type": "boolean", "description": "false marks an optional/bonus Fact that never lowers coverage if missing." }
+      }
+    },
+    "expectedEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event_id", "event_type", "order_index"],
+      "properties": {
+        "event_id": { "type": ["string", "null"] },
+        "event_type": { "type": ["string", "null"] },
+        "order_index": { "type": ["integer", "null"], "minimum": 0, "description": "This event's position in the expected chronological sequence, for the Event/Relation Scorer's ordering check." }
+      }
+    },
+    "expectedRelation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["relation_id", "relation_type", "source_document_id", "target_document_id", "source_corp_code", "target_corp_code"],
+      "properties": {
+        "relation_id": { "type": ["string", "null"] },
+        "relation_type": { "type": "string", "minLength": 1 },
+        "source_document_id": { "type": "string", "minLength": 1 },
+        "target_document_id": { "type": "string", "minLength": 1 },
+        "source_corp_code": { "type": "string", "pattern": "^[0-9]{8}$" },
+        "target_corp_code": { "type": "string", "pattern": "^[0-9]{8}$" }
+      }
+    },
+    "expectedNumericClaim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "unit", "unit_conversion_allowed", "role"],
+      "properties": {
+        "value": { "type": "number" },
+        "unit": { "type": "string", "minLength": 1 },
+        "unit_conversion_allowed": {
+          "type": "boolean",
+          "description": "false: the Agent answer's own reported unit must equal `unit` exactly, no scale conversion accepted. true: a conversion listed in the active ScoringPolicy's numeric_unit_conversions table is also accepted (never an unlisted, ad-hoc derived calculation)."
+        },
+        "role": { "type": ["string", "null"], "description": "Free-text disambiguator (e.g. \"contract_amount\", \"revenue_ratio_pct\") for a question with more than one numeric claim." }
+      }
+    },
+    "expectedDateClaim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["date", "date_role"],
+      "properties": {
+        "date": { "type": "string", "format": "date" },
+        "date_role": {
+          "type": "string",
+          "minLength": 1,
+          "description": "e.g. DECISION_DATE / CORRECTION_DATE / COMPLETION_DATE / AS_OF_DATE -- a correct date value with the WRONG role is its own distinct Date Claim Scorer error, never silently accepted as a match."
+        }
+      }
+    }
+  }
+}

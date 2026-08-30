@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://disclosure-analyst.local/schema/agent-comparison/benchmark/benchmark-item-result.v0.1.json",
+  "title": "Benchmark Item Result v0.1",
+  "description": "Turn P6: one (evaluation_item_id, variant_id) execution, produced by domain/agent-comparison/benchmark/runner.mjs. Mirrors telemetry-event.schema.json / integration/interfaces/comparison-record.schema.json's own no-raw-text discipline: no raw prompt, no raw model response text, no raw ExecutionTrace, no API key, no internal exception message is ever stored here -- only ids/hashes/counts/enums and the Grading Scorer axis outputs (each axis's own raw_score/status/error_codes, never a single collapsed quality number unless a ScoringPolicy explicitly requested one).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "benchmark_run_id", "variant_id", "agent_variant_revision",
+    "evaluation_item_id", "dataset_id", "dataset_sha256", "evaluation_item_sha256",
+    "split", "model_config_id", "model_config_sha256", "prompt_template_id",
+    "prompt_template_sha256", "code_revision", "release_id", "release_manifest_sha256",
+    "random_seed", "temperature", "cache_policy", "execution_mode",
+    "outcome_category", "structured_query_count", "document_retrieval_count",
+    "model_call_attempt_count", "model_call_success_count", "model_call_failure_count",
+    "model_fallback_used", "model_failure_code", "citation_binding_status",
+    "unsupported_claim_count", "evidence_validation_success_rate", "scoring_eligible",
+    "latency_ms", "answer_sha256", "execution_trace_sha256", "run_status", "scoring"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.1.0" },
+    "benchmark_run_id": { "type": "string", "minLength": 1 },
+    "variant_id": { "enum": ["STRUCTURED_FIRST", "HYBRID_RETRIEVAL", "PLANNER", "DOCUMENT_FIRST_RAG"] },
+    "agent_variant_revision": { "type": "string", "minLength": 1 },
+    "evaluation_item_id": { "type": "string", "minLength": 1 },
+    "dataset_id": { "type": "string", "minLength": 1 },
+    "dataset_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "evaluation_item_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "sha256 of the canonicalized DatasetRecord actually executed (question + hints + expected_* + split), independent of dataset_sha256 (the whole dataset's hash) -- lets one item be pinned/audited without needing the whole dataset."
+    },
+    "split": { "enum": ["DEV_TUNE", "DEV_CHECK", "HOLDOUT"] },
+    "model_config_id": { "type": "string", "pattern": "^model_[a-z0-9_.-]+$" },
+    "model_config_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "prompt_template_id": { "type": ["string", "null"] },
+    "prompt_template_sha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
+    "code_revision": { "type": "string", "minLength": 1 },
+    "release_id": { "type": ["string", "null"] },
+    "release_manifest_sha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
+    "random_seed": { "type": ["integer", "null"] },
+    "temperature": { "type": ["number", "null"], "minimum": 0, "maximum": 2 },
+    "cache_policy": { "type": "string", "minLength": 1 },
+    "execution_mode": { "enum": ["STRUCTURED", "RETRIEVAL", "BOTH", "EARLY_EXIT"] },
+    "outcome_category": {
+      "enum": [
+        "NORMAL_ANSWER",
+        "NORMAL_INFORMATION_LIMIT",
+        "MODEL_NOT_ATTEMPTED_INFORMATION_LIMIT",
+        "MODEL_CALL_FAILURE_FALLBACK",
+        "POST_HOC_CLAIM_VALIDATION_FAILURE_FALLBACK",
+        "AGENT_VARIANT_EXECUTION_FAILURE",
+        "TIMEOUT",
+        "ABORTED",
+        "BUDGET_EXCEEDED",
+        "DATASET_CONTRACT_FAILURE"
+      ],
+      "description": "domain/agent-comparison/benchmark/failure-classification.mjs's own closed taxonomy (Turn P6 section D) -- the ONE field a report/scorer reads to decide which of the 10 mutually-exclusive buckets a row belongs to. NORMAL_ANSWER/NORMAL_INFORMATION_LIMIT/MODEL_NOT_ATTEMPTED_INFORMATION_LIMIT are scoring_eligible-eligible (subject to the Flow's own scoring_eligible value); every other category is always scoring_eligible=false."
+    },
+    "structured_query_count": { "type": "integer", "minimum": 0 },
+    "document_retrieval_count": { "type": "integer", "minimum": 0 },
+    "model_call_attempt_count": { "type": "integer", "minimum": 0 },
+    "model_call_success_count": { "type": "integer", "minimum": 0 },
+    "model_call_failure_count": { "type": "integer", "minimum": 0 },
+    "model_fallback_used": { "type": "boolean" },
+    "model_failure_code": { "type": ["string", "null"] },
+    "citation_binding_status": { "enum": ["PASS", "FAIL", "NOT_CHECKED"] },
+    "unsupported_claim_count": { "type": "integer", "minimum": 0 },
+    "evidence_validation_success_rate": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+    "scoring_eligible": { "type": "boolean" },
+    "latency_ms": { "type": "number", "minimum": 0 },
+    "answer_sha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
+    "execution_trace_sha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
+    "run_status": { "enum": ["OK", "FAILED"] },
+    "scoring": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "axes", "composite_score", "scoring_policy_version"],
+      "properties": {
+        "schema_version": { "const": "0.1.0" },
+        "scoring_policy_version": {
+          "type": ["string", "null"],
+          "description": "null when no explicit ScoringPolicy was supplied to the runner -- composite_score is then always null too (Turn P6 section C: \"가중 종합 점수는 별도의 명시적 scoring policy가 제공될 때만 계산\")."
+        },
+        "axes": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["answerability", "numeric_claim", "date_claim", "fact_coverage", "event_relation", "citation", "style", "operational"],
+          "properties": {
+            "answerability": { "$ref": "#/$defs/axisResult" },
+            "numeric_claim": { "$ref": "#/$defs/axisResult" },
+            "date_claim": { "$ref": "#/$defs/axisResult" },
+            "fact_coverage": { "$ref": "#/$defs/axisResult" },
+            "event_relation": { "$ref": "#/$defs/axisResult" },
+            "citation": { "$ref": "#/$defs/axisResult" },
+            "style": { "$ref": "#/$defs/axisResult" },
+            "operational": { "$ref": "#/$defs/axisResult" }
+          }
+        },
+        "composite_score": { "type": ["number", "null"], "minimum": 0, "maximum": 1 }
+      }
+    }
+  },
+  "$defs": {
+    "axisResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "raw_score", "error_codes", "details"],
+      "properties": {
+        "status": {
+          "enum": ["PASS", "FAIL", "NOT_APPLICABLE", "SKIPPED"],
+          "description": "SKIPPED: scoring_eligible=false for this item (fallback/failure row) -- the axis is never computed against a substituted answer. NOT_APPLICABLE: the DatasetRecord has no expected_* content this axis grades (e.g. no expected_relations)."
+        },
+        "raw_score": { "type": ["number", "null"], "minimum": 0, "maximum": 1, "description": "This axis's own uncombined score, null for SKIPPED/NOT_APPLICABLE." },
+        "error_codes": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "details": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/jsonValue" },
+          "description": "Axis-specific structured detail (counts, mismatched slot names, ids) -- never raw answer text."
+        }
+      }
+    },
+    "jsonValue": {
+      "anyOf": [
+        { "type": "null" },
+        { "type": "boolean" },
+        { "type": "number" },
+        { "type": "string" },
+        { "type": "array", "items": { "$ref": "#/$defs/jsonValue" } },
+        { "type": "object", "additionalProperties": { "$ref": "#/$defs/jsonValue" } }
+      ]
+    }
+  }
+}

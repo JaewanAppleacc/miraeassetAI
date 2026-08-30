@@ -1,0 +1,40 @@
+{
+  "schema_version": "0.1.0",
+  "evaluation_item_id": "evaluation_item_synthetic_0001",
+  "question": "매출액이 얼마인가요?",
+  "as_of_date": "2026-01-15",
+  "hints": {
+    "corp_codes": ["00000001"],
+    "metric_codes": ["REVENUE"],
+    "document_ids": [],
+    "event_types": [],
+    "period_filter": { "start": null, "end": null, "period_types": [] },
+    "scope_filter": []
+  },
+  "split": "DEV_TUNE",
+  "evaluation_group_id": "evaluation_group_synthetic_0001",
+  "chain_component_id": null,
+  "expected_answerability": "SUPPORTED",
+  "expected_facts": [
+    {
+      "fact_id": "fact_000000000000000000000001",
+      "semantic_slot": "revenue_fy2025",
+      "corp_code": "00000001",
+      "metric_code": "REVENUE",
+      "required": true
+    }
+  ],
+  "expected_events": [],
+  "expected_relations": [],
+  "expected_numeric_claims": [
+    {
+      "value": 1000000000,
+      "unit": "KRW",
+      "unit_conversion_allowed": false,
+      "role": "revenue_amount"
+    }
+  ],
+  "expected_date_claims": [],
+  "allowed_evidence_ids": ["evidence_000000000000000000000001"],
+  "grading_policy_version": "grading_policy_synthetic_v0.1"
+}

@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://disclosure-analyst.local/schema/agent-comparison/benchmark/scoring-policy.v0.1.json",
+  "title": "Benchmark Scoring Policy v0.1",
+  "description": "Turn P6 section C: a weighted composite score is computed ONLY when an explicit ScoringPolicy like this is supplied to domain/agent-comparison/benchmark/report.mjs -- the default (no policy) leaves BenchmarkItemResult.scoring.composite_score null and reports per-axis results only. numeric_unit_conversions is also the ONLY source of truth the Numeric Claim Scorer consults for which unit-scale conversions (e.g. 천원/백만원/억원) are acceptable when a DatasetRecord's expectedNumericClaim marks unit_conversion_allowed=true -- an unlisted conversion is never accepted even then.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "scoring_policy_id", "scoring_policy_version", "numeric_unit_conversions", "axis_weights", "composite_score_formula_version"],
+  "properties": {
+    "schema_version": { "const": "0.1.0" },
+    "scoring_policy_id": { "type": "string", "minLength": 1 },
+    "scoring_policy_version": { "type": "string", "minLength": 1 },
+    "numeric_unit_conversions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["from_unit", "to_unit", "multiplier"],
+        "properties": {
+          "from_unit": { "type": "string", "minLength": 1 },
+          "to_unit": { "type": "string", "minLength": 1 },
+          "multiplier": { "type": "number", "exclusiveMinimum": 0 }
+        }
+      }
+    },
+    "axis_weights": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["answerability", "numeric_claim", "date_claim", "fact_coverage", "event_relation", "citation", "style", "operational"],
+      "properties": {
+        "answerability": { "type": "number", "minimum": 0 },
+        "numeric_claim": { "type": "number", "minimum": 0 },
+        "date_claim": { "type": "number", "minimum": 0 },
+        "fact_coverage": { "type": "number", "minimum": 0 },
+        "event_relation": { "type": "number", "minimum": 0 },
+        "citation": { "type": "number", "minimum": 0 },
+        "style": { "type": "number", "minimum": 0 },
+        "operational": { "type": "number", "minimum": 0 }
+      },
+      "description": "Relative weights, normalized by report.mjs at combine-time -- need not sum to 1 here."
+    },
+    "composite_score_formula_version": { "type": "string", "minLength": 1 }
+  }
+}

@@ -1,0 +1,107 @@
+{
+  "schema_version": "0.1.0",
+  "benchmark_run_id": "benchmark_run_synthetic_0001",
+  "variant_id": "STRUCTURED_FIRST",
+  "agent_variant_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "evaluation_item_id": "evaluation_item_synthetic_0001",
+  "dataset_id": "dataset_synthetic_fixture_0001",
+  "dataset_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "evaluation_item_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "split": "DEV_TUNE",
+  "model_config_id": "model_fake-deterministic-v1",
+  "model_config_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "prompt_template_id": "structured-first-answer-prompt-v1",
+  "prompt_template_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "code_revision": "unknown",
+  "release_id": null,
+  "release_manifest_sha256": null,
+  "random_seed": null,
+  "temperature": 0,
+  "cache_policy": "NONE",
+  "execution_mode": "STRUCTURED",
+  "outcome_category": "NORMAL_ANSWER",
+  "structured_query_count": 2,
+  "document_retrieval_count": 0,
+  "model_call_attempt_count": 1,
+  "model_call_success_count": 1,
+  "model_call_failure_count": 0,
+  "model_fallback_used": false,
+  "model_failure_code": null,
+  "citation_binding_status": "PASS",
+  "unsupported_claim_count": 0,
+  "evidence_validation_success_rate": 1,
+  "scoring_eligible": true,
+  "latency_ms": 12.5,
+  "answer_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "execution_trace_sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+  "run_status": "OK",
+  "scoring": {
+    "schema_version": "0.1.0",
+    "scoring_policy_version": null,
+    "axes": {
+      "answerability": {
+        "status": "PASS",
+        "raw_score": 1,
+        "error_codes": [],
+        "details": {}
+      },
+      "numeric_claim": {
+        "status": "PASS",
+        "raw_score": 1,
+        "error_codes": [],
+        "details": {
+          "matched_count": 1,
+          "expected_count": 1
+        }
+      },
+      "date_claim": {
+        "status": "NOT_APPLICABLE",
+        "raw_score": null,
+        "error_codes": [],
+        "details": {}
+      },
+      "fact_coverage": {
+        "status": "PASS",
+        "raw_score": 1,
+        "error_codes": [],
+        "details": {
+          "covered_count": 1,
+          "required_count": 1,
+          "unauthorized_fact_ids": []
+        }
+      },
+      "event_relation": {
+        "status": "NOT_APPLICABLE",
+        "raw_score": null,
+        "error_codes": [],
+        "details": {}
+      },
+      "citation": {
+        "status": "PASS",
+        "raw_score": 1,
+        "error_codes": [],
+        "details": {
+          "used_evidence_ids": [
+            "evidence_000000000000000000000001"
+          ]
+        }
+      },
+      "style": {
+        "status": "PASS",
+        "raw_score": 1,
+        "error_codes": [],
+        "details": {}
+      },
+      "operational": {
+        "status": "PASS",
+        "raw_score": 1,
+        "error_codes": [],
+        "details": {
+          "latency_ms": 12.5,
+          "model_call_attempt_count": 1
+        }
+      }
+    },
+    "composite_score": null
+  }
+}

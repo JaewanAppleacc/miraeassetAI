@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://disclosure-analyst.local/schema/agent-comparison/benchmark/benchmark-run-result.v0.1.json",
+  "title": "Benchmark Run Result v0.1",
+  "description": "Turn P6: aggregates every BenchmarkItemResult (benchmark-item-result.schema.json) for ONE variant_id over ONE dataset into per-axis summary statistics. Produced by domain/agent-comparison/benchmark/report.mjs's summarizeRunResult -- never recomputes a raw answer/prompt, only aggregates the already-hashed/already-scored item results.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "benchmark_run_id", "variant_id", "agent_variant_revision",
+    "model_config_id", "model_config_sha256", "dataset_id", "dataset_sha256",
+    "item_count", "eligible_count", "ineligible_count", "outcome_category_counts",
+    "axis_summary", "item_ids"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.1.0" },
+    "benchmark_run_id": { "type": "string", "minLength": 1 },
+    "variant_id": { "enum": ["STRUCTURED_FIRST", "HYBRID_RETRIEVAL", "PLANNER", "DOCUMENT_FIRST_RAG"] },
+    "agent_variant_revision": { "type": "string", "minLength": 1 },
+    "model_config_id": { "type": "string", "pattern": "^model_[a-z0-9_.-]+$" },
+    "model_config_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "dataset_id": { "type": "string", "minLength": 1 },
+    "dataset_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "item_count": { "type": "integer", "minimum": 0 },
+    "eligible_count": { "type": "integer", "minimum": 0, "description": "Count of items with scoring_eligible=true -- the only rows any mean/median in axis_summary is computed over." },
+    "ineligible_count": { "type": "integer", "minimum": 0, "description": "scoring_eligible=false rows -- excluded from every axis_summary mean/median, but STILL counted here (Turn P6 section D: never dropped from failure-rate statistics)." },
+    "outcome_category_counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "NORMAL_ANSWER", "NORMAL_INFORMATION_LIMIT", "MODEL_NOT_ATTEMPTED_INFORMATION_LIMIT",
+        "MODEL_CALL_FAILURE_FALLBACK", "POST_HOC_CLAIM_VALIDATION_FAILURE_FALLBACK",
+        "AGENT_VARIANT_EXECUTION_FAILURE", "TIMEOUT", "ABORTED", "BUDGET_EXCEEDED",
+        "DATASET_CONTRACT_FAILURE"
+      ],
+      "properties": {
+        "NORMAL_ANSWER": { "type": "integer", "minimum": 0 },
+        "NORMAL_INFORMATION_LIMIT": { "type": "integer", "minimum": 0 },
+        "MODEL_NOT_ATTEMPTED_INFORMATION_LIMIT": { "type": "integer", "minimum": 0 },
+        "MODEL_CALL_FAILURE_FALLBACK": { "type": "integer", "minimum": 0 },
+        "POST_HOC_CLAIM_VALIDATION_FAILURE_FALLBACK": { "type": "integer", "minimum": 0 },
+        "AGENT_VARIANT_EXECUTION_FAILURE": { "type": "integer", "minimum": 0 },
+        "TIMEOUT": { "type": "integer", "minimum": 0 },
+        "ABORTED": { "type": "integer", "minimum": 0 },
+        "BUDGET_EXCEEDED": { "type": "integer", "minimum": 0 },
+        "DATASET_CONTRACT_FAILURE": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "axis_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["answerability", "numeric_claim", "date_claim", "fact_coverage", "event_relation", "citation", "style", "operational"],
+      "properties": {
+        "answerability": { "$ref": "#/$defs/axisSummary" },
+        "numeric_claim": { "$ref": "#/$defs/axisSummary" },
+        "date_claim": { "$ref": "#/$defs/axisSummary" },
+        "fact_coverage": { "$ref": "#/$defs/axisSummary" },
+        "event_relation": { "$ref": "#/$defs/axisSummary" },
+        "citation": { "$ref": "#/$defs/axisSummary" },
+        "style": { "$ref": "#/$defs/axisSummary" },
+        "operational": { "$ref": "#/$defs/axisSummary" }
+      }
+    },
+    "item_ids": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "description": "evaluation_item_id of every item executed under this variant, in canonical (sorted) order -- used by the ComparisonReport's identical-item-set check."
+    }
+  },
+  "$defs": {
+    "axisSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["n_scored", "mean", "median", "pass_count", "fail_count", "not_applicable_count", "skipped_count"],
+      "properties": {
+        "n_scored": { "type": "integer", "minimum": 0, "description": "How many eligible items had a non-null raw_score for this axis (PASS/FAIL rows only)." },
+        "mean": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "median": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "pass_count": { "type": "integer", "minimum": 0 },
+        "fail_count": { "type": "integer", "minimum": 0 },
+        "not_applicable_count": { "type": "integer", "minimum": 0 },
+        "skipped_count": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}
