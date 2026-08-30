@@ -1,0 +1,8 @@
+{
+  "schema_version": "0.1.0",
+  "kind": "FAKE_DETERMINISTIC",
+  "provider": "test-fixture",
+  "model": "deterministic-fake-embedding-v1",
+  "revision": "v1",
+  "dimension": 8
+}

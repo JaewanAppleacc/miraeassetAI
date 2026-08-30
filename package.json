@@ -62,6 +62,8 @@
     "test:agent-comparison-integration": "node --test tests/agent-comparison-integration-registry.test.mjs tests/agent-comparison-integration-comparison.test.mjs",
     "test:agent-comparison-integration:real-bundle-smoke": "node --test tests/agent-comparison-integration-real-bundle-smoke.test.mjs",
     "agent-comparison:four-variant-smoke": "node scripts/run-agent-comparison-four-variant-smoke.mjs",
+    "test:vector-retrieval": "node --test tests/reference-vector-retrieval-contract.test.mjs tests/reference-vector-retrieval-repository-no-write-sql.test.mjs tests/agent-comparison-embedding-adapter.test.mjs tests/agent-comparison-vector-retrieval-smoke.test.mjs",
+    "test:reference-vector-retrieval:postgres16": "node --test tests/reference-vector-retrieval-postgres16-integration.test.mjs",
     "test:reference-db:postgres16": "node --test tests/reference-release-postgres16-integration.test.mjs",
     "test:reference-repository:postgres16": "node --test tests/reference-repository-postgres16-integration.test.mjs",
     "test:coverage-authorized-fact-view:postgres16": "node --test tests/coverage-authorized-fact-view-postgres16-integration.test.mjs",

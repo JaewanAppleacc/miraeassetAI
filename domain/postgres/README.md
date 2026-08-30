@@ -384,3 +384,46 @@ production 응답을 절대 대체하지 않음)로 재사용 가능하게 분�
 `tests/coverage-authorized-fact-view.test.mjs`(fake client 단위)와
 `tests/coverage-authorized-fact-view-postgres16-integration.test.mjs`(실제
 PostgreSQL 16, 부분 Coverage 합성 fixture)로 검증한다.
+
+## pgvector 기반 검색 인프라 (Turn P4)
+
+기존 `disclosure_reference` 테이블(001/002)은 전혀 수정하지 않고
+`domain/postgres/003_reference_vector_retrieval.sql`을 additive로 추가했다.
+새 테이블 `reference_retrieval_indexes`/`reference_retrieval_chunks`는
+Fact/Evidence/Event/Relation 정본과 완전히 분리된 **후보 검색 전용** 색인이다
+— 검색 결과는 그 자체로 Fact가 아니며, `services.validator.validateEvidence`를
+통과해야만 grounding에 쓰인다(도메인 원칙 2번 참고).
+
+**pgvector extension 필요**: 이 migration은 `CREATE EXTENSION IF NOT EXISTS
+vector`로 시작한다. 대상 PostgreSQL 서버에 pgvector의 control/SQL 파일이
+설치되어 있지 않으면(이 프로젝트는 이를 자동 설치하지 않는다 — 운영자/OS
+레벨 설치 사항) 이 한 문장에서 전체 migration이 원자적으로 실패·롤백된다.
+설치하려면(운영자가 직접, 사용자 승인 후):
+
+```bash
+brew install pgvector   # Homebrew PostgreSQL 16 기준
+```
+
+**임베딩은 설정 주입**: `domain/agent-comparison/retrieval/embedding-adapter.mjs`
+가 `../model-adapter.mjs`와 동일한 패턴(FAKE_DETERMINISTIC | HTTP_EMBEDDINGS,
+API key 없으면 fail-closed, 코드에 provider/model 하드코딩 없음)을 따른다.
+
+**색인 범위(1차)**: 승인된 v0.20-r3 bundle이 이미 적재된 Reference DB의
+VERIFIED Evidence만 색인한다(`reference-vector-retrieval-loader.mjs`,
+Evidence 1건 = chunk 1건, `quoted_text` 원문 그대로, 합성 금지).
+`DOCUMENT_CHUNK`(전체 4,204문서용)는 스키마/인터페이스만 존재하고 이번
+Turn에 실제 데이터를 적재하지 않는다 — 전체 corpus portable snapshot과
+chunking policy pin이 아직 별도 gate이기 때문이다.
+
+**Repository/Retriever**: `reference-vector-retrieval-repository.mjs`(읽기
+전용, SELECT만)와 `domain/agent-comparison/retrieval/pgvector-retriever-adapter.mjs`
+(기존 `domain/runtime/retriever-store.mjs` 계약을 그대로 만족하는 어댑터)로
+분리되어 있다. HYBRID_RETRIEVAL/DOCUMENT_FIRST_RAG에는
+`domain/agent-comparison/integration/wire-vector-retriever.mjs`를 통해서만
+주입하며, 두 Variant의 flow 파일 자체는 수정하지 않는다.
+
+**PostgreSQL 16 + pgvector 통합 테스트**: `npm run test:reference-vector-retrieval:postgres16`.
+`DATABASE_URL` 없으면 `POSTGRESQL_16_INTEGRATION_NOT_RUN`, pgvector
+extension이 서버에 없으면 `BLOCKED_PGVECTOR_EXTENSION_NOT_AVAILABLE`로
+명시적으로 실패한다(무음 skip 금지, 이 프로젝트가 설치를 대신 수행하지도
+않는다).

@@ -73,6 +73,10 @@ const pairs = [
     "domain/agent-comparison/integration/interfaces/comparison-record.schema.json",
     "domain/agent-comparison/integration/interfaces/examples/comparison-record.example.json",
   ],
+  [
+    "domain/agent-comparison/retrieval/interfaces/embedding-config.schema.json",
+    "domain/agent-comparison/retrieval/interfaces/examples/embedding-config.example.json",
+  ],
 ];
 
 const ajv = new Ajv2020({ allErrors: true, strict: true, allowUnionTypes: true });

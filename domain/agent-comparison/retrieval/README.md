@@ -1,0 +1,45 @@
+# Vector Retrieval (Turn P4)
+
+Config-driven embedding contract plus the adapter that bridges a pgvector
+search backend into the existing, unmodified `services.retriever.retrieve`
+contract (`domain/runtime/retriever-store.mjs`). Nothing here is a new
+Retriever contract -- `domain/retrieval/retrieval-request.schema.json` and
+`retrieval-result.schema.json` (frozen) are followed exactly.
+
+## Files
+
+| File | Role |
+|---|---|
+| `contracts.mjs` | Ajv validator for `EmbeddingConfig` |
+| `interfaces/embedding-config.schema.json` | Provider/model identity for an EmbeddingAdapter -- mirrors `../interfaces/model-config.schema.json` |
+| `embedding-adapter.mjs` | `createEmbeddingAdapter(config)` -- `FAKE_DETERMINISTIC` \| `HTTP_EMBEDDINGS`, fails closed with no API key, typed `EmbeddingCallError` |
+| `fake-deterministic-embedding-adapter.mjs` | Offline, reproducible, order-preserving fake embeddings |
+| `pgvector-retriever-adapter.mjs` | Adapts a pgvector search repository into `services.retriever`'s adapter shape |
+
+## The grounding boundary, restated
+
+A vector search hit is a **candidate only**. `citation_authority` is pinned
+to `"SOURCE_SPANS"`; `similarity_score` is never a substitute for
+`services.validator.validateEvidence`. This file never calls that
+validator itself -- HYBRID_RETRIEVAL and DOCUMENT_FIRST_RAG each do, exactly
+as they already do for their existing (non-vector) retrieval paths (see
+`../flows/hybrid-retrieval-agent.mjs` / `../flows/document-first-rag-agent.mjs`'s
+own header comments).
+
+## Wiring into an Agent variant
+
+`../integration/wire-vector-retriever.mjs` is the ONLY place a
+`pgvector-retriever-adapter` gets injected into a variant -- it does so by
+constructing the standard `context`/`serviceAdapters`/`flowOptions`
+arguments `four-variant-comparison.mjs`'s `runFourVariantComparison` (or a
+plain `runAgentFlow` call) already accepts, never by editing a variant's
+own flow file. STRUCTURED_FIRST and PLANNER (without
+`input.hints.enable_retrieval_fallback`) are unaffected by design.
+
+## No real embedding API call anywhere in this Turn
+
+Every test and script in this Turn uses `FAKE_DETERMINISTIC` only. The
+`HTTP_EMBEDDINGS` adapter kind is real, tested code (with an injected
+`fetchImpl` in tests), but is never invoked against a real endpoint here --
+comparing real embedding-model performance is out of scope until a Gold
+split is finalized in a separate Turn.
