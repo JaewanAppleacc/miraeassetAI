@@ -1,0 +1,64 @@
+{
+  "schema_version": "0.1.0",
+  "generated_at": "2026-08-31T21:16:15.950Z",
+  "source_branch": "demo-ai-festival/codex/gold-phase1-207-evaluation-v01",
+  "dev_tune_gold_path": "domain/evaluation/releases/gold-phase1-207-v0.1/dev-tune-gold.v0.1.jsonl",
+  "dev_tune_manifest_path": "domain/evaluation/releases/gold-phase1-207-v0.1/dev-tune-release-manifest.v0.1.json",
+  "owner_decision_id": "fb275850-39e8-49d9-96a4-4eab93cbfd55",
+  "owner_decision_sha256": "00dc07913a3674102fbb341b5bf61c10ad3ea3d6e0bf52206f366157f88a6c8d",
+  "dev_tune_gold_sha256": "7941144c09ce25debeeab6c3fbdfbd4c16761a6be06ab3a844ad159c832f102b",
+  "row_count": 101,
+  "all_checks": [
+    {
+      "id": "owner_decision_sha256_pinned",
+      "pass": true,
+      "detail": "expected 00dc07913a3674102fbb341b5bf61c10ad3ea3d6e0bf52206f366157f88a6c8d, got 00dc07913a3674102fbb341b5bf61c10ad3ea3d6e0bf52206f366157f88a6c8d"
+    },
+    {
+      "id": "dev_tune_agent_use_authorized",
+      "pass": true,
+      "detail": "true"
+    },
+    {
+      "id": "dev_check_agent_use_authorized_is_false",
+      "pass": true,
+      "detail": "false"
+    },
+    {
+      "id": "holdout_agent_access_authorized_is_false",
+      "pass": true,
+      "detail": "false"
+    },
+    {
+      "id": "dev_tune_gold_sha256_matches_manifest",
+      "pass": true,
+      "detail": "computed 7941144c09ce25debeeab6c3fbdfbd4c16761a6be06ab3a844ad159c832f102b, manifest declares 7941144c09ce25debeeab6c3fbdfbd4c16761a6be06ab3a844ad159c832f102b"
+    },
+    {
+      "id": "row_count_exactly_101",
+      "pass": true,
+      "detail": "got 101"
+    },
+    {
+      "id": "all_rows_valid_json",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "id": "all_rows_split_dev_tune",
+      "pass": true,
+      "detail": "0 row(s) with split != DEV_TUNE"
+    }
+  ],
+  "gate_status": "GREEN",
+  "authorized_scope": {
+    "gold_phase1_207_authorized": true,
+    "dev_tune_agent_use_authorized": true,
+    "dev_check_agent_use_authorized": false,
+    "holdout_agent_access_authorized": false,
+    "holdout_evaluation_authorized": false,
+    "agent_ranking_authorized": false,
+    "production_wiring_authorized": false,
+    "gold_promotion_applied": false
+  }
+}

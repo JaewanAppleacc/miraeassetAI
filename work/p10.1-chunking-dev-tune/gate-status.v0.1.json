@@ -1,0 +1,10 @@
+{
+  "schema_version": "0.1.0",
+  "generated_at": "2026-08-31T21:16:15.952Z",
+  "gate": "DEV_TUNE_INPUT_GATE",
+  "status": "GREEN",
+  "dev_check_accessed": false,
+  "holdout_accessed": false,
+  "row_count": 101,
+  "owner_decision_sha256": "00dc07913a3674102fbb341b5bf61c10ad3ea3d6e0bf52206f366157f88a6c8d"
+}
