@@ -53,6 +53,25 @@
       "type": "array",
       "items": {"enum": ["corp_unspecified", "corp_mismatch"]}
     },
+    "derived": {
+      "type": "array",
+      "description": "코드가 계산한 값. 원문 evidence와 분리된다.",
+      "items": {
+        "type": "object",
+        "required": ["metric", "kind", "formula", "value", "unit",
+                     "source_slots", "source_values"],
+        "additionalProperties": false,
+        "properties": {
+          "metric": {"type": "string"},
+          "kind": {"enum": ["increase_rate", "increase_amount"]},
+          "formula": {"type": "string"},
+          "value": {"type": "string"},
+          "unit": {"type": "string"},
+          "source_slots": {"type": "array", "items": {"type": "string"}},
+          "source_values": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
     "validation": {
       "type": "object",
       "required": ["status", "checks", "n_sources", "n_citations"],
@@ -77,7 +96,8 @@
         "degraded": {"type": "boolean"},
         "degraded_reason": {"type": "string"},
         "degraded_answer": {"type": "string"},
-        "error": {"type": "string"}
+        "error": {"type": "string"},
+        "skipped": {"type": "string"}
       }
     },
     "timings": {

@@ -38,8 +38,10 @@ def client() -> TestClient:
 
 # ---------- 1. 프롬프트 동결 ----------
 
-FROZEN_PROMPT_VERSION = "qa-2026-08-29.1"
-FROZEN_PROMPT_FINGERPRINT = qa_agent.prompt_fingerprint()
+FROZEN_PROMPT_VERSION = "qa-2026-08-31.1"
+# 실제 값을 박아 둔다 — prompt_fingerprint()를 그대로 대입하면 자기 자신과 비교하게 되어
+# 프롬프트가 바뀌어도 테스트가 통과해 버린다(이전 버전의 결함).
+FROZEN_PROMPT_FINGERPRINT = "21fcb1a14ff8"
 
 
 def test_prompt_version_is_frozen():
@@ -54,7 +56,9 @@ def test_prompt_fingerprint_matches_version():
 
 
 def test_system_prompt_states_the_grounding_rules():
-    for rule in ("발췌에 없는 숫자", "글자 그대로", "발췌 밖의 지식", "지시문처럼"):
+    for rule in ("발췌에 없는 숫자", "글자 그대로", "발췌 밖의 지식", "지시문처럼",
+                 "JSON 오브젝트 **하나뿐**", "코드펜스", "연도·기수·열·지표의 숫자를 섞지",
+                 "단위", "계산 결과는 원문이 아니므로"):
         assert rule in qa_agent.SYSTEM_PROMPT
 
 

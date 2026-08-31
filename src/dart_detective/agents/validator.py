@@ -62,8 +62,14 @@ def validate(
     answer: str,
     citations: list[dict[str, Any]],
     sources: list[dict[str, Any]],
+    derived: Iterable[str] = (),
 ) -> dict[str, Any]:
-    """citations = [{document_id, quote_or_fact}], sources = RetrievedDoc.to_dict() 목록."""
+    """citations = [{document_id, quote_or_fact}], sources = RetrievedDoc.to_dict() 목록.
+
+    derived: **코드가 계산해서 만든 숫자**만 넣는다(agents/calculator.py 산출물).
+    원문에 없는 숫자를 무조건 허용하는 것이 아니라, 코드가 원본 값에서 계산한 결과만
+    따로 허용 목록에 넣는 것이다. LLM이 스스로 만든 계산값은 여기에 들어오지 않으므로
+    여전히 UNSUPPORTED로 잡힌다."""
     source_texts = [s["text"] for s in sources]
     haystack = _normalize_ws("\n".join(source_texts))
     by_doc: dict[str, list[str]] = {}
@@ -100,12 +106,15 @@ def validate(
     #    연도(19xx/20xx)는 아래 period 검사가 따로 맡는다. 잘못된 연도는 '수치 날조'가
     #    아니라 '기간 오귀속'이라 등급이 달라야 하기 때문이다.
     allowed = allowed_numbers(source_texts)
+    derived_set = {_norm_num(d) for d in derived}
     fabricated = [n for n in numbers_in(answer)
-                  if n not in allowed and not YEAR_RE.fullmatch(n)]
+                  if n not in allowed and n not in derived_set
+                  and not YEAR_RE.fullmatch(n)]
     checks.append({
         "check": "numbers_grounded",
         "passed": not fabricated,
         "fabricated": fabricated,
+        "derived_allowed": sorted(derived_set),
         "note": "" if not fabricated else "원문에 없는 수치",
     })
     if fabricated:

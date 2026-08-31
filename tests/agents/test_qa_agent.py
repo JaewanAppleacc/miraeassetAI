@@ -148,6 +148,71 @@ def test_each_slot_gets_its_own_chunk_when_possible(retriever):
     assert len(texts) == len(set(texts))
 
 
+# ---------- 연도 × 표 열 매핑 (Phase 8) ----------
+
+def chunk_of(text: str):
+    from dart_detective.corpus_retriever import RetrievedChunk
+    return RetrievedChunk(chunk_id="c1", doc_id="d1", score=1.0, section_path=(),
+                          row_labels=("매출액",), evidence_text=text, metadata={})
+
+
+COMPARE_TABLE = "\n".join([
+    "제 49 기 2025.01.01 부터 2025.12.31 까지",
+    "제 48 기 2024.01.01 부터 2024.12.31 까지",
+    "제 47 기 2023.01.01 부터 2023.12.31 까지",
+    "매출액 | 61,118,127 | 57,236,995 | 59,254,361",
+])
+OLD_TABLE = "\n".join([
+    "제 47 기 2023.01.01 부터 2023.12.31 까지",
+    "제 46 기 2022.01.01 부터 2022.12.31 까지",
+    "매출액 | 59,254,361 | 51,906,293",
+])
+
+
+def test_period_columns_reads_year_to_column():
+    assert qa_agent.period_columns(chunk_of(COMPARE_TABLE)) == {2025: 0, 2024: 1, 2023: 2}
+
+
+def test_period_columns_reads_pipe_style_header():
+    text = "\n".join([
+        "구분 | (2025.01.01.~ 2025.12.31) | (2024.01.01.~ 2024.12.31)",
+        "매출액 | 61,118,127 | 57,236,995",
+    ])
+    assert qa_agent.period_columns(chunk_of(text)) == {2025: 0, 2024: 1}
+
+
+def test_value_at_picks_the_column_value():
+    line = "매출액 | 61,118,127 | 57,236,995 | 59,254,361"
+    assert qa_agent.value_at(line, 0) == "61,118,127"
+    assert qa_agent.value_at(line, 2) == "59,254,361"
+    assert qa_agent.value_at(line, 9) is None
+
+
+def test_year_slot_rejects_table_without_that_year():
+    """Q12 회귀 — 2023년 표가 2025 자리에 들어가면 안 된다.
+    '2025'라는 글자가 본문에 있어도 표 머리글에 2025 열이 없으면 쓰지 않는다."""
+    old = chunk_of(OLD_TABLE + "\n주) 2025년 이후 계획은 별도 공시")
+    assert qa_agent.match_evidence(("매출액_2025",), [old]) == []
+    got = qa_agent.match_evidence(("매출액_2023",), [old])
+    assert got and got[0].evidence_text.startswith("매출액 | 59,254,361")
+
+
+def test_two_year_slots_map_to_different_columns_of_one_table():
+    got = {m.slot: m for m in
+           qa_agent.match_evidence(("매출액_2025", "매출액_2023"), [chunk_of(COMPARE_TABLE)])}
+    assert set(got) == {"매출액_2025", "매출액_2023"}
+    assert "61,118,127" in got["매출액_2025"].reason      # 선택 값이 이유에 남는다
+    assert "59,254,361" in got["매출액_2023"].reason
+    assert got["매출액_2025"].evidence_text == got["매출액_2023"].evidence_text  # 같은 행
+
+
+def test_correct_year_table_beats_wrong_year_table():
+    """두 표가 경쟁하면 요청 연도 열을 가진 표가 이긴다(순위가 낮아도)."""
+    got = qa_agent.match_evidence(("매출액_2025",),
+                                  [chunk_of(OLD_TABLE), chunk_of(COMPARE_TABLE)])
+    assert got and got[0].evidence_text.startswith("매출액 | 61,118,127")
+
+
 def test_slot_without_matching_evidence_is_left_empty(retriever):
     """근거가 없는 자리는 비운다 — 아무 청크나 끌어다 채우지 않는다."""
     matches = qa_agent.match_evidence(("부채총계_2025",),

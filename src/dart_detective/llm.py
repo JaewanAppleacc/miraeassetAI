@@ -31,6 +31,10 @@ from typing import Any, Protocol, runtime_checkable
 
 # HyperCLOVA X. 모델/엔드포인트는 계정별로 다를 수 있어 환경변수로 덮어쓴다.
 CLOVA_DEFAULT_MODEL = "HCX-005"
+# 속도 제한(429)만 재시도한다. 재시도는 1회로 끝 — 실패해도 fallback이 답을 만든다.
+RETRY_STATUS = 429
+MAX_RETRIES = 1
+RETRY_WAIT_SECONDS = 3.0
 CLOVA_DEFAULT_ENDPOINT = "https://clovastudio.stream.ntruss.com/v3/chat-completions"
 # Claude 모델 ID는 날짜 접미사 없이 그대로 쓴다. 평가용이 아니라 개발 참고용이다.
 ANTHROPIC_DEFAULT_MODEL = "claude-opus-5"
@@ -111,27 +115,78 @@ class AnthropicLLM:
         )
 
 
+def _balanced_objects(text: str) -> list[str]:
+    """문자열 리터럴을 존중하면서 최상위 {...} 후보를 전부 찾는다.
+
+    첫 `{`부터 마지막 `}`까지 통째로 자르면 오브젝트가 둘 이상일 때 둘을 하나로
+    이어붙여 버린다 — 그러면 어느 쪽이 답인지 알 수 없다. 균형 잡힌 덩어리를
+    따로 모아 두고, 개수 판단은 호출자가 한다.
+    """
+    out: list[str] = []
+    depth = start = 0
+    in_string = escaped = False
+    for i, ch in enumerate(text):
+        if in_string:
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == '"':
+                in_string = False
+            continue
+        if ch == '"':
+            in_string = True
+        elif ch == "{":
+            if depth == 0:
+                start = i
+            depth += 1
+        elif ch == "}" and depth:
+            depth -= 1
+            if depth == 0:
+                out.append(text[start:i + 1])
+    return out
+
+
 def extract_json(text: str) -> dict[str, Any]:
     """모델 출력에서 JSON 오브젝트를 꺼낸다.
 
     HyperCLOVA X에는 Anthropic의 structured output 같은 스키마 강제가 없다. 그래서
     프롬프트로 JSON만 내라고 지시하고, 코드펜스나 앞뒤 설명이 섞여 나오는 경우까지
     여기서 걷어낸다. 그래도 못 읽으면 LLMUnavailable을 던져 Agent가 fallback한다.
+
+    복구하는 것은 **포장이 잘못된 경우**뿐이다. 깨진 JSON을 의미로 고쳐 쓰거나,
+    오브젝트가 여러 개일 때 하나를 임의로 고르는 일은 하지 않는다 — 그건 모델이
+    틀린 것이고, 틀린 답을 통과시키는 것보다 fallback이 낫다.
     """
     text = (text or "").strip()
     fence = re.search(r"```(?:json)?\s*(.+?)```", text, re.S)
     if fence:
         text = fence.group(1).strip()
     try:
-        return json.loads(text)
+        data = json.loads(text)
     except json.JSONDecodeError:
         pass
-    start, end = text.find("{"), text.rfind("}")
-    if start >= 0 and end > start:
+    else:
+        if isinstance(data, dict):
+            return data
+        raise LLMUnavailable("JSON 오브젝트가 아니다")
+
+    parsed: list[dict[str, Any]] = []
+    last_error: json.JSONDecodeError | None = None
+    for chunk in _balanced_objects(text):
         try:
-            return json.loads(text[start:end + 1])
+            data = json.loads(chunk)
         except json.JSONDecodeError as exc:
-            raise LLMUnavailable(f"JSON 파싱 실패: {exc}") from exc
+            last_error = exc
+            continue
+        if isinstance(data, dict):
+            parsed.append(data)
+    if len(parsed) == 1:
+        return parsed[0]
+    if len(parsed) > 1:
+        raise LLMUnavailable(f"JSON 오브젝트가 {len(parsed)}개 — 어느 것이 답인지 모호하다")
+    if last_error is not None:
+        raise LLMUnavailable(f"JSON 파싱 실패: {last_error}")
     raise LLMUnavailable("응답에서 JSON을 찾지 못했다")
 
 
@@ -156,30 +211,45 @@ class ClovaLLM:
         self.max_tokens = max_tokens
         self.temperature = temperature
         self.timeout = timeout
+        self.last_retries = 0          # 직전 _post에서 429로 다시 보낸 횟수(0 또는 1)
 
     @property
     def url(self) -> str:
         return f"{self.endpoint}/{self.model}"
 
     def _post(self, payload: dict[str, Any]) -> dict[str, Any]:
-        request = urllib.request.Request(
-            self.url,
-            data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
-            headers={
-                "Authorization": f"Bearer {self.api_key}",
-                "X-NCP-CLOVASTUDIO-REQUEST-ID": uuid.uuid4().hex,
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-            },
-            method="POST",
-        )
-        try:
-            with urllib.request.urlopen(request, timeout=self.timeout) as response:
-                return json.loads(response.read().decode("utf-8"))
-        except urllib.error.HTTPError as exc:      # 4xx/5xx는 fallback 대상이다
-            raise LLMUnavailable(f"CLOVA HTTP {exc.code}") from exc
-        except urllib.error.URLError as exc:
-            raise LLMUnavailable(f"CLOVA 연결 실패: {exc.reason}") from exc
+        """한 번 보낸다. 429(속도 제한)일 때만 딱 한 번 더 보낸다.
+
+        429는 모델이 틀린 게 아니라 우리가 너무 빨리 부른 것이므로 재시도가 정당하다.
+        그 외 오류(4xx/5xx, 연결 실패)는 재시도하지 않는다 — 같은 요청을 다시 보내도
+        같은 답이고, 호출 비용만 는다.
+        """
+        self.last_retries = 0
+        attempt = 0
+        while True:
+            request = urllib.request.Request(
+                self.url,
+                data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "X-NCP-CLOVASTUDIO-REQUEST-ID": uuid.uuid4().hex,
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                },
+                method="POST",
+            )
+            try:
+                with urllib.request.urlopen(request, timeout=self.timeout) as response:
+                    return json.loads(response.read().decode("utf-8"))
+            except urllib.error.HTTPError as exc:  # 4xx/5xx는 fallback 대상이다
+                if exc.code == RETRY_STATUS and attempt < MAX_RETRIES:
+                    attempt += 1
+                    self.last_retries = attempt
+                    time.sleep(RETRY_WAIT_SECONDS)
+                    continue
+                raise LLMUnavailable(f"CLOVA HTTP {exc.code}") from exc
+            except urllib.error.URLError as exc:
+                raise LLMUnavailable(f"CLOVA 연결 실패: {exc.reason}") from exc
 
     def complete_json(self, system: str, user: str,
                       schema: dict[str, Any]) -> LLMResult:
