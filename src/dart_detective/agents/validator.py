@@ -58,6 +58,16 @@ def _normalize_ws(s: str) -> str:
     return re.sub(r"\s+", " ", s).strip()
 
 
+def _squash(s: str) -> str:
+    """공백을 전부 제거한 형태. 인용 대조 전용.
+
+    실측(Q08): LLM이 원문 "상기4. 5. ... 취득후"를 "상기 4. 5. ... 취득 후"로 —
+    글자는 같고 띄어쓰기만 고쳐 옮겼는데 UNSUPPORTED로 맞는 답이 통째로 폐기됐다.
+    공백만 무시한다 — 글자·숫자가 하나라도 다르면 여전히 실패한다(검증 약화 아님).
+    """
+    return re.sub(r"\s+", "", s)
+
+
 # 숫자에 붙은 한글 단위. 원문이 "19,300,000,000"(원)인데 답변이 "19,300억 원"이면
 # 숫자 자체는 원문에서 왔지만 100배 틀린 금액이 된다 — 실측(N11)에서 그대로 통과했다.
 UNIT_MULTIPLIER = {"조": 10**12, "천억": 10**11, "억": 10**8,
@@ -132,12 +142,13 @@ def validate(
     soft_fail = False
 
     # 1) 인용 검사 — quote_or_fact가 실제 원문의 부분 문자열인가
+    haystack_squashed = _squash(haystack)
     for c in citations:
-        quote = _normalize_ws(c.get("quote_or_fact", ""))
+        quote = _squash(c.get("quote_or_fact", ""))
         doc_id = c.get("document_id", "")
-        scope = _normalize_ws("\n".join(by_doc.get(doc_id, []))) if doc_id in by_doc else ""
+        scope = _squash("\n".join(by_doc.get(doc_id, []))) if doc_id in by_doc else ""
         ok_in_doc = bool(quote) and quote in scope
-        ok_anywhere = bool(quote) and quote in haystack
+        ok_anywhere = bool(quote) and quote in haystack_squashed
         checks.append({
             "check": "quote_grounded",
             "document_id": doc_id,

@@ -152,3 +152,45 @@ def test_decimal_and_percent_values_are_matched_verbatim():
     bad = validator.validate("매출액대비는 2.1%다.", [], sources)
     assert ok["status"] == "SUPPORTED"
     assert bad["status"] == "UNSUPPORTED"
+
+
+# ---------- 인용 대조는 공백만 무시한다 (Q08 실측 수리) ----------
+
+Q08_SOURCE = [{'document_id': 'd1', 'text': '- 상기4. 5. 자기주식 취득후 전량 소각할 계획임'}]
+
+
+def test_quote_with_different_spacing_is_grounded():
+    '''글자는 같고 띄어쓰기만 다른 인용 — 실측에서 맞는 답이 폐기됐던 사례.'''
+    from dart_detective.agents.validator import validate
+    check = validate('전량 소각할 계획이다.',
+                     [{'document_id': 'd1',
+                       'quote_or_fact': '- 상기 4. 5. 자기주식 취득 후 전량 소각할 계획임'}],
+                     Q08_SOURCE)
+    quote = next(c for c in check['checks'] if c['check'] == 'quote_grounded')
+    assert quote['passed']
+
+
+def test_quote_with_a_changed_word_still_fails():
+    from dart_detective.agents.validator import validate
+    check = validate('답', [{'document_id': 'd1',
+                            'quote_or_fact': '- 상기4. 5. 자기주식 처분후 전량 소각할 계획임'}],
+                     Q08_SOURCE)
+    assert check['status'] == 'UNSUPPORTED'
+
+
+def test_quote_with_a_changed_digit_still_fails():
+    from dart_detective.agents.validator import validate
+    check = validate('답', [{'document_id': 'd1',
+                            'quote_or_fact': '- 상기4. 6. 자기주식 취득후 전량 소각할 계획임'}],
+                     Q08_SOURCE)
+    assert check['status'] == 'UNSUPPORTED'
+
+
+def test_wrong_document_is_still_flagged_softly():
+    from dart_detective.agents.validator import validate
+    check = validate('답', [{'document_id': 'd2',
+                            'quote_or_fact': '상기 4. 5. 자기주식 취득 후 전량 소각할 계획임'}],
+                     Q08_SOURCE)
+    quote = next(c for c in check['checks'] if c['check'] == 'quote_grounded')
+    assert not quote['passed']
+    assert '다른 문서' in quote['note']
