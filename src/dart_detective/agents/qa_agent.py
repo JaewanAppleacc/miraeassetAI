@@ -225,19 +225,38 @@ def plan_slots(question: str, conditions: QueryConditions) -> tuple[str, ...]:
     """
     metrics = infer_metrics(question)
     years = sorted(conditions.years)
+    corps = sorted(conditions.corps)
     if not metrics:
         # 항목 자리 뒤에 자유 자리를 하나 붙인다. 질문이 항목 이름으로 말하지 않은 것
         # ("…해지의 해지금액과 사유는?"의 '사유')을 그 자리가 받는다.
         items = extract_disclosure_items(question)
-        return (*items, ANSWER_SLOT) if items else (ANSWER_SLOT,)
+        if not items:
+            return (ANSWER_SLOT,)
+        if len(corps) >= 2:
+            # 두 기업을 비교하는 질문 — 같은 항목이라도 회사마다 자리를 따로 둔다.
+            return (*(f"{item}@{corp}" for item in items for corp in corps), ANSWER_SLOT)
+        return (*items, ANSWER_SLOT)
     if not years:
         return tuple(metrics)
     return tuple(f"{m}_{y}" for m in metrics for y in years)
 
 
 def split_slot(slot: str) -> tuple[str, int | None]:
-    m = re.fullmatch(r"(.+)_((?:19|20)\d{2})", slot)
-    return (m.group(1), int(m.group(2))) if m else (slot, None)
+    base, _ = split_entity(slot)
+    m = re.fullmatch(r"(.+)_((?:19|20)\d{2})", base)
+    return (m.group(1), int(m.group(2))) if m else (base, None)
+
+
+def split_entity(slot: str) -> tuple[str, str | None]:
+    """'계약금액@한국항공우주' -> ('계약금액', '한국항공우주').
+
+    두 기업을 비교하는 질문에서 같은 항목이 회사마다 하나씩 필요하다. 자리 이름에
+    회사를 붙여 두면 근거가 섞이지 않고, 계산기도 어느 값이 누구 것인지 안다.
+    """
+    if "@" in slot:
+        base, corp = slot.rsplit("@", 1)
+        return base, corp
+    return slot, None
 
 
 # ---------- 2. 근거 선택 ----------
@@ -349,6 +368,8 @@ def _line_for(chunk: RetrievedChunk, metric: str, question: str = "",
 # 표 머리글에서 기간을 읽는다. "제 49 기 2025.01.01 부터 ..." / "(2025.01.01.~ 2025.12.31)"
 _PERIOD_YEAR_RE = re.compile(r"(?:제\s*\d+\s*기[^|]*?)?((?:19|20)\d{2})\s*[.년]\s*\d{1,2}")
 _VALUE_RE = re.compile(r"\d[\d,]*")
+# 값 칸 판정: 금액·비율만. 날짜(2026-11-30)나 설명 문장은 계산에 쓰지 않는다.
+_PICK_VALUE_RE = re.compile(r"\(?\d[\d,]*(?:\.\d+)?\)?%?")
 
 
 def period_columns(chunk: RetrievedChunk) -> dict[int, int]:
@@ -395,6 +416,20 @@ def value_at(line: str, column: int) -> str | None:
         return None
     cell = cells[column + 1]
     return cell if _VALUE_RE.search(cell) else None
+
+
+def picked_value_of(line: str, column: int | None) -> str | None:
+    """계산에 쓸 값을 뽑는다.
+
+    연도 열을 확정했으면 그 열의 값이다. 공시 항목 줄("계약금액(원) | 1,195,242,120,000")
+    처럼 열이 하나뿐이면 첫 값 칸을 쓴다. 값 칸이 여럿이면 어느 것이 답인지 알 수 없으니
+    뽑지 않는다 — 계산기는 값이 없으면 계산하지 않는다.
+    """
+    if column is not None:
+        return value_at(line, column)
+    cells = [c.strip() for c in line.split("|")[1:]]
+    values = [c for c in cells if c and _PICK_VALUE_RE.fullmatch(c.replace(" ", ""))]
+    return values[0] if len(values) == 1 else None
 
 
 def corp_tokens(corps: Sequence[str]) -> frozenset[str]:
@@ -448,11 +483,18 @@ def match_evidence(slots: Sequence[str], chunks: Sequence[RetrievedChunk],
                 break
             continue
         metric, year = split_slot(slot)
+        _, want_corp = split_entity(slot)
         best: tuple[float, RetrievedChunk, str, str, int | None] | None = None
         for rank, chunk in enumerate(chunks, start=1):
             reasons: list[str] = []
             weight = 0.0
             metric_hit = False
+            if want_corp is not None:
+                # 회사가 붙은 자리는 그 회사 공시만 본다. 두 기업 비교에서 근거가
+                # 섞이면 "누구 값인지"가 무너진다.
+                if chunk.metadata.get("corp_name") != want_corp:
+                    continue
+                reasons.append(f"기업 '{want_corp}' 공시")
             if metric != ANSWER_SLOT:
                 if metric in chunk.row_labels:
                     weight += 0.5
@@ -490,7 +532,7 @@ def match_evidence(slots: Sequence[str], chunks: Sequence[RetrievedChunk],
             score = weight + rank_score
             reasons.append(f"Retrieval {rank}위")
             line = _line_for(chunk, metric, question, drop)
-            picked = value_at(line, column) if column is not None else None
+            picked = picked_value_of(line, column)
             if (chunk.chunk_id, line, column) in used:
                 # 같은 행의 같은 열을 두 자리에 쓰면 한쪽은 반드시 틀린 값이다.
                 # (같은 열이라도 지표가 다르면 행이 다르므로 허용된다.)
@@ -511,7 +553,7 @@ def match_evidence(slots: Sequence[str], chunks: Sequence[RetrievedChunk],
             evidence_text=line,
             section_path=chunk.section_path,
             confidence=round(min(score, 1.0), 4), reason=reason,
-            column=column, picked_value=value_at(line, column) if column is not None else None,
+            column=column, picked_value=picked_value_of(line, column),
         ))
         if len(matches) >= limit:
             break

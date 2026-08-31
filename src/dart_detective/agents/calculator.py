@@ -118,6 +118,51 @@ def compute(metric: str, old_slot: str, old_raw: str,
     ]
 
 
+def plan_entity_comparisons(question: str,
+                            slots: Sequence[str]) -> list[tuple[str, str, str]]:
+    """(항목, 기업A, 기업B) 목록. 같은 항목이 두 기업에 있을 때만.
+
+    자리 이름이 '계약금액@한국항공우주' 꼴이라 누구 값인지 알 수 있다. 셋 이상이면
+    어느 둘을 비교하라는 것인지 질문만으로 정할 수 없으므로 계산하지 않는다.
+    """
+    if not is_comparison_question(question):
+        return []
+    by_item: dict[str, list[str]] = {}
+    for slot in slots:
+        if "@" not in slot:
+            continue
+        item, corp = slot.rsplit("@", 1)
+        by_item.setdefault(item, []).append(corp)
+    out = []
+    for item, corps in by_item.items():
+        uniq = sorted(dict.fromkeys(corps))
+        if len(uniq) == 2:
+            out.append((item, uniq[0], uniq[1]))
+    return out
+
+
+def compare_entities(item: str, corp_a: str, raw_a: str,
+                     corp_b: str, raw_b: str, unit: str = "") -> list[Derived]:
+    """두 기업의 같은 항목을 견준다. 차액과 어느 쪽이 큰지."""
+    a, b = parse_number(raw_a), parse_number(raw_b)
+    if a is None or b is None:
+        return []
+    bigger, smaller = (corp_a, corp_b) if a >= b else (corp_b, corp_a)
+    diff = abs(a - b)
+    slots = (f"{item}@{corp_a}", f"{item}@{corp_b}")
+    values = (_fmt(a), _fmt(b))
+    out = [Derived(metric=item, kind="difference",
+                   formula=f"|{_fmt(a)} - {_fmt(b)}|",
+                   value=_fmt(diff), unit=unit,
+                   source_slots=slots, source_values=values)]
+    if a != b:
+        out.append(Derived(metric=item, kind="larger_side",
+                           formula=f"{bigger} > {smaller}",
+                           value=bigger, unit="",
+                           source_slots=slots, source_values=values))
+    return out
+
+
 def derive(question: str, slots: Sequence[str],
            values_by_slot: Mapping[str, str],
            lines_by_slot: Mapping[str, str] | None = None) -> list[Derived]:
@@ -139,7 +184,34 @@ def derive(question: str, slots: Sequence[str],
             continue                 # 단위가 섞이면 계산하지 않는다
         out.extend(compute(metric, old_slot, old_raw, new_slot, new_raw,
                            unit=old_unit or new_unit))
+
+    for item, corp_a, corp_b in plan_entity_comparisons(question, slots):
+        slot_a, slot_b = f"{item}@{corp_a}", f"{item}@{corp_b}"
+        raw_a, raw_b = values_by_slot.get(slot_a), values_by_slot.get(slot_b)
+        if not raw_a or not raw_b:
+            continue
+        unit_a = unit_of(lines_by_slot.get(slot_a, ""))
+        unit_b = unit_of(lines_by_slot.get(slot_b, ""))
+        if unit_a and unit_b and unit_a != unit_b:
+            continue                 # 단위가 섞이면 계산하지 않는다
+        out.extend(compare_entities(item, corp_a, raw_a, corp_b, raw_b,
+                                    unit=unit_a or unit_b))
     return out
+
+
+def has_final_consonant(word: str) -> bool:
+    """마지막 글자에 받침이 있나. 한글이 아니면 없는 것으로 본다."""
+    if not word:
+        return False
+    ch = word.strip()[-1]
+    if not ("가" <= ch <= "힣"):
+        return False
+    return (ord(ch) - 0xAC00) % 28 != 0
+
+
+def subject_particle(word: str) -> str:
+    """'계약금액이' / '차이가' — 받침에 따라 조사를 고른다."""
+    return "이" if has_final_consonant(word) else "가"
 
 
 def describe(derived: Sequence[Derived]) -> str:
@@ -148,11 +220,19 @@ def describe(derived: Sequence[Derived]) -> str:
         return ""
     lines = []
     for d in derived:
+        unit = f" {d.unit}" if d.unit else ""
         if d.kind == "increase_rate":
             lines.append(f"- {d.metric}: {d.source_values[0]} → {d.source_values[1]} "
                          f"({d.value}% 변동)")
+        elif d.kind == "difference":
+            a_slot, b_slot = d.source_slots
+            a_corp = a_slot.rsplit("@", 1)[-1]
+            b_corp = b_slot.rsplit("@", 1)[-1]
+            lines.append(f"- {d.metric} 차이: {a_corp} {d.source_values[0]} vs "
+                         f"{b_corp} {d.source_values[1]} → {d.value}{unit}")
+        elif d.kind == "larger_side":
+            lines.append(f"- {d.metric}{subject_particle(d.metric)} 더 큰 쪽: {d.value}")
         else:
-            unit = f" {d.unit}" if d.unit else ""
             lines.append(f"- {d.metric} 증감액: {d.value}{unit}")
     return "계산 결과(원문 값에서 코드가 계산):\n" + "\n".join(lines)
 
@@ -161,6 +241,8 @@ def allowed_numbers(derived: Sequence[Derived]) -> list[str]:
     """Validator에 넘길 '코드가 만든 숫자' 목록. LLM이 만든 값은 여기 들어오지 않는다."""
     out: list[str] = []
     for d in derived:
+        if not any(ch.isdigit() for ch in d.value):
+            continue            # 기업명 같은 값(larger_side)은 숫자 허용 목록이 아니다
         out.append(d.value)
         out.append(d.value.replace(",", ""))
         out.append(d.value.lstrip("-"))
