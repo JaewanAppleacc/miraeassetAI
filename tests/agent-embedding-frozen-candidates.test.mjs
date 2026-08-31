@@ -69,15 +69,28 @@ test("BGE-M3 pin: repository, 40-hex revision, dimension, license", () => {
   assert.equal(c.competition_status, "ELIGIBLE_FOR_BOUNDED_CALIBRATION");
 });
 
-test("PIXIE-Rune pin: model identity unresolved, revision is the fail-closed sentinel, never a guessed value", () => {
+test("PIXIE-Rune pin (Turn P9.2 Owner decision): telepix/PIXIE-Rune-v1.5, dimension 1024, max length 6144, asymmetric prefix, ELIGIBLE", () => {
   const c = getFrozenCandidateById("pixie_rune");
-  assert.equal(c.repository_id, null);
-  assert.equal(c.immutable_revision, "BLOCKED_MISSING_IMMUTABLE_REVISION");
-  assert.equal(c.embedding_dimension, null);
-  assert.equal(c.competition_status, "BLOCKED_UNVERIFIED_MODEL_ID");
-  assert.ok(Array.isArray(c.pixie_rune_variants_researched) && c.pixie_rune_variants_researched.length === 3, "the 3 known real variants must still be documented as research, without being pinned as the answer");
+  assert.equal(c.repository_id, "telepix/PIXIE-Rune-v1.5");
+  assert.equal(c.immutable_revision, "29dd334196af53e6cfc16674379e743334f5fa66");
+  assert.equal(c.embedding_dimension, 1024);
+  assert.equal(c.max_input_length, 6144);
+  assert.equal(c.pooling_method, "CLS");
+  assert.equal(c.normalization.applied_by_default, true);
+  assert.equal(c.license, "Apache-2.0");
+  assert.equal(c.query_prefix, "query: ");
+  assert.equal(c.document_prefix, "");
+  assert.equal(c.competition_status, "ELIGIBLE_FOR_BOUNDED_CALIBRATION");
+});
+
+test("PIXIE-Rune's un-pinned v1.0/Preview variants are still retained as research context, never as an alternative active pin", () => {
+  const c = getFrozenCandidateById("pixie_rune");
+  assert.ok(Array.isArray(c.pixie_rune_variants_researched) && c.pixie_rune_variants_researched.length === 2, "exactly the 2 NON-pinned variants remain as research context (v1.5 itself is now the active pin, not a 'researched alternative')");
+  const researchedRepositoryIds = c.pixie_rune_variants_researched.map((v) => v.repository_id);
+  assert.deepEqual(researchedRepositoryIds.sort(), ["telepix/PIXIE-Rune-Preview", "telepix/PIXIE-Rune-v1.0"]);
+  assert.ok(!researchedRepositoryIds.includes(c.repository_id), "the active pin must never also appear in its own 'researched alternatives' list");
   for (const variant of c.pixie_rune_variants_researched) {
-    assert.match(variant.immutable_revision, /^[0-9a-f]{40}$/, "each researched variant still carries a REAL verified revision, even though none is selected");
+    assert.match(variant.immutable_revision, /^[0-9a-f]{40}$/, "each researched variant still carries a REAL verified revision, even though it is not the active pin");
   }
 });
 
@@ -92,10 +105,15 @@ test("every candidate in the registry file validates against its own JSON schema
 // Revision missing -> fail-closed
 // -------------------------------------------------------------------------
 
-test("a candidate with no verified immutable_revision can never produce a CalibrationConfig", () => {
-  const pixie = getFrozenCandidateById("pixie_rune");
+test("a candidate with no verified immutable_revision can never produce a CalibrationConfig (synthetic unresolved-identity case)", () => {
+  const unresolved = {
+    frozen_candidate_id: "synthetic_unresolved", repository_id: null, immutable_revision: "BLOCKED_MISSING_IMMUTABLE_REVISION",
+    embedding_dimension: null, competition_status: "BLOCKED_UNVERIFIED_MODEL_ID",
+    adapter_compatibility: { classification: "COMPATIBLE_VIA_LOCAL_OPENAI_SHAPED_SERVER", reason: "test" },
+    provider_organization: "org",
+  };
   assert.throws(
-    () => toCalibrationConfig(pixie, { datasetManifestSha256: "a".repeat(64), sampleSalt: "s", codeRevision: "r", maximumItemCount: 1, maximumRequestCount: 1, maximumTotalInputUnits: 1 }),
+    () => toCalibrationConfig(unresolved, { datasetManifestSha256: "a".repeat(64), sampleSalt: "s", codeRevision: "r", maximumItemCount: 1, maximumRequestCount: 1, maximumTotalInputUnits: 1 }),
     (error) => { assert.ok(error instanceof FrozenCandidateRegistryError); assert.equal(error.code, "MISSING_REVISION"); return true; },
   );
 });
@@ -164,19 +182,26 @@ test("KURE-v1 and BGE-M3 (empty prefixes both modes) embed the SAME text identic
   }
 });
 
-test("PIXIE-Rune-v1.5-shaped candidate (asymmetric prefixes) NEVER embeds the same raw text identically for query vs document mode", () => {
-  const pixieV15Shaped = { frozen_candidate_id: "pixie_rune_v15_test", query_prefix: "query: ", document_prefix: "" };
-  const query = prepareTextForMode(pixieV15Shaped, "샘플 텍스트", "query");
-  const doc = prepareTextForMode(pixieV15Shaped, "샘플 텍스트", "document");
+test("PIXIE-Rune-v1.5 (real registry pin, asymmetric prefixes) NEVER embeds the same raw text identically for query vs document mode", () => {
+  const pixie = getFrozenCandidateById("pixie_rune");
+  const query = prepareTextForMode(pixie, "샘플 텍스트", "query");
+  const doc = prepareTextForMode(pixie, "샘플 텍스트", "document");
   assert.notEqual(query, doc, "a candidate with differing query/document prefixes must never produce the identical prepared string for both modes");
   assert.equal(query, "query: 샘플 텍스트");
   assert.equal(doc, "샘플 텍스트");
 });
 
-test("prepareTextForMode rejects an invalid mode and refuses to guess a prefix when one is unverified (null)", () => {
+test("prepareTextForMode applies a query-already-containing-'query: ' text's prefix exactly once, never stripping the pre-existing substring", () => {
+  const pixie = getFrozenCandidateById("pixie_rune");
+  const alreadyPrefixedLookingText = 'query: 이미 "query: "가 포함된 원문';
+  const prepared = prepareTextForMode(pixie, alreadyPrefixedLookingText, "query");
+  assert.equal(prepared, `query: ${alreadyPrefixedLookingText}`, "the prefix must be applied exactly once, on top of whatever the raw text already contains -- never removed on the assumption it looks redundant");
+});
+
+test("prepareTextForMode rejects an invalid mode and refuses to guess a prefix when one is unverified (null, synthetic case)", () => {
   const c = getFrozenCandidateById("kure_v1");
   assert.throws(() => prepareTextForMode(c, "text", "not-a-real-mode"), TypeError);
-  const unresolved = getFrozenCandidateById("pixie_rune"); // query_prefix/document_prefix are null
+  const unresolved = { frozen_candidate_id: "synthetic_no_prefix", query_prefix: null, document_prefix: null, competition_status: "BLOCKED_UNVERIFIED_MODEL_ID" };
   assert.throws(
     () => prepareTextForMode(unresolved, "text", "query"),
     (error) => { assert.equal(error.code, "PREFIX_NOT_VERIFIED"); return true; },

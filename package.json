@@ -77,6 +77,7 @@
     "test:resumable-dedup-loader:bounded-memory:postgres16": "node --test tests/reference-dedup-resumable-loader-bounded-memory-postgres16-integration.test.mjs",
     "test:embedding-calibration": "node --test tests/agent-embedding-calibration-contracts.test.mjs tests/agent-embedding-calibration-dataset.test.mjs tests/agent-embedding-calibration-metrics.test.mjs tests/agent-embedding-calibration-runner.test.mjs",
     "test:embedding-frozen-candidates": "node --test tests/agent-embedding-frozen-candidates.test.mjs",
+    "test:embedding-local-calibration-connection": "node --test tests/agent-embedding-local-calibration-connection.test.mjs",
     "run:embedding-calibration": "node scripts/run-embedding-calibration-v01.mjs",
     "test:reference-db:postgres16": "node --test tests/reference-release-postgres16-integration.test.mjs",
     "test:reference-repository:postgres16": "node --test tests/reference-repository-postgres16-integration.test.mjs",

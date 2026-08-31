@@ -6,8 +6,34 @@
 // CalibrationConfig's api_key_env_var VALUE (only ever the env var NAME,
 // which is itself config, not a secret) or into any dataset item's
 // textContent field.
-export function buildCalibrationRunManifest({ calibrationConfig, datasetManifest, codeRevision }) {
-  return Object.freeze({
+import { createHash } from "node:crypto";
+
+function canonicalize(value) {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonicalize(value[key])]));
+  }
+  return value;
+}
+
+// Hashes ONLY the two prefix strings -- never the raw dataset text they get
+// applied to. Two candidates with the identical (query_prefix,
+// document_prefix) pair share the same prefix_policy_sha256 by design (the
+// POLICY is identical even if the models differ).
+export function computePrefixPolicySha256({ queryPrefix, documentPrefix }) {
+  return createHash("sha256").update(JSON.stringify(canonicalize({ query_prefix: queryPrefix, document_prefix: documentPrefix })), "utf8").digest("hex");
+}
+
+// `frozenCandidate` (Turn P9.2, optional -- omitting it reproduces the
+// exact Turn P9.1 manifest shape byte-for-byte): when a run was built from
+// registry.mjs's toCalibrationConfig, passing the SAME candidate object
+// here folds in the identity/prefix/server-attestation pins this Turn's
+// own invariant requires -- "동일 모델명이라도 revision이 다르면 다른 run으로
+// 취급한다" holds structurally because immutable_revision is ALREADY part
+// of calibrationConfig.model_id (see registry.mjs) and is repeated here
+// verbatim for a human-readable manifest field too.
+export function buildCalibrationRunManifest({ calibrationConfig, datasetManifest, codeRevision, frozenCandidate, registrySha256, serverIdentityAttestationSha256, runResult }) {
+  const base = {
     schema_version: "0.1.0",
     calibration_run_manifest_version: "0.1",
     calibration_id: calibrationConfig.calibration_id,
@@ -36,6 +62,22 @@ export function buildCalibrationRunManifest({ calibrationConfig, datasetManifest
     dataset_item_count: datasetManifest.item_count,
     dataset_distinct_evidence_count: datasetManifest.distinct_evidence_count,
     created_at: new Date().toISOString(),
+  };
+  if (!frozenCandidate) return Object.freeze(base);
+
+  return Object.freeze({
+    ...base,
+    frozen_candidate_id: frozenCandidate.frozen_candidate_id,
+    repository_id: frozenCandidate.repository_id,
+    immutable_revision: frozenCandidate.immutable_revision,
+    registry_sha256: registrySha256 ?? null,
+    prefix_policy_sha256: computePrefixPolicySha256({ queryPrefix: frozenCandidate.query_prefix, documentPrefix: frozenCandidate.document_prefix }),
+    server_identity_attestation_sha256: serverIdentityAttestationSha256 ?? runResult?.server_identity_attestation_sha256 ?? null,
+    embedding_dimension: frozenCandidate.embedding_dimension,
+    max_input_length: frozenCandidate.max_input_length,
+    normalization: frozenCandidate.normalization,
+    pooling_method: frozenCandidate.pooling_method,
+    query_document_modes: frozenCandidate.query_prefix === frozenCandidate.document_prefix ? ["SYMMETRIC"] : ["QUERY", "DOCUMENT"],
   });
 }
 
@@ -46,6 +88,9 @@ export function buildCalibrationGateStatus({ runResult }) {
     calibration_id: runResult.calibration_id,
     run_status: runResult.run_status,
     actual_external_embedding_call_performed: runResult.actual_external_embedding_call_performed,
+    loopback_protocol_test_performed: runResult.loopback_protocol_test_performed ?? false,
+    mock_embedding_call_performed: runResult.mock_embedding_call_performed ?? false,
+    actual_model_embedding_call_performed: runResult.actual_model_embedding_call_performed ?? false,
     real_embedding_full_load_started: false,
     production_index_modified: false,
     ranking_performed: runResult.ranking_performed,

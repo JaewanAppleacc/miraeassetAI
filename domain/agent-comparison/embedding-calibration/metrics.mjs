@@ -23,8 +23,17 @@ export function cosineSimilarity(a, b) {
 // ascending) so identical similarity scores never produce run-to-run
 // ordering noise. Returns an array of calibration_item_id, best match
 // first.
-export function rankBySimilarity(queryItem, allItems, embeddingByItemId) {
-  const queryVector = embeddingByItemId.get(queryItem.calibrationItemId);
+//
+// `queryEmbeddingByItemId` (Turn P9.2, optional): when a candidate needs
+// asymmetric query/document prefixing (see registry.mjs's
+// prepareTextForMode), the query item's OWN vector must come from its
+// QUERY-mode embedding while every candidate (including itself) is still
+// looked up in its DOCUMENT-mode embedding -- this mirrors how retrieval
+// actually works (one query vector against a corpus of document vectors).
+// Omitting it (the default) reproduces the exact pre-P9.2 behavior: the
+// SAME map is used for both roles.
+export function rankBySimilarity(queryItem, allItems, embeddingByItemId, queryEmbeddingByItemId = embeddingByItemId) {
+  const queryVector = queryEmbeddingByItemId.get(queryItem.calibrationItemId);
   const scored = allItems.map((item) => ({
     id: item.calibrationItemId,
     score: cosineSimilarity(queryVector, embeddingByItemId.get(item.calibrationItemId)),
@@ -39,22 +48,22 @@ export function selfMatchHitAtK(rankedIds, expectedSelfMatchId, k) {
   return rankedIds.slice(0, k).includes(expectedSelfMatchId);
 }
 
-export function computeRecallAtK(items, embeddingByItemId, k) {
+export function computeRecallAtK(items, embeddingByItemId, k, queryEmbeddingByItemId = embeddingByItemId) {
   if (items.length === 0) return 0;
   let hits = 0;
   for (const item of items) {
-    const ranked = rankBySimilarity(item, items, embeddingByItemId);
+    const ranked = rankBySimilarity(item, items, embeddingByItemId, queryEmbeddingByItemId);
     if (selfMatchHitAtK(ranked, item.expectedSelfMatchId, k)) hits += 1;
   }
   return hits / items.length;
 }
 
 // Mean Reciprocal Rank of the item's own self-match position (1-based).
-export function computeMRR(items, embeddingByItemId) {
+export function computeMRR(items, embeddingByItemId, queryEmbeddingByItemId = embeddingByItemId) {
   if (items.length === 0) return 0;
   let sum = 0;
   for (const item of items) {
-    const ranked = rankBySimilarity(item, items, embeddingByItemId);
+    const ranked = rankBySimilarity(item, items, embeddingByItemId, queryEmbeddingByItemId);
     const position = ranked.indexOf(item.expectedSelfMatchId);
     sum += position === -1 ? 0 : 1 / (position + 1);
   }
@@ -65,10 +74,10 @@ export function computeMRR(items, embeddingByItemId) {
 // IDENTICAL ordering (including tie-break) -- proves rankBySimilarity has
 // no hidden nondeterminism (Map iteration order, floating point ordering
 // noise, etc).
-export function rankingIsReproducible(items, embeddingByItemId) {
+export function rankingIsReproducible(items, embeddingByItemId, queryEmbeddingByItemId = embeddingByItemId) {
   for (const item of items) {
-    const first = rankBySimilarity(item, items, embeddingByItemId);
-    const second = rankBySimilarity(item, items, embeddingByItemId);
+    const first = rankBySimilarity(item, items, embeddingByItemId, queryEmbeddingByItemId);
+    const second = rankBySimilarity(item, items, embeddingByItemId, queryEmbeddingByItemId);
     if (JSON.stringify(first) !== JSON.stringify(second)) return false;
   }
   return true;
@@ -81,12 +90,12 @@ export function rankingIsReproducible(items, embeddingByItemId) {
 // This is checking the SAME invariant reference-dedup-retrieval-repository.mjs's
 // real filter-before-top-k SQL enforces at the DB layer, but purely
 // in-memory over this run's own embeddings.
-export function corpCodeFilterAccuracy(items, embeddingByItemId) {
+export function corpCodeFilterAccuracy(items, embeddingByItemId, queryEmbeddingByItemId = embeddingByItemId) {
   if (items.length === 0) return { accuracy: 1, violations: [] };
   const violations = [];
   for (const item of items) {
     const sameCorpItems = items.filter((other) => other.corpCode === item.corpCode);
-    const ranked = rankBySimilarity(item, sameCorpItems, embeddingByItemId);
+    const ranked = rankBySimilarity(item, sameCorpItems, embeddingByItemId, queryEmbeddingByItemId);
     const crossCorpLeak = ranked.some((id) => {
       const found = items.find((other) => other.calibrationItemId === id);
       return found && found.corpCode !== item.corpCode;

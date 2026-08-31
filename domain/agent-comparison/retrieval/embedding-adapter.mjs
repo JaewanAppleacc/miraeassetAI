@@ -67,12 +67,44 @@ function assertVectorsShape(vectors, expectedCount, dimension, label) {
   }
 }
 
+// Turn P9.2: the ONLY hostnames auth_mode=NONE may ever be used against.
+// Checked against endpoint_url's OWN parsed hostname -- never against a
+// caller-supplied network_scope claim, which is informational only.
+const LOOPBACK_HOSTNAMES = Object.freeze(new Set(["127.0.0.1", "localhost", "::1"]));
+
 function createHttpEmbeddingsAdapter(config, { fetchImpl = fetch } = {}) {
-  const apiKey = process.env[config.api_key_env_var];
-  if (typeof apiKey !== "string" || apiKey === "") {
-    throw new EmbeddingAdapterUnavailableError(
-      `environment variable ${config.api_key_env_var} is not set; refusing to call ${config.provider}/${config.model} without an API key`,
-    );
+  // Turn P9.2: absent auth_mode means BEARER_ENV -- identical to every
+  // config this adapter has ever accepted before this Turn. This branch is
+  // unreachable for such configs; nothing about their behavior changes.
+  const authMode = config.auth_mode ?? "BEARER_ENV";
+  let apiKey = null;
+
+  if (authMode === "BEARER_ENV") {
+    apiKey = process.env[config.api_key_env_var];
+    if (typeof apiKey !== "string" || apiKey === "") {
+      throw new EmbeddingAdapterUnavailableError(
+        `environment variable ${config.api_key_env_var} is not set; refusing to call ${config.provider}/${config.model} without an API key`,
+      );
+    }
+  } else if (authMode === "NONE") {
+    // Fail-closed BEFORE any request is ever sent (this constructor runs
+    // once, before embedDocuments/embedQuery can be called at all) -- a
+    // dummy/placeholder key is never used as a workaround; auth_mode=NONE
+    // sends no Authorization header, and is refused outright for anything
+    // that does not parse to a real loopback hostname.
+    let hostname;
+    try {
+      hostname = new URL(config.endpoint_url).hostname;
+    } catch {
+      throw new EmbeddingAdapterUnavailableError(`endpoint_url is not a valid URL; refusing to permit auth_mode=NONE without a verifiable loopback hostname`);
+    }
+    if (!LOOPBACK_HOSTNAMES.has(hostname)) {
+      throw new EmbeddingAdapterUnavailableError(
+        `auth_mode=NONE is only permitted for a loopback endpoint (127.0.0.1, localhost, or ::1) -- refusing to call "${hostname}" without authentication`,
+      );
+    }
+  } else {
+    throw new EmbeddingAdapterUnavailableError(`unsupported auth_mode: ${authMode}`);
   }
 
   async function callEmbeddingsEndpoint(texts) {
@@ -84,7 +116,9 @@ function createHttpEmbeddingsAdapter(config, { fetchImpl = fetch } = {}) {
       try {
         response = await fetchImpl(config.endpoint_url, {
           method: "POST",
-          headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
+          headers: authMode === "BEARER_ENV"
+            ? { "content-type": "application/json", authorization: `Bearer ${apiKey}` }
+            : { "content-type": "application/json" },
           body: JSON.stringify({ model: config.model, input: texts }),
           signal: controller.signal,
         });

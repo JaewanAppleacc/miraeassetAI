@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://disclosure-analyst.local/schema/agent-comparison/retrieval/embedding-config.v0.1.json",
   "title": "Embedding Adapter Config v0.1",
-  "description": "Turn P4: provider/model identity for an EmbeddingAdapter, injected as configuration -- never hardcoded inside loader/retriever code (see embedding-adapter.mjs). Mirrors ../interfaces/model-config.schema.json's own shape and rules exactly, scoped to embeddings instead of chat completions.",
+  "description": "Turn P4: provider/model identity for an EmbeddingAdapter, injected as configuration -- never hardcoded inside loader/retriever code (see embedding-adapter.mjs). Mirrors ../interfaces/model-config.schema.json's own shape and rules exactly, scoped to embeddings instead of chat completions. Turn P9.2 (additive, backward-compatible): added auth_mode/network_scope so a LOCAL loopback server can be called without a bearer key -- a config that never sets auth_mode behaves EXACTLY as before (api_key_env_var still required whenever kind=HTTP_EMBEDDINGS).",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema_version", "kind", "provider", "model", "revision", "dimension"],
@@ -17,18 +17,34 @@
     "revision": { "type": "string", "minLength": 1, "description": "A provider/model revision label, pinned in reference_retrieval_indexes.embedding_revision so a later model version change is never silently mixed into the same index." },
     "dimension": { "type": "integer", "minimum": 1, "maximum": 4096 },
     "endpoint_url": { "type": "string", "minLength": 1, "description": "Required when kind=HTTP_EMBEDDINGS; the full embeddings-endpoint URL." },
-    "api_key_env_var": { "type": "string", "minLength": 1, "description": "Name of the environment variable holding the API key. The key value itself is never part of this config or of any telemetry/log output." },
-    "timeout_ms": { "type": "integer", "minimum": 1 }
+    "api_key_env_var": { "type": "string", "minLength": 1, "description": "Name of the environment variable holding the API key. The key value itself is never part of this config or of any telemetry/log output. Required when kind=HTTP_EMBEDDINGS UNLESS auth_mode is explicitly \"NONE\"." },
+    "timeout_ms": { "type": "integer", "minimum": 1 },
+    "auth_mode": {
+      "enum": ["BEARER_ENV", "NONE"],
+      "description": "Turn P9.2. Absent means BEARER_ENV (the original, only-ever behavior -- fully backward compatible). NONE sends no Authorization header at all, and is only ever accepted by embedding-adapter.mjs's own runtime check for a LOOPBACK endpoint_url hostname (127.0.0.1/localhost/::1) -- an external hostname with auth_mode=NONE is refused before any request is sent, regardless of what this field claims."
+    },
+    "network_scope": {
+      "enum": ["LOOPBACK", "EXTERNAL"],
+      "description": "Turn P9.2. Optional, informational self-declaration for manifests/telemetry only -- embedding-adapter.mjs independently re-derives the real scope from endpoint_url's own hostname and never trusts this field for the auth_mode=NONE safety check."
+    }
   },
   "allOf": [
     {
       "if": { "properties": { "kind": { "const": "HTTP_EMBEDDINGS" } }, "required": ["kind"] },
       "then": {
-        "required": ["endpoint_url", "api_key_env_var"],
-        "properties": {
-          "endpoint_url": { "type": "string", "minLength": 1 },
-          "api_key_env_var": { "type": "string", "minLength": 1 }
-        }
+        "required": ["endpoint_url"],
+        "properties": { "endpoint_url": { "type": "string", "minLength": 1 } }
+      }
+    },
+    {
+      "if": {
+        "properties": { "kind": { "const": "HTTP_EMBEDDINGS" } },
+        "not": { "properties": { "auth_mode": { "const": "NONE" } }, "required": ["auth_mode"] },
+        "required": ["kind"]
+      },
+      "then": {
+        "required": ["api_key_env_var"],
+        "properties": { "api_key_env_var": { "type": "string", "minLength": 1 } }
       }
     }
   ]

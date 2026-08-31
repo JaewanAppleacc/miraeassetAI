@@ -100,7 +100,16 @@ export function toEmbeddingConfig(calibrationConfig) {
     timeout_ms: calibrationConfig.request_timeout_ms,
   };
   if (calibrationConfig.adapter_kind === "HTTP_EMBEDDINGS") {
-    return { ...base, endpoint_url: calibrationConfig.endpoint, api_key_env_var: calibrationConfig.api_key_env_var };
+    const httpConfig = { ...base, endpoint_url: calibrationConfig.endpoint };
+    // Turn P9.2: auth_mode/network_scope pass through only when present --
+    // an OLD CalibrationConfig that never set them produces the EXACT same
+    // EmbeddingConfig shape as before (api_key_env_var only, no auth_mode
+    // key at all), so embedding-adapter.mjs's own "absent means BEARER_ENV"
+    // default applies identically either way.
+    if (calibrationConfig.auth_mode !== undefined) httpConfig.auth_mode = calibrationConfig.auth_mode;
+    if (calibrationConfig.network_scope !== undefined) httpConfig.network_scope = calibrationConfig.network_scope;
+    if (calibrationConfig.auth_mode !== "NONE") httpConfig.api_key_env_var = calibrationConfig.api_key_env_var;
+    return httpConfig;
   }
   return base;
 }

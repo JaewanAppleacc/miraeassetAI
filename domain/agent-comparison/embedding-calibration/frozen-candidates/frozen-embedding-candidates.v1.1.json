@@ -81,35 +81,34 @@
     {
       "frozen_candidate_id": "pixie_rune",
       "provider_organization": "TelePIX Co., Ltd.",
-      "repository_id": null,
-      "immutable_revision": "BLOCKED_MISSING_IMMUTABLE_REVISION",
-      "model_architecture": "XLMRobertaModel, 24 layers (confirmed for the telepix/PIXIE-Rune-v1.5 variant specifically). Pure bidirectional encoder, never a decoder-only/generative architecture, per the v1.5 model card.",
-      "embedding_dimension": null,
-      "max_input_length": null,
-      "pooling_method": "UNKNOWN",
-      "normalization": { "applied_by_default": true, "mechanism": "confirmed for v1.5 only: sentence-transformers pipeline module 2 = Normalize (L2), per modules.json -- NOT independently re-verified for v1.0/Preview, presumed same family" },
+      "repository_id": "telepix/PIXIE-Rune-v1.5",
+      "immutable_revision": "29dd334196af53e6cfc16674379e743334f5fa66",
+      "model_architecture": "XLMRobertaModel, 24 layers. Pure bidirectional encoder, never a decoder-only/generative architecture, per the v1.5 model card.",
+      "embedding_dimension": 1024,
+      "max_input_length": 6144,
+      "pooling_method": "CLS",
+      "normalization": { "applied_by_default": true, "mechanism": "sentence-transformers pipeline module 2 = Normalize (L2), per modules.json" },
       "supported_languages": "Korean, English (primary; v1.5 card states 74 total languages)",
-      "license": "Apache-2.0 (confirmed identical across all 3 known variants)",
+      "license": "Apache-2.0",
       "requires_remote_code": false,
       "runnable_locally": true,
       "official_http_endpoint_available": false,
       "required_runtime": ["python>=3.9", "sentence-transformers", "transformers", "torch"],
       "estimated_memory_gb_range": {
         "min_gb": 2.5, "max_gb": 5,
-        "basis": "v1.5's model.safetensors is 2.27GB (fp32, ~560M-param XLM-RoBERTa-large scale); presumed comparable for v1.0/Preview given the same organization/architecture family, not independently confirmed."
+        "basis": "v1.5's model.safetensors is 2.27GB (fp32, ~560M-param XLM-RoBERTa-large scale) + typical CPU inference overhead; not independently profiled this Turn (no model download performed)."
       },
-      "query_prefix": null,
-      "document_prefix": null,
-      "competition_status": "BLOCKED_UNVERIFIED_MODEL_ID",
-      "competition_status_reason": "CLAUDE.md names only 'PIXIE-Rune (실험 전 정확한 revision 고정)' with no version qualifier. THREE distinct, actively published repositories exist under this family name -- telepix/PIXIE-Rune-v1.0, telepix/PIXIE-Rune-v1.5, and telepix/PIXIE-Rune-Preview -- with different immutable revisions and (for at least Preview vs. v1.0/v1.5) potentially different characteristics. Per this Turn's own instruction (never guess an unresolvable identity/revision), no single repository_id is pinned here; see pixie_rune_variants_researched below for what IS independently confirmed about each. This is NOT a license/runtime/regulatory blocker -- it is an identity-resolution blocker requiring the organizer/owner to specify exactly which PIXIE-Rune build the competition means before any further pin or calibration step.",
+      "query_prefix": "query: ",
+      "document_prefix": "",
+      "competition_status": "ELIGIBLE_FOR_BOUNDED_CALIBRATION",
+      "competition_status_reason": "Turn P9.2 Owner decision: identity ambiguity (Section B of Turn P9.1) resolved -- the Owner has confirmed telepix/PIXIE-Rune-v1.5 @ 29dd334196af53e6cfc16674379e743334f5fa66 as the exact pinned build. Architecture is a pure XLM-RoBERTa bidirectional encoder (confirmed independently in Turn P9.1, not re-derived here), architecturally incapable of generation -- not the Qwen-style generative-derived pattern CLAUDE.md flags. Apache-2.0 license, immutable revision and dimension both independently verified. Query prefix is asymmetric (\"query: \" for queries, none for documents) -- any use of this candidate MUST route text through query/document-mode-aware preparation (see registry.mjs's prepareTextForMode); a caller embedding raw, unprefixed text as a query would silently misrepresent this model.",
       "pixie_rune_variants_researched": [
-        { "repository_id": "telepix/PIXIE-Rune-v1.0", "immutable_revision": "091fe5a6682119cfc02451f37fdece163ddf38de", "license": "apache-2.0", "note": "earlier stable release; architecture/dimension not independently re-verified this Turn beyond the shared family README" },
-        { "repository_id": "telepix/PIXIE-Rune-v1.5", "immutable_revision": "29dd334196af53e6cfc16674379e743334f5fa66", "license": "apache-2.0", "note": "latest stable release at research time; dimension=1024, max_seq_length=6144, pooling=CLS, query_prefix=\"query: \", document_prefix=\"\" (asymmetric -- confirmed via config_sentence_transformers.json prompts object), Normalize module present. Reported by TelePIX as marginally outperforming v1.0 on STELLA/MTEB-Korean." },
-        { "repository_id": "telepix/PIXIE-Rune-Preview", "immutable_revision": "5103ecbda7dd9e502f8414c54731da0c3f2dc72b", "license": "apache-2.0", "note": "explicitly named 'Preview' -- presumed experimental/pre-release, not independently re-verified" }
+        { "repository_id": "telepix/PIXIE-Rune-v1.0", "immutable_revision": "091fe5a6682119cfc02451f37fdece163ddf38de", "license": "apache-2.0", "note": "earlier stable release; architecture/dimension not independently re-verified this Turn beyond the shared family README. Not the pinned build -- kept here only as research context, never as an alternative active pin (exactly one PIXIE-Rune build may be active at a time)." },
+        { "repository_id": "telepix/PIXIE-Rune-Preview", "immutable_revision": "5103ecbda7dd9e502f8414c54731da0c3f2dc72b", "license": "apache-2.0", "note": "explicitly named 'Preview' -- presumed experimental/pre-release, not independently re-verified. Not the pinned build." }
       ],
       "adapter_compatibility": {
         "classification": "COMPATIBLE_VIA_LOCAL_OPENAI_SHAPED_SERVER",
-        "reason": "Provisional, architecture-level judgment shared across all 3 known variants (all sentence-transformers XLM-RoBERTa checkpoints, same TEI-servable stack as KURE-v1/BGE-M3) -- NOT a confirmation that a specific pinned artifact is ready, since competition_status is BLOCKED_UNVERIFIED_MODEL_ID. Notably, v1.5 requires a query-only prefix (\"query: \") applied asymmetrically to queries vs. documents -- any adapter wiring for this candidate must route text through a query/document-mode-aware preparation step, never embed the identical raw text the same way for both roles (see frozen-candidate-registry.mjs's prepareTextForMode)."
+        "reason": "No provider-hosted official HTTP embeddings endpoint exists for this open-weight model. It CAN be served locally via HuggingFace's own Text Embeddings Inference (TEI), whose /v1/embeddings endpoint already accepts {input, model} and returns {data:[{embedding}]} -- byte-shape-compatible with the existing HTTP_EMBEDDINGS adapter contract with zero new protocol code. Requires a query-only prefix (\"query: \") applied asymmetrically to queries vs. documents -- any adapter wiring for this candidate must route text through a query/document-mode-aware preparation step, never embed the identical raw text the same way for both roles (see registry.mjs's prepareTextForMode). This Turn does not install or run any such server against the real model; only a fake loopback mock server is used for protocol/handshake tests."
       },
       "sources": [
         { "url": "https://huggingface.co/telepix/PIXIE-Rune-v1.5", "accessed_at": "2026-08-31T10:24:33Z", "note": "official model card: dimension, max length, architecture, prompt_name usage, apache-2.0 license, non-generative-derivation statement" },
@@ -119,8 +118,9 @@
         { "url": "https://huggingface.co/telepix/PIXIE-Rune-v1.5/raw/main/sentence_bert_config.json", "accessed_at": "2026-08-31T10:24:33Z", "note": "max_seq_length: 6144" },
         { "url": "https://huggingface.co/telepix/PIXIE-Rune-v1.5/raw/main/config.json", "accessed_at": "2026-08-31T10:24:33Z", "note": "architectures: XLMRobertaModel, model_type: xlm-roberta, 24 layers" },
         { "url": "https://huggingface.co/telepix/PIXIE-Rune-v1.5/tree/main", "accessed_at": "2026-08-31T10:24:33Z", "note": "model.safetensors = 2.27 GB" },
-        { "url": "https://huggingface.co/api/models/telepix/PIXIE-Rune-v1.0", "accessed_at": "2026-08-31T10:24:33Z", "note": "official HF API response: sha=091fe5a6682119cfc02451f37fdece163ddf38de, license=apache-2.0" },
-        { "url": "https://huggingface.co/api/models/telepix/PIXIE-Rune-Preview", "accessed_at": "2026-08-31T10:24:33Z", "note": "official HF API response: sha=5103ecbda7dd9e502f8414c54731da0c3f2dc72b, license=apache-2.0" }
+        { "url": "https://huggingface.co/api/models/telepix/PIXIE-Rune-v1.0", "accessed_at": "2026-08-31T10:24:33Z", "note": "official HF API response (research context, not the pinned build): sha=091fe5a6682119cfc02451f37fdece163ddf38de, license=apache-2.0" },
+        { "url": "https://huggingface.co/api/models/telepix/PIXIE-Rune-Preview", "accessed_at": "2026-08-31T10:24:33Z", "note": "official HF API response (research context, not the pinned build): sha=5103ecbda7dd9e502f8414c54731da0c3f2dc72b, license=apache-2.0" },
+        { "url": "owner-decision:turn-p9.2", "accessed_at": "2026-08-31T00:00:00Z", "note": "Owner explicitly confirmed telepix/PIXIE-Rune-v1.5 @ 29dd334196af53e6cfc16674379e743334f5fa66 as the exact pinned PIXIE-Rune build, resolving the Turn P9.1 identity ambiguity." }
       ]
     }
   ]

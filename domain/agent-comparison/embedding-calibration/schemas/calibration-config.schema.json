@@ -33,7 +33,28 @@
     "sample_salt": { "type": "string", "minLength": 1, "description": "Deterministic-sampling salt; the SAME salt against the SAME candidate pool always selects the SAME dataset." },
     "dataset_manifest_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "Pins this config to one already-generated CalibrationDatasetManifest -- a config is never valid against an unpinned or different dataset." },
     "code_revision": { "type": "string", "minLength": 1 },
-    "api_key_env_var": { "type": "string", "minLength": 1, "description": "Name of the environment variable holding the API key. Required when adapter_kind=HTTP_EMBEDDINGS. The key value itself is never part of this config or of any telemetry/log/report output." },
+    "api_key_env_var": { "type": "string", "minLength": 1, "description": "Name of the environment variable holding the API key. Required when adapter_kind=HTTP_EMBEDDINGS UNLESS auth_mode is explicitly \"NONE\". The key value itself is never part of this config or of any telemetry/log/report output." },
+    "auth_mode": {
+      "enum": ["BEARER_ENV", "NONE"],
+      "description": "Turn P9.2. Absent means BEARER_ENV -- identical to every CalibrationConfig this schema has ever accepted before this Turn. NONE is only ever honored by the underlying EmbeddingConfig/adapter for a verified LOOPBACK endpoint hostname."
+    },
+    "network_scope": {
+      "enum": ["LOOPBACK", "EXTERNAL"],
+      "description": "Turn P9.2. Optional, informational self-declaration for manifests/telemetry only -- the adapter independently re-derives the real scope from the endpoint URL and never trusts this field for the auth_mode=NONE safety check."
+    },
+    "server_pin": {
+      "type": "object",
+      "description": "Turn P9.2. OPTIONAL. Absent means no preflight server-identity handshake runs (identical to every CalibrationConfig before this Turn). When present, runner.mjs performs exactly one GET to server_info_url before the first embedding POST and fails the run closed (zero POSTs) on any mismatch -- see runner.mjs's runServerIdentityHandshake.",
+      "additionalProperties": false,
+      "required": ["server_info_url", "expected_repository_id", "expected_model_revision", "expected_max_input_length", "require_preflight_attestation"],
+      "properties": {
+        "server_info_url": { "type": "string", "minLength": 1 },
+        "expected_repository_id": { "type": "string", "minLength": 1 },
+        "expected_model_revision": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "expected_max_input_length": { "type": "integer", "minimum": 1 },
+        "require_preflight_attestation": { "type": "boolean" }
+      }
+    },
     "cache_policy": {
       "type": "object", "additionalProperties": false, "required": ["enabled"],
       "properties": { "enabled": { "type": "boolean" } },
@@ -61,7 +82,11 @@
   },
   "allOf": [
     {
-      "if": { "properties": { "adapter_kind": { "const": "HTTP_EMBEDDINGS" } }, "required": ["adapter_kind"] },
+      "if": {
+        "properties": { "adapter_kind": { "const": "HTTP_EMBEDDINGS" } },
+        "not": { "properties": { "auth_mode": { "const": "NONE" } }, "required": ["auth_mode"] },
+        "required": ["adapter_kind"]
+      },
       "then": {
         "required": ["api_key_env_var"],
         "properties": { "api_key_env_var": { "type": "string", "minLength": 1 } }

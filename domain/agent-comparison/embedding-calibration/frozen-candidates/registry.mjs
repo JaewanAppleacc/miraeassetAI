@@ -132,6 +132,9 @@ export function toCalibrationConfig(candidate, {
   datasetManifestSha256, sampleSalt, codeRevision, maximumItemCount, maximumRequestCount,
   maximumTotalInputUnits, batchSize = 20, requestTimeoutMs = 30000, apiKeyEnvVar, endpointOverride,
   inputPricePerMillionUnits = null, callerRequestsAuthorization = false,
+  // Turn P9.2 (all optional, all additive -- omitting every one of these
+  // reproduces the exact Turn P9.1 config shape byte-for-byte):
+  authMode, networkScope, serverInfoUrlOverride, requirePreflightAttestation = true,
 } = {}) {
   if (typeof candidate.immutable_revision !== "string" || !/^[0-9a-f]{40}$/.test(candidate.immutable_revision)) {
     throw new FrozenCandidateRegistryError(
@@ -182,6 +185,19 @@ export function toCalibrationConfig(candidate, {
     input_price_per_million_units: inputPricePerMillionUnits,
     actual_external_call_authorized: authorized,
   };
-  if (adapterKind === "HTTP_EMBEDDINGS") config.api_key_env_var = apiKeyEnvVar ?? "FROZEN_CANDIDATE_UNUSED_KEY_ENV_VAR";
+  if (adapterKind === "HTTP_EMBEDDINGS") {
+    if (authMode !== undefined) config.auth_mode = authMode;
+    if (networkScope !== undefined) config.network_scope = networkScope;
+    if (authMode !== "NONE") config.api_key_env_var = apiKeyEnvVar ?? "FROZEN_CANDIDATE_UNUSED_KEY_ENV_VAR";
+    if (serverInfoUrlOverride) {
+      config.server_pin = Object.freeze({
+        server_info_url: serverInfoUrlOverride,
+        expected_repository_id: candidate.repository_id,
+        expected_model_revision: candidate.immutable_revision,
+        expected_max_input_length: candidate.max_input_length,
+        require_preflight_attestation: requirePreflightAttestation,
+      });
+    }
+  }
   return Object.freeze(config);
 }
