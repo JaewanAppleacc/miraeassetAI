@@ -1,0 +1,16 @@
+{
+  "base_url": "http://127.0.0.1:8000",
+  "answer_path": "/answer",
+  "question_parameter": "question",
+  "question_id_parameter": "question_id",
+  "gold_path": "run/newq_gold.jsonl",
+  "result_path": "run/newq_results.jsonl",
+  "summary_path": "run/newq_summary.json",
+  "split": "DEV_TUNE",
+  "run_purpose": "FLOW_SELECTION",
+  "timeout_ms": 300000,
+  "concurrency": 1,
+  "retries": 0,
+  "git_commit": "6f1393fa0f4630876b47b480a51d0a6cad4d31a0",
+  "configuration_sha256": "399a064a9e2f45d6391c17fb6e7f933f42c98daa94a3fa2750cfda2932ed52b7"
+}
