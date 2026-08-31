@@ -66,6 +66,18 @@ export function startMockLoopbackEmbeddingServer({ info, dimension = 8, infoResp
       res.end(JSON.stringify(currentInfo));
       return;
     }
+    if (req.method === "POST" && req.url === "/tokenize") {
+      const raw = await readBody(req);
+      const parsed = JSON.parse(raw);
+      // Deterministic, whitespace-based token-count stand-in -- good enough
+      // for exercising the truncation-check ORCHESTRATION logic without a
+      // real tokenizer; real per-model token counts only ever come from
+      // local_embedding_server.py's own real tokenizer.
+      const lengths = parsed.input.map((text) => text.split(/\s+/).filter(Boolean).length);
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify({ lengths, max_input_length: currentInfo.max_input_length }));
+      return;
+    }
     if (req.method === "POST" && req.url === "/v1/embeddings") {
       embedCallCount += 1;
       const raw = await readBody(req);

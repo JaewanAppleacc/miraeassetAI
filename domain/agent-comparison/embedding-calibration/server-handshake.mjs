@@ -67,8 +67,16 @@ async function fetchServerInfo(serverInfoUrl, fetchImpl, requestTimeoutMs) {
     if (!body || typeof body !== "object" || Array.isArray(body)) {
       throw new ServerIdentityHandshakeError("SERVER_INFO_MALFORMED", "/info response body was not a JSON object");
     }
+    // Turn P9.3's own /info contract names this field "embedding_dimension"
+    // (matching CalibrationConfig's own expected_dimension naming); Turn
+    // P9.2's mock server (and any future server) may still send the
+    // shorter "dimension" -- both are accepted and normalized to
+    // `dimension` internally so every downstream check has one name.
+    if (body.dimension === undefined && body.embedding_dimension !== undefined) {
+      body.dimension = body.embedding_dimension;
+    }
     for (const field of ["repository_id", "model_revision", "dimension", "max_input_length", "ready"]) {
-      if (!(field in body)) throw new ServerIdentityHandshakeError("SERVER_INFO_MALFORMED", `/info response is missing required field "${field}"`);
+      if (!(field in body)) throw new ServerIdentityHandshakeError("SERVER_INFO_MALFORMED", `/info response is missing required field "${field}" (or its "embedding_dimension" alias)`);
     }
     return body;
   } finally {

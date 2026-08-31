@@ -14,6 +14,12 @@
 # testing
 /coverage
 
+# python (task-owned venvs are never in-repo; this only catches stray
+# bytecode caches from running .py scripts directly, e.g.
+# scripts/embedding-calibration-real/local_embedding_server.py)
+__pycache__/
+*.pyc
+
 # next.js
 /.next/
 /.vinext/

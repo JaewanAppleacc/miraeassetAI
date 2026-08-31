@@ -1,0 +1,10 @@
+# Turn P9.3: minimal package set for the task-owned local embedding server.
+# No fastapi/uvicorn -- local_embedding_server.py uses only the Python
+# standard library's http.server, so those two dependencies are never
+# installed at all (smaller task-owned cache, fewer moving parts).
+torch
+transformers
+sentence-transformers
+huggingface-hub
+safetensors
+numpy
