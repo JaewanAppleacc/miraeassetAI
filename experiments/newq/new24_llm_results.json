@@ -1,0 +1,848 @@
+{
+  "summary": {
+    "targets": [
+      "N01",
+      "N02",
+      "N03",
+      "N04",
+      "N05",
+      "N06",
+      "N07",
+      "N08",
+      "N09",
+      "N10",
+      "N11",
+      "N12",
+      "N13",
+      "N14",
+      "N15",
+      "N16",
+      "N17",
+      "N18",
+      "N19",
+      "N20",
+      "N21",
+      "N22",
+      "N23",
+      "N24"
+    ],
+    "api_calls": 22,
+    "llm_answers_kept": 19,
+    "json_failures": 3,
+    "api_failures": 0,
+    "fabricated_total": 0,
+    "validator": {
+      "PARTIALLY_SUPPORTED": 11,
+      "SUPPORTED": 13
+    },
+    "tokens": {
+      "input": 96021,
+      "output": 2856,
+      "total": 98877
+    },
+    "cost_krw_ex_vat": 134.31,
+    "cost_krw_inc_vat": 147.74
+  },
+  "rows": [
+    {
+      "qid": "N01",
+      "type": "answerable",
+      "question": "한미반도체가 2023년 5월 Forehope Semiconductor와 체결한 공급계약의 계약금액은 얼마인가?",
+      "expect": [
+        "7,927,088,000"
+      ],
+      "expect_in_answer": [
+        "7,927,088,000"
+      ],
+      "expect_in_evidence": [
+        "7,927,088,000"
+      ],
+      "llm_used": true,
+      "api": "OK",
+      "json_parse": "PASS",
+      "schema": "PASS",
+      "validator": "PARTIALLY_SUPPORTED",
+      "degraded_reason": null,
+      "llm_error": null,
+      "retries": 0,
+      "n_derived": 0,
+      "fabricated": [],
+      "unsupported_numbers": [],
+      "warnings": [],
+      "uncertainty": "",
+      "latency_ms": 2870,
+      "input_tokens": 4015,
+      "output_tokens": 65,
+      "answer": "7,927,088,000원",
+      "degraded_answer": null,
+      "raw_text": "{\"answer\": \"7,927,088,000원\", \"evidence\": [{\"document_id\": \"[exchange_20230530800118]\", \"quote_or_fact\": \"2. 계약내역 | 계약금액(원) | 7,927,088,000\"}], \"uncertainty\": \"\"}"
+    },
+    {
+      "qid": "N02",
+      "type": "answerable",
+      "question": "한미반도체가 2025년 6월 결정한 7공장 신규시설투자 금액과 자기자본 대비 비율은 얼마인가?",
+      "expect": [
+        "28,480,000,000",
+        "5.26"
+      ],
+      "expect_in_answer": [
+        "28,480,000,000",
+        "5.26"
+      ],
+      "expect_in_evidence": [
+        "28,480,000,000",
+        "5.26"
+      ],
+      "llm_used": true,
+      "api": "OK",
+      "json_parse": "PASS",
+      "schema": "PASS",
+      "validator": "SUPPORTED",
+      "degraded_reason": "unsupported",
+      "llm_error": null,
+      "retries": 0,
+      "n_derived": 0,
+      "fabricated": [],
+      "unsupported_numbers": [],
+      "warnings": [],
+      "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+      "latency_ms": 4133,
+      "input_tokens": 2493,
+      "output_tokens": 126,
+      "answer": "공시에서 확인한 값:\n- 투자금액: 28,480,000,000\n- 자기자본대비: 5.26\n함께 확인되는 원문 근거:\n- [answer] 자기자본(원) | 540,887,863,389\n- [answer] 5. 이사회결의일(결정일) | 2025-06-20\n- [answer] ※ 관련 세부 내용은 2024년 7월 23일 유형자산취득결정(자율공시)과 2025년 6월 20일 신규시설투자등(자율공시) 공시문을 확인해주시기 바랍니다.",
+      "degraded_answer": "한미반도체가 2025년 6월에 결정한 7공장 신규 시설 투자 금액은 288억 원이고, 이는 자기자본 대비 5.26%에 해당합니다.",
+      "raw_text": "{\"answer\": \"한미반도체가 2025년 6월에 결정한 7공장 신규 시설 투자 금액은 288억 원이고, 이는 자기자본 대비 5.26%에 해당합니다.\", \"evidence\": [{\"document_id\": \"[exchange_20250620800077]\", \"quote_or_fact\": \"2. 투자내역 | 투자금액(원) | 28,480,000,000\"}, {\"document_id\": \"[exchange_20250620800077]\", \"quote_or_fact\": \"자기자본대비(%) | 5.26\"}], \"uncertainty\": \"\"}"
+    },
+    {
+      "qid": "N03",
+      "type": "answerable",
+      "question": "한미반도체 7공장 신규시설투자의 투자기간 종료일은 언제인가?",
+      "expect": [
+        "2026-11-30"
+      ],
+      "expect_in_answer": [
+        "2026-11-30"
+      ],
+      "expect_in_evidence": [
+        "2026-11-30"
+      ],
+      "llm_used": true,
+      "api": "OK",
+      "json_parse": "PASS",
+      "schema": "PASS",
+      "validator": "PARTIALLY_SUPPORTED",
+      "degraded_reason": null,
+      "llm_error": null,
+      "retries": 0,
+      "n_derived": 0,
+      "fabricated": [],
+      "unsupported_numbers": [],
+      "warnings": [],
+      "uncertainty": "",
+      "latency_ms": 3029,
+      "input_tokens": 2860,
+      "output_tokens": 54,
+      "answer": "2026-11-30",
+      "degraded_answer": null,
+      "raw_text": "{\"answer\": \"2026-11-30\", \"evidence\": [{\"document_id\": \"[exchange_20250620800077]\", \"quote_or_fact\": \"종료일 | 2026-11-30\"}], \"uncertainty\": \"\"}"
+    },
+    {
+      "qid": "N04",
+      "type": "answerable",
+      "question": "에코프로비엠이 2023년 5월 결정한 신규시설투자의 투자금액과 자기자본 대비 비율은 얼마인가?",
+      "expect": [
+        "473,200,000,000",
+        "31.8"
+      ],
+      "expect_in_answer": [
+        "473,200,000,000",
+        "31.8"
+      ],
+      "expect_in_evidence": [
+        "473,200,000,000",
+        "31.8"
+      ],
+      "llm_used": true,
+      "api": "OK",
+      "json_parse": "PASS",
+      "schema": "PASS",
+      "validator": "PARTIALLY_SUPPORTED",
+      "degraded_reason": null,
+      "llm_error": null,
+      "retries": 0,
+      "n_derived": 0,
+      "fabricated": [],
+      "unsupported_numbers": [],
+      "warnings": [],
+      "uncertainty": "",
+      "latency_ms": 4220,
+      "input_tokens": 2967,
+      "output_tokens": 114,
+      "answer": "투자금액은 473,200,000,000원이고, 자기자본 대비 비율은 31.8%입니다.",
+      "degraded_answer": null,
+      "raw_text": "{\"answer\": \"투자금액은 473,200,000,000원이고, 자기자본 대비 비율은 31.8%입니다.\", \"evidence\": [{\"document_id\": \"[exchange_20230523900365]\", \"quote_or_fact\": \"2. 투자내역 | 투자금액(원) | 473,200,000,000\"} , { \"document_id\": \"[exchange_20230523900365]\", \"quote_or_fact\": \"자기자본대비(%) | 31.8\"}], \"uncertainty\": \"\"}"
+    },
+    {
+      "qid": "N05",
+      "type": "answerable",
+      "question": "에코프로비엠이 삼성SDI와 체결한 하이니켈 NCA 양극소재 중장기 공급계약의 총 계약금액과 계약기간은?",
+      "expect": [
+        "43,867,615,524,480",
+        "2028-12-31"
+      ],
+      "expect_in_answer": [
+        "43,867,615,524,480"
+      ],
+      "expect_in_evidence": [
+        "43,867,615,524,480"
+      ],
+      "llm_used": false,
+      "api": "OK",
+      "json_parse": "FAIL (JSON 파싱 실패: Invalid \\escape: line 1 column 273 (char 272))",
+      "schema": "N/A",
+      "validator": "SUPPORTED",
+      "degraded_reason": null,
+      "llm_error": "LLMUnavailable: JSON 파싱 실패: Invalid \\escape: line 1 column 273 (char 272)",
+      "retries": 0,
+      "n_derived": 0,
+      "fabricated": [],
+      "unsupported_numbers": [],
+      "warnings": [],
+      "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+      "latency_ms": 9419,
+      "input_tokens": 2784,
+      "output_tokens": 127,
+      "answer": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [계약금액@에코프로비엠] 계약금액 | 43,867,615,524,480원\n- [answer] 2023.12 | 하이니켈계 NCA 양극소재 중장기 공급계약 체결 (삼성SDI)\n- [answer] 2023.05 | 에코프로비엠, 하이니켈 양극재(CSG, NCA) 글로벌 탄소발자국 인증\n- [answer] 2023.08 | 에코프로비엠-SK온-포드 캐나다 양극재 공장설립을 위한 JV 계약 체결",
+      "degraded_answer": null,
+      "raw_text": "{\"answer\": \"총 계약금액은 43,867,615,524,480원이며, 계약기간은 2024년 1월 1일부터 2028년 12월 31일까지입니다.\", \"evidence\": [{\"document_id\": \"[periodic_20240514001631]\", \"quote_or_fact\": \"계약금액 | 43,867,615,524,480원\"}, {\"document_id\": \"[periodic_20240514001631]\", \"quote_or_fact\": \"계약기간 | 2024.01.01 \\~ 2028.12.31\"}]}"
+    },
+    {
+      "qid": "N06",
+      "type": "answerable",
+      "question": "두산에너빌리티가 2023년 3월 수주한 카자흐스탄 Shymkent 복합화력 공사의 계약금액은 얼마인가?",
+      "expect": [
+        "1,152,180,085,272"
+      ],
+      "expect_in_answer": [
+        "1,152,180,085,272"
+      ],
+      "expect_in_evidence": [
+        "1,152,180,085,272"
+      ],
+      "llm_used": true,
+      "api": "OK",
+      "json_parse": "PASS",
+      "schema": "PASS",
+      "validator": "PARTIALLY_SUPPORTED",
+      "degraded_reason": null,
+      "llm_error": null,
+      "retries": 0,
+      "n_derived": 0,
+      "fabricated": [],
+      "unsupported_numbers": [],
+      "warnings": [],
+      "uncertainty": "",
+      "latency_ms": 3824,
+      "input_tokens": 7166,
+      "output_tokens": 69,
+      "answer": "1,152,180,085,272원",
+      "degraded_answer": null,
+      "raw_text": "{\"answer\": \"1,152,180,085,272원\", \"evidence\": [{\"document_id\": \"[exchange_20230315800453]\", \"quote_or_fact\": \"2. 계약내역 | 계약금액(원) | 1,152,180,085,272\"}], \"uncertainty\": \"\"}"
+    },
+    {
+      "qid": "N07",
+      "type": "answerable",
+      "question": "두산에너빌리티가 2025년 12월 결정한 SMR 전용공장 신규시설투자의 투자금액과 투자기간은?",
+      "expect": [
+        "806,800,000,000",
+        "2031-06-30"
+      ],
+      "expect_in_answer": [
+        "806,800,000,000"
+      ],
+      "expect_in_evidence": [
+        "806,800,000,000"
+      ],
+      "llm_used": true,
+      "api": "OK",
+      "json_parse": "PASS",
+      "schema": "PASS",
+      "validator": "SUPPORTED",
+      "degraded_reason": "unsupported",
+      "llm_error": null,
+      "retries": 0,
+      "n_derived": 0,
+      "fabricated": [],
+      "unsupported_numbers": [],
+      "warnings": [],
+      "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+      "latency_ms": 4824,
+      "input_tokens": 2877,
+      "output_tokens": 169,
+      "answer": "공시에서 확인한 값:\n- 투자금액: 806,800,000,000\n함께 확인되는 원문 근거:\n- [answer] 5. 이사회결의일(결정일) | 2025-12-17\n- [answer] 4. 투자기간 | 시작일 | 2026-03-01\n- [answer] 7. 기타 투자판단과 관련한 중요사항 | - 상기 2. 투자내역은 데이터 센터 등 글로벌 전력 수요 증가에 따른 SMR 수주 물량 증가에 대응하기 위하여, 창원공장 부지에 SMR 전용공장 신축 및 기존공장 최적화, 혁신제조시설 구축하는 건으로, 건축물 및 기계설비 등 관련 유형자산의 취득을 포함하고 있습니다.- 상기 2. 투자내역의 투자금액은 향후 경영환경 및 투자 진행과정에서 변경될 수 있습니다.- 상기 2. 투자내역의 자기자본은 최근 사업연도말(2024.12.31) K-IFRS에 따라 작성된 연결재무제표 기준 입니다.- 상기 4. 투자기간의 시작일과 종료일은 착공예정일을 기준으로 산정되었으며, 향후 경영환경 및 투자 진행 과정에서 변경될 수 있습니다.- 본 공시는 2025년 12월 12일자 보도에 대한 '풍문 또는 보도에 대한 해명(미확정)'에 관한 확정 공시 사항입니다.\n- [answer] ※ 관련공시 | 2025-12-12 풍문 또는 보도에 대한 해명(미확정)",
+      "degraded_answer": "투자금액은 806,800,000,000원이며, 투자기간은 2026년 3월 1일부터 2031년 6월 30일까지입니다.",
+      "raw_text": "{\"answer\": \"투자금액은 806,800,000,000원이며, 투자기간은 2026년 3월 1일부터 2031년 6월 30일까지입니다.\", \"evidence\": [{\"document_id\": \"[exchange_20251217800832]\", \"quote_or_fact\": \"2. 투자내역 | 투자금액(원) | 806,800,000,000\"} , { \"document_id\": \"[exchange_20251217800832]\", \"quote_or_fact\": \"4. 투자기간 | 시작일 | 2026-03-01\"} , { \"document_id\": \"[exchange_20251217800832]\", \"quote_or_fact\": \"4. 투자기간 | 종료일 | 2031-06-30\"}], \"uncertainty\": \"\"}"
+    },
+    {
+      "qid": "N08",
+      "type": "answerable",
+      "question": "한국항공우주가 2023년 2월 체결한 말레이시아 FA-50 경전투기 수출계약의 계약금액과 공급 대수는?",
+      "expect": [
+        "1,195,242,120,000",
+        "18대"
+      ],
+      "expect_in_answer": [
+        "1,195,242,120,000",
+        "18대"
+      ],
+      "expect_in_evidence": [
+        "1,195,242,120,000"
+      ],
+      "llm_used": true,
+      "api": "OK",
+      "json_parse": "PASS",
+      "schema": "PASS",
+      "validator": "PARTIALLY_SUPPORTED",
+      "degraded_reason": null,
+      "llm_error": null,
+      "retries": 0,
+      "n_derived": 0,
+      "fabricated": [],
+      "unsupported_numbers": [],
+      "warnings": [],
+      "uncertainty": "",
+      "latency_ms": 6218,
+      "input_tokens": 6844,
+      "output_tokens": 159,
+      "answer": "한국항공우주는 2023년 2월에 말레이시아와 FA-50 경전투기 수출 계약을 체결하였으며, 계약금액은 1,195,242,120,000원이고, 공급 대수는 18대입니다.",
+      "degraded_answer": null,
+      "raw_text": "{\"answer\": \"한국항공우주는 2023년 2월에 말레이시아와 FA-50 경전투기 수출 계약을 체결하였으며, 계약금액은 1,195,242,120,000원이고, 공급 대수는 18대입니다.\", \"evidence\": [{\"document_id\": \"[exchange_20230224800251]\", \"quote_or_fact\": \"2. 계약내역 | 계약금액(원) | 1,195,242,120,000\"} , { \"document_id\": \"[exchange_20230224800251]\", \"quote_or_fact\": \"6. 주요 계약조건 | 가. 주내용 : FA-50 경전투기 18대 및 관련 지원요소 공급계약\" }], \"uncertainty\": \"\"}"
+    },
+    {
+      "qid": "N09",
+      "type": "answerable",
+      "question": "한국항공우주가 2023년 9월 공시한 Embraer 주익 개발·공급 계약 해지의 해지금액과 사유는 무엇인가?",
+      "expect": [
+        "4,004,923,296,000",
+        "계약이행 불가"
+      ],
+      "expect_in_answer": [
+        "4,004,923,296,000"
+      ],
+      "expect_in_evidence": [
+        "4,004,923,296,000"
+      ],
+      "llm_used": true,
+      "api": "OK",
+      "json_parse": "PASS",
+      "schema": "PASS",
+      "validator": "PARTIALLY_SUPPORTED",
+      "degraded_reason": null,
+      "llm_error": null,
+      "retries": 0,
+      "n_derived": 0,
+      "fabricated": [],
+      "unsupported_numbers": [],
+      "warnings": [],
+      "uncertainty": "",
+      "latency_ms": 10271,
+      "input_tokens": 5224,
+      "output_tokens": 350,
+      "answer": "해지금액은 4,004,923,296,000원이며, 해지 사유는 계약상대방(Embraer)의 차세대 중형 민항기 개발(TPNG) 사업이 중단됨에 따라 당사 주익 개발 및 공급 계약의 불확실성이 확대되고 Embraer社의 계약이행이 불가하여 진행되었습니다.",
+      "degraded_answer": null,
+      "raw_text": "{\"answer\": \"해지금액은 4,004,923,296,000원이며, 해지 사유는 계약상대방(Embraer)의 차세대 중형 민항기 개발(TPNG) 사업이 중단됨에 따라 당사 주익 개발 및 공급 계약의 불확실성이 확대되고 Embraer社의 계약이행이 불가하여 진행되었습니다.\", \"evidence\": [{\"document_id\": \"[exchange_20230926800443]\", \"quote_or_fact\": \"2. 해지내역 | 해지금액(원) | 4,004,923,296,000\"} ,{\"document_id\": \"[exchange_20230926800443]\", \"quote_or_fact\": \"8. 기타 투자판단과 관련한 중요사항 | 가. 상기 해지 건은 2022년 12월 20일 공시한 '단일판매·공급계약 체결'에 대한 해지 공시입니다. 나. 상기 2항의 해지금액은 계약일 당시 매매기준율(1,310.10원/$)을 적용하였습니다. 다. 상기 2항의 최근매출액은 2021년말 연결재무제표 기준입니다. 라. 동 건은 계약상대방(Embraer)의 차세대 중형 민항기 개발(TPNG) 사업이 중단됨에 따라 당사 주익 개발 및 공급 계약의 불확실성이 확대되고 Embraer社의 계약이행이 불가하여 당사의 사업과 시장의 투명성 제고를 위해 진행되는 건입니다. 이와 관련하여 Embraer社로부터 사업 종결 공문을 수령하였습니다.\"}], \"uncertainty\": \"\"}"
+    },
+    {
+      "qid": "N10",
+      "type": "answerable",
+      "question": "대우건설이 2023년 12월 공시한 대전 도안 2-2지구 공동주택 신축공사 계약 해지의 해지금액과 사유는?",
+      "expect": [
+        "1,147,665,603,998",
+        "발주처의 공사도급계약 해제 통보"
+      ],
+      "expect_in_answer": [
+        "1,147,665,603,998",
+        "발주처의 공사도급계약 해제 통보"
+      ],
+      "expect_in_evidence": [
+        "1,147,665,603,998",
+        "발주처의 공사도급계약 해제 통보"
+      ],
+      "llm_used": true,
+      "api": "OK",
+      "json_parse": "PASS",
+      "schema": "PASS",
+      "validator": "PARTIALLY_SUPPORTED",
+      "degraded_reason": null,
+      "llm_error": null,
+      "retries": 0,
+      "n_derived": 0,
+      "fabricated": [],
+      "unsupported_numbers": [],
+      "warnings": [],
+      "uncertainty": "",
+      "latency_ms": 5519,
+      "input_tokens": 7122,
+      "output_tokens": 155,
+      "answer": "대우건설이 2023년 12월에 공시한 대전 도안 2-2지구 공동주택 신축공사 계약 해지에 대한 해지금액은 1,147,665,603,998원이며, 해지 사유는 발주처의 공사도급계약 해제 통보입니다.",
+      "degraded_answer": null,
+      "raw_text": "{\"answer\": \"대우건설이 2023년 12월에 공시한 대전 도안 2-2지구 공동주택 신축공사 계약 해지에 대한 해지금액은 1,147,665,603,998원이며, 해지 사유는 발주처의 공사도급계약 해제 통보입니다.\", \"evidence\": [{\"document_id\": \"[exchange_20231214801332]\", \"quote_or_fact\": \"2. 해지내역 | 해지금액(원) | 1,147,665,603,998\"}, {\"document_id\": \"[exchange_20231214801332]\", \"quote_or_fact\": \"5. 해지 주요사유 | 발주처의 공사도급계약 해제 통보\"}], \"uncertainty\": \"\"}"
+    },
+    {
+      "qid": "N11",
+      "type": "answerable",
+      "question": "두산퓨얼셀이 2024년 공시한 연료전지 시스템 공급계약 해지의 해지금액과 해지일자는?",
+      "expect": [
+        "19,300,000,000",
+        "2024-05-31"
+      ],
+      "expect_in_answer": [
+        "19,300,000,000",
+        "2024-05-31"
+      ],
+      "expect_in_evidence": [
+        "19,300,000,000",
+        "2024-05-31"
+      ],
+      "llm_used": true,
+      "api": "OK",
+      "json_parse": "PASS",
+      "schema": "PASS",
+      "validator": "PARTIALLY_SUPPORTED",
+      "degraded_reason": null,
+      "llm_error": null,
+      "retries": 0,
+      "n_derived": 0,
+      "fabricated": [],
+      "unsupported_numbers": [],
+      "warnings": [],
+      "uncertainty": "",
+      "latency_ms": 4083,
+      "input_tokens": 4461,
+      "output_tokens": 115,
+      "answer": "해지금액은 19,300,000,000원이며, 해지 일자는 2024-05-31입니다.",
+      "degraded_answer": null,
+      "raw_text": "{\"answer\": \"해지금액은 19,300,000,000원이며, 해지 일자는 2024-05-31입니다.\", \"evidence\": [{\"document_id\": \"[exchange_20240603800359]\", \"quote_or_fact\": \"2. 해지내역 | 해지금액(원) | 19,300,000,000\"}, {\"document_id\": \"[exchange_20240603800359]\", \"quote_or_fact\": \"6. 해지일자 | 2024-05-31\"}], \"uncertainty\": \"\"}"
+    },
+    {
+      "qid": "N12",
+      "type": "answerable_multihop",
+      "question": "대우건설이 2023년 12월 해지한 대전 도안 2-2지구 공사는 최초 언제 계약이 체결됐는가?",
+      "expect": [
+        "2022년 5월 2일"
+      ],
+      "expect_in_answer": [
+        "2022년 5월 2일"
+      ],
+      "expect_in_evidence": [
+        "2022년 5월 2일"
+      ],
+      "llm_used": true,
+      "api": "OK",
+      "json_parse": "PASS",
+      "schema": "PASS",
+      "validator": "SUPPORTED",
+      "degraded_reason": null,
+      "llm_error": null,
+      "retries": 0,
+      "n_derived": 0,
+      "fabricated": [],
+      "unsupported_numbers": [],
+      "warnings": [],
+      "uncertainty": "",
+      "latency_ms": 3704,
+      "input_tokens": 4359,
+      "output_tokens": 83,
+      "answer": "2022년 5월 2일",
+      "degraded_answer": null,
+      "raw_text": "{\"answer\": \"2022년 5월 2일\", \"evidence\": [{\"document_id\": \"exchange_20231214801332\", \"quote_or_fact\": \"- 본 건은 2022년 5월 2일 최초 공사도급계약 체결하였고, 발주처의 공사도급계약 해제 통보로 공시하는 건임\"}], \"uncertainty\": \"\"}"
+    },
+    {
+      "qid": "N13",
+      "type": "trap_unknown_corp",
+      "question": "엘지전자의 2025년 신규시설투자 금액은 얼마인가?",
+      "expect": [],
+      "expect_in_answer": [],
+      "expect_in_evidence": [],
+      "llm_used": false,
+      "api": "OK",
+      "json_parse": "FAIL (JSON 파싱 실패: Expecting ',' delimiter: line 1 column 135 (char 134))",
+      "schema": "N/A",
+      "validator": "SUPPORTED",
+      "degraded_reason": null,
+      "llm_error": "LLMUnavailable: JSON 파싱 실패: Expecting ',' delimiter: line 1 column 135 (char 134)",
+      "retries": 0,
+      "n_derived": 0,
+      "fabricated": [],
+      "unsupported_numbers": [],
+      "warnings": [
+        "corp_unspecified"
+      ],
+      "uncertainty": "질문에서 기업을 특정하지 못했다 — 아래 근거는 LG유플러스, 두산퓨얼셀 공시다. 의도한 기업이 아니면 회사명을 정확히 넣어 다시 물어라. 값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+      "latency_ms": 3654,
+      "input_tokens": 3953,
+      "output_tokens": 53,
+      "answer": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [투자금액] 7. 기타 투자판단과 관련한 중요사항 | - 상기 투자는 발전용 고체산화물 연료전지(SOFC, Solid Oxide Fuel Cell) 생산설비를 구축하는 건으로, 건축물, 기계장치 등 관련 유형자산의 취득을 포함하고 있습니다.- 투자소재지 : 전북 군산시- 상기 투자에 소요되는 자금은 '20년 유상증자를 통해 조달한 자금 등 당사 보유 현금으로 충당할 예정입니다.- 2항의 '자기자본'은 2020년말 K-IFRS 개별재무제표 기준 자기자본에 공시사유 발생일까지의 자본잉여금의 증감액을 더한 금액입니다.- 상기 투자금액 및 투자기간은 향후 진행상황에 따라 변동될 수 있습니다.\n- [answer] 종료일 | 2025-06-30\n- [answer] ※ 관련공시 | 2020-10-19 신규시설투자등2021-12-21 신규시설투자등2023-12-28 신규시설투자등\n- [answer] 2. 투자내역 | 투자금액(원) | 615,600,000,000\n- [answer] 4. 투자기간 | 시작일 | 2025-05-07",
+      "degraded_answer": null,
+      "raw_text": "{\"answer\": \"155,800,000,000원\", \"evidence\": [{\"document_id\": \"[exchange_20250430800633]\", \"quote_or_fact\": \"투자금액(원) | 155,800,000,000\"}}]"
+    },
+    {
+      "qid": "N14",
+      "type": "trap_out_of_range",
+      "question": "한미반도체가 2015년에 결정한 신규시설투자 금액은 얼마인가?",
+      "expect": [],
+      "expect_in_answer": [],
+      "expect_in_evidence": [],
+      "llm_used": false,
+      "api": "NO_CALL",
+      "json_parse": "N/A",
+      "schema": "N/A",
+      "validator": "SUPPORTED",
+      "degraded_reason": null,
+      "llm_error": null,
+      "retries": 0,
+      "n_derived": 0,
+      "fabricated": [],
+      "unsupported_numbers": [],
+      "warnings": [],
+      "uncertainty": "질문을 좁히거나 기간·기업 조건을 명시해야 한다.",
+      "latency_ms": 40,
+      "input_tokens": null,
+      "output_tokens": null,
+      "answer": "검색된 공시에서 이 질문에 답할 근거를 찾지 못했다.",
+      "degraded_answer": null,
+      "raw_text": ""
+    },
+    {
+      "qid": "N15",
+      "type": "trap_not_in_corpus",
+      "question": "에코프로비엠 대표이사의 출신 학교는 어디인가?",
+      "expect": [],
+      "expect_in_answer": [],
+      "expect_in_evidence": [],
+      "llm_used": false,
+      "api": "OK",
+      "json_parse": "FAIL (JSON 파싱 실패: Expecting property name enclosed in double quotes: line 1 column 264 (char 263))",
+      "schema": "N/A",
+      "validator": "SUPPORTED",
+      "degraded_reason": null,
+      "llm_error": "LLMUnavailable: JSON 파싱 실패: Expecting property name enclosed in double quotes: line 1 column 264 (char 263)",
+      "retries": 0,
+      "n_derived": 0,
+      "fabricated": [],
+      "unsupported_numbers": [],
+      "warnings": [],
+      "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+      "latency_ms": 4957,
+      "input_tokens": 8107,
+      "output_tokens": 225,
+      "answer": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 주재환 | 남 | 1958년 04월 | 사장 | 사내이사 | 상근 | 사업총괄대표이사이사회 의장 | □ 고려대학교 화학공학 석사□ 삼성SDI 셀 사업부장□ 일진머티리얼즈 대표이사□ 현) 에코프로비엠 대표이사 | - | - | 계열회사 임원 | 2022.03.14 ~ | 2025년 03월 28일\n- [answer] 최문호 | 남 | 1974년 04월 | 사장 | 사내이사 | 상근 | 개발총괄대표이사인사위원회 위원 | □ 서울대학교 화학공학 학사□ 한양대학교 에너지공학 박사□ 현) 에코프로비엠 대표이사(CTO) | 122,028 | - | 계열회사 임원 | 2016.05.02 ~ | 2025년 03월 28일\n- [answer] 신일용 | 남 | 1957년 08월 | 사외이사 | 사외이사 | 비상근 | 내부거래위원회 위원장인사위원회 위원 | □ 서울대학교 경영학 학사□ 삼성SDI (상무)□ 갤럭시아커뮤니케이션 (대표)□ 세아그룹 (전무) | - | - | 계열회사 임원 | 2019.03.28 ~ | 2025년 03월 28일\n- [answer] 주재환 | 남 | 1958년 04월 | 사장 | 사내이사 | 상근 | 대표이사 (사업총괄)이사회 의장 | □ 고려대학교 화학공학 석사□ 삼성SDI 셀 사업부장□ 일진머티리얼즈 대표이사□ 현)에코프로BM 대표이사 | 2022.03.14 ~ 현재 | 2025.03.28\n- [answer] 최문호 | 남 | 1974년 04월 | 사장 | 사내이사 | 상근 | 대표이사 (개발총괄)인사위원회 위원 | □ 서울대학교 화학공학 학사□ 한양대학교 에너지공학 박사□ 현)에코프로BM 대표이사(CTO) | 2016.05.02 ~ 현재 | 2025.03.28",
+      "degraded_answer": null,
+      "raw_text": "{\"answer\": \"고려대학교 화학공학 석사와 서울대학교 화학공학 학사\", \"evidence\": [{\"document_id\": \"[periodic_20240417000540]\", \"quote_or_fact\": \"주재환 | 남 | 1958년 04월 | 사장 | 사내이사 | 상근 | 사업총괄대표이사이사회 의장 | \\\\u25a0 고려대학교 화학공학 석사\\\\u25a0 삼성SDI 셀 사업부장\\\\u25a0 일진머티리얼즈 대표이사\\\\u25a0 현) 에코프로비엠 대표이사\"}], [\"document_id\": \"[periodic_20240417000540]\", \"quote_or_fact\": \"최문호 | 남 | 1974년 04월 | 사장 | 사내이사 | 상근 | 개발총괄대표이사인사위원회 위원 | \\\\u25a0 서울대학교 화학공학 학사\\\\u25a0 한양대학교 에너지공학 박사\\\\u25a0 현) 에코프로비엠 대표이사(CTO)\"}]"
+    },
+    {
+      "qid": "N16",
+      "type": "calc_two_corp",
+      "question": "한국항공우주의 말레이시아 FA-50 계약금액과 두산에너빌리티의 카자흐스탄 Shymkent 계약금액 중 어느 쪽이 더 크고 차이는 얼마인가?",
+      "expect": [
+        "1,195,242,120,000",
+        "1,152,180,085,272"
+      ],
+      "expect_in_answer": [
+        "1,195,242,120,000",
+        "1,152,180,085,272"
+      ],
+      "expect_in_evidence": [
+        "1,195,242,120,000",
+        "1,152,180,085,272"
+      ],
+      "llm_used": false,
+      "api": "NO_CALL",
+      "json_parse": "N/A",
+      "schema": "N/A",
+      "validator": "SUPPORTED",
+      "degraded_reason": null,
+      "llm_error": null,
+      "retries": 0,
+      "n_derived": 2,
+      "fabricated": [],
+      "unsupported_numbers": [],
+      "warnings": [],
+      "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+      "latency_ms": 100,
+      "input_tokens": null,
+      "output_tokens": null,
+      "answer": "계산 결과(원문 값에서 코드가 계산):\n- 계약금액 차이: 두산에너빌리티 1,152,180,085,272 vs 한국항공우주 1,195,242,120,000 → 43,062,034,728\n- 계약금액이 더 큰 쪽: 한국항공우주\n\n공시에서 확인한 값:\n- 두산에너빌리티 계약금액: 1,152,180,085,272\n- 한국항공우주 계약금액: 1,195,242,120,000\n함께 확인되는 원문 근거:\n- [answer] 5. 계약기간 | 시작일 | 2023-02-24\n- [answer] - 체결계약명 | 말레이시아 FA-50 경전투기 수출사업 계약\n- [answer] 5. 계약기간 | 시작일 | 2023-03-14",
+      "degraded_answer": null,
+      "raw_text": ""
+    },
+    {
+      "qid": "N17",
+      "type": "trap_ambiguous",
+      "question": "계약금액이 얼마인가?",
+      "expect": [],
+      "expect_in_answer": [],
+      "expect_in_evidence": [],
+      "llm_used": true,
+      "api": "OK",
+      "json_parse": "PASS",
+      "schema": "PASS",
+      "validator": "PARTIALLY_SUPPORTED",
+      "degraded_reason": null,
+      "llm_error": null,
+      "retries": 0,
+      "n_derived": 0,
+      "fabricated": [],
+      "unsupported_numbers": [],
+      "warnings": [
+        "corp_unspecified"
+      ],
+      "uncertainty": "질문에서 기업을 특정하지 못했다 — 아래 근거는 한전기술 공시다. 의도한 기업이 아니면 회사명을 정확히 넣어 다시 물어라.",
+      "latency_ms": 2562,
+      "input_tokens": 5461,
+      "output_tokens": 65,
+      "answer": "42,724,000,000원",
+      "degraded_answer": null,
+      "raw_text": "{\"answer\": \"42,724,000,000원\", \"evidence\": [{\"document_id\": \"[exchange_20231020800499]\", \"quote_or_fact\": \"2. 계약내역 | 계약금액(원) | 42,724,000,000\"}], \"uncertainty\": \"\"}"
+    },
+    {
+      "qid": "N18",
+      "type": "answerable",
+      "question": "한미반도체가 2023년 5월 체결한 계약의 계약상대방은 어느 나라 회사이며 계약 종료일은 언제인가?",
+      "expect": [
+        "중국",
+        "2023-08-31"
+      ],
+      "expect_in_answer": [
+        "중국",
+        "2023-08-31"
+      ],
+      "expect_in_evidence": [
+        "중국",
+        "2023-08-31"
+      ],
+      "llm_used": true,
+      "api": "OK",
+      "json_parse": "PASS",
+      "schema": "PASS",
+      "validator": "SUPPORTED",
+      "degraded_reason": "unsupported",
+      "llm_error": null,
+      "retries": 0,
+      "n_derived": 0,
+      "fabricated": [],
+      "unsupported_numbers": [],
+      "warnings": [],
+      "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+      "latency_ms": 4290,
+      "input_tokens": 4113,
+      "output_tokens": 122,
+      "answer": "공시에서 확인한 값:\n- 종료일: 2024-04-05\n함께 확인되는 원문 근거:\n- [계약상대] 2022.11.14 | 단일ㆍ판매공급계약(자율공시) | a.계약상대: NANYA PCB, 대만b.거래품목: 반도체 제조용 장비c.거래규모: 3,370백만원d.거래종료: 2023년 09월 08일 | 생산 & 계약이행 중\n- [answer] 2023.05.30 | 단일ㆍ판매공급계약(자율공시) | a.계약상대: Forehope, 중국b.거래품목: 반도체 제조용 장비c.거래규모: 7,927백만원d.거래종료: 2023년 08월 31일 | 생산 & 계약이행 중\n- [answer] 2023.06.12 | 단일ㆍ판매공급계약(자율공시) | a.계약상대: Infineon, 싱가포르b.거래품목: 반도체 제조용 장비c.거래규모: 1,219백만원d.거래종료: 2023년 10월 24일 | 생산 & 계약이행 중\n- [answer] 5. 계약기간 | 시작일 | 2023-08-31",
+      "degraded_answer": "Forehope Semiconductor (Ningbo) Co.,Ltd., 2023-08-31",
+      "raw_text": "{\"answer\": \"Forehope Semiconductor (Ningbo) Co.,Ltd., 2023-08-31\", \"evidence\": [{\"document_id\": \"[exchange_20230530800118]\", \"quote_or_fact\": \"a.계약상대: Forehope Semiconductor (Ningbo) Co.,Ltd.\", \"quote_position\": 3}, {\"document_id\": \"[exchange_20230530800118]\", \"quote_or_fact\": \"d.거래종료: 2023년 08월 31일\", \"quote_position\": 4}], \"uncertainty\": \"\"}"
+    },
+    {
+      "qid": "N19",
+      "type": "answerable_other_mech",
+      "question": "NAVER가 2025년 1월 2일 결정한 자기주식 처분의 처분예정주식 수와 처분예정금액은 얼마인가?",
+      "expect": [
+        "108,354",
+        "20,999,005,200"
+      ],
+      "expect_in_answer": [
+        "108,354",
+        "20,999,005,200"
+      ],
+      "expect_in_evidence": [],
+      "llm_used": true,
+      "api": "OK",
+      "json_parse": "PASS",
+      "schema": "PASS",
+      "validator": "SUPPORTED",
+      "degraded_reason": null,
+      "llm_error": null,
+      "retries": 0,
+      "n_derived": 0,
+      "fabricated": [],
+      "unsupported_numbers": [],
+      "warnings": [],
+      "uncertainty": "",
+      "latency_ms": 4335,
+      "input_tokens": 3395,
+      "output_tokens": 145,
+      "answer": "NAVER가 2025년 1월 2일 결정한 자기주식 처분의 처분예정주식 수는 108,354주이고, 처분예정금액은 20,999,005,200원입니다.",
+      "degraded_answer": null,
+      "raw_text": "{\"answer\": \"NAVER가 2025년 1월 2일 결정한 자기주식 처분의 처분예정주식 수는 108,354주이고, 처분예정금액은 20,999,005,200원입니다.\", \"evidence\": [{\"document_id\": \"major_20250102000373\", \"quote_or_fact\": \"1. 처분예정주식(주) | 보통주식 | 108,354\"}, {\"document_id\": \"major_20250102000373\", \"quote_or_fact\": \"3. 처분예정금액(원) | 보통주식 | 20,999,005,200\"}], \"uncertainty\": \"\"}"
+    },
+    {
+      "qid": "N20",
+      "type": "answerable_other_mech",
+      "question": "NAVER가 2024년 7월 결정한 자기주식 처분의 처분예정금액과 처분목적은 무엇인가?",
+      "expect": [
+        "40,174,398,000",
+        "보상 경쟁력 강화"
+      ],
+      "expect_in_answer": [
+        "40,174,398,000",
+        "보상 경쟁력 강화"
+      ],
+      "expect_in_evidence": [
+        "40,174,398,000"
+      ],
+      "llm_used": true,
+      "api": "OK",
+      "json_parse": "PASS",
+      "schema": "PASS",
+      "validator": "SUPPORTED",
+      "degraded_reason": null,
+      "llm_error": null,
+      "retries": 0,
+      "n_derived": 0,
+      "fabricated": [],
+      "unsupported_numbers": [],
+      "warnings": [],
+      "uncertainty": "",
+      "latency_ms": 4577,
+      "input_tokens": 3107,
+      "output_tokens": 146,
+      "answer": "NAVER가 2024년 7월 결정한 자기주식 처분의 처분예정금액은 40,174,398,000원이며, 처분목적은 '보상 경쟁력 강화를 위한 직원 대상 자기주식 지급'입니다.",
+      "degraded_answer": null,
+      "raw_text": "{\"answer\": \"NAVER가 2024년 7월 결정한 자기주식 처분의 처분예정금액은 40,174,398,000원이며, 처분목적은 '보상 경쟁력 강화를 위한 직원 대상 자기주식 지급'입니다.\", \"evidence\": [{\"document_id\": \"major_20240701000614\", \"quote_or_fact\": \"3. 처분예정금액(원) | 보통주식 | 40,174,398,000\"}, {\"document_id\": \"major_20240701000614\", \"quote_or_fact\": \"5. 처분목적 | 보상 경쟁력 강화를 위한 직원 대상 자기주식 지급\"}], \"uncertainty\": \"\"}"
+    },
+    {
+      "qid": "N21",
+      "type": "answerable_other_mech",
+      "question": "메리츠금융지주가 2025년 3월 해지한 자기주식취득 신탁계약의 해지 전 계약금액과 해지예정주식 수는?",
+      "expect": [
+        "500,000,000,000",
+        "6,090,941"
+      ],
+      "expect_in_answer": [],
+      "expect_in_evidence": [
+        "500,000,000,000"
+      ],
+      "llm_used": true,
+      "api": "OK",
+      "json_parse": "PASS",
+      "schema": "FAIL missing=['uncertainty']",
+      "validator": "SUPPORTED",
+      "degraded_reason": null,
+      "llm_error": null,
+      "retries": 0,
+      "n_derived": 0,
+      "fabricated": [],
+      "unsupported_numbers": [],
+      "warnings": [],
+      "uncertainty": "",
+      "latency_ms": 6583,
+      "input_tokens": 3876,
+      "output_tokens": 115,
+      "answer": "계약금액: 550,000,000,000원, 해지예정주식 수: 4,792,700주",
+      "degraded_answer": null,
+      "raw_text": "{\"answer\": \"계약금액: 550,000,000,000원, 해지예정주식 수: 4,792,700주\", \"evidence\": [{\"document_id\": \"major_20250820000169\", \"quote_or_fact\": \"1. 계약금액(원) | 해지 전 | 550,000,000,000\"}, {\"document_id\": \"major_20250820000169\", \"quote_or_fact\": \"9. 해지예정주식(주) | 보통주식 | 4,792,700\"}]}"
+    },
+    {
+      "qid": "N22",
+      "type": "answerable_other_mech",
+      "question": "메리츠금융지주가 2023년 11월 해지한 자기주식취득 신탁계약의 해지목적과 해지 전 계약금액은?",
+      "expect": [
+        "신탁계약기간 만료",
+        "200,000,000,000"
+      ],
+      "expect_in_answer": [
+        "신탁계약기간 만료",
+        "200,000,000,000"
+      ],
+      "expect_in_evidence": [
+        "200,000,000,000"
+      ],
+      "llm_used": true,
+      "api": "OK",
+      "json_parse": "PASS",
+      "schema": "FAIL missing=['uncertainty']",
+      "validator": "SUPPORTED",
+      "degraded_reason": null,
+      "llm_error": null,
+      "retries": 0,
+      "n_derived": 0,
+      "fabricated": [],
+      "unsupported_numbers": [],
+      "warnings": [],
+      "uncertainty": "",
+      "latency_ms": 5608,
+      "input_tokens": 3204,
+      "output_tokens": 97,
+      "answer": "신탁계약기간 만료, 200,000,000,000원",
+      "degraded_answer": null,
+      "raw_text": "{\"answer\": \"신탁계약기간 만료, 200,000,000,000원\", \"evidence\": [{\"document_id\": \"major_20231121000308\", \"quote_or_fact\": \"해지목적 | 신탁계약기간 만료\"}, {\"document_id\": \"major_20231121000308\", \"quote_or_fact\": \"1. 계약금액(원) | 해지 전 | 200,000,000,000\"}]}"
+    },
+    {
+      "qid": "N23",
+      "type": "answerable_other_mech",
+      "question": "와이지엔터테인먼트 최대주주가 2024년 1월 제출한 대량보유상황보고서에서 이번 보고서 기준 보유주식 수와 보유비율은?",
+      "expect": [
+        "5,098,596",
+        "27.28"
+      ],
+      "expect_in_answer": [
+        "5,098,596",
+        "27.28"
+      ],
+      "expect_in_evidence": [
+        "5,098,596",
+        "27.28"
+      ],
+      "llm_used": true,
+      "api": "OK",
+      "json_parse": "PASS",
+      "schema": "PASS",
+      "validator": "PARTIALLY_SUPPORTED",
+      "degraded_reason": null,
+      "llm_error": null,
+      "retries": 0,
+      "n_derived": 0,
+      "fabricated": [],
+      "unsupported_numbers": [],
+      "warnings": [],
+      "uncertainty": "",
+      "latency_ms": 2679,
+      "input_tokens": 4322,
+      "output_tokens": 61,
+      "answer": "5,098,596 | 27.28",
+      "degraded_answer": null,
+      "raw_text": "{\"answer\": \"5,098,596 | 27.28\", \"evidence\": [{\"document_id\": \"[holding_20240123000009]\", \"quote_or_fact\": \"이번 보고서 | 5,098,596 | 27.28\"}], \"uncertainty\": \"\"}"
+    },
+    {
+      "qid": "N24",
+      "type": "answerable_other_mech",
+      "question": "2023년 3월 와이지엔터테인먼트 대량보유상황보고서의 보고사유와 이번 보고서 보유비율은 무엇인가?",
+      "expect": [
+        "특별관계자 및 보유주식수 변동",
+        "24.92"
+      ],
+      "expect_in_answer": [],
+      "expect_in_evidence": [
+        "24.92"
+      ],
+      "llm_used": true,
+      "api": "OK",
+      "json_parse": "PASS",
+      "schema": "PASS",
+      "validator": "PARTIALLY_SUPPORTED",
+      "degraded_reason": null,
+      "llm_error": null,
+      "retries": 0,
+      "n_derived": 0,
+      "fabricated": [],
+      "unsupported_numbers": [],
+      "warnings": [],
+      "uncertainty": "",
+      "latency_ms": 7135,
+      "input_tokens": 3311,
+      "output_tokens": 241,
+      "answer": "2023년 7월 12일 기준 대량보유상황보고의 한도 기준(5%) 보다 하락에 따른 자발적 변동보고 그 후, 2023년 7월 13일 기준으로 5% 이상 보유하게 되어 보고함. 2023년 7월 28일 기준 다시 대량보유상황보고 한도 기준보다(5%) 하락하여 자발적 변동 보고함 | 878,422 | 4.70",
+      "degraded_answer": null,
+      "raw_text": "{\"answer\": \"2023년 7월 12일 기준 대량보유상황보고의 한도 기준(5%) 보다 하락에 따른 자발적 변동보고 그 후, 2023년 7월 13일 기준으로 5% 이상 보유하게 되어 보고함. 2023년 7월 28일 기준 다시 대량보유상황보고 한도 기준보다(5%) 하락하여 자발적 변동 보고함 | 878,422 | 4.70\", \"evidence\": [{\"document_id\": \"[holding_20230807000118]\", \"quote_or_fact\": \"보고사유 | 2023년 7월 12일 기준 대량보유상황보고의 한도 기준(5%) 보다 하락에 따른 자발적 변동보고 그 후, 2023년 7월 13일 기준으로 5% 이상 보유하게 되어 보고함2023년 7월 28일 기준 다시 대량보유상황보고 한도 기준보다(5%) 하락하여 자발적 변동 보고함\"}], \"uncertainty\": \"\"}"
+    }
+  ]
+}
