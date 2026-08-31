@@ -22,7 +22,9 @@ COMPARISON_WORDS = (
     "증가율", "감소율", "증감률", "증감", "증가액", "감소액", "증가", "감소",
     "퍼센트", "%", "차이", "변화", "변했", "비교",
 )
-PERCENT_DECIMALS = 2                 # 백분율 반올림 자릿수(고정)
+# 백분율 반올림 자릿수. 팀 공통 Gold의 scoring_spec이 rounding=3, tolerance=0.001을
+# 쓰므로 3자리로 맞춘다 — 2자리로 자르면 반올림 차이만으로 오답이 된다(3.15 vs 3.145).
+PERCENT_DECIMALS = 3
 _NUM_RE = re.compile(r"-?\d[\d,]*(?:\.\d+)?")
 _UNIT_RE = re.compile(r"단위\s*[::]\s*([^\s|)]+)")
 

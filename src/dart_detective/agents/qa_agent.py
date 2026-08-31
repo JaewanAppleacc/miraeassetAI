@@ -378,6 +378,8 @@ _PERIOD_YEAR_RE = re.compile(r"(?:제\s*\d+\s*기[^|]*?)?((?:19|20)\d{2})\s*[.�
 _VALUE_RE = re.compile(r"\d[\d,]*")
 # 값 칸 판정: 금액·비율만. 날짜(2026-11-30)나 설명 문장은 계산에 쓰지 않는다.
 _PICK_VALUE_RE = re.compile(r"\(?\d[\d,]*(?:\.\d+)?\)?%?")
+# 날짜도 값이다. 계약 시작일·종료일·해지일자는 표에 2023-04-28 형태로 적힌다.
+_PICK_DATE_RE = re.compile(r"(?:19|20)\d{2}[-.]\d{1,2}[-.]\d{1,2}")
 
 
 def period_columns(chunk: RetrievedChunk) -> dict[int, int]:
@@ -437,7 +439,12 @@ def picked_value_of(line: str, column: int | None) -> str | None:
         return value_at(line, column)
     cells = [c.strip() for c in line.split("|")[1:]]
     values = [c for c in cells if c and _PICK_VALUE_RE.fullmatch(c.replace(" ", ""))]
-    return values[0] if len(values) == 1 else None
+    if len(values) == 1:
+        return values[0]
+    dates = [c for c in cells if c and _PICK_DATE_RE.fullmatch(c.replace(" ", ""))]
+    if len(dates) == 1:
+        return dates[0]
+    return None
 
 
 def corp_tokens(corps: Sequence[str]) -> frozenset[str]:

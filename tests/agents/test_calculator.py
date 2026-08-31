@@ -1,7 +1,7 @@
 """결정론적 계산기 — 산술은 코드가 한다(LLM 아님).
 
 Q12 실측 배경: HyperCLOVA X가 올바른 원문 행 4개를 인용하고도 증가율을
-2.95% / 46.67%로 계산했다. 정답은 3.15% / 46.28%다.
+2.95% / 46.67%로 계산했다. 정답은 3.145% / 46.276%다(팀 Gold의 rounding=3 기준).
 """
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ def values(**kw) -> dict:
 def test_q12_revenue_rate():
     got = calculator.compute("매출액", "매출액_2023", REV_2023, "매출액_2025", REV_2025)
     rate = next(d for d in got if d.kind == "increase_rate")
-    assert rate.value == "3.15"          # LLM이 낸 2.95가 아니다
+    assert rate.value == "3.145"         # LLM이 낸 2.95가 아니다
     assert rate.unit == "%"
     assert rate.source_slots == ("매출액_2023", "매출액_2025")
     assert rate.source_values == (REV_2023, REV_2025)
@@ -34,14 +34,14 @@ def test_q12_revenue_rate():
 def test_q12_operating_profit_rate():
     got = calculator.compute("영업이익", "영업이익_2023", OP_2023, "영업이익_2025", OP_2025)
     rate = next(d for d in got if d.kind == "increase_rate")
-    assert rate.value == "46.28"         # LLM이 낸 46.67이 아니다
+    assert rate.value == "46.276"        # LLM이 낸 46.67이 아니다
 
 
 def test_q12_rejects_llm_numbers():
     """LLM이 만든 값은 계산 결과로 인정되지 않는다."""
     got = calculator.compute("매출액", "매출액_2023", REV_2023, "매출액_2025", REV_2025)
     allowed = calculator.allowed_numbers(got)
-    assert "3.15" in allowed
+    assert "3.145" in allowed
     assert "2.95" not in allowed
     assert "46.67" not in allowed
 
@@ -59,7 +59,7 @@ def test_decrease_rate_is_negative():
     got = calculator.compute("매출액", "매출액_2023", "1,000", "매출액_2025", "800")
     rate = next(d for d in got if d.kind == "increase_rate")
     amount = next(d for d in got if d.kind == "increase_amount")
-    assert rate.value == "-20.00"
+    assert rate.value == "-20.000"
     assert amount.value == "-200"
 
 
@@ -71,7 +71,7 @@ def test_parenthesis_is_read_as_negative():
 
 def test_rounding_is_half_up_and_fixed_to_two_decimals():
     got = calculator.compute("x", "x_2023", "10000", "x_2025", "10125")
-    assert next(d for d in got if d.kind == "increase_rate").value == "1.25"
+    assert next(d for d in got if d.kind == "increase_rate").value == "1.250"
 
 
 # ---------- 예외 — 계산하지 않는다 ----------

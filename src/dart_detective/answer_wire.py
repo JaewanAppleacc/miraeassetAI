@@ -18,6 +18,7 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Any, Mapping
 
 # 팀 계약이 정한 값만 쓸 수 있다(STRUCTURED / RETRIEVAL / BOTH / EARLY_EXIT).
@@ -91,8 +92,8 @@ GOLD_FIELD_OF: dict[str, str] = {
     "계약금액": "contract_amount",
     "해지금액": "termination_amount",
     "투자금액": "investment_amount",
-    "자기자본대비": "equity_ratio",
-    "매출액대비": "revenue_ratio",
+    "자기자본대비": "equity_ratio_percent",
+    "매출액대비": "revenue_ratio_percent",
     "최근매출액": "recent_revenue",
     "자기자본": "equity",
     "시작일": "period_start",
@@ -101,6 +102,17 @@ GOLD_FIELD_OF: dict[str, str] = {
     "이사회결의일": "decision_date",
     "매출액": "revenue",
     "영업이익": "operating_profit",
+}
+# 지표 × 연도 자리는 이름을 규칙으로 만든다(revenue_2023). Gold에는 단위를 붙인
+# 이름(revenue_2023_million_krw)도 있는데, 그건 **표의 단위가 실제로 백만원일 때만**
+# 내보낸다 — 이름이 단위를 주장하기 때문이다.
+METRIC_EN: dict[str, str] = {"매출액": "revenue", "영업이익": "operating_profit"}
+UNIT_SUFFIX: dict[str, str] = {"백만원": "million_krw", "천원": "thousand_krw", "원": "krw"}
+# 코드가 계산한 값의 이름도 규칙으로 만든다. 문항별 이름을 사전에 박지 않는다 —
+# 그건 정답지를 코드에 넣는 것이다.
+DERIVED_SUFFIX: dict[str, str] = {
+    "increase_rate": "change_percent",
+    "difference": "diff_krw",
 }
 
 
@@ -119,6 +131,47 @@ def _number_or_text(raw: str) -> Any:
     return -value if negative else value
 
 
+_UNIT_IN_LINE = re.compile(r"단위\s*[::]\s*([^\s|)]+)")
+_YEAR_SLOT = re.compile(r"^(.+)_((?:19|20)\d{2})$")
+
+
+def _unit_of(line: str) -> str:
+    m = _UNIT_IN_LINE.search(line or "")
+    return m.group(1) if m else ""
+
+
+def field_names_for(slot: str, line: str) -> list[str]:
+    """자리 이름에서 Gold 필드 이름을 규칙으로 만든다.
+
+    문항마다 다른 이름(crane_investment_amount 같은)은 만들지 않는다 — 그건 정답지를
+    코드에 박는 일이다. 여기서 만드는 것은 규칙으로 유도되는 이름뿐이다:
+      계약금액          -> contract_amount
+      매출액_2023       -> revenue_2023 (표 단위가 백만원이면 revenue_2023_million_krw도)
+    """
+    base = slot.split("@", 1)[0]
+    direct = GOLD_FIELD_OF.get(base)
+    if direct:
+        return [direct]
+    m = _YEAR_SLOT.match(base)
+    if not m:
+        return []
+    metric_en = METRIC_EN.get(m.group(1))
+    if not metric_en:
+        return []
+    names = [f"{metric_en}_{m.group(2)}"]
+    suffix = UNIT_SUFFIX.get(_unit_of(line))
+    if suffix:
+        names.append(f"{names[0]}_{suffix}")
+    return names
+
+
+def derived_field_names(metric: str, kind: str) -> list[str]:
+    """코드 계산값의 이름도 규칙으로. 매출액 증가율 -> revenue_change_percent."""
+    metric_en = METRIC_EN.get(metric)
+    suffix = DERIVED_SUFFIX.get(kind)
+    return [f"{metric_en}_{suffix}"] if metric_en and suffix else []
+
+
 def looked_up_values(state: Mapping[str, Any]) -> dict[str, Any]:
     """selector가 자리마다 확정한 원문 값. 계산이 아니라 조회다.
 
@@ -130,24 +183,38 @@ def looked_up_values(state: Mapping[str, Any]) -> dict[str, Any]:
         picked = match.get("picked_value")
         if not picked:
             continue
-        item = match["slot"].split("@", 1)[0].rsplit("_", 1)[0]
-        field = GOLD_FIELD_OF.get(item) or GOLD_FIELD_OF.get(match["slot"])
-        if field and field not in out:
-            out[field] = _number_or_text(picked)
+        for field in field_names_for(match["slot"], match.get("evidence_text", "")):
+            out.setdefault(field, _number_or_text(picked))
+    return out
+
+
+def derived_values(state: Mapping[str, Any]) -> dict[str, Any]:
+    """코드가 계산한 값을 Gold 필드 이름으로. 값 자체는 calculator가 만든 그대로다."""
+    out: dict[str, Any] = {}
+    for d in state.get("derived") or []:
+        for field in derived_field_names(d["metric"], d["kind"]):
+            out.setdefault(field, _number_or_text(d["value"]))
     return out
 
 
 def calculation_of(state: Mapping[str, Any]) -> dict[str, Any]:
-    """코드가 만든 값 + selector가 확정한 조회값. 없으면 빈 오브젝트."""
+    """코드가 만든 값 + selector가 확정한 조회값.
+
+    하니스는 `calculation.result`(없으면 `.value`) **안쪽**을 본다 — 최상위에 필드를
+    늘어놔도 읽지 않는다(closed-metric.mjs의 structuredRaw). 값이 여러 개인 답은
+    result를 오브젝트로, 계산 결과 하나뿐이면 그 값을 그대로 둔다.
+    """
     derived = state.get("derived") or []
-    looked_up = looked_up_values(state)
+    looked_up = {**looked_up_values(state), **derived_values(state)}
     if not derived:
-        return dict(looked_up)
+        return {"result": looked_up, "value": looked_up} if looked_up else {}
     primary = derived[0]
+    result: Any = {**looked_up} if looked_up else primary["value"]
     return {
         **looked_up,
-        "result": primary["value"],
-        "value": primary["value"],
+        "result": result,
+        "value": result,
+        "primary_value": primary["value"],
         "unit": primary["unit"] or None,
         "metric": primary["metric"],
         "formula": primary["formula"],

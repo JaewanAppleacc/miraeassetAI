@@ -1,5 +1,5 @@
 {
-  "run_id": "3fe8536e-4db5-48d9-8798-076061e59adc",
+  "run_id": "5f5afc96-b508-4e8c-b090-66a873f3ef33",
   "configuration_sha256": "1c04ed78d4fa742b3323ec18b111176eeeb1fde459f598c3fae4b531cc335f8e",
   "git_commit": "6f1393fa0f4630876b47b480a51d0a6cad4d31a0",
   "total": 25,
@@ -9,8 +9,8 @@
   "metric_eligible": 25,
   "metric_excluded": 0,
   "metric_pass": 34,
-  "metric_fail": 63,
-  "not_scored": 47,
+  "metric_fail": 67,
+  "not_scored": 43,
   "review_required": 13,
   "timeouts": 0,
   "http_errors": 0,
@@ -18,8 +18,8 @@
   "reservation_failures": 0,
   "question_echo_mismatches": 0,
   "latency_ms": {
-    "p50": 375,
-    "p95": 2038
+    "p50": 402,
+    "p95": 2358
   },
   "answerability_distribution": {
     "SUPPORTED": 25

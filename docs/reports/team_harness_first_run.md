@@ -72,3 +72,42 @@
 DART_DETECTIVE_LLM=off .venv/bin/python -m uvicorn dart_detective.api:app --port 8000
 node scripts/run-evaluation-harness.mjs run/config.json
 ```
+
+---
+
+## 2차: 필드명 매핑 후 (같은 날, LLM 호출 0회)
+
+| 항목 | 1차 | 2차 |
+|---|---|---|
+| metric_pass | 34 | 34 |
+| not_scored | 47 | **43** |
+| value 하위 필드 | 전부 NOT_SCORED | **PASS 4 / FAIL 2** / NOT_SCORED 61 |
+
+**바뀐 것**
+
+1. **하니스는 `calculation.result` 안쪽을 본다.** 최상위에 필드를 늘어놔도 읽지 않는다
+   (`closed-metric.mjs`의 `structuredRaw`: `calc.result ?? calc.value`). result를
+   오브젝트로 바꾸자 채점이 붙기 시작했다.
+2. **필드 이름은 규칙으로만 만든다.** Gold의 `expected_answer.value` 필드는 25문항에
+   181종이고 대부분 문항 전용(`crane_investment_amount`, `mobis_revenue_2023`)이다.
+   그걸 사전에 박으면 정답지를 코드에 넣는 것이라 하지 않았다. 규칙으로 유도되는 것만
+   내보낸다 — 항목명(`contract_amount`), 지표×연도(`revenue_2023`), 표에 단위가 적혀
+   있을 때만 붙는 단위 이름(`revenue_2023_million_krw`), 계산값(`revenue_change_percent`).
+3. **날짜도 값으로 뽑는다.** `period_start`/`period_end`는 표에 `2023-04-28` 형태라
+   숫자 판정에서 빠져 있었다.
+4. **백분율 자릿수를 3으로.** Gold의 `scoring_spec`이 `rounding: 3, tolerance: 0.001`
+   이라 2자리로 자르면 반올림 차이만으로 오답이 된다(3.15 vs 3.145). 규격을 맞춘 것이지
+   정답을 맞춘 것이 아니다.
+
+**실채점 예시**
+
+| 문항 | 필드 | 우리 값 | Gold | 결과 |
+|---|---|---|---|---|
+| Q01 | contract_amount | 635,384,978,972 | 635384978972 | PASS |
+| Q02 | equity_ratio_percent | 5.5 | 5.5 | PASS |
+| Q12 | operating_profit_change_percent | 46.276 | 46.276 | PASS |
+| Q12 | revenue_change_percent | 3.145 | 3.145 | PASS(자릿수 수정 후) |
+| Q11 | revenue_change_percent | 30.26 | 29.645 | FAIL — 다른 표를 근거로 삼았다 |
+
+Q11은 반올림이 아니라 **값 자체가 다르다**. 우리 selector가 고른 표가 Gold이 기대한
+표와 다르다는 뜻이고, 이건 형식이 아니라 실제 성능 문제다 — 남겨서 다음에 본다.
