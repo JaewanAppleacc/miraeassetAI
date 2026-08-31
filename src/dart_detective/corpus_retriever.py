@@ -71,6 +71,7 @@ class CorpusRetriever:
     section_alpha: float = DEFAULT_SECTION_ALPHA
     strategy: str = "line_window"
     _doc_meta: dict[str, Mapping[str, Any]] = field(default_factory=dict, repr=False)
+    _scope_cache: dict[str, dict[int, str]] = field(default_factory=dict, repr=False)
 
     @classmethod
     def from_paths(cls, doc_index_path: Path | str, documents_path: Path | str,
@@ -79,6 +80,34 @@ class CorpusRetriever:
         index = DocumentIndex.from_jsonl(doc_index_path, corp_dict)
         docs = {d["doc_id"]: d for d in load_documents(documents_path)}
         return cls(document_index=index, corp_dict=corp_dict, docs_by_id=docs, **kwargs)
+
+    def statement_scopes(self, doc_id: str) -> Mapping[int, str]:
+        """노드 번호 -> "연결" | "별도". 표 바로 앞 제목 문단으로 가른다.
+
+        사업보고서 요약재무정보에는 같은 섹션 안에 표가 둘 있다.
+            가. 요약연결재무정보   <- 연결
+            나. 요약재무정보       <- 별도
+        표 자체에는 구분이 없고 앞 문단에만 있다. 검색 점수는 그대로 두고, 근거를 고를 때
+        참고하려고 여기서 문서 한 번만 훑어 만든다.
+        """
+        cached = self._scope_cache.get(doc_id)
+        if cached is not None:
+            return cached
+        scopes: dict[int, str] = {}
+        current = ""
+        for node in (self.docs_by_id.get(doc_id) or {}).get("nodes") or []:
+            text = (node.get("text") or "").strip()
+            if node.get("kind") != "table" and text:
+                head = text[:40]
+                if "연결" in head and "별도" not in head:
+                    current = "연결"
+                elif ("별도" in head or "개별" in head
+                      or head.startswith(("나. 요약재무정보", "요약재무정보"))):
+                    current = "별도"
+            elif node.get("kind") == "table" and current:
+                scopes[node.get("node_index", -1)] = current
+        self._scope_cache[doc_id] = scopes
+        return scopes
 
     def conditions(self, question: str) -> QueryConditions:
         """조건 추출은 Retrieval 쪽 parser를 그대로 쓴다 — Agent가 따로 만들지 않는다."""

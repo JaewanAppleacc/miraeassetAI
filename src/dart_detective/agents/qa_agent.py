@@ -447,6 +447,34 @@ def picked_value_of(line: str, column: int | None) -> str | None:
     return None
 
 
+# 질문이 연결/별도 중 무엇을 물었나. 재무제표는 같은 항목이 두 벌 있고 금액이 다르다.
+CONSOLIDATED_WORDS = ("연결",)
+SEPARATE_WORDS = ("별도", "개별")
+SCOPE_BONUS = 0.6       # 질문이 요구한 쪽 표에 주는 가산점
+SCOPE_PENALTY = 0.6     # 반대쪽 표에 주는 감점
+
+
+def wanted_scope(question: str) -> str:
+    """질문이 요구한 재무제표 범위. 둘 다/없으면 빈 문자열(가르지 않는다)."""
+    wants_consolidated = any(w in question for w in CONSOLIDATED_WORDS)
+    wants_separate = any(w in question for w in SEPARATE_WORDS)
+    if wants_consolidated and not wants_separate:
+        return "연결"
+    if wants_separate and not wants_consolidated:
+        return "별도"
+    return ""
+
+
+def scope_of_chunk(chunk: RetrievedChunk, scopes: Mapping[int, str]) -> str:
+    """이 청크가 연결 표인가 별도 표인가. 모르면 빈 문자열."""
+    path = " ".join(chunk.section_path)
+    if "연결" in path:
+        return "연결"
+    if chunk.node_index is None:
+        return ""
+    return scopes.get(chunk.node_index, "")
+
+
 def corp_tokens(corps: Sequence[str]) -> frozenset[str]:
     """기업명에서 나온 토큰. 줄 고르기에서 빼려고 모은다."""
     return frozenset(t for corp in corps for t in tokenize(corp))
@@ -454,7 +482,8 @@ def corp_tokens(corps: Sequence[str]) -> frozenset[str]:
 
 def match_evidence(slots: Sequence[str], chunks: Sequence[RetrievedChunk],
                    *, limit: int = MAX_EVIDENCE, question: str = "",
-                   drop: frozenset[str] = frozenset()) -> list[EvidenceMatch]:
+                   drop: frozenset[str] = frozenset(),
+                   scopes: Mapping[str, Mapping[int, str]] | None = None) -> list[EvidenceMatch]:
     """slot마다 가장 잘 맞는 청크를 고른다. 근거가 없으면 그 slot은 비운다.
 
     선택은 결정론적이다 — 지표가 행 레이블에 있는지, 연도가 청크/문서에 있는지,
@@ -464,6 +493,7 @@ def match_evidence(slots: Sequence[str], chunks: Sequence[RetrievedChunk],
     matches: list[EvidenceMatch] = []
     used: set[tuple[str, str, int | None]] = set()
     used_chunks: set[str] = set()
+    want_scope = wanted_scope(question)
 
     def fill_free_slot() -> None:
         """자유 자리 — 상위 청크에서 질문과 맞는 줄을 채운다.
@@ -545,6 +575,15 @@ def match_evidence(slots: Sequence[str], chunks: Sequence[RetrievedChunk],
                     reasons.append(f"문서 기준연도 {year}(열 미확인)")
             if metric != ANSWER_SLOT and not metric_hit:
                 continue
+            if want_scope:
+                chunk_scope = scope_of_chunk(chunk, (scopes or {}).get(chunk.doc_id, {}))
+                if chunk_scope == want_scope:
+                    weight += SCOPE_BONUS
+                    reasons.append(f"{want_scope} 재무제표")
+                elif chunk_scope:
+                    # 질문이 부른 쪽이 아니다. 같은 항목이라도 금액이 다르다.
+                    weight -= SCOPE_PENALTY
+                    reasons.append(f"{chunk_scope} 표(질문은 {want_scope})")
             rank_score = 1.0 / rank
             score = weight + rank_score
             reasons.append(f"Retrieval {rank}위")
@@ -715,9 +754,13 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
     t_retrieval = time.perf_counter()
     state.retrieval_results = retriever.retrieve(question, state.conditions, k=k)
     state.timings["retrieval_ms"] = int((time.perf_counter() - t_retrieval) * 1000)
+    scopes = {}
+    if wanted_scope(question) and hasattr(retriever, "statement_scopes"):
+        scopes = {doc_id: retriever.statement_scopes(doc_id)
+                  for doc_id in {c.doc_id for c in state.retrieval_results}}
     state.evidence_matches = match_evidence(
         state.slots, state.retrieval_results, limit=max_evidence, question=question,
-        drop=corp_tokens(sorted(state.conditions.corps)))
+        drop=corp_tokens(sorted(state.conditions.corps)), scopes=scopes)
     # LLM 유무와 무관하게 기록한다 — 키가 없어도 "무엇을 얼마나 넘길 것인가"를 알아야
     # 크레딧을 쓰기 전에 비용과 문맥 크기를 가늠할 수 있다.
     context = llm_context(state.retrieval_results, llm_context_chunks)
