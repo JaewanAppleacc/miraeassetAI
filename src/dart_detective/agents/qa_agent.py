@@ -181,16 +181,55 @@ class AgentState:
 
 # ---------- 1. 질문 이해 ----------
 
+# 공시 서식의 항목 이름. 재무지표(매출액·영업이익)는 표 구조가 "지표 × 연도"라
+# infer_metrics가 맡고, 여기는 계약·투자·해지 공시처럼 "항목 | 값" 한 줄로 끝나는
+# 서식을 맡는다. 서식이 정해져 있어 항목명이 원문에 거의 그대로 적힌다 —
+# 그래서 사전이 짧고, 새 표현을 추측해서 늘리지 않는다.
+DISCLOSURE_ITEMS: dict[str, str] = {
+    "계약금액": "계약금액", "계약 금액": "계약금액", "수주금액": "계약금액",
+    "해지금액": "해지금액", "해지 금액": "해지금액",
+    "투자금액": "투자금액", "투자 금액": "투자금액", "투자규모": "투자금액",
+    "자기자본대비": "자기자본대비", "자기자본 대비": "자기자본대비",
+    "매출액대비": "매출액대비", "매출액 대비": "매출액대비",
+    "최근매출액": "최근매출액",
+    "종료일": "종료일", "만료일": "종료일",
+    "시작일": "시작일", "착수일": "시작일",
+    "해지일자": "해지일자", "해지일": "해지일자",
+    "해지사유": "해지 주요사유", "해지 사유": "해지 주요사유",
+    "계약상대": "계약상대", "계약 상대": "계약상대", "계약상대방": "계약상대",
+    "공급지역": "판매ㆍ공급지역", "판매지역": "판매ㆍ공급지역",
+    "투자목적": "투자목적", "투자대상": "투자대상",
+    "이사회결의일": "이사회결의일", "결의일": "이사회결의일",
+    "자기자본": "자기자본",
+}
+
+
+def extract_disclosure_items(question: str) -> tuple[str, ...]:
+    """질문에 **직접 적힌** 공시 항목만 뽑는다. 추론하지 않는다.
+
+    "자기자본 대비 비율"은 '자기자본대비' 하나다 — 더 긴 항목이 잡히면 그 안에
+    들어가는 짧은 항목('자기자본')은 버린다. 안 그러면 같은 값을 두 자리가 다툰다.
+    """
+    hits = list(dict.fromkeys(norm for word, norm in DISCLOSURE_ITEMS.items()
+                              if word in question))
+    return tuple(h for h in hits
+                 if not any(other != h and h in other for other in hits))
+
+
 def plan_slots(question: str, conditions: QueryConditions) -> tuple[str, ...]:
     """질문이 요구하는 근거 자리(slot)를 정한다.
 
     지표 추출은 Retrieval의 `infer_metrics`를 그대로 쓴다 — parser를 새로 만들지 않는다.
-    지표 × 연도로 자리를 만들고(예: 영업이익_2025), 지표가 없으면 자리 하나로 둔다.
+    지표 × 연도로 자리를 만들고(예: 영업이익_2025), 지표가 없으면 공시 항목을 본다
+    (예: 계약금액·해지일자). 둘 다 없으면 자리 하나로 둔다.
     """
     metrics = infer_metrics(question)
     years = sorted(conditions.years)
     if not metrics:
-        return (ANSWER_SLOT,)
+        # 항목 자리 뒤에 자유 자리를 하나 붙인다. 질문이 항목 이름으로 말하지 않은 것
+        # ("…해지의 해지금액과 사유는?"의 '사유')을 그 자리가 받는다.
+        items = extract_disclosure_items(question)
+        return (*items, ANSWER_SLOT) if items else (ANSWER_SLOT,)
     if not years:
         return tuple(metrics)
     return tuple(f"{m}_{y}" for m in metrics for y in years)
@@ -375,13 +414,21 @@ def match_evidence(slots: Sequence[str], chunks: Sequence[RetrievedChunk],
     matches: list[EvidenceMatch] = []
     used: set[tuple[str, str, int | None]] = set()
     used_chunks: set[str] = set()
-    if tuple(slots) == (ANSWER_SLOT,):
-        # 지표가 없는 질문은 자리를 나눌 수 없다. 상위 청크에서 질문과 맞는 줄을 준다.
-        # 한 청크에서 한 줄만 뽑으면 "투자금액과 자기자본 대비 비율은?"처럼 두 값을 묻는
-        # 질문에서 한쪽이 반드시 빠진다 — 같은 표의 다른 행이기 때문이다(실측 11/24).
+
+    def fill_free_slot() -> None:
+        """자유 자리 — 상위 청크에서 질문과 맞는 줄을 채운다.
+
+        한 청크에서 한 줄만 뽑으면 "투자금액과 자기자본 대비 비율은?"처럼 두 값을 묻는
+        질문에서 한쪽이 반드시 빠진다 — 같은 표의 다른 행이기 때문이다(실측 11/24).
+        항목 자리가 이미 가져간 줄은 건너뛴다.
+        """
+        seen = {m.evidence_text for m in matches}
         for rank, chunk in enumerate(list(chunks)[:ANSWER_CHUNKS], start=1):
             for order, line in enumerate(_best_lines(chunk, question, drop,
                                                      LINES_PER_CHUNK)):
+                if line in seen:
+                    continue
+                seen.add(line)
                 matches.append(EvidenceMatch(
                     slot=ANSWER_SLOT, chunk_id=chunk.chunk_id, doc_id=chunk.doc_id,
                     evidence_text=line, section_path=chunk.section_path,
@@ -389,9 +436,17 @@ def match_evidence(slots: Sequence[str], chunks: Sequence[RetrievedChunk],
                     reason=f"Retrieval {rank}위" if order == 0
                            else f"Retrieval {rank}위 · 같은 표의 {order + 1}번째 근거 줄"))
                 if len(matches) >= limit:
-                    return matches
+                    return
+
+    if tuple(slots) == (ANSWER_SLOT,):
+        fill_free_slot()
         return matches
     for slot in slots:
+        if slot == ANSWER_SLOT:             # 항목 자리 뒤에 붙은 자유 자리
+            fill_free_slot()
+            if len(matches) >= limit:
+                break
+            continue
         metric, year = split_slot(slot)
         best: tuple[float, RetrievedChunk, str, str, int | None] | None = None
         for rank, chunk in enumerate(chunks, start=1):

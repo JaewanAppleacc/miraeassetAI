@@ -58,6 +58,57 @@ def _normalize_ws(s: str) -> str:
     return re.sub(r"\s+", " ", s).strip()
 
 
+# 숫자에 붙은 한글 단위. 원문이 "19,300,000,000"(원)인데 답변이 "19,300억 원"이면
+# 숫자 자체는 원문에서 왔지만 100배 틀린 금액이 된다 — 실측(N11)에서 그대로 통과했다.
+UNIT_MULTIPLIER = {"조": 10**12, "천억": 10**11, "억": 10**8,
+                   "천만": 10**7, "백만": 10**6, "만": 10**4}
+NUM_UNIT_RE = re.compile(r"(\d[\d,]*(?:\.\d+)?)\s*(조|천억|천만|백만|억|만)\s*원?")
+# 반올림·근사 표현("약 19억원" ← 1,930,000,000)을 살려두기 위한 여유.
+# 잡으려는 것은 자릿수 오류(100배·1000배)라 5%는 충분히 좁다.
+SCALE_TOLERANCE = 0.05
+
+
+def _source_values(sources: Iterable[str]) -> list[float]:
+    out: list[float] = []
+    for src in sources:
+        for tok in numbers_in(src):
+            try:
+                out.append(float(tok))
+            except ValueError:
+                continue
+    return out
+
+
+def unit_mismatches(answer: str, sources: Iterable[str],
+                    derived: Iterable[str] = ()) -> list[str]:
+    """답변의 "숫자+단위"가 원문 금액과 자릿수가 맞는지 본다.
+
+    통과 조건은 셋 중 하나다.
+      · 원문 어딘가에 그 표기가 그대로 있다("193억")
+      · 환산값이 원문 숫자와 (오차 1% 안에서) 같다
+      · 코드가 계산한 값이다(derived)
+    셋 다 아니면 자릿수가 틀린 것이다.
+    """
+    source_text = "\n".join(sources)
+    values = _source_values([source_text])
+    derived_values = _source_values(derived)
+    bad: list[str] = []
+    for m in NUM_UNIT_RE.finditer(answer):
+        raw, unit = m.group(1), m.group(2)
+        try:
+            implied = float(raw.replace(",", "")) * UNIT_MULTIPLIER[unit]
+        except (ValueError, KeyError):
+            continue
+        if f"{raw}{unit}" in source_text or f"{raw} {unit}" in source_text:
+            continue
+        pool = values + derived_values
+        if any(v and abs(v - implied) / max(abs(implied), 1.0) <= SCALE_TOLERANCE
+               for v in pool):
+            continue
+        bad.append(m.group().strip())
+    return bad
+
+
 def validate(
     answer: str,
     citations: list[dict[str, Any]],
@@ -118,6 +169,19 @@ def validate(
         "note": "" if not fabricated else "원문에 없는 수치",
     })
     if fabricated:
+        hard_fail = True
+
+    # 2-1) 단위 검사 — 숫자는 원문에서 왔지만 자릿수를 바꿔 쓴 경우
+    #      "19,300,000,000원"을 "19,300억 원"으로 옮기면 100배가 된다. 숫자 검사만으로는
+    #      못 잡는다(19300은 백만 단위 환산값으로 이미 허용되기 때문).
+    scale_errors = unit_mismatches(answer, source_texts, derived)
+    checks.append({
+        "check": "units_consistent",
+        "passed": not scale_errors,
+        "mismatched": scale_errors,
+        "note": "" if not scale_errors else "원문 금액과 자릿수가 맞지 않는 단위 표기",
+    })
+    if scale_errors:
         hard_fail = True
 
     # 3) 기간(연도) 검사

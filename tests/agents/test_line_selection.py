@@ -127,11 +127,22 @@ def test_lines_per_chunk_is_capped():
 
 
 def test_evidence_never_exceeds_the_limit():
-    chunks = [chunk(INVEST_TABLE, chunk_id=f"c{i}") for i in range(5)]
+    chunks = [chunk(INVEST_TABLE.replace("28,480,000,000", f"{i}8,480,000,000"),
+                    chunk_id=f"c{i}") for i in range(5)]
     matches = qa_agent.match_evidence(
         ["answer"], chunks, limit=3,
         question="투자금액과 자기자본 대비 비율은?", drop=CORP_DROP)
     assert len(matches) == 3
+
+
+def test_identical_lines_from_different_chunks_are_not_repeated():
+    """같은 공시가 여러 문서에 실려도 같은 줄을 두 번 인용하지 않는다."""
+    chunks = [chunk(INVEST_TABLE, chunk_id=f"c{i}") for i in range(5)]
+    matches = qa_agent.match_evidence(
+        ["answer"], chunks, limit=5,
+        question="투자금액과 자기자본 대비 비율은?", drop=CORP_DROP)
+    texts = [m.evidence_text for m in matches]
+    assert len(texts) == len(set(texts))
 
 
 def test_second_line_is_labelled_in_the_reason():
