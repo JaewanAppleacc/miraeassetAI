@@ -27,6 +27,13 @@ const OFFICIAL_SPLIT_DECISION_PATH = resolve(V02_DIR, "component-safe-reallocati
 
 export const OUT_DIR = resolve(AUTHORING_V02_DIR, "owner-review-v0.2");
 export const UI_DIR = resolve(OUT_DIR, "ui/v0.2");
+// Turn N4.22: renamed from "...gate-status..." to "...template-status..."
+// so the ownership split with the decision verifier's own
+// gold-300-authoring-owner-decision-verification-status.v0.2.json is
+// unmistakable by name alone. This script is the ONLY writer of this
+// file, and it ALWAYS re-declares the PENDING template defaults -- it
+// must never be mistaken for, or overwrite, a real recorded decision.
+export const TEMPLATE_STATUS_PATH = resolve(OUT_DIR, "gold-300-authoring-owner-review-template-status.v0.2.json");
 
 const APPROVE_DISPOSITION = "APPROVE_GOLD_300_PLAN_AND_ELIGIBLE_AUTHORING";
 const EXPORT_FILENAME = "gold-300-authoring-owner-decision.v0.2.json";
@@ -100,7 +107,7 @@ export function buildGold300OwnerReviewV02({ generatedAt } = {}) {
   };
   writeJson(resolve(OUT_DIR, "gold-300-authoring-owner-decision-template.v0.2.json"), decisionTemplate);
 
-  writeJson(resolve(OUT_DIR, "gold-300-authoring-owner-review-gate-status.v0.2.json"), {
+  writeJson(TEMPLATE_STATUS_PATH, {
     schema_version: "0.1.0", turn: "N4.20.1", generated_at: now,
     status: "GOLD_300_PLAN_REVIEW_READY_PENDING_DECISION",
     gold_300_plan_authorized: false, eligible_authoring_authorized: false, blocked_authoring_authorized: false,

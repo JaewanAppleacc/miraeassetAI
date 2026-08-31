@@ -4,9 +4,15 @@
 // `authoring_status` field per row (via domain/evaluation/gold-300-
 // authorization.mjs's rowAuthoringStatus) and re-confirming per-author
 // eligible/manual-review/blocked counts against the REAL, recorded Owner
-// decision. This script REFUSES to run unless
-// gold-300-authoring-owner-decision-recorded-gate-status.v0.2.json shows
+// decision. This script REFUSES to run unless VERIFICATION_STATUS_PATH
+// (gold-300-authoring-owner-decision-verification-status.v0.2.json) shows
 // a genuinely verified, real (not chat-pasted) Owner decision.
+//
+// Turn N4.22 Part D adds a second, independent check: the recorded
+// decision must ALSO match the hardcoded ACTIVE_DECISION_PIN (decision_id
+// AND raw file SHA-256) from domain/evaluation/gold-300-owner-decision-
+// provenance.mjs, re-verified directly here rather than only trusted via
+// the already-written verification-status file.
 //
 // It still never writes a question, expected_answer, or citation --
 // question_status/expected_answer_status/citation_status stay NOT_AUTHORED
@@ -18,7 +24,8 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { rowAuthoringStatus } from "../domain/evaluation/gold-300-authorization.mjs";
-import { REAL_DECISION_PATH } from "./build-gold-300-owner-decision-v0.2-verification-v04202.mjs";
+import { ACTIVE_DECISION_PIN } from "../domain/evaluation/gold-300-owner-decision-provenance.mjs";
+import { REAL_DECISION_PATH, VERIFICATION_STATUS_PATH } from "./build-gold-300-owner-decision-v0.2-verification-v04202.mjs";
 
 const REPO_ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
 function readJsonl(p) { return readFileSync(p, "utf8").split(/\r?\n/).filter(Boolean).map((l) => JSON.parse(l)); }
@@ -34,18 +41,26 @@ const OWNER_REVIEW_V02_DIR = resolve(AUTHORING_V02_DIR, "owner-review-v0.2");
 
 const PACKET_A_V01_PATH = resolve(AUTHORING_V01_DIR, "author-a-gold-150-authoring-packet.v0.1.jsonl");
 const PACKET_B_V01_PATH = resolve(AUTHORING_V01_DIR, "author-b-gold-150-authoring-packet.v0.1.jsonl");
-const RECORDED_GATE_STATUS_PATH = resolve(OWNER_REVIEW_V02_DIR, "gold-300-authoring-owner-decision-recorded-gate-status.v0.2.json");
 
 export function buildGold300AuthoringPacketsV02({ generatedAt } = {}) {
   const now = generatedAt ?? new Date().toISOString();
 
-  const gate = readJson(RECORDED_GATE_STATUS_PATH);
-  if (!gate.real_decision_verified) throw new Error("buildGold300AuthoringPacketsV02: gate-status does not show real_decision_verified=true -- run ingestGold300OwnerDecisionV02 + verifyAndRecordGold300OwnerDecisionV02 against a real downloaded decision first");
+  const gate = readJson(VERIFICATION_STATUS_PATH);
+  if (!gate.real_decision_verified) throw new Error("buildGold300AuthoringPacketsV02: verification-status does not show real_decision_verified=true -- run ingestGold300OwnerDecisionV02 + verifyAndRecordGold300OwnerDecisionV02 against a real downloaded decision first");
   if (gate.gold_300_plan_authorized !== true || gate.eligible_authoring_authorized !== true) {
     throw new Error(`buildGold300AuthoringPacketsV02: plan is not authorized (gold_300_plan_authorized=${gate.gold_300_plan_authorized}, eligible_authoring_authorized=${gate.eligible_authoring_authorized}) -- refusing to mark any row AUTHORING_ALLOWED`);
   }
   const decision = readJson(REAL_DECISION_PATH);
   if (decision.owner_disposition !== "APPROVE_GOLD_300_PLAN_AND_ELIGIBLE_AUTHORING") throw new Error("buildGold300AuthoringPacketsV02: recorded decision is not a genuine APPROVE");
+
+  // Turn N4.22 Part D: re-verify packet provenance directly against the
+  // pinned active decision -- never rely solely on the verification-status
+  // file already having checked this (defense in depth: that file could in
+  // principle be stale relative to a decision file swapped in afterward).
+  const decisionSha256ForPinCheck = sha256File(REAL_DECISION_PATH);
+  if (decision.decision_id !== ACTIVE_DECISION_PIN.decision_id || decisionSha256ForPinCheck !== ACTIVE_DECISION_PIN.sha256) {
+    throw new Error(`buildGold300AuthoringPacketsV02: recorded decision does not match the pinned active decision (expected decision_id=${ACTIVE_DECISION_PIN.decision_id} sha256=${ACTIVE_DECISION_PIN.sha256}, got decision_id=${decision.decision_id} sha256=${decisionSha256ForPinCheck}) -- refusing to build packets against an unpinned decision`);
+  }
 
   const packetABefore = sha256File(PACKET_A_V01_PATH);
   const packetBBefore = sha256File(PACKET_B_V01_PATH);
@@ -111,6 +126,7 @@ export function buildGold300AuthoringPacketsV02({ generatedAt } = {}) {
     status: "AUTHORIZED_PACKETS_READY",
     source_decision_id: decision.decision_id,
     source_decision_sha256: sha256File(REAL_DECISION_PATH),
+    active_decision_pin_matched: decision.decision_id === ACTIVE_DECISION_PIN.decision_id && sha256File(REAL_DECISION_PATH) === ACTIVE_DECISION_PIN.sha256,
     v01_packets_unmodified: { author_a: packetABefore === packetABeforeAfter, author_b: packetBBefore === packetBBeforeAfter },
     author_a: { path: "work/handoff/anchor-dev-tune-v0.2/gold-authoring-300-v0.2/author-a-gold-150-authoring-packet.v0.2.jsonl", sha256: sha256File(pathA), row_count: annotatedA.length, status_counts: countsA },
     author_b: { path: "work/handoff/anchor-dev-tune-v0.2/gold-authoring-300-v0.2/author-b-gold-150-authoring-packet.v0.2.jsonl", sha256: sha256File(pathB), row_count: annotatedB.length, status_counts: countsB },

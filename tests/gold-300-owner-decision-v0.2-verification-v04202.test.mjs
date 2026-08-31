@@ -17,15 +17,16 @@ import {
   ingestGold300OwnerDecisionV02,
   verifyAndRecordGold300OwnerDecisionV02,
   REAL_DECISION_PATH,
+  VERIFICATION_STATUS_PATH,
 } from "../scripts/build-gold-300-owner-decision-v0.2-verification-v04202.mjs";
+import { TEMPLATE_STATUS_PATH } from "../scripts/build-gold-300-owner-review-v0.2-v04201.mjs";
+import { ACTIVE_DECISION_PIN } from "../domain/evaluation/gold-300-owner-decision-provenance.mjs";
 
 const REPO_ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
 function readJson(p) { return JSON.parse(readFileSync(p, "utf8")); }
 function sha256(buf) { return createHash("sha256").update(buf).digest("hex"); }
 
 const OWNER_REVIEW_V02_DIR = resolve(REPO_ROOT, "work/handoff/anchor-dev-tune-v0.2/gold-authoring-300-v0.2/owner-review-v0.2");
-const RECORDED_GATE_STATUS_PATH = resolve(OWNER_REVIEW_V02_DIR, "gold-300-authoring-owner-decision-recorded-gate-status.v0.2.json");
-const UI_DEFAULT_GATE_STATUS_PATH = resolve(OWNER_REVIEW_V02_DIR, "gold-300-authoring-owner-review-gate-status.v0.2.json");
 const INGESTION_PROVENANCE_PATH = resolve(OWNER_REVIEW_V02_DIR, "gold-300-authoring-owner-decision-ingestion-provenance.v0.2.json");
 
 // Snapshot the genuine, already-ingested real decision's bytes AND its
@@ -104,10 +105,10 @@ test("verifyAndRecordGold300OwnerDecisionV02: the real, genuinely-downloaded dec
   assert.equal(result.verificationReport.ingestion_provenance.has_quarantine_marker, true);
 });
 
-test("verifyAndRecordGold300OwnerDecisionV02: writes its OWN gate-status filename, distinct from the v0.2 UI builder's PENDING-default gate-status file -- the two must never collide", () => {
+test("verifyAndRecordGold300OwnerDecisionV02: writes its OWN status filename, distinct from the v0.2 UI builder's PENDING-default template-status file -- the two must never collide", () => {
   restoreGenuineDecision();
-  assert.notEqual(RECORDED_GATE_STATUS_PATH, UI_DEFAULT_GATE_STATUS_PATH);
-  const recorded = readJson(RECORDED_GATE_STATUS_PATH);
+  assert.notEqual(VERIFICATION_STATUS_PATH, TEMPLATE_STATUS_PATH);
+  const recorded = readJson(VERIFICATION_STATUS_PATH);
   assert.equal(recorded.gold_300_plan_authorized, true);
 });
 
@@ -162,6 +163,76 @@ test("verifyAndRecordGold300OwnerDecisionV02: a decision with blocked_authoring_
     assert.equal(result.allOk, false);
     assert.ok(result.verificationReport.domain_verification.violations.some((v) => v.type === "BLOCKED_AUTHORING_AUTHORIZED_NOT_FALSE"));
   } finally {
+    restoreGenuineDecision();
+  }
+});
+
+// -- Turn N4.22 hard gates -------------------------------------------
+
+test("Turn N4.22: a decision that is domain-valid in every other respect (real counts, real packet SHAs, real official-split id) but was ingested from a source lacking the com.apple.quarantine marker is HARD REJECTED, not merely flagged", () => {
+  const dir = mkdtempSync(join(tmpdir(), "gold300-n422-quarantine-test-"));
+  const fixturePath = join(dir, "not-really-downloaded.json");
+  try {
+    writeFileSync(fixturePath, readFileSync(REAL_DECISION_PATH)); // byte-identical content, but this copy was never through a browser download
+    const ingestion = ingestGold300OwnerDecisionV02({ sourcePath: fixturePath });
+    assert.equal(ingestion.provenance.has_quarantine_marker, false);
+    const result = verifyAndRecordGold300OwnerDecisionV02({ ingestion });
+    assert.equal(result.allOk, false);
+    assert.equal(result.isGenuineApproval, false);
+    assert.ok(result.verificationReport.provenance_verification.violations.some((v) => v.type === "NO_QUARANTINE_MARKER_PROVENANCE"));
+    assert.equal(result.recordedGateStatus.gold_300_plan_authorized, false);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+    restoreGenuineDecision();
+  }
+});
+
+test("Turn N4.22: the superseded chat-reconstructed decision_id (e266789a...) is rejected even when every other field (counts, packet SHAs, official-split id) is otherwise domain-valid", () => {
+  const realBytes = readFileSync(REAL_DECISION_PATH);
+  const tampered = JSON.parse(realBytes.toString("utf8"));
+  tampered.decision_id = "e266789a-5263-4015-9dc1-7fa8e6eb36c2";
+  try {
+    writeFileSync(REAL_DECISION_PATH, `${JSON.stringify(tampered, null, 2)}\n`);
+    const result = verifyAndRecordGold300OwnerDecisionV02();
+    assert.equal(result.allOk, false);
+    assert.equal(result.isGenuineApproval, false);
+    assert.ok(result.verificationReport.provenance_verification.violations.some((v) => v.type === "DECISION_ID_IS_SUPERSEDED"));
+    assert.ok(result.verificationReport.provenance_verification.violations.some((v) => v.type === "DECISION_ID_NOT_ACTIVE_PIN"));
+  } finally {
+    restoreGenuineDecision();
+  }
+});
+
+test("Turn N4.22: a decision file whose bytes were altered (breaking the pinned SHA-256) even while decision_id stays the real active id is rejected -- id alone is never sufficient", () => {
+  const realBytes = readFileSync(REAL_DECISION_PATH);
+  const tampered = JSON.parse(realBytes.toString("utf8"));
+  tampered.owner_note = "a single harmless-looking added character changes the file's SHA-256";
+  try {
+    writeFileSync(REAL_DECISION_PATH, `${JSON.stringify(tampered, null, 2)}\n`);
+    assert.notEqual(sha256(readFileSync(REAL_DECISION_PATH)), ACTIVE_DECISION_PIN.sha256);
+    const result = verifyAndRecordGold300OwnerDecisionV02();
+    assert.equal(result.allOk, false);
+    assert.ok(result.verificationReport.provenance_verification.violations.some((v) => v.type === "DECISION_SHA256_NOT_ACTIVE_PIN"));
+  } finally {
+    restoreGenuineDecision();
+  }
+});
+
+test("Turn N4.22 Part E.9: ingestion copies the source's raw BYTES, never a JSON.parse/re-serialize round-trip -- a fixture with nonstandard whitespace/key order stays byte-identical after copy", () => {
+  const dir = mkdtempSync(join(tmpdir(), "gold300-n422-byte-copy-test-"));
+  const fixturePath = join(dir, "nonstandard-formatting.json");
+  // Deliberately NOT what JSON.stringify(parsed, null, 2) would produce:
+  // compact, single-line, keys in an unusual order, trailing spaces.
+  const oddBytes = Buffer.from('{"n":1,   "hello":"world","z":true}   \n', "utf8");
+  writeFileSync(fixturePath, oddBytes);
+  try {
+    const result = ingestGold300OwnerDecisionV02({ sourcePath: fixturePath });
+    const copiedBytes = readFileSync(REAL_DECISION_PATH);
+    assert.deepEqual(copiedBytes, oddBytes, "the copy must be byte-identical to the source, not a re-serialized normalization of its parsed content");
+    assert.notDeepEqual(copiedBytes, Buffer.from(`${JSON.stringify(JSON.parse(oddBytes.toString("utf8")), null, 2)}\n`, "utf8"));
+    assert.equal(result.sha256, sha256(oddBytes));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
     restoreGenuineDecision();
   }
 });

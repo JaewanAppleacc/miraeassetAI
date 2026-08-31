@@ -6,6 +6,7 @@
 // grant, and the v0.1 packets remain byte-unmodified.
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -103,4 +104,41 @@ test("buildGold300AuthoringPacketsV02: the packet manifest explicitly documents 
   const manifest = readJson(resolve(REPO_ROOT, "work/handoff/anchor-dev-tune-v0.2/gold-authoring-300-v0.2/gold-authoring-300-packet-manifest.v0.2.json"));
   assert.equal(manifest.holdout_authoring_vs_agent_access.holdout_agent_access_authorized, false);
   assert.equal(manifest.holdout_authoring_vs_agent_access.holdout_evaluation_authorized, false);
+});
+
+// -- Turn N4.22 Part D: packet provenance re-verification -----------------
+
+test("Turn N4.22: the packet manifest records active_decision_pin_matched=true against the real recorded decision, with source_decision_id/sha256 exactly matching decision_id 93c5b69c... and SHA db5ea49b...", () => {
+  buildGold300AuthoringPacketsV02();
+  const manifest = readJson(resolve(REPO_ROOT, "work/handoff/anchor-dev-tune-v0.2/gold-authoring-300-v0.2/gold-authoring-300-packet-manifest.v0.2.json"));
+  assert.equal(manifest.source_decision_id, "93c5b69c-6e37-46fd-b319-17179a0d6402");
+  assert.equal(manifest.source_decision_sha256, "db5ea49b9b4e29c1076cbcc26f5002a8060b4004a50730e2a184fac2324ab13e");
+  assert.equal(manifest.active_decision_pin_matched, true);
+});
+
+test("Turn N4.22: buildGold300AuthoringPacketsV02 refuses to run when the recorded decision's decision_id/SHA does not match the pinned active decision, even if the gate's own real_decision_verified/gold_300_plan_authorized somehow still read true", () => {
+  const realBytes = readFileSync(REAL_DECISION_PATH);
+  const tampered = JSON.parse(realBytes.toString("utf8"));
+  tampered.decision_id = "e266789a-5263-4015-9dc1-7fa8e6eb36c2";
+  try {
+    // Ensure the gate file itself is genuinely up to date (in practice this
+    // tamper also fails verifyAndRecordGold300OwnerDecisionV02 and the gate
+    // would already read false -- this test targets the packet builder's
+    // OWN independent pin re-check as defense in depth, not just the gate).
+    writeFileSync(REAL_DECISION_PATH, `${JSON.stringify(tampered, null, 2)}\n`);
+    assert.throws(() => buildGold300AuthoringPacketsV02(), /does not match the pinned active decision|plan is not authorized|real_decision_verified/);
+  } finally {
+    writeFileSync(REAL_DECISION_PATH, realBytes);
+    verifyAndRecordGold300OwnerDecisionV02();
+  }
+});
+
+test("Turn N4.22 Part E.10: buildGold300AuthoringPacketsV02's CLI stdout never includes the Owner's name or any row/assignment content -- only status, counts, and booleans", () => {
+  const scriptPath = resolve(REPO_ROOT, "scripts/build-gold-300-authoring-packets-v0.2-v04202.mjs");
+  const stdout = execFileSync("node", [scriptPath], { cwd: REPO_ROOT, encoding: "utf8" });
+  assert.doesNotMatch(stdout, /최재완/, "the real Owner's name must never appear in CLI output");
+  assert.doesNotMatch(stdout, /assignment_id/);
+  assert.doesNotMatch(stdout, /"question"|"expected_answer"|"evidence_citations"/);
+  const parsed = JSON.parse(stdout);
+  assert.equal(parsed.status, "V02_AUTHORIZED_PACKETS_BUILT");
 });

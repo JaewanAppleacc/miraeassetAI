@@ -798,10 +798,13 @@ test("Turn N4.18.3: test:domain's test-file list has no duplicates and still lis
   // -- tests/gold-300-plan-reverification-v04201.test.mjs and
   // tests/gold-300-owner-review-v0.2-v04201.test.mjs. Turn N4.20.2 bumped it
   // to 159 -- tests/gold-300-owner-decision-v0.2-verification-v04202.test.mjs
-  // and tests/gold-300-authoring-packets-v0.2-v04202.test.mjs. This
+  // and tests/gold-300-authoring-packets-v0.2-v04202.test.mjs. Turn N4.22
+  // bumped it to 162 -- tests/gold-300-owner-decision-provenance.test.mjs,
+  // tests/gold-300-owner-review-gate-status-separation-v0422.test.mjs, and
+  // tests/gold-300-owner-decision-provenance-resolution-v0422.test.mjs. This
   // assertion's purpose is still "no silent addition/removal drift"; it is
   // intentionally updated alongside every deliberate, reviewed addition.
-  assert.equal(files.length, 159, "the test-file count must match the current known-good list (159) -- update this alongside any deliberate addition/removal, never silently");
+  assert.equal(files.length, 162, "the test-file count must match the current known-good list (162) -- update this alongside any deliberate addition/removal, never silently");
   assert.equal(new Set(files).size, files.length, "no test file may be listed twice");
 
   for (const mustHave of [

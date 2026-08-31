@@ -16,17 +16,31 @@
 // agent_ranking_authorized, relation_decisions_authorized, or
 // actual_official_promotion_applied to become anything but false.
 //
-// Writes its recorded gate status to a filename DISTINCT from the v0.2 UI
-// builder's own gate-status file (which always re-declares PENDING) --
-// Turn N4.20.2's original version shared that exact filename, so whichever
-// script last ran during a full test:domain pass silently clobbered the
-// other's meaning. Never repeat that collision.
+// Writes its recorded status to VERIFICATION_STATUS_PATH -- a filename
+// permanently DISTINCT from the v0.2 UI builder's own template-status file
+// (which always re-declares PENDING). Turn N4.20.2's original version
+// shared that exact filename, so whichever script last ran during a full
+// test:domain pass silently clobbered the other's meaning; Turn N4.22
+// renamed both files ("...verification-status..." / "...template-
+// status...") so the ownership split is unmistakable by name alone.
+//
+// Turn N4.22 also makes two additional checks HARD failures (previously
+// either absent or only a soft CLI warning): (1) the ingestion provenance
+// record must show a genuine com.apple.quarantine marker, and (2) the
+// decision's own decision_id and raw file SHA-256 must both match the
+// single hardcoded ACTIVE_DECISION_PIN in domain/evaluation/gold-300-
+// owner-decision-provenance.mjs. Together these permanently close the
+// path by which the earlier, chat-reconstructed decision (decision_id
+// e266789a-5263-4015-9dc1-7fa8e6eb36c2, never backed by a real file) --
+// or any other domain-valid but non-approved decision file -- could ever
+// become recorded as authorized.
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { verifyGold300PlanDecisionV02 } from "../domain/evaluation/gold-300-authorization.mjs";
+import { verifyActiveDecisionPin } from "../domain/evaluation/gold-300-owner-decision-provenance.mjs";
 import { buildGold300PlanReverification } from "./build-gold-300-plan-reverification-v04201.mjs";
 
 const REPO_ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
@@ -43,7 +57,13 @@ export const REAL_DECISION_PATH = resolve(OWNER_REVIEW_V02_DIR, "gold-300-author
 const PACKET_A_PATH = resolve(AUTHORING_V01_DIR, "author-a-gold-150-authoring-packet.v0.1.jsonl");
 const PACKET_B_PATH = resolve(AUTHORING_V01_DIR, "author-b-gold-150-authoring-packet.v0.1.jsonl");
 const OFFICIAL_SPLIT_DECISION_PATH = resolve(V02_DIR, "component-safe-reallocation-v0.1/official-split-approval-v0.1/results/owner-v0.1/official-split-approval-decision.v0.1.json");
-const RECORDED_GATE_STATUS_PATH = resolve(OWNER_REVIEW_V02_DIR, "gold-300-authoring-owner-decision-recorded-gate-status.v0.2.json");
+// Turn N4.22: renamed from "...recorded-gate-status..." to make the
+// ownership split with the v0.2 UI builder's own
+// gold-300-authoring-owner-review-template-status.v0.2.json unmistakable
+// by name alone, not just by (previously already-distinct) content --
+// this script is the ONLY writer of this file; the UI builder must never
+// touch it.
+export const VERIFICATION_STATUS_PATH = resolve(OWNER_REVIEW_V02_DIR, "gold-300-authoring-owner-decision-verification-status.v0.2.json");
 const VERIFICATION_REPORT_PATH = resolve(OWNER_REVIEW_V02_DIR, "gold-300-authoring-owner-decision-verification-report.v0.2.json");
 // writeFileSync copies BYTES only, never extended attributes -- the copy
 // at REAL_DECISION_PATH can never itself carry the source's
@@ -170,6 +190,23 @@ export function verifyAndRecordGold300OwnerDecisionV02({ generatedAt, ingestion 
   // ---- 4. Domain-level structural/count/hard-invariant verification ----
   const domainVerification = verifyGold300PlanDecisionV02({ decision, expected });
 
+  // ---- 5. Turn N4.22 hard gates -------------------------------------
+  // (a) the ingestion provenance marker is now a HARD requirement, not a
+  // soft CLI warning: a decision file lacking com.apple.quarantine can
+  // never become authorized, closing the gap where a locally-fabricated
+  // file (never actually downloaded) could otherwise still pass every
+  // other check.
+  if (ingestionProvenance.has_quarantine_marker !== true) {
+    provenanceViolations.push({ type: "NO_QUARANTINE_MARKER_PROVENANCE" });
+  }
+  // (b) the decision must be BOTH the pinned active decision_id AND match
+  // its pinned raw file SHA-256 -- see domain/evaluation/gold-300-owner-
+  // decision-provenance.mjs. This is what makes the earlier chat-
+  // reconstructed decision (e266789a...) permanently unselectable as
+  // active, regardless of what any single decision file on disk claims.
+  const pinVerification = verifyActiveDecisionPin({ decisionId: decision.decision_id, decisionSha256: decisionSha256 });
+  for (const v of pinVerification.violations) provenanceViolations.push(v);
+
   const allOk = domainVerification.ok && provenanceViolations.length === 0;
   const isGenuineApproval = allOk && domainVerification.is_genuine_approval;
 
@@ -193,7 +230,7 @@ export function verifyAndRecordGold300OwnerDecisionV02({ generatedAt, ingestion 
   writeJson(VERIFICATION_REPORT_PATH, verificationReport);
 
   const recordedGateStatus = {
-    schema_version: "0.2.0", turn: "N4.20.2", generated_at: now,
+    schema_version: "0.2.0", turn: "N4.22", generated_at: now,
     status: allOk
       ? (isGenuineApproval ? "GOLD_300_PLAN_AND_ELIGIBLE_AUTHORING_RECORDED" : "DECISION_RECORDED_NOT_A_GENUINE_APPROVAL")
       : "DECISION_VERIFICATION_FAILED_NOT_RECORDED_AS_AUTHORIZED",
@@ -213,9 +250,10 @@ export function verifyAndRecordGold300OwnerDecisionV02({ generatedAt, ingestion 
     blocked_count: expected.blocked_count,
     author_a_immediately_authorizable_count: expected.author_a_immediately_authorizable_count,
     author_b_immediately_authorizable_count: expected.author_b_immediately_authorizable_count,
-    note: "gold_300_plan_authorized/eligible_authoring_authorized/holdout_authoring_authorized reflect a REAL, independently re-verified, provenance-checked Owner decision -- not a UI default and not chat-pasted text. blocked_authoring_authorized, holdout_agent_access_authorized, holdout_evaluation_authorized, production_wiring_authorized, agent_ranking_authorized, and relation_decisions_authorized remain hard-coded false regardless of this decision's content.",
+    active_decision_pin_ok: pinVerification.ok,
+    note: "gold_300_plan_authorized/eligible_authoring_authorized/holdout_authoring_authorized reflect a REAL, independently re-verified, provenance-checked Owner decision that also matches the hardcoded active-decision pin (decision_id AND raw file SHA-256) in domain/evaluation/gold-300-owner-decision-provenance.mjs -- not a UI default, not chat-pasted text, and not merely any genuinely-downloaded file. blocked_authoring_authorized, holdout_agent_access_authorized, holdout_evaluation_authorized, production_wiring_authorized, agent_ranking_authorized, and relation_decisions_authorized remain hard-coded false regardless of this decision's content.",
   };
-  writeJson(RECORDED_GATE_STATUS_PATH, recordedGateStatus);
+  writeJson(VERIFICATION_STATUS_PATH, recordedGateStatus);
 
   return Object.freeze({ verificationReport, recordedGateStatus, allOk, isGenuineApproval });
 }
