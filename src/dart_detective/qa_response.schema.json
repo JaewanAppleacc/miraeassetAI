@@ -41,7 +41,10 @@
           "evidence_text": {"type": "string"},
           "section_path": {"type": "array", "items": {"type": "string"}},
           "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-          "reason": {"type": "string"}
+          "reason": {"type": "string"},
+          "node_index": {"type": ["integer", "null"]},
+          "rcept_no": {"type": "string"},
+          "picked_value": {"type": ["string", "null"]}
         }
       }
     },

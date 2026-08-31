@@ -231,7 +231,8 @@ def test_agent_calls_retrieval_and_keeps_provenance(retriever):
     assert top.section_path == ("III. 재무에 관한 사항", "1. 요약재무정보")
     assert "매출액" in top.row_labels
     assert set(top.to_dict()) == {"chunk_id", "doc_id", "score", "section_path",
-                                  "row_label", "evidence_text", "metadata"}
+                                  "row_label", "evidence_text", "metadata",
+                                  "node_index"}
 
 
 def test_retrieval_metadata_carries_document_fields(retriever):

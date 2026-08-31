@@ -21,9 +21,10 @@ import threading
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
+from . import answer_wire
 from .agents import qa_agent
 from .corpus_retriever import CorpusRetriever
 from .llm import get_llm
@@ -147,3 +148,25 @@ def qa(req: QARequest,
         ",".join(response["warnings"]) or "-",
     )
     return response
+
+
+@router.get("/answer")
+def answer(
+    question_id: str = Query(min_length=1),
+    question: str = Query(min_length=1),
+    retriever: CorpusRetriever = Depends(get_retriever),
+) -> dict[str, str]:
+    """주최측 공식 계약. 문자열 5개만 내보낸다 — 파이프라인은 POST /qa와 같다.
+
+    question_id는 요청이 준 값을 그대로 돌려준다(계약상 요청 경계가 권위다).
+    """
+    if not question_id.strip() or not question.strip():
+        raise HTTPException(status_code=400, detail="question_id와 question은 공백일 수 없다")
+    state = qa_agent.answer_question(question, retriever, llm=get_llm())
+    out = state.to_dict()
+    logger.info(
+        "answer question_id=%s chars=%d evidence=%d derived=%d validation=%s conf=%s",
+        question_id, len(question), len(out["evidence"]), len(out["derived"]),
+        (out["validation"] or {}).get("status"), (out["confidence"] or {}).get("score"),
+    )
+    return answer_wire.to_answer_wire(question_id, question, out)

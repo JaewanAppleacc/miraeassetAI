@@ -38,6 +38,8 @@ class RetrievedChunk:
     row_labels: tuple[str, ...]
     evidence_text: str
     metadata: Mapping[str, Any]
+    # 원문 노드 번호. 팀 공통 계약의 source_locator가 이 번호를 요구한다.
+    node_index: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -47,6 +49,7 @@ class RetrievedChunk:
             "section_path": list(self.section_path),
             "row_label": list(self.row_labels),
             "evidence_text": self.evidence_text,
+            "node_index": self.node_index,
             "metadata": dict(self.metadata),
         }
 
@@ -91,6 +94,7 @@ class CorpusRetriever:
                 "doc_group": doc.doc_group,
                 "doc_subtype": doc.doc_subtype or doc.major_label,
                 "report_nm": doc.report_nm, "rcept_dt": doc.rcept_dt,
+                "rcept_no": getattr(doc, "rcept_no", ""),
                 "base_year": doc.base_year, "base_month": doc.base_month,
                 "period_year": doc.period_year, "is_correction": doc.is_correction,
             }
@@ -119,6 +123,7 @@ class CorpusRetriever:
             row_labels=tuple(sorted(chunk.row_labels)),
             evidence_text=chunk.search_text,
             metadata=self._metadata_of(chunk.doc_id),
+            node_index=chunk.node_index,
         )
 
 

@@ -122,6 +122,9 @@ class EvidenceMatch:
     # 표 열까지 확정했을 때만 채운다. API 응답 스키마는 건드리지 않으므로 to_dict에 넣지 않는다.
     column: int | None = None
     picked_value: str | None = None
+    # 원문 위치(팀 계약의 source_locator용). 응답 스키마는 건드리지 않는다.
+    node_index: int | None = None
+    rcept_no: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -129,6 +132,8 @@ class EvidenceMatch:
             "evidence_text": self.evidence_text,
             "section_path": list(self.section_path),
             "confidence": self.confidence, "reason": self.reason,
+            "node_index": self.node_index, "rcept_no": self.rcept_no,
+            "picked_value": self.picked_value,
         }
 
 
@@ -470,6 +475,8 @@ def match_evidence(slots: Sequence[str], chunks: Sequence[RetrievedChunk],
                 matches.append(EvidenceMatch(
                     slot=ANSWER_SLOT, chunk_id=chunk.chunk_id, doc_id=chunk.doc_id,
                     evidence_text=line, section_path=chunk.section_path,
+                    node_index=chunk.node_index,
+                    rcept_no=str(chunk.metadata.get("rcept_no") or ""),
                     confidence=round(1.0 / (rank + order), 4),
                     reason=f"Retrieval {rank}위" if order == 0
                            else f"Retrieval {rank}위 · 같은 표의 {order + 1}번째 근거 줄"))
@@ -557,6 +564,8 @@ def match_evidence(slots: Sequence[str], chunks: Sequence[RetrievedChunk],
             section_path=chunk.section_path,
             confidence=round(min(score, 1.0), 4), reason=reason,
             column=column, picked_value=picked_value_of(line, column),
+            node_index=chunk.node_index,
+            rcept_no=str(chunk.metadata.get("rcept_no") or ""),
         ))
         if len(matches) >= limit:
             break
