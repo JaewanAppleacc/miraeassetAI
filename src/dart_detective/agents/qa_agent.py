@@ -27,6 +27,7 @@ from typing import Any, Mapping, Sequence
 
 from dart_corpus.retrieval.chunk_index import infer_metrics, row_label_of
 from dart_corpus.retrieval.conditions import QueryConditions
+from dart_corpus.retrieval.lexical import tokenize
 
 from ..corpus_retriever import CorpusRetriever, RetrievedChunk, chunk_lines
 from ..llm import LLMResult, LLMUnavailable
@@ -202,13 +203,108 @@ def split_slot(slot: str) -> tuple[str, int | None]:
 
 # ---------- 2. 근거 선택 ----------
 
-def _line_for(chunk: RetrievedChunk, metric: str) -> str:
-    """지표가 적힌 줄을 고른다. 못 찾으면 청크의 첫 줄."""
-    lines = chunk_lines(chunk)
+# 값 셀 판정: 숫자·날짜·비율처럼 값만 든 칸인가. "한미반도체 7공장"은 숫자가 있어도
+# 값이 아니다 — 그래서 "숫자를 포함하나"가 아니라 "값으로만 이뤄졌나"를 본다.
+_VALUE_CELL_RE = re.compile(r"^[\(\)\d,.\-%~/원년월일 ]+$")
+VALUE_LINE_BONUS = 0.6      # 값이 실린 줄에 주는 가산점 — 표는 "항목 | 값" 구조다
+
+
+def _has_value_cell(line: str) -> bool:
+    cells = [c.strip() for c in line.split("|")[1:]]
+    return any(c and _VALUE_CELL_RE.match(c) and any(ch.isdigit() for ch in c) for c in cells)
+
+
+def _line_weights(lines: Sequence[str]) -> dict[str, float]:
+    """청크 안에서 흔한 단어일수록 가볍게 센다.
+
+    "투자"처럼 표 전체에 깔린 단어는 어느 줄을 고를지 못 가른다. 반대로 "종료"처럼
+    한 줄에만 있는 단어가 그 줄을 지목한다.
+    """
+    counts: dict[str, int] = {}
     for line in lines:
-        if metric and (metric in row_label_of(line) or metric in line):
+        for token in set(tokenize(line)):
+            counts[token] = counts.get(token, 0) + 1
+    return {token: 1.0 / (1.0 + n) for token, n in counts.items()}
+
+
+# 값을 묻는 질문인지. 그렇다면 항목명만 있고 값이 없는 줄은 답이 될 수 없다 —
+# "1. 투자구분 | 신규시설투자"는 질문 단어를 많이 담아도 금액을 알려주지 않는다.
+VALUE_ASKING = ("얼마", "금액", "규모", "몇 ", "비율", "퍼센트", "%", "언제",
+                "일자", "날짜", "종료일", "시작일", "수량", "주식수", "단가")
+NO_VALUE_PENALTY = 0.35     # 값을 묻는데 값이 없는 줄 — 0으로 죽이지는 않는다
+
+
+def asks_for_value(question: str) -> bool:
+    return any(w in question for w in VALUE_ASKING)
+
+
+def _line_score(line: str, q_tokens: set[str], weights: dict[str, float],
+                *, want_value: bool) -> float:
+    tokens = set(tokenize(line)) & q_tokens
+    if not tokens:
+        return 0.0
+    score = sum(weights.get(t, 0.5) for t in tokens)
+    if _has_value_cell(line):
+        score += VALUE_LINE_BONUS
+    elif want_value:
+        score *= NO_VALUE_PENALTY
+    return score
+
+
+ANSWER_CHUNKS = 3           # 지표 없는 질문에서 근거로 볼 상위 청크 수
+LINES_PER_CHUNK = 2         # 한 청크에서 인용할 줄 수 — 표는 값이 여러 행에 흩어진다
+
+
+def _best_lines(chunk: RetrievedChunk, question: str, drop: frozenset[str],
+                n: int) -> list[str]:
+    """청크에서 질문과 맞는 줄을 점수 순으로 최대 n개. 질문이 없으면 첫 줄만."""
+    lines = chunk_lines(chunk)
+    if not lines:
+        text = chunk.evidence_text.strip()
+        return [text] if text else []
+    q_tokens = set(tokenize(question)) - drop if question else set()
+    if not q_tokens:
+        return lines[:1]
+    weights = _line_weights(lines)
+    want_value = asks_for_value(question)
+    scored = [(_line_score(line, q_tokens, weights, want_value=want_value), i, line)
+              for i, line in enumerate(lines)]
+    picked = [line for score, _, line in sorted(scored, key=lambda x: (-x[0], x[1]))
+              if score > 0][:n]
+    return picked or lines[:1]
+
+
+def _line_for(chunk: RetrievedChunk, metric: str, question: str = "",
+              drop: frozenset[str] = frozenset()) -> str:
+    """청크 안에서 근거로 쓸 줄 하나를 고른다.
+
+    지표가 있으면 그 지표가 적힌 줄이 먼저다(gold25가 기대하는 동작).
+    지표가 없는 질문 — "계약금액", "해지일자", "투자기간 종료일"처럼 지표 사전에 없는
+    항목 — 은 예전에는 무조건 첫 줄을 돌려줬다. 그러면 표 머리글("1. 투자구분 | …")이
+    근거로 나가고 정작 답이 든 3번째 줄은 버려진다(새 질문 18문항 실측: 21/21 실패).
+
+    그래서 질문 단어와 겹치는 줄을 고르되, 청크 안에서 흔한 단어는 가볍게 세고 값이
+    실린 줄을 우대한다. drop에는 기업명처럼 어느 줄을 고를지 못 가르는 말을 넣는다 —
+    Stage 1에서 기업을 이미 조건으로 잘라내는 것과 같은 이유다.
+    """
+    lines = chunk_lines(chunk)
+    if not lines:
+        return chunk.evidence_text.strip()
+    for line in lines:
+        if metric and metric != ANSWER_SLOT and (metric in row_label_of(line) or metric in line):
             return line
-    return lines[0] if lines else chunk.evidence_text.strip()
+    q_tokens = set(tokenize(question)) - drop if question else set()
+    if q_tokens:
+        weights = _line_weights(lines)
+        want_value = asks_for_value(question)
+        best_line, best_score = lines[0], 0.0
+        for line in lines:
+            score = _line_score(line, q_tokens, weights, want_value=want_value)
+            if score > best_score:          # 동점이면 먼저 나온 줄 — 표 순서를 존중한다
+                best_line, best_score = line, score
+        if best_score:
+            return best_line
+    return lines[0]
 
 
 # 표 머리글에서 기간을 읽는다. "제 49 기 2025.01.01 부터 ..." / "(2025.01.01.~ 2025.12.31)"
@@ -262,25 +358,39 @@ def value_at(line: str, column: int) -> str | None:
     return cell if _VALUE_RE.search(cell) else None
 
 
+def corp_tokens(corps: Sequence[str]) -> frozenset[str]:
+    """기업명에서 나온 토큰. 줄 고르기에서 빼려고 모은다."""
+    return frozenset(t for corp in corps for t in tokenize(corp))
+
+
 def match_evidence(slots: Sequence[str], chunks: Sequence[RetrievedChunk],
-                   *, limit: int = MAX_EVIDENCE) -> list[EvidenceMatch]:
+                   *, limit: int = MAX_EVIDENCE, question: str = "",
+                   drop: frozenset[str] = frozenset()) -> list[EvidenceMatch]:
     """slot마다 가장 잘 맞는 청크를 고른다. 근거가 없으면 그 slot은 비운다.
 
     선택은 결정론적이다 — 지표가 행 레이블에 있는지, 연도가 청크/문서에 있는지,
     그리고 Retrieval 점수 순서만 본다. LLM은 여기 관여하지 않는다.
+    question은 청크 안에서 어느 줄을 인용할지 고르는 데만 쓴다(순위에는 영향 없음).
     """
     matches: list[EvidenceMatch] = []
     used: set[tuple[str, str, int | None]] = set()
     used_chunks: set[str] = set()
     if tuple(slots) == (ANSWER_SLOT,):
-        # 지표가 없는 질문은 자리를 나눌 수 없다. 상위 청크 몇 개를 그대로 근거로 준다.
-        return [
-            EvidenceMatch(slot=ANSWER_SLOT, chunk_id=c.chunk_id, doc_id=c.doc_id,
-                          evidence_text=_line_for(c, ""), section_path=c.section_path,
-                          confidence=round(1.0 / rank, 4),
-                          reason=f"Retrieval {rank}위")
-            for rank, c in enumerate(list(chunks)[:min(limit, 3)], start=1)
-        ]
+        # 지표가 없는 질문은 자리를 나눌 수 없다. 상위 청크에서 질문과 맞는 줄을 준다.
+        # 한 청크에서 한 줄만 뽑으면 "투자금액과 자기자본 대비 비율은?"처럼 두 값을 묻는
+        # 질문에서 한쪽이 반드시 빠진다 — 같은 표의 다른 행이기 때문이다(실측 11/24).
+        for rank, chunk in enumerate(list(chunks)[:ANSWER_CHUNKS], start=1):
+            for order, line in enumerate(_best_lines(chunk, question, drop,
+                                                     LINES_PER_CHUNK)):
+                matches.append(EvidenceMatch(
+                    slot=ANSWER_SLOT, chunk_id=chunk.chunk_id, doc_id=chunk.doc_id,
+                    evidence_text=line, section_path=chunk.section_path,
+                    confidence=round(1.0 / (rank + order), 4),
+                    reason=f"Retrieval {rank}위" if order == 0
+                           else f"Retrieval {rank}위 · 같은 표의 {order + 1}번째 근거 줄"))
+                if len(matches) >= limit:
+                    return matches
+        return matches
     for slot in slots:
         metric, year = split_slot(slot)
         best: tuple[float, RetrievedChunk, str, str, int | None] | None = None
@@ -324,7 +434,7 @@ def match_evidence(slots: Sequence[str], chunks: Sequence[RetrievedChunk],
             rank_score = 1.0 / rank
             score = weight + rank_score
             reasons.append(f"Retrieval {rank}위")
-            line = _line_for(chunk, metric)
+            line = _line_for(chunk, metric, question, drop)
             picked = value_at(line, column) if column is not None else None
             if (chunk.chunk_id, line, column) in used:
                 # 같은 행의 같은 열을 두 자리에 쓰면 한쪽은 반드시 틀린 값이다.
@@ -489,8 +599,9 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
     t_retrieval = time.perf_counter()
     state.retrieval_results = retriever.retrieve(question, state.conditions, k=k)
     state.timings["retrieval_ms"] = int((time.perf_counter() - t_retrieval) * 1000)
-    state.evidence_matches = match_evidence(state.slots, state.retrieval_results,
-                                            limit=max_evidence)
+    state.evidence_matches = match_evidence(
+        state.slots, state.retrieval_results, limit=max_evidence, question=question,
+        drop=corp_tokens(sorted(state.conditions.corps)))
     # LLM 유무와 무관하게 기록한다 — 키가 없어도 "무엇을 얼마나 넘길 것인가"를 알아야
     # 크레딧을 쓰기 전에 비용과 문맥 크기를 가늠할 수 있다.
     context = llm_context(state.retrieval_results, llm_context_chunks)
