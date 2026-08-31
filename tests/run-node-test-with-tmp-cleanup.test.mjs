@@ -792,10 +792,12 @@ test("Turn N4.18.3: test:domain's test-file list has no duplicates and still lis
   const files = command.match(/tests\/[\w.-]+\.test\.mjs/g) || [];
 
   // Turn N4.19: count bumped from 152 to 153 -- tests/v03-split-preservation-bundle-v0419.test.mjs
-  // was legitimately added to test:domain in that Turn. This assertion's purpose
-  // is still "no silent addition/removal drift"; it is intentionally updated
+  // was legitimately added to test:domain in that Turn. Turn N4.20 bumped it
+  // again to 155 -- tests/gold-300-selection-v0420.test.mjs and
+  // tests/gold-300-owner-review-v0420.test.mjs. This assertion's purpose is
+  // still "no silent addition/removal drift"; it is intentionally updated
   // alongside every deliberate, reviewed addition to the list.
-  assert.equal(files.length, 153, "the test-file count must match the current known-good list (153) -- update this alongside any deliberate addition/removal, never silently");
+  assert.equal(files.length, 155, "the test-file count must match the current known-good list (155) -- update this alongside any deliberate addition/removal, never silently");
   assert.equal(new Set(files).size, files.length, "no test file may be listed twice");
 
   for (const mustHave of [
