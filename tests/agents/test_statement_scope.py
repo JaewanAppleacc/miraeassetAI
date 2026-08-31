@@ -105,3 +105,42 @@ def test_unlabelled_chunks_are_not_penalised():
     matches = qa_agent.match_evidence(
         ["매출액_2023"], chunks, question="연결 매출액은?", scopes={})
     assert matches and matches[0].chunk_id == "unknown"
+
+
+# ---------- 패턴 확장 (표본 1개짜리 규칙이라는 지적에 대한 방어) ----------
+
+def test_table_own_first_line_wins_over_the_running_heading():
+    """표 첫 줄에 표기가 있으면 앞 제목보다 우선이다."""
+    doc = {"doc_id": "d", "nodes": [
+        {"node_index": 1, "kind": "paragraph", "text": "가. 요약연결재무정보"},
+        {"node_index": 2, "kind": "table", "text": "별도 재무상태표\n자산 | 100"},
+    ]}
+    r = CorpusRetriever(document_index=None, corp_dict=None, docs_by_id={"d": doc})
+    assert r.statement_scopes("d")[2] == "별도"
+
+
+def test_plain_heading_resets_the_running_scope():
+    """연결 제목 뒤에 무관한 제목이 오면 그 아래 표는 라벨 없이 둔다 —
+    먼 표까지 이전 표기를 끌고 가지 않는다."""
+    doc = {"doc_id": "d", "nodes": [
+        {"node_index": 1, "kind": "paragraph", "text": "가. 요약연결재무정보"},
+        {"node_index": 2, "kind": "table", "text": "자산 | 100"},
+        {"node_index": 3, "kind": "paragraph", "text": "다. 배당에 관한 사항"},
+        {"node_index": 4, "kind": "table", "text": "배당금 | 500"},
+    ]}
+    r = CorpusRetriever(document_index=None, corp_dict=None, docs_by_id={"d": doc})
+    scopes = r.statement_scopes("d")
+    assert scopes[2] == "연결"
+    assert 4 not in scopes
+
+
+def test_long_paragraph_does_not_reset_the_scope():
+    """본문 문단(제목 아님)은 표기 흐름을 끊지 않는다."""
+    doc = {"doc_id": "d", "nodes": [
+        {"node_index": 1, "kind": "paragraph", "text": "가. 요약연결재무정보"},
+        {"node_index": 2, "kind": "paragraph",
+         "text": "위 표는 한국채택국제회계기준에 따라 작성되었으며 세부 내역은 주석을 참조하기 바랍니다."},
+        {"node_index": 3, "kind": "table", "text": "자산 | 100"},
+    ]}
+    r = CorpusRetriever(document_index=None, corp_dict=None, docs_by_id={"d": doc})
+    assert r.statement_scopes("d")[3] == "연결"

@@ -25,6 +25,21 @@ COMPARISON_WORDS = (
 # 백분율 반올림 자릿수. 팀 공통 Gold의 scoring_spec이 rounding=3, tolerance=0.001을
 # 쓰므로 3자리로 맞춘다 — 2자리로 자르면 반올림 차이만으로 오답이 된다(3.15 vs 3.145).
 PERCENT_DECIMALS = 3
+# 사람이 읽는 문장에는 2자리가 자연스럽다("3.15% 변동"). 채점·API에는 3자리 원값을
+# 그대로 쓰고, 표시만 줄인다 — 두 표기 모두 같은 계산에서 나온 값이다.
+DISPLAY_DECIMALS = 2
+
+
+def display_value(d: "Derived") -> str:
+    """사람에게 보여줄 표기. 백분율만 표시 자릿수로 줄이고 나머지는 원값 그대로."""
+    if d.unit != "%":
+        return d.value
+    try:
+        rounded = Decimal(d.value).quantize(
+            Decimal("1." + "0" * DISPLAY_DECIMALS), rounding=ROUND_HALF_UP)
+    except InvalidOperation:
+        return d.value
+    return f"{rounded}"
 _NUM_RE = re.compile(r"-?\d[\d,]*(?:\.\d+)?")
 _UNIT_RE = re.compile(r"단위\s*[::]\s*([^\s|)]+)")
 
@@ -225,7 +240,7 @@ def describe(derived: Sequence[Derived]) -> str:
         unit = f" {d.unit}" if d.unit else ""
         if d.kind == "increase_rate":
             lines.append(f"- {d.metric}: {d.source_values[0]} → {d.source_values[1]} "
-                         f"({d.value}% 변동)")
+                         f"({display_value(d)}% 변동)")
         elif d.kind == "difference":
             a_slot, b_slot = d.source_slots
             a_corp = a_slot.rsplit("@", 1)[-1]
@@ -245,8 +260,9 @@ def allowed_numbers(derived: Sequence[Derived]) -> list[str]:
     for d in derived:
         if not any(ch.isdigit() for ch in d.value):
             continue            # 기업명 같은 값(larger_side)은 숫자 허용 목록이 아니다
-        out.append(d.value)
-        out.append(d.value.replace(",", ""))
-        out.append(d.value.lstrip("-"))
-        out.append(d.value.lstrip("-").replace(",", ""))
+        for v in (d.value, display_value(d)):   # 원값(채점용)과 표시값 둘 다 허용
+            out.append(v)
+            out.append(v.replace(",", ""))
+            out.append(v.lstrip("-"))
+            out.append(v.lstrip("-").replace(",", ""))
     return sorted({v for v in out if v})

@@ -158,3 +158,28 @@ def test_duplicate_lines_are_not_emitted_twice():
         question="투자금액은 얼마인가?", drop=CORP_DROP)
     texts = [m.evidence_text for m in matches]
     assert len(texts) == len(set(texts))
+
+
+# ---------- 발췌 대신 값 정리 (fallback 가독성) ----------
+
+def test_fallback_composes_values_when_slots_are_filled():
+    matches = qa_agent.match_evidence(
+        ["투자금액", "answer"], [chunk(INVEST_TABLE)],
+        question="한미반도체 7공장 투자금액은 얼마인가?", drop=CORP_DROP)
+    answer, _ = qa_agent.fallback_answer(matches)
+    assert "공시에서 확인한 값:" in answer
+    assert "- 투자금액: 28,480,000,000" in answer
+
+
+def test_fallback_without_values_keeps_the_excerpt_form():
+    matches = qa_agent.match_evidence(
+        ["answer"], [chunk("회사는 신규 사업을 검토 중이라고 밝혔다.")],
+        question="신규 사업 계획은?")
+    answer, _ = qa_agent.fallback_answer(matches)
+    assert answer.startswith("검색된 공시에서 확인되는 근거는 다음과 같다.")
+
+
+def test_slot_label_reads_naturally():
+    assert qa_agent.slot_label("계약금액@한국항공우주") == "한국항공우주 계약금액"
+    assert qa_agent.slot_label("매출액_2023") == "2023년 매출액"
+    assert qa_agent.slot_label("해지일자") == "해지일자"

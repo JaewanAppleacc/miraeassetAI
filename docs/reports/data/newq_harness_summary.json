@@ -1,16 +1,16 @@
 {
-  "run_id": "862e507f-592f-4e2a-9052-609eb0fcef72",
+  "run_id": "d2ce80b2-44db-4db0-bbdf-237bdb8e83dc",
   "configuration_sha256": "399a064a9e2f45d6391c17fb6e7f933f42c98daa94a3fa2750cfda2932ed52b7",
   "git_commit": "6f1393fa0f4630876b47b480a51d0a6cad4d31a0",
-  "total": 18,
-  "api_success": 18,
-  "contract_success": 18,
-  "response_usable": 18,
-  "metric_eligible": 18,
+  "total": 24,
+  "api_success": 24,
+  "contract_success": 24,
+  "response_usable": 24,
+  "metric_eligible": 24,
   "metric_excluded": 0,
-  "metric_pass": 47,
-  "metric_fail": 24,
-  "not_scored": 25,
+  "metric_pass": 58,
+  "metric_fail": 40,
+  "not_scored": 33,
   "review_required": 5,
   "timeouts": 0,
   "http_errors": 0,
@@ -18,16 +18,16 @@
   "reservation_failures": 0,
   "question_echo_mismatches": 0,
   "latency_ms": {
-    "p50": 642,
-    "p95": 3840
+    "p50": 684,
+    "p95": 2092
   },
   "answerability_distribution": {
-    "SUPPORTED": 15,
+    "SUPPORTED": 21,
     "UNKNOWN_COMPANY": 2,
     "EVIDENCE_NOT_FOUND": 1
   },
   "execution_mode_distribution": {
-    "RETRIEVAL": 17,
+    "RETRIEVAL": 23,
     "EARLY_EXIT": 1
   },
   "failed_question_ids": []

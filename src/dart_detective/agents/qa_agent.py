@@ -663,8 +663,25 @@ def corp_warning_text(warnings: Sequence[str], evidence_corps: Sequence[str]) ->
 
 # ---------- 3. 답변 ----------
 
+def slot_label(slot: str) -> str:
+    """자리 이름을 사람이 읽는 표현으로. '계약금액@한국항공우주' -> '한국항공우주 계약금액'."""
+    base, corp = split_entity(slot)
+    item, year = split_slot(base)
+    parts = []
+    if corp:
+        parts.append(corp)
+    if year is not None:
+        parts.append(f"{year}년")
+    parts.append(item)
+    return " ".join(parts)
+
+
 def fallback_answer(matches: Sequence[EvidenceMatch]) -> tuple[str, str]:
-    """LLM 없이 만드는 답변. 근거 줄만 그대로 옮기므로 항상 grounded다.
+    """LLM 없이 만드는 답변. 값과 인용 전부 원문 그대로라 항상 grounded다.
+
+    값까지 확정한 자리(picked_value)는 "항목: 값" 문장으로 정리한다 — 발췌 줄만
+    나열하면 표 머리글 조각이 섞여 읽기 어렵다(Phase 10 실측: LLM 답변이 폐기된
+    문항은 전부 이 나열로 나갔다). 정리는 기계적 나열이지 재작성이 아니다.
 
     출처(doc_id·section_path)는 답변 문장에 넣지 않는다 — doc_id에 숫자가 들어 있어서
     본문에 섞으면 Validator가 '원문에 없는 수치'로 잡는다(실측: periodic_20260318000826).
@@ -673,9 +690,18 @@ def fallback_answer(matches: Sequence[EvidenceMatch]) -> tuple[str, str]:
     if not matches:
         return ("검색된 공시에서 이 질문에 답할 근거를 찾지 못했다.",
                 "질문을 좁히거나 기간·기업 조건을 명시해야 한다.")
-    lines = "\n".join(f"- [{m.slot}] {m.evidence_text}" for m in matches)
-    return ("검색된 공시에서 확인되는 근거는 다음과 같다.\n" + lines,
-            "위 줄은 원문 발췌 그대로다. 출처는 evidence의 doc_id/section_path에 있다.")
+    valued = [m for m in matches if m.picked_value and m.slot != ANSWER_SLOT]
+    rest = [m for m in matches if m not in valued]
+    parts: list[str] = []
+    if valued:
+        parts.append("공시에서 확인한 값:")
+        parts.extend(f"- {slot_label(m.slot)}: {m.picked_value}" for m in valued)
+    if rest:
+        parts.append(("함께 확인되는 원문 근거:" if valued
+                      else "검색된 공시에서 확인되는 근거는 다음과 같다."))
+        parts.extend(f"- [{m.slot}] {m.evidence_text}" for m in rest)
+    return ("\n".join(parts),
+            "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.")
 
 
 def llm_context(chunks: Sequence[RetrievedChunk],

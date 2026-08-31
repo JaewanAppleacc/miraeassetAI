@@ -131,3 +131,25 @@ def test_plan_comparisons_needs_two_years_of_same_metric():
     assert calculator.plan_comparisons(q, ("매출액_2023", "매출액_2025")) == [
         ("매출액", 2023, 2025)]
     assert calculator.plan_comparisons(q, ("매출액_2025",)) == []
+
+
+# ---------- 표시값과 채점값 분리 ----------
+
+def test_percent_display_is_two_decimals_but_value_stays_three():
+    got = calculator.compute("매출액", "매출액_2023", REV_2023, "매출액_2025", REV_2025)
+    rate = next(d for d in got if d.kind == "increase_rate")
+    assert rate.value == "3.145"                       # 채점·API용 원값
+    assert calculator.display_value(rate) == "3.15"    # 사람이 읽는 표기
+    assert "3.15% 변동" in calculator.describe(got)
+
+
+def test_both_display_and_raw_forms_are_allowed_numbers():
+    got = calculator.compute("매출액", "매출액_2023", REV_2023, "매출액_2025", REV_2025)
+    allowed = calculator.allowed_numbers(got)
+    assert "3.145" in allowed and "3.15" in allowed
+
+
+def test_non_percent_values_are_not_display_rounded():
+    got = calculator.compute("매출액", "매출액_2023", REV_2023, "매출액_2025", REV_2025)
+    amount = next(d for d in got if d.kind == "increase_amount")
+    assert calculator.display_value(amount) == amount.value

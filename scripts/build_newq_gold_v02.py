@@ -81,6 +81,26 @@ META: dict[str, dict] = {
             "answerability": "AMBIGUOUS_QUERY"},
     "N18": {"type": "SIMPLE_LOOKUP", "difficulty": "EASY",
             "fields": {"period_end": "2023-08-31"}, "unit": None},
+    # N19~N24: 다른 서식(자기주식 처분·신탁계약 해지·대량보유상황보고서).
+    # 앞 문항들이 계약·투자 서식에 몰려 있다는 지적을 받아 메커니즘을 넓혔다 —
+    # 이 항목들은 우리 항목 사전(DISCLOSURE_ITEMS)에 없어서, 사전에 맞춘 세트가 아니다.
+    "N19": {"type": "NUMERIC_LOOKUP", "difficulty": "EASY",
+            "fields": {"shares_to_dispose": "108,354",
+                       "disposal_planned_amount": "20,999,005,200"}, "unit": "원"},
+    "N20": {"type": "NUMERIC_LOOKUP", "difficulty": "MEDIUM",
+            "fields": {"disposal_planned_amount": "40,174,398,000"}, "unit": "원"},
+    "N21": {"type": "NUMERIC_LOOKUP", "difficulty": "MEDIUM",
+            "fields": {"trust_amount_before_termination": "500,000,000,000",
+                       "shares_to_terminate": "6,090,941"}, "unit": "원"},
+    "N22": {"type": "EVENT_TRACE", "difficulty": "MEDIUM",
+            "fields": {"trust_amount_before_termination": "200,000,000,000",
+                       "termination_purpose": "신탁계약기간 만료"}, "unit": "원"},
+    "N23": {"type": "NUMERIC_LOOKUP", "difficulty": "MEDIUM",
+            "fields": {"shares_held_current": "5,098,596",
+                       "holding_ratio_percent": "27.28"}, "unit": None},
+    "N24": {"type": "SIMPLE_LOOKUP", "difficulty": "MEDIUM",
+            "fields": {"report_reason": "특별관계자 및 보유주식수 변동",
+                       "holding_ratio_percent": "24.92"}, "unit": None},
 }
 
 

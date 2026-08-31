@@ -98,14 +98,25 @@ class CorpusRetriever:
         for node in (self.docs_by_id.get(doc_id) or {}).get("nodes") or []:
             text = (node.get("text") or "").strip()
             if node.get("kind") != "table" and text:
-                head = text[:40]
-                if "연결" in head and "별도" not in head:
+                head = text[:60]
+                if "연결" in head and "별도" not in head and "개별" not in head:
                     current = "연결"
                 elif ("별도" in head or "개별" in head
                       or head.startswith(("나. 요약재무정보", "요약재무정보"))):
                     current = "별도"
-            elif node.get("kind") == "table" and current:
-                scopes[node.get("node_index", -1)] = current
+                elif _looks_like_heading(text):
+                    # 제목인데 연결/별도 표기가 없다 — 이전 표기를 먼 표까지 끌고 가지
+                    # 않는다. 모르는 것은 모르는 채로 둔다.
+                    current = ""
+            elif node.get("kind") == "table":
+                # 표 자신의 첫 줄에 표기가 있으면 그것이 우선이다.
+                first = text.split(chr(10), 1)[0][:60]
+                if "연결" in first and "별도" not in first:
+                    scopes[node.get("node_index", -1)] = "연결"
+                elif "별도" in first or "개별" in first:
+                    scopes[node.get("node_index", -1)] = "별도"
+                elif current:
+                    scopes[node.get("node_index", -1)] = current
         self._scope_cache[doc_id] = scopes
         return scopes
 
@@ -154,6 +165,15 @@ class CorpusRetriever:
             metadata=self._metadata_of(chunk.doc_id),
             node_index=chunk.node_index,
         )
+
+
+_HEADING_PREFIX = tuple(f"{c}." for c in "가나다라마바사아자차") + tuple(f"{i}." for i in range(1, 10))
+
+
+def _looks_like_heading(text: str) -> bool:
+    """짧고 목차 번호로 시작하는 문단 — 표 제목일 가능성이 높다."""
+    line = text.split(chr(10), 1)[0].strip()
+    return len(line) <= 40 and line.startswith(_HEADING_PREFIX)
 
 
 def chunk_lines(chunk: RetrievedChunk) -> Sequence[str]:
