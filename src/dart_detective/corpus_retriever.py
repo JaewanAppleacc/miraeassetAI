@@ -24,8 +24,48 @@ from dart_corpus.retrieval.chunk_index import (
 )
 from dart_corpus.retrieval.conditions import QueryConditions
 
+# 공시 서식의 항목 이름. 여기(검색 창구)에 두는 이유: retrieve()가 절단 전 재정렬
+# 게이트로 쓰고, Agent도 슬롯 계획에 쓴다 — Agent가 이쪽을 import하므로 순환이 없다.
+# 원래 주석: 재무지표(매출액·영업이익)는 표 구조가 "지표 × 연도"라
+# infer_metrics가 맡고, 여기는 계약·투자·해지 공시처럼 "항목 | 값" 한 줄로 끝나는
+# 서식을 맡는다. 서식이 정해져 있어 항목명이 원문에 거의 그대로 적힌다 —
+# 그래서 사전이 짧고, 새 표현을 추측해서 늘리지 않는다.
+DISCLOSURE_ITEMS: dict[str, str] = {
+    "계약금액": "계약금액", "계약 금액": "계약금액", "수주금액": "계약금액",
+    "해지금액": "해지금액", "해지 금액": "해지금액",
+    "투자금액": "투자금액", "투자 금액": "투자금액", "투자규모": "투자금액",
+    "자기자본대비": "자기자본대비", "자기자본 대비": "자기자본대비",
+    "매출액대비": "매출액대비", "매출액 대비": "매출액대비",
+    "최근매출액": "최근매출액",
+    "종료일": "종료일", "만료일": "종료일",
+    "시작일": "시작일", "착수일": "시작일",
+    "해지일자": "해지일자", "해지일": "해지일자",
+    "해지사유": "해지 주요사유", "해지 사유": "해지 주요사유",
+    "계약상대": "계약상대", "계약 상대": "계약상대", "계약상대방": "계약상대",
+    "공급지역": "판매ㆍ공급지역", "판매지역": "판매ㆍ공급지역",
+    "투자목적": "투자목적", "투자대상": "투자대상",
+    "이사회결의일": "이사회결의일", "결의일": "이사회결의일",
+    "자기자본": "자기자본",
+}
+
+
+def extract_disclosure_items(question: str) -> tuple[str, ...]:
+    """질문에 **직접 적힌** 공시 항목만 뽑는다. 추론하지 않는다.
+
+    "자기자본 대비 비율"은 '자기자본대비' 하나다 — 더 긴 항목이 잡히면 그 안에
+    들어가는 짧은 항목('자기자본')은 버린다. 안 그러면 같은 값을 두 자리가 다툰다.
+    """
+    hits = list(dict.fromkeys(norm for word, norm in DISCLOSURE_ITEMS.items()
+                              if word in question))
+    return tuple(h for h in hits
+                 if not any(other != h and h in other for other in hits))
+
+
 DEFAULT_STAGE1_K = 50          # gold 25문항 11차 채택값
 DEFAULT_CHUNK_K = 20
+# 항목 질문에서 원문 공시 조각에 주는 가산(절단 전). 스윕 실측으로 채택.
+ITEM_DOC_BONUS = 0.15
+PRIMARY_DOC_GROUPS = ("exchange", "major")
 
 
 @dataclass(frozen=True)
@@ -150,8 +190,21 @@ class CorpusRetriever:
         if not usable:
             return []
         chunk_index = ChunkIndex.from_documents(usable, strategy=self.strategy)
-        hits = chunk_index.search(question, k=k or self.chunk_k,
-                                  section_alpha=self.section_alpha)
+        want = k or self.chunk_k
+        # 계약금액·투자금액 같은 항목 질문의 답은 원문 공시(exchange/major) 서식에 있다.
+        # 사업보고서의 요약 한 줄이 짧아서(BM25 길이 정규화) 원문을 이기는 실측(N05)이
+        # 있어, 항목이 잡힌 질문에서만 원문 공시 조각을 절단 전에 가산한다.
+        # beta 스윕(0/0.15/0.3/0.5) 실측: gold25 E-R 전 구간 완전 불변,
+        # 새 24문항 상위20 35->36/36. 최소 유효값 0.15를 쓴다.
+        if extract_disclosure_items(question):
+            hits = chunk_index.search(question, k=len(chunk_index.chunks),
+                                      section_alpha=self.section_alpha)
+            hits = sorted(((score * (1.0 + ITEM_DOC_BONUS)
+                            if chunk.doc_group in PRIMARY_DOC_GROUPS else score, chunk)
+                           for score, chunk in hits), key=lambda x: -x[0])[:want]
+        else:
+            hits = chunk_index.search(question, k=want,
+                                      section_alpha=self.section_alpha)
         return [self._to_chunk(score, chunk) for score, chunk in hits]
 
     def _to_chunk(self, score: float, chunk: Chunk) -> RetrievedChunk:

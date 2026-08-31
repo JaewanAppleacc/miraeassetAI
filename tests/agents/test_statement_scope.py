@@ -144,3 +144,26 @@ def test_long_paragraph_does_not_reset_the_scope():
     ]}
     r = CorpusRetriever(document_index=None, corp_dict=None, docs_by_id={"d": doc})
     assert r.statement_scopes("d")[3] == "연결"
+
+
+# ---------- 연도 머리글 판독: 완화 매칭의 경계 ----------
+
+def bare_chunk(text: str) -> RetrievedChunk:
+    # 이 파일의 chunk() 헬퍼는 자체 머리글(2025 포함)을 붙인다 — 연도 판독
+    # 테스트엔 오염이라 머리글 없이 직접 만든다.
+    return RetrievedChunk(chunk_id="x", doc_id="d", score=1.0, section_path=("공시",),
+                          row_labels=("매출액",), evidence_text=text, metadata={})
+
+
+def test_half_year_header_without_month_digits_is_read():
+    # Q10 실측 — "2025년 반기 | 2024년 | 2023년" 형태 머리글
+    c = bare_chunk("구 분 | 2025년 반기 | 2024년 | 2023년" + chr(10) + "매출액 | 100 | 200 | 300")
+    assert qa_agent.period_columns(c) == {2025: 0, 2024: 1, 2023: 2}
+
+
+def test_footnote_year_is_not_a_period_column():
+    # 각주의 "2025년"이 연도 열로 오인되면 Q12 보호가 깨진다 — 실측 회귀
+    c = bare_chunk("구 분 | 제53기 2023.01.01 ~ 2023.12.31 | 제52기 2022.01.01 ~ 2022.12.31"
+                   + chr(10) + "매출액 | 59,254,361 | 51,906,293"
+                   + chr(10) + "주) 2025년 이후 계획은 별도 공시")
+    assert 2025 not in qa_agent.period_columns(c)

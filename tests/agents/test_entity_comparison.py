@@ -142,3 +142,33 @@ def test_describe_uses_the_right_particle():
     text = calculator.describe(got)
     assert "계약금액이 더 큰 쪽" in text
     assert "계약금액가" not in text
+
+
+# ---------- 대량보유 요약 서식: 직전/이번 변동 계산 (3번-b) ----------
+
+HOLDING_LINES = [
+    '보유주식등의 수 및 보유비율 |  | 보유주식등의 수 | 보유비율',
+    '직전 보고서 | 4,660,516 | 25.01',
+    '이번 보고서 | 4,650,276 | 24.92',
+]
+
+
+def test_pair_change_is_computed_for_change_questions():
+    got = calculator.report_pair_diffs('보유주식 수와 지분율은 직전 보고보다 변했는가?',
+                                       HOLDING_LINES)
+    assert [d.value for d in got] == ['-10,240', '-0.09']
+    assert got[0].kind == 'pair_change'
+
+
+def test_pair_change_needs_a_change_word():
+    assert calculator.report_pair_diffs('이번 보고서 보유주식 수는?', HOLDING_LINES) == []
+
+
+def test_mismatched_cell_counts_are_not_paired():
+    lines = ['직전 보고서 | 4,660,516 | 25.01', '이번 보고서 | 4,650,276']
+    assert calculator.report_pair_diffs('얼마나 변했나?', lines) == []
+
+
+def test_non_numeric_cells_block_the_pair():
+    lines = ['직전 보고서 | - | -', '이번 보고서 | 4,650,276 | 24.92']
+    assert calculator.report_pair_diffs('얼마나 변했나?', lines) == []

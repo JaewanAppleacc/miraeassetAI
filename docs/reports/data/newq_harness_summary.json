@@ -1,5 +1,5 @@
 {
-  "run_id": "d2ce80b2-44db-4db0-bbdf-237bdb8e83dc",
+  "run_id": "5f29e342-ee3c-4797-8a12-d7417463f917",
   "configuration_sha256": "399a064a9e2f45d6391c17fb6e7f933f42c98daa94a3fa2750cfda2932ed52b7",
   "git_commit": "6f1393fa0f4630876b47b480a51d0a6cad4d31a0",
   "total": 24,
@@ -18,8 +18,8 @@
   "reservation_failures": 0,
   "question_echo_mismatches": 0,
   "latency_ms": {
-    "p50": 684,
-    "p95": 2092
+    "p50": 1402,
+    "p95": 5372
   },
   "answerability_distribution": {
     "SUPPORTED": 21,

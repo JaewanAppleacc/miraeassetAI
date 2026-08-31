@@ -29,7 +29,8 @@ from dart_corpus.retrieval.chunk_index import infer_metrics, row_label_of
 from dart_corpus.retrieval.conditions import QueryConditions
 from dart_corpus.retrieval.lexical import tokenize
 
-from ..corpus_retriever import CorpusRetriever, RetrievedChunk, chunk_lines
+from ..corpus_retriever import (CorpusRetriever, RetrievedChunk, chunk_lines,
+                               DISCLOSURE_ITEMS, extract_disclosure_items)
 from ..llm import LLMResult, LLMUnavailable
 from . import calculator, confidence, validator
 
@@ -189,41 +190,6 @@ class AgentState:
 
 # ---------- 1. 질문 이해 ----------
 
-# 공시 서식의 항목 이름. 재무지표(매출액·영업이익)는 표 구조가 "지표 × 연도"라
-# infer_metrics가 맡고, 여기는 계약·투자·해지 공시처럼 "항목 | 값" 한 줄로 끝나는
-# 서식을 맡는다. 서식이 정해져 있어 항목명이 원문에 거의 그대로 적힌다 —
-# 그래서 사전이 짧고, 새 표현을 추측해서 늘리지 않는다.
-DISCLOSURE_ITEMS: dict[str, str] = {
-    "계약금액": "계약금액", "계약 금액": "계약금액", "수주금액": "계약금액",
-    "해지금액": "해지금액", "해지 금액": "해지금액",
-    "투자금액": "투자금액", "투자 금액": "투자금액", "투자규모": "투자금액",
-    "자기자본대비": "자기자본대비", "자기자본 대비": "자기자본대비",
-    "매출액대비": "매출액대비", "매출액 대비": "매출액대비",
-    "최근매출액": "최근매출액",
-    "종료일": "종료일", "만료일": "종료일",
-    "시작일": "시작일", "착수일": "시작일",
-    "해지일자": "해지일자", "해지일": "해지일자",
-    "해지사유": "해지 주요사유", "해지 사유": "해지 주요사유",
-    "계약상대": "계약상대", "계약 상대": "계약상대", "계약상대방": "계약상대",
-    "공급지역": "판매ㆍ공급지역", "판매지역": "판매ㆍ공급지역",
-    "투자목적": "투자목적", "투자대상": "투자대상",
-    "이사회결의일": "이사회결의일", "결의일": "이사회결의일",
-    "자기자본": "자기자본",
-}
-
-
-def extract_disclosure_items(question: str) -> tuple[str, ...]:
-    """질문에 **직접 적힌** 공시 항목만 뽑는다. 추론하지 않는다.
-
-    "자기자본 대비 비율"은 '자기자본대비' 하나다 — 더 긴 항목이 잡히면 그 안에
-    들어가는 짧은 항목('자기자본')은 버린다. 안 그러면 같은 값을 두 자리가 다툰다.
-    """
-    hits = list(dict.fromkeys(norm for word, norm in DISCLOSURE_ITEMS.items()
-                              if word in question))
-    return tuple(h for h in hits
-                 if not any(other != h and h in other for other in hits))
-
-
 def plan_slots(question: str, conditions: QueryConditions) -> tuple[str, ...]:
     """질문이 요구하는 근거 자리(slot)를 정한다.
 
@@ -318,7 +284,8 @@ def _line_score(line: str, q_tokens: set[str], weights: dict[str, float],
 
 
 ANSWER_CHUNKS = 3           # 지표 없는 질문에서 근거로 볼 상위 청크 수
-LINES_PER_CHUNK = 2         # 한 청크에서 인용할 줄 수 — 표는 값이 여러 행에 흩어진다
+LINES_PER_CHUNK = 3         # 한 청크에서 인용할 줄 수 — 표는 값이 여러 행에 흩어진다
+                            # 2->3 스윕 실측: gold25 근거 41->47/140, 새 24문항 불변(25/36)
 
 
 def _best_lines(chunk: RetrievedChunk, question: str, drop: frozenset[str],
@@ -375,6 +342,11 @@ def _line_for(chunk: RetrievedChunk, metric: str, question: str = "",
 
 # 표 머리글에서 기간을 읽는다. "제 49 기 2025.01.01 부터 ..." / "(2025.01.01.~ 2025.12.31)"
 _PERIOD_YEAR_RE = re.compile(r"(?:제\s*\d+\s*기[^|]*?)?((?:19|20)\d{2})\s*[.년]\s*\d{1,2}")
+# "2025년 반기"처럼 년 뒤에 숫자가 없는 표기(반기보고서 머리글, Q10 실측).
+# 한 줄에 이런 셀이 2개 이상일 때만 머리글로 인정한다 — 각주("주) 2025년 이후 …")는
+# 셀이 하나라 여기 걸리지 않는다. 완화 매칭이 각주를 연도 열로 오인하면 Q12 보호가
+# 깨진다(회귀 테스트로 잠금).
+_PERIOD_YEAR_LOOSE_RE = re.compile(r"(?:제\s*\d+\s*기[^|]*?)?((?:19|20)\d{2})\s*(?:[.년]\s*\d{1,2}|년)")
 _VALUE_RE = re.compile(r"\d[\d,]*")
 # 값 칸 판정: 금액·비율만. 날짜(2026-11-30)나 설명 문장은 계산에 쓰지 않는다.
 _PICK_VALUE_RE = re.compile(r"\(?\d[\d,]*(?:\.\d+)?\)?%?")
@@ -398,17 +370,21 @@ def period_columns(chunk: RetrievedChunk) -> dict[int, int]:
         if len(cells) > 1 and sum(1 for c in cells if _VALUE_RE.fullmatch(c.replace(",", ""))) >= 2:
             continue                      # 데이터 행은 머리글이 아니다
         found: list[int] = []
+        loose: list[int] = []
         for cell in cells:
             m = _PERIOD_YEAR_RE.search(cell)
             if m:
                 found.append(int(m.group(1)))
-        if not found:
-            continue
-        if len(cells) > 1 and len(found) > 1:
-            # 한 줄에 여러 기간 셀 — 라벨 칸을 뺀 순서가 곧 값 열 순서다
-            order = found
+            lm = _PERIOD_YEAR_LOOSE_RE.search(cell)
+            if lm:
+                loose.append(int(lm.group(1)))
+        if len(cells) > 1 and len(loose) > 1:
+            # 한 줄에 여러 기간 셀 — 라벨 칸을 뺀 순서가 곧 값 열 순서다.
+            # 이 다중 셀 머리글에서만 "2025년"식 표기를 인정한다.
+            order = loose
             break
-        order.extend(found)
+        if found:
+            order.extend(found)
     if not order:
         return {}
     mapping: dict[int, int] = {}
@@ -799,7 +775,12 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
 
     # 계산형 질문이면 산술은 코드가 한다 — LLM에게 맡기지 않는다.
     # (Q12 실측: LLM이 올바른 행을 인용하고도 3.15%를 2.95%로 계산했다.)
-    state.derived = calculator.derive(
+    matched_ids = {m.chunk_id for m in state.evidence_matches}
+    pair_lines = [ln for chnk in state.retrieval_results
+                  if chnk.chunk_id in matched_ids
+                  for ln in chunk_lines(chnk)]
+    state.derived = calculator.report_pair_diffs(question, pair_lines)
+    state.derived += calculator.derive(
         question, state.slots,
         {m.slot: m.picked_value for m in state.evidence_matches if m.picked_value},
         {m.slot: m.evidence_text for m in state.evidence_matches})

@@ -216,6 +216,44 @@ def derive(question: str, slots: Sequence[str],
     return out
 
 
+# 대량보유상황보고서 요약 서식의 고정 행 쌍. 서식이 법정 고정이라 이름을 신뢰할 수 있다.
+PAIR_LABELS = (("직전 보고서", "이번 보고서"),)
+PAIR_COLUMN_NAMES = ("주식등의 수", "비율(%)")   # 요약표 열 순서(고정 서식)
+
+
+def report_pair_diffs(question: str, lines: Sequence[str]) -> list[Derived]:
+    """'직전 보고서 | X | R1' / '이번 보고서 | Y | R2' 쌍의 변동을 계산한다.
+
+    질문이 변동·차이를 물을 때만. 두 줄의 숫자 칸 수가 같을 때만 — 어긋나면
+    어느 칸끼리 짝인지 알 수 없으므로 계산하지 않는다.
+    """
+    if not any(w in question for w in ("변동", "변했", "차이", "증감", "얼마나")):
+        return []
+    def cells(line):
+        return [parse_number(x) for x in line.split("|")[1:] if x.strip()]
+    out: list[Derived] = []
+    for before_label, after_label in PAIR_LABELS:
+        before = next((l for l in lines if l.split("|")[0].strip() == before_label), None)
+        after = next((l for l in lines if l.split("|")[0].strip() == after_label), None)
+        if not before or not after:
+            continue
+        b_vals, a_vals = cells(before), cells(after)
+        if len(b_vals) != len(a_vals) or not b_vals or any(
+                v is None for v in b_vals + a_vals):
+            continue
+        for i, (b, a) in enumerate(zip(b_vals, a_vals)):
+            name = (PAIR_COLUMN_NAMES[i] if i < len(PAIR_COLUMN_NAMES)
+                    else f"{i + 1}번째 값")
+            out.append(Derived(
+                metric=f"직전 대비 {name}", kind="pair_change",
+                formula=f"{_fmt(a)} - {_fmt(b)}", value=_fmt(a - b),
+                unit="%p" if "%" in name else "",
+                source_slots=(before_label, after_label),
+                source_values=(_fmt(b), _fmt(a))))
+        break   # 서식상 쌍은 하나다
+    return out
+
+
 def has_final_consonant(word: str) -> bool:
     """마지막 글자에 받침이 있나. 한글이 아니면 없는 것으로 본다."""
     if not word:
@@ -247,6 +285,9 @@ def describe(derived: Sequence[Derived]) -> str:
             b_corp = b_slot.rsplit("@", 1)[-1]
             lines.append(f"- {d.metric} 차이: {a_corp} {d.source_values[0]} vs "
                          f"{b_corp} {d.source_values[1]} → {d.value}{unit}")
+        elif d.kind == "pair_change":
+            lines.append(f"- {d.metric}: {d.source_values[0]} → {d.source_values[1]} "
+                         f"({'+' if not d.value.startswith('-') else ''}{d.value}{unit.strip() or ''} 변동)")
         elif d.kind == "larger_side":
             lines.append(f"- {d.metric}{subject_particle(d.metric)} 더 큰 쪽: {d.value}")
         else:
