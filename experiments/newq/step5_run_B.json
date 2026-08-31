@@ -1,0 +1,71 @@
+{
+  "summary": {
+    "model": "HCX-007",
+    "kept": 0,
+    "total": 3,
+    "json_fail": 0,
+    "fabricated_total": 0,
+    "tokens": {
+      "in": 0,
+      "out": 0
+    },
+    "cost_krw_ex_vat": 0.0,
+    "cost_krw_inc_vat": 0.0
+  },
+  "rows": [
+    {
+      "qid": "Q02",
+      "model": "HCX-007",
+      "llm_kept": false,
+      "degraded_reason": null,
+      "llm_error": "LLMUnavailable: CLOVA HTTP 400",
+      "api": "FAIL (LLMUnavailable: CLOVA HTTP 400)",
+      "json_parse": "N/A",
+      "validator": "SUPPORTED",
+      "fabricated": [],
+      "units_ok": true,
+      "confidence": 70,
+      "input_tokens": null,
+      "output_tokens": null,
+      "latency_ms": 243,
+      "answer_head": "공시에서 확인한 값:\n- 자기자본대비: 5.5\n함께 확인되는 원문 근거:\n- [answer] 자기자본(원) | 4,863,349,890,725\n- [answer] 4. 투자기간 | 시작일 | 2025-04-28\n- ",
+      "raw_text": ""
+    },
+    {
+      "qid": "Q19",
+      "model": "HCX-007",
+      "llm_kept": false,
+      "degraded_reason": null,
+      "llm_error": "LLMUnavailable: CLOVA HTTP 400",
+      "api": "FAIL (LLMUnavailable: CLOVA HTTP 400)",
+      "json_parse": "N/A",
+      "validator": "SUPPORTED",
+      "fabricated": [],
+      "units_ok": true,
+      "confidence": 70,
+      "input_tokens": null,
+      "output_tokens": null,
+      "latency_ms": 248,
+      "answer_head": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [계약금액] - 상기 계약금액은 확정 계약금액(USD 1,060,022,700)에, 2024년 7월 2일 최초매매기준율 (USD/KRW 1,380.80)을 적용한 금",
+      "raw_text": ""
+    },
+    {
+      "qid": "Q23",
+      "model": "HCX-007",
+      "llm_kept": false,
+      "degraded_reason": null,
+      "llm_error": "LLMUnavailable: CLOVA HTTP 400",
+      "api": "FAIL (LLMUnavailable: CLOVA HTTP 400)",
+      "json_parse": "N/A",
+      "validator": "SUPPORTED",
+      "fabricated": [],
+      "units_ok": true,
+      "confidence": 70,
+      "input_tokens": null,
+      "output_tokens": null,
+      "latency_ms": 403,
+      "answer_head": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 8. 기타 투자판단과 관련한 중요사항 | - 멕시코 국영석유회사 PEMEX와 당사의 멕시코 법인 Samsung Ingenieria DUBA S.A. ",
+      "raw_text": ""
+    }
+  ]
+}

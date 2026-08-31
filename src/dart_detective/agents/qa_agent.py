@@ -719,6 +719,25 @@ def _element_text(value: Any) -> str:
     return ""
 
 
+def normalize_citations(value: Any) -> list[dict[str, Any]]:
+    """모델이 준 evidence를 {document_id, quote_or_fact} 목록으로 정규화한다.
+
+    실측(run A Q18): 스키마를 지시했는데도 evidence가 문자열 배열로 와서
+    c.get(...)이 AttributeError로 죽었다 — 답 전체가 예외 폐기됐다. 문자열 원소는
+    인용문으로만 취급한다(document_id는 비움 -> 인용 검사에서 soft로 잡힌다).
+    dict가 아닌 그 외 원소는 버린다. 내용을 지어내지 않는다.
+    """
+    if not isinstance(value, list):
+        return []
+    out: list[dict[str, Any]] = []
+    for item in value:
+        if isinstance(item, dict):
+            out.append(item)
+        elif isinstance(item, str) and item.strip():
+            out.append({"document_id": "", "quote_or_fact": item.strip()})
+    return out
+
+
 def answer_text(value: Any) -> str:
     """모델이 준 answer 필드를 문자열로 정규화한다.
 
@@ -803,7 +822,7 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
         try:
             payload, meta = _llm_answer(llm, user_prompt)
             state.llm = {"used": True, **meta}
-            llm_citations = payload.get("evidence", []) or []
+            llm_citations = normalize_citations(payload.get("evidence"))
             llm_answer = answer_text(payload.get("answer"))
             check = validator.validate(llm_answer, llm_citations, sources,
                                        derived=calculator.allowed_numbers(state.derived))

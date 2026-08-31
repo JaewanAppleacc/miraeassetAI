@@ -192,3 +192,17 @@ def test_recovered_answer_still_goes_through_validator():
     check = validator.validate(answer, [], [{"document_id": "d1",
                                              "text": "매출액 | 100"}])
     assert check["status"] == "UNSUPPORTED"
+
+
+# ---------- evidence가 문자열 배열로 오는 경우 (run A Q18 실측) ----------
+
+def test_string_citations_are_normalized_not_crashed():
+    got = qa_agent.normalize_citations(["원문 한 줄", {"document_id": "d1",
+                                                     "quote_or_fact": "다른 줄"}, 3, None])
+    assert got == [{"document_id": "", "quote_or_fact": "원문 한 줄"},
+                   {"document_id": "d1", "quote_or_fact": "다른 줄"}]
+
+
+def test_non_list_citations_become_empty():
+    assert qa_agent.normalize_citations("문자열") == []
+    assert qa_agent.normalize_citations(None) == []
