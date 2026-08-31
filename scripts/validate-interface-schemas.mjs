@@ -82,6 +82,11 @@ const pairs = [
     "domain/agent-comparison/embedding-calibration/schemas/calibration-config.schema.json",
     "domain/agent-comparison/embedding-calibration/examples/calibration-config.example.json",
   ],
+  // Turn P9.1: Frozen Embedding Candidate (KURE-v1/BGE-M3/PIXIE-Rune) pin schema.
+  [
+    "domain/agent-comparison/embedding-calibration/frozen-candidates/frozen-embedding-candidate.schema.json",
+    "domain/agent-comparison/embedding-calibration/frozen-candidates/frozen-embedding-candidate.example.json",
+  ],
   // Turn P6: Benchmark Runner / Gold-blind Scoring Infrastructure schemas.
   [
     "domain/agent-comparison/benchmark/interfaces/dataset-record.schema.json",

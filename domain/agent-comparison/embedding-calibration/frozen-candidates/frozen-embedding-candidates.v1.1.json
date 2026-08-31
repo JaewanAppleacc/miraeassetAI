@@ -1,0 +1,127 @@
+{
+  "schema_version": "1.1",
+  "registry_id": "frozen_embedding_candidates_v1_1",
+  "source_document": "CLAUDE.md section 10 (Retrieval experiment contract) -- KURE-v1 / BGE-M3 / PIXIE-Rune",
+  "candidates": [
+    {
+      "frozen_candidate_id": "kure_v1",
+      "provider_organization": "nlpai-lab (Korea University NLP&AI Lab)",
+      "repository_id": "nlpai-lab/KURE-v1",
+      "immutable_revision": "4ed4540949c70b7da2c74004a915e1f2d5e46e4f",
+      "model_architecture": "XLMRobertaModel, 24 layers -- fine-tuned from BAAI/bge-m3 via CachedGISTEmbedLoss on ~1.88M Korean query-document pairs. Pure bidirectional encoder, never a decoder-only/generative architecture.",
+      "embedding_dimension": 1024,
+      "max_input_length": 8192,
+      "pooling_method": "CLS",
+      "normalization": { "applied_by_default": true, "mechanism": "sentence-transformers pipeline module 2 = Normalize (L2), per modules.json" },
+      "supported_languages": "Korean, English (primary training focus); base BAAI/bge-m3 itself covers 100+ languages",
+      "license": "MIT",
+      "requires_remote_code": false,
+      "runnable_locally": true,
+      "official_http_endpoint_available": false,
+      "required_runtime": ["python>=3.9", "sentence-transformers>=3.3", "transformers>=4.47", "torch>=2.4"],
+      "estimated_memory_gb_range": {
+        "min_gb": 2.5, "max_gb": 5,
+        "basis": "model.safetensors is 2.27GB (fp32, ~560M-param XLM-RoBERTa-large scale). Range assumes typical CPU inference overhead (activations, tokenizer, batching) on top of resident weights; not independently profiled this Turn (no model download performed)."
+      },
+      "query_prefix": "",
+      "document_prefix": "",
+      "competition_status": "ELIGIBLE_FOR_BOUNDED_CALIBRATION",
+      "competition_status_reason": "Pure XLM-RoBERTa bidirectional encoder (via BAAI/bge-m3 lineage + RetroMAE pretraining), architecturally incapable of autoregressive generation -- not derived from any generative/decoder LLM (the CLAUDE.md concern, exemplified by the Qwen-embedding family, does not apply to this BERT/RoBERTa-lineage architecture). MIT license, immutable revision and dimension both confirmed from the official HuggingFace repository -- no blocker identified for a bounded, Gold-blind calibration smoke.",
+      "adapter_compatibility": {
+        "classification": "COMPATIBLE_VIA_LOCAL_OPENAI_SHAPED_SERVER",
+        "reason": "No provider-hosted official HTTP embeddings endpoint exists for this open-weight model. It CAN be served locally via HuggingFace's own Text Embeddings Inference (TEI), whose /v1/embeddings endpoint already accepts {input, model} and returns {data:[{embedding}]} -- byte-shape-compatible with the existing HTTP_EMBEDDINGS adapter contract with zero new protocol code. This Turn does not install or run any such server."
+      },
+      "sources": [
+        { "url": "https://huggingface.co/nlpai-lab/KURE-v1", "accessed_at": "2026-08-31T10:24:33Z", "note": "official model card: base model, training method, license, languages, usage example" },
+        { "url": "https://huggingface.co/api/models/nlpai-lab/KURE-v1", "accessed_at": "2026-08-31T10:24:33Z", "note": "official HF API response: sha=4ed4540949c70b7da2c74004a915e1f2d5e46e4f, license=MIT, tags (xlm-roberta, base_model:BAAI/bge-m3), confirmed via two independent fetches" },
+        { "url": "https://huggingface.co/nlpai-lab/KURE-v1/raw/main/1_Pooling/config.json", "accessed_at": "2026-08-31T10:24:33Z", "note": "pooling_mode_cls_token: true, word_embedding_dimension: 1024" },
+        { "url": "https://huggingface.co/nlpai-lab/KURE-v1/raw/main/sentence_bert_config.json", "accessed_at": "2026-08-31T10:24:33Z", "note": "max_seq_length: 8192" },
+        { "url": "https://huggingface.co/nlpai-lab/KURE-v1/raw/main/config_sentence_transformers.json", "accessed_at": "2026-08-31T10:24:33Z", "note": "similarity_fn_name: cosine" },
+        { "url": "https://huggingface.co/nlpai-lab/KURE-v1/raw/main/modules.json", "accessed_at": "2026-08-31T10:24:33Z", "note": "pipeline = Transformer -> Pooling -> Normalize" },
+        { "url": "https://huggingface.co/nlpai-lab/KURE-v1/tree/main", "accessed_at": "2026-08-31T10:24:33Z", "note": "model.safetensors = 2.27 GB" }
+      ]
+    },
+    {
+      "frozen_candidate_id": "bge_m3",
+      "provider_organization": "BAAI (Beijing Academy of Artificial Intelligence)",
+      "repository_id": "BAAI/bge-m3",
+      "immutable_revision": "5617a9f61b028005a4858fdac845db406aefb181",
+      "model_architecture": "XLMRobertaModel (RetroMAE-pretrained encoder extended to 8192 tokens); supports Dense/Sparse/ColBERT multi-vector retrieval from one encoding pass. Pure bidirectional encoder, never a decoder-only/generative architecture.",
+      "embedding_dimension": 1024,
+      "max_input_length": 8192,
+      "pooling_method": "CLS",
+      "normalization": { "applied_by_default": true, "mechanism": "sentence-transformers pipeline module 2 = Normalize (L2), per modules.json" },
+      "supported_languages": "100+ languages (official card: \"more than 100 working languages\")",
+      "license": "MIT",
+      "requires_remote_code": false,
+      "runnable_locally": true,
+      "official_http_endpoint_available": false,
+      "required_runtime": ["python>=3.9", "FlagEmbedding (primary) or sentence-transformers>=3.3", "transformers", "torch"],
+      "estimated_memory_gb_range": {
+        "min_gb": 2.5, "max_gb": 5,
+        "basis": "pytorch_model.bin is 2.27GB (fp32, ~560M-param XLM-RoBERTa-large scale). Range assumes typical CPU inference overhead on top of resident weights; not independently profiled this Turn (no model download performed)."
+      },
+      "query_prefix": "",
+      "document_prefix": "",
+      "competition_status": "ELIGIBLE_FOR_BOUNDED_CALIBRATION",
+      "competition_status_reason": "Official model card explicitly states the architecture is XLM-RoBERTa + RetroMAE, and that BGE-M3 'no longer requires adding instructions to the queries' (symmetric encoder, not an instruction-tuned generative-derived model). Architecturally incapable of autoregressive generation -- not the Qwen-style generative-LLM-derived pattern CLAUDE.md flags. MIT license, immutable revision and dimension both confirmed from the official HuggingFace repository -- no blocker identified for a bounded, Gold-blind calibration smoke.",
+      "adapter_compatibility": {
+        "classification": "COMPATIBLE_VIA_LOCAL_OPENAI_SHAPED_SERVER",
+        "reason": "No provider-hosted official HTTP embeddings endpoint exists (the 'text-embeddings-inference'/'endpoints_compatible' HF tags describe SELF-hostable deployment options, not an already-running BAAI-operated endpoint). Self-hosted TEI's /v1/embeddings endpoint is byte-shape-compatible with the existing HTTP_EMBEDDINGS adapter contract with zero new protocol code. This Turn does not install or run any such server."
+      },
+      "sources": [
+        { "url": "https://huggingface.co/BAAI/bge-m3", "accessed_at": "2026-08-31T10:24:33Z", "note": "official model card: dimension, max length, no-instruction-required statement, architecture, FlagEmbedding usage" },
+        { "url": "https://huggingface.co/api/models/BAAI/bge-m3", "accessed_at": "2026-08-31T10:24:33Z", "note": "official HF API response: sha=5617a9f61b028005a4858fdac845db406aefb181, license=MIT, tags (xlm-roberta, text-embeddings-inference, endpoints_compatible), confirmed via two independent fetches" },
+        { "url": "https://huggingface.co/BAAI/bge-m3/raw/main/1_Pooling/config.json", "accessed_at": "2026-08-31T10:24:33Z", "note": "pooling_mode_cls_token: true, word_embedding_dimension: 1024" },
+        { "url": "https://huggingface.co/BAAI/bge-m3/raw/main/sentence_bert_config.json", "accessed_at": "2026-08-31T10:24:33Z", "note": "max_seq_length: 8192" },
+        { "url": "https://huggingface.co/BAAI/bge-m3/raw/main/modules.json", "accessed_at": "2026-08-31T10:24:33Z", "note": "pipeline = Transformer -> Pooling -> Normalize" },
+        { "url": "https://huggingface.co/BAAI/bge-m3/tree/main", "accessed_at": "2026-08-31T10:24:33Z", "note": "pytorch_model.bin = 2.27 GB" }
+      ]
+    },
+    {
+      "frozen_candidate_id": "pixie_rune",
+      "provider_organization": "TelePIX Co., Ltd.",
+      "repository_id": null,
+      "immutable_revision": "BLOCKED_MISSING_IMMUTABLE_REVISION",
+      "model_architecture": "XLMRobertaModel, 24 layers (confirmed for the telepix/PIXIE-Rune-v1.5 variant specifically). Pure bidirectional encoder, never a decoder-only/generative architecture, per the v1.5 model card.",
+      "embedding_dimension": null,
+      "max_input_length": null,
+      "pooling_method": "UNKNOWN",
+      "normalization": { "applied_by_default": true, "mechanism": "confirmed for v1.5 only: sentence-transformers pipeline module 2 = Normalize (L2), per modules.json -- NOT independently re-verified for v1.0/Preview, presumed same family" },
+      "supported_languages": "Korean, English (primary; v1.5 card states 74 total languages)",
+      "license": "Apache-2.0 (confirmed identical across all 3 known variants)",
+      "requires_remote_code": false,
+      "runnable_locally": true,
+      "official_http_endpoint_available": false,
+      "required_runtime": ["python>=3.9", "sentence-transformers", "transformers", "torch"],
+      "estimated_memory_gb_range": {
+        "min_gb": 2.5, "max_gb": 5,
+        "basis": "v1.5's model.safetensors is 2.27GB (fp32, ~560M-param XLM-RoBERTa-large scale); presumed comparable for v1.0/Preview given the same organization/architecture family, not independently confirmed."
+      },
+      "query_prefix": null,
+      "document_prefix": null,
+      "competition_status": "BLOCKED_UNVERIFIED_MODEL_ID",
+      "competition_status_reason": "CLAUDE.md names only 'PIXIE-Rune (실험 전 정확한 revision 고정)' with no version qualifier. THREE distinct, actively published repositories exist under this family name -- telepix/PIXIE-Rune-v1.0, telepix/PIXIE-Rune-v1.5, and telepix/PIXIE-Rune-Preview -- with different immutable revisions and (for at least Preview vs. v1.0/v1.5) potentially different characteristics. Per this Turn's own instruction (never guess an unresolvable identity/revision), no single repository_id is pinned here; see pixie_rune_variants_researched below for what IS independently confirmed about each. This is NOT a license/runtime/regulatory blocker -- it is an identity-resolution blocker requiring the organizer/owner to specify exactly which PIXIE-Rune build the competition means before any further pin or calibration step.",
+      "pixie_rune_variants_researched": [
+        { "repository_id": "telepix/PIXIE-Rune-v1.0", "immutable_revision": "091fe5a6682119cfc02451f37fdece163ddf38de", "license": "apache-2.0", "note": "earlier stable release; architecture/dimension not independently re-verified this Turn beyond the shared family README" },
+        { "repository_id": "telepix/PIXIE-Rune-v1.5", "immutable_revision": "29dd334196af53e6cfc16674379e743334f5fa66", "license": "apache-2.0", "note": "latest stable release at research time; dimension=1024, max_seq_length=6144, pooling=CLS, query_prefix=\"query: \", document_prefix=\"\" (asymmetric -- confirmed via config_sentence_transformers.json prompts object), Normalize module present. Reported by TelePIX as marginally outperforming v1.0 on STELLA/MTEB-Korean." },
+        { "repository_id": "telepix/PIXIE-Rune-Preview", "immutable_revision": "5103ecbda7dd9e502f8414c54731da0c3f2dc72b", "license": "apache-2.0", "note": "explicitly named 'Preview' -- presumed experimental/pre-release, not independently re-verified" }
+      ],
+      "adapter_compatibility": {
+        "classification": "COMPATIBLE_VIA_LOCAL_OPENAI_SHAPED_SERVER",
+        "reason": "Provisional, architecture-level judgment shared across all 3 known variants (all sentence-transformers XLM-RoBERTa checkpoints, same TEI-servable stack as KURE-v1/BGE-M3) -- NOT a confirmation that a specific pinned artifact is ready, since competition_status is BLOCKED_UNVERIFIED_MODEL_ID. Notably, v1.5 requires a query-only prefix (\"query: \") applied asymmetrically to queries vs. documents -- any adapter wiring for this candidate must route text through a query/document-mode-aware preparation step, never embed the identical raw text the same way for both roles (see frozen-candidate-registry.mjs's prepareTextForMode)."
+      },
+      "sources": [
+        { "url": "https://huggingface.co/telepix/PIXIE-Rune-v1.5", "accessed_at": "2026-08-31T10:24:33Z", "note": "official model card: dimension, max length, architecture, prompt_name usage, apache-2.0 license, non-generative-derivation statement" },
+        { "url": "https://huggingface.co/api/models/telepix/PIXIE-Rune-v1.5", "accessed_at": "2026-08-31T10:24:33Z", "note": "official HF API response: sha=29dd334196af53e6cfc16674379e743334f5fa66, license=apache-2.0 (confirmed via two independent fetches)" },
+        { "url": "https://huggingface.co/telepix/PIXIE-Rune-v1.5/raw/main/config_sentence_transformers.json", "accessed_at": "2026-08-31T10:24:33Z", "note": "prompts: {query: \"query: \", document: \"\"}, similarity_fn_name: cosine" },
+        { "url": "https://huggingface.co/telepix/PIXIE-Rune-v1.5/raw/main/modules.json", "accessed_at": "2026-08-31T10:24:33Z", "note": "pipeline = Transformer -> Pooling -> Normalize" },
+        { "url": "https://huggingface.co/telepix/PIXIE-Rune-v1.5/raw/main/sentence_bert_config.json", "accessed_at": "2026-08-31T10:24:33Z", "note": "max_seq_length: 6144" },
+        { "url": "https://huggingface.co/telepix/PIXIE-Rune-v1.5/raw/main/config.json", "accessed_at": "2026-08-31T10:24:33Z", "note": "architectures: XLMRobertaModel, model_type: xlm-roberta, 24 layers" },
+        { "url": "https://huggingface.co/telepix/PIXIE-Rune-v1.5/tree/main", "accessed_at": "2026-08-31T10:24:33Z", "note": "model.safetensors = 2.27 GB" },
+        { "url": "https://huggingface.co/api/models/telepix/PIXIE-Rune-v1.0", "accessed_at": "2026-08-31T10:24:33Z", "note": "official HF API response: sha=091fe5a6682119cfc02451f37fdece163ddf38de, license=apache-2.0" },
+        { "url": "https://huggingface.co/api/models/telepix/PIXIE-Rune-Preview", "accessed_at": "2026-08-31T10:24:33Z", "note": "official HF API response: sha=5103ecbda7dd9e502f8414c54731da0c3f2dc72b, license=apache-2.0" }
+      ]
+    }
+  ]
+}

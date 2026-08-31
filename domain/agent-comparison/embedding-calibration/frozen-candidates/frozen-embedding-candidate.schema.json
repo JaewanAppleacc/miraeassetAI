@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://disclosure-analyst.local/schema/agent-comparison/embedding-calibration/frozen-embedding-candidate.v1.1.json",
+  "title": "Frozen Embedding Candidate v1.1",
+  "description": "Turn P9.1: one CLAUDE.md 'Frozen v1.1' embedding candidate (KURE-v1 / BGE-M3 / PIXIE-Rune), pinned from official sources only. This is a RESEARCH/COMPATIBILITY PIN, never a model selection -- see competition_status and adapter_compatibility for the gates that must clear before actual_external_call_authorized may ever be true for this candidate.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "frozen_candidate_id", "provider_organization", "repository_id", "immutable_revision",
+    "model_architecture", "embedding_dimension", "max_input_length", "pooling_method",
+    "normalization", "supported_languages", "license", "requires_remote_code", "runnable_locally",
+    "official_http_endpoint_available", "required_runtime", "estimated_memory_gb_range",
+    "query_prefix", "document_prefix", "competition_status", "competition_status_reason",
+    "adapter_compatibility", "sources"
+  ],
+  "properties": {
+    "frozen_candidate_id": { "type": "string", "pattern": "^[a-z0-9_.-]+$" },
+    "provider_organization": { "type": "string", "minLength": 1 },
+    "repository_id": { "type": ["string", "null"], "description": "Exact provider/model repository ID (e.g. HuggingFace 'org/name'). null ONLY when model identity itself is ambiguous (see BLOCKED_UNVERIFIED_MODEL_ID)." },
+    "immutable_revision": {
+      "type": ["string", "null"],
+      "pattern": "^([0-9a-f]{40}|BLOCKED_MISSING_IMMUTABLE_REVISION)$",
+      "description": "A real, verified 40-hex-char commit SHA from the official source, or the literal sentinel BLOCKED_MISSING_IMMUTABLE_REVISION when one could not be found -- NEVER a guessed/estimated value. null only when repository_id itself is null."
+    },
+    "model_architecture": { "type": "string", "minLength": 1 },
+    "embedding_dimension": { "type": ["integer", "null"], "minimum": 1, "maximum": 8192 },
+    "max_input_length": { "type": ["integer", "null"], "minimum": 1 },
+    "pooling_method": { "type": "string", "enum": ["CLS", "MEAN", "LAST_TOKEN", "UNKNOWN"] },
+    "normalization": {
+      "type": "object", "additionalProperties": false, "required": ["applied_by_default", "mechanism"],
+      "properties": {
+        "applied_by_default": { "type": "boolean" },
+        "mechanism": { "type": "string" }
+      }
+    },
+    "supported_languages": { "type": "string", "minLength": 1 },
+    "license": { "type": "string", "minLength": 1 },
+    "requires_remote_code": { "type": "boolean" },
+    "runnable_locally": { "type": "boolean" },
+    "official_http_endpoint_available": { "type": "boolean" },
+    "required_runtime": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "estimated_memory_gb_range": {
+      "type": "object", "additionalProperties": false, "required": ["min_gb", "max_gb", "basis"],
+      "properties": { "min_gb": { "type": "number", "minimum": 0 }, "max_gb": { "type": "number", "minimum": 0 }, "basis": { "type": "string" } }
+    },
+    "query_prefix": { "type": ["string", "null"], "description": "Exact string prepended to a QUERY text before embedding. Empty string means no prefix. null means unverified/not applicable." },
+    "document_prefix": { "type": ["string", "null"], "description": "Exact string prepended to a DOCUMENT/passage text before embedding. Empty string means no prefix." },
+    "competition_status": {
+      "enum": ["ELIGIBLE_FOR_BOUNDED_CALIBRATION", "REQUIRES_ORGANIZER_APPROVAL", "BLOCKED_LICENSE", "BLOCKED_MISSING_REVISION", "BLOCKED_MISSING_RUNTIME", "BLOCKED_UNVERIFIED_MODEL_ID"]
+    },
+    "competition_status_reason": { "type": "string", "minLength": 1 },
+    "adapter_compatibility": {
+      "type": "object", "additionalProperties": false, "required": ["classification", "reason"],
+      "properties": {
+        "classification": {
+          "enum": ["EXISTING_HTTP_EMBEDDINGS_COMPATIBLE", "COMPATIBLE_VIA_LOCAL_OPENAI_SHAPED_SERVER", "REQUIRES_NEW_PROTOCOL_ADAPTER", "LOCAL_INFERENCE_RUNTIME_REQUIRED", "NOT_CURRENTLY_RUNNABLE"]
+        },
+        "reason": { "type": "string", "minLength": 1 }
+      }
+    },
+    "sources": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["url", "accessed_at", "note"],
+        "properties": {
+          "url": { "type": "string", "minLength": 1 },
+          "accessed_at": { "type": "string", "format": "date-time" },
+          "note": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "pixie_rune_variants_researched": {
+      "type": "array",
+      "description": "Optional: used only when competition_status=BLOCKED_UNVERIFIED_MODEL_ID and more than one real candidate repository was found under the same CLAUDE.md name -- documents what IS independently confirmed about each un-selected variant, without pinning any single one as authoritative.",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["repository_id", "immutable_revision", "license", "note"],
+        "properties": {
+          "repository_id": { "type": "string", "minLength": 1 },
+          "immutable_revision": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+          "license": { "type": "string", "minLength": 1 },
+          "note": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "competition_status": { "const": "ELIGIBLE_FOR_BOUNDED_CALIBRATION" } }, "required": ["competition_status"] },
+      "then": {
+        "properties": {
+          "immutable_revision": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+          "embedding_dimension": { "type": "integer" }
+        }
+      }
+    }
+  ]
+}

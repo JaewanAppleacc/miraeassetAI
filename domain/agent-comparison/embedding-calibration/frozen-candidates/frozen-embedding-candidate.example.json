@@ -1,0 +1,75 @@
+{
+  "frozen_candidate_id": "kure_v1",
+  "provider_organization": "nlpai-lab (Korea University NLP&AI Lab)",
+  "repository_id": "nlpai-lab/KURE-v1",
+  "immutable_revision": "4ed4540949c70b7da2c74004a915e1f2d5e46e4f",
+  "model_architecture": "XLMRobertaModel, 24 layers -- fine-tuned from BAAI/bge-m3 via CachedGISTEmbedLoss on ~1.88M Korean query-document pairs. Pure bidirectional encoder, never a decoder-only/generative architecture.",
+  "embedding_dimension": 1024,
+  "max_input_length": 8192,
+  "pooling_method": "CLS",
+  "normalization": {
+    "applied_by_default": true,
+    "mechanism": "sentence-transformers pipeline module 2 = Normalize (L2), per modules.json"
+  },
+  "supported_languages": "Korean, English (primary training focus); base BAAI/bge-m3 itself covers 100+ languages",
+  "license": "MIT",
+  "requires_remote_code": false,
+  "runnable_locally": true,
+  "official_http_endpoint_available": false,
+  "required_runtime": [
+    "python>=3.9",
+    "sentence-transformers>=3.3",
+    "transformers>=4.47",
+    "torch>=2.4"
+  ],
+  "estimated_memory_gb_range": {
+    "min_gb": 2.5,
+    "max_gb": 5,
+    "basis": "model.safetensors is 2.27GB (fp32, ~560M-param XLM-RoBERTa-large scale). Range assumes typical CPU inference overhead (activations, tokenizer, batching) on top of resident weights; not independently profiled this Turn (no model download performed)."
+  },
+  "query_prefix": "",
+  "document_prefix": "",
+  "competition_status": "ELIGIBLE_FOR_BOUNDED_CALIBRATION",
+  "competition_status_reason": "Pure XLM-RoBERTa bidirectional encoder (via BAAI/bge-m3 lineage + RetroMAE pretraining), architecturally incapable of autoregressive generation -- not derived from any generative/decoder LLM (the CLAUDE.md concern, exemplified by the Qwen-embedding family, does not apply to this BERT/RoBERTa-lineage architecture). MIT license, immutable revision and dimension both confirmed from the official HuggingFace repository -- no blocker identified for a bounded, Gold-blind calibration smoke.",
+  "adapter_compatibility": {
+    "classification": "COMPATIBLE_VIA_LOCAL_OPENAI_SHAPED_SERVER",
+    "reason": "No provider-hosted official HTTP embeddings endpoint exists for this open-weight model. It CAN be served locally via HuggingFace's own Text Embeddings Inference (TEI), whose /v1/embeddings endpoint already accepts {input, model} and returns {data:[{embedding}]} -- byte-shape-compatible with the existing HTTP_EMBEDDINGS adapter contract with zero new protocol code. This Turn does not install or run any such server."
+  },
+  "sources": [
+    {
+      "url": "https://huggingface.co/nlpai-lab/KURE-v1",
+      "accessed_at": "2026-08-31T10:24:33Z",
+      "note": "official model card: base model, training method, license, languages, usage example"
+    },
+    {
+      "url": "https://huggingface.co/api/models/nlpai-lab/KURE-v1",
+      "accessed_at": "2026-08-31T10:24:33Z",
+      "note": "official HF API response: sha=4ed4540949c70b7da2c74004a915e1f2d5e46e4f, license=MIT, tags (xlm-roberta, base_model:BAAI/bge-m3), confirmed via two independent fetches"
+    },
+    {
+      "url": "https://huggingface.co/nlpai-lab/KURE-v1/raw/main/1_Pooling/config.json",
+      "accessed_at": "2026-08-31T10:24:33Z",
+      "note": "pooling_mode_cls_token: true, word_embedding_dimension: 1024"
+    },
+    {
+      "url": "https://huggingface.co/nlpai-lab/KURE-v1/raw/main/sentence_bert_config.json",
+      "accessed_at": "2026-08-31T10:24:33Z",
+      "note": "max_seq_length: 8192"
+    },
+    {
+      "url": "https://huggingface.co/nlpai-lab/KURE-v1/raw/main/config_sentence_transformers.json",
+      "accessed_at": "2026-08-31T10:24:33Z",
+      "note": "similarity_fn_name: cosine"
+    },
+    {
+      "url": "https://huggingface.co/nlpai-lab/KURE-v1/raw/main/modules.json",
+      "accessed_at": "2026-08-31T10:24:33Z",
+      "note": "pipeline = Transformer -> Pooling -> Normalize"
+    },
+    {
+      "url": "https://huggingface.co/nlpai-lab/KURE-v1/tree/main",
+      "accessed_at": "2026-08-31T10:24:33Z",
+      "note": "model.safetensors = 2.27 GB"
+    }
+  ]
+}
