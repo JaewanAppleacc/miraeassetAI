@@ -168,3 +168,13 @@ node scripts/run-evaluation-harness.mjs run/config.json
 | `scripts/make_harness_config.py` | config 생성기 |
 | `data/eval/newq_gold.v0.2.jsonl` | seed 밖 평가셋 18문항 |
 | `docs/reports/team_harness_first_run.md` | 1~3차 실행 기록과 수치 |
+
+---
+
+## 부록: 이 저장소에 들어 있는 것 (릴리스 번들 안 뒤져도 됨)
+
+| 파일 | 내용 |
+|---|---|
+| `data/eval/seed_gold.v0.17.jsonl` | seed 25문항 Gold v0.2 (팀 릴리스 번들에서 그대로 복사) |
+| `data/eval/newq_gold.v0.2.jsonl` | seed 밖 24문항 |
+| `tests/fixtures/team_contracts/*.schema.json` | 공식 wire·내부 응답 스키마 원본 사본 — `tests/agents/test_team_contract_schemas.py`가 우리 응답을 이 원본으로 검증한다. 팀이 스키마를 바꾸면 사본을 갱신하는 순간 테스트가 이탈을 잡는다 |
