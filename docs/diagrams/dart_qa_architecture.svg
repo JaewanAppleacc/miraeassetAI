@@ -1,0 +1,235 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1660 1030" width="1660" height="1030" font-family="Malgun Gothic, Apple SD Gothic Neo, Noto Sans KR, sans-serif">
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#1E5F58"/>
+    </marker>
+    <marker id="arGold" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#7A5A12"/>
+    </marker>
+    <marker id="arGrey" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#9C4A22"/>
+    </marker>
+    <style>
+      .h1{font-size:30px;font-weight:700;fill:#181B1C}
+      .sub{font-size:15px;fill:#5E6669}
+      .band{font-size:13px;font-weight:700;fill:#1E5F58;letter-spacing:2px}
+      .bandGold{font-size:13px;font-weight:700;fill:#7A5A12;letter-spacing:2px}
+      .bandWarn{font-size:13px;font-weight:700;fill:#9C4A22;letter-spacing:2px}
+      .t{font-size:16px;font-weight:700;fill:#181B1C}
+      .d{font-size:13px;fill:#5E6669}
+      .m{font-size:12.5px;font-family:Consolas,monospace;fill:#1E5F58}
+      .mg{font-size:12.5px;font-family:Consolas,monospace;fill:#7A5A12}
+      .mw{font-size:12.5px;font-family:Consolas,monospace;fill:#9C4A22}
+      .lbl{font-size:12px;fill:#5E6669}
+      .strike{text-decoration:line-through}
+      .box{fill:#FFFFFF;stroke:#DEDED7;stroke-width:1.2;rx:10}
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="1660" height="1030" fill="#FAFAF7"/>
+
+  <!-- 제목 -->
+  <text class="h1" x="40" y="52">DART 공시 QA — 전체 구조 한 장</text>
+  <text class="sub" x="40" y="78">공시 4,204건을 검색 가능한 형태로 만들고(A), 두 단계로 찾고(B), Agent가 값을 고르고 계산·검증한다(C). gold25는 채점만 한다(D). 임베딩은 실험 후 미채택(E).</text>
+
+  <!-- ================= A. 데이터 준비 ================= -->
+  <text class="band" x="40" y="118">A · 데이터 준비 — 공시 전체 대상, gold25 참조 없음</text>
+
+  <rect class="box" x="40" y="132" width="255" height="104" fill="#FFFFFF" stroke="#DEDED7" rx="10"/>
+  <text class="t" x="58" y="162">① 공시 원문</text>
+  <text class="d" x="58" y="184">팀이 수집한 DART 공시 원본</text>
+  <text class="m" x="58" y="212">5.3 GB · raw</text>
+
+  <rect class="box" x="325" y="132" width="255" height="104" fill="#FFFFFF" stroke="#DEDED7" rx="10"/>
+  <text class="t" x="343" y="162">② 파싱 → DocumentIR</text>
+  <text class="d" x="343" y="184">표는 항목 | 값 | 값 구조로 보존</text>
+  <text class="m" x="343" y="212">4,204건</text>
+
+  <rect class="box" x="610" y="132" width="255" height="104" fill="#FFFFFF" stroke="#DEDED7" rx="10"/>
+  <text class="t" x="628" y="162">③ 문서 인덱스</text>
+  <text class="d" x="628" y="184">회사·기간·본문 키워드 정리</text>
+  <text class="m" x="628" y="212">doc_index.jsonl · 107MB</text>
+
+  <rect class="box" x="895" y="132" width="275" height="104" fill="#E4EFEC" stroke="#1E5F58" stroke-width="1.6" rx="10"/>
+  <text class="t" x="913" y="162">④ 청킹 A0 (채택)</text>
+  <text class="d" x="913" y="184">표의 줄 구조를 유지해 자름</text>
+  <text class="m" x="913" y="212">질문당 평균 12,706조각</text>
+
+  <line x1="295" y1="184" x2="322" y2="184" stroke="#1E5F58" stroke-width="1.6" marker-end="url(#ar)"/>
+  <line x1="580" y1="184" x2="607" y2="184" stroke="#1E5F58" stroke-width="1.6" marker-end="url(#ar)"/>
+  <line x1="865" y1="184" x2="892" y2="184" stroke="#1E5F58" stroke-width="1.6" marker-end="url(#ar)"/>
+
+  <!-- ================= B. 검색 2단계 ================= -->
+  <text class="band" x="40" y="288">B · 검색 2단계 — 키워드(BM25). 벡터 임베딩 아님</text>
+
+  <rect class="box" x="40" y="302" width="540" height="140" fill="#FFFFFF" stroke="#DEDED7" rx="10"/>
+  <text class="t" x="58" y="332">Stage 1 · 문서 고르기</text>
+  <text class="d" x="58" y="356">질문에서 회사·기간을 뽑아 조건으로 잘라낸다 (점수가 아니라 필터)</text>
+  <text class="d" x="58" y="378">회사를 이미 걸렀으므로 검색어에서 회사명 토큰은 제외</text>
+  <text class="m" x="58" y="406">4,204건 → 후보 50건 (stage1_k = 50)</text>
+  <text class="lbl" x="58" y="428">document_index.py</text>
+
+  <rect class="box" x="630" y="302" width="540" height="140" fill="#FFFFFF" stroke="#DEDED7" rx="10"/>
+  <text class="t" x="648" y="332">Stage 2 · 조각 고르기</text>
+  <text class="d" x="648" y="356">한국어를 음절 2글자 단위로 쪼개 BM25 점수 ("자기주식" → 자기·기주·주식)</text>
+  <text class="d" x="648" y="378">질문 유형에 맞는 섹션에 가산점 + 표 행 라벨 신호</text>
+  <text class="m" x="648" y="406">조각 순위 → 상위 20 (채점) / 상위 16 (LLM 문맥)</text>
+  <text class="lbl" x="648" y="428">chunk_index.py</text>
+
+  <line x1="580" y1="372" x2="627" y2="372" stroke="#1E5F58" stroke-width="1.6" marker-end="url(#ar)"/>
+  <line x1="1032" y1="236" x2="1032" y2="299" stroke="#1E5F58" stroke-width="1.6" marker-end="url(#ar)"/>
+
+  <!-- ================= C. Agent ================= -->
+  <text class="band" x="40" y="494">C · Agent — 검색을 대체하지 않고 그 위에 얹는다</text>
+
+  <rect class="box" x="40" y="508" width="175" height="132" fill="#F5EEDC" stroke="#7A5A12" stroke-width="1.6" rx="10"/>
+  <text class="t" x="56" y="536">1. 값 고르기</text>
+  <text class="d" x="56" y="558">표 머리글을 읽어</text>
+  <text class="d" x="56" y="576">"몇 열 = 몇 년" 확인</text>
+  <text class="d" x="56" y="594">애매하면 비운다</text>
+  <text class="mg" x="56" y="622">column-aware</text>
+
+  <rect class="box" x="233" y="508" width="175" height="132" fill="#F5EEDC" stroke="#7A5A12" stroke-width="1.6" rx="10"/>
+  <text class="t" x="249" y="536">2. 계산</text>
+  <text class="d" x="249" y="558">증가율·차이는</text>
+  <text class="d" x="249" y="576">코드가 계산</text>
+  <text class="d" x="249" y="594">단위 다르면 계산 안 함</text>
+  <text class="mg" x="249" y="622">calculator.py</text>
+
+  <rect class="box" x="426" y="508" width="175" height="132" fill="#FFFFFF" stroke="#DEDED7" rx="10"/>
+  <text class="t" x="442" y="536">3. LLM 답변</text>
+  <text class="d" x="442" y="558">상위 16조각만 근거</text>
+  <text class="d" x="442" y="576">HCX-005</text>
+  <text class="d" x="442" y="594">프롬프트 해시로 잠금</text>
+  <text class="m" x="442" y="622">qa-2026-08-31.1</text>
+
+  <rect class="box" x="619" y="508" width="175" height="132" fill="#F5EEDC" stroke="#7A5A12" stroke-width="1.6" rx="10"/>
+  <text class="t" x="635" y="536">4. 응답 살리기</text>
+  <text class="d" x="635" y="558">JSON 하나만 추출</text>
+  <text class="d" x="635" y="576">answer 리스트 정규화</text>
+  <text class="d" x="635" y="594">429만 1회 재시도</text>
+  <text class="mg" x="635" y="622">llm.py</text>
+
+  <rect class="box" x="812" y="508" width="175" height="132" fill="#FFFFFF" stroke="#DEDED7" rx="10"/>
+  <text class="t" x="828" y="536">5. 검증</text>
+  <text class="d" x="828" y="558">숫자·인용이 원문에</text>
+  <text class="d" x="828" y="576">있는지 확인</text>
+  <text class="d" x="828" y="594">원문 / 계산값 / 그 외</text>
+  <text class="m" x="828" y="622">validator.py</text>
+
+  <rect class="box" x="1005" y="508" width="165" height="132" fill="#E4EFEC" stroke="#1E5F58" stroke-width="1.6" rx="10"/>
+  <text class="t" x="1021" y="536">6. 답변</text>
+  <text class="d" x="1021" y="558">근거 있으면 그대로</text>
+  <text class="d" x="1021" y="576">없으면 답변 폐기 →</text>
+  <text class="d" x="1021" y="594">원문 발췌로 대체</text>
+  <text class="m" x="1021" y="622">POST /qa</text>
+
+  <line x1="215" y1="574" x2="230" y2="574" stroke="#1E5F58" stroke-width="1.6" marker-end="url(#ar)"/>
+  <line x1="408" y1="574" x2="423" y2="574" stroke="#1E5F58" stroke-width="1.6" marker-end="url(#ar)"/>
+  <line x1="601" y1="574" x2="616" y2="574" stroke="#1E5F58" stroke-width="1.6" marker-end="url(#ar)"/>
+  <line x1="794" y1="574" x2="809" y2="574" stroke="#1E5F58" stroke-width="1.6" marker-end="url(#ar)"/>
+  <line x1="987" y1="574" x2="1002" y2="574" stroke="#1E5F58" stroke-width="1.6" marker-end="url(#ar)"/>
+  <line x1="320" y1="442" x2="320" y2="505" stroke="#1E5F58" stroke-width="1.6" marker-end="url(#ar)"/>
+
+  <!-- 계산 성립 시 LLM 건너뜀 -->
+  <path d="M 320 650 L 320 676 L 707 676 L 707 646" fill="none" stroke="#7A5A12" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#arGold)"/>
+  <text class="mg" x="360" y="670">계산이 되면 LLM을 아예 부르지 않는다 — 25문항 중 3문항, 비용 0원</text>
+
+  <!-- ================= E. 미채택 실험 ================= -->
+  <text class="bandWarn" x="40" y="734">E · 실험은 했지만 안 쓰는 것 — 임베딩이 여기 있다</text>
+
+  <rect x="40" y="748" width="1130" height="132" fill="#F6EAE2" stroke="#9C4A22" stroke-width="1.3" rx="10"/>
+
+  <text class="t" x="62" y="778" fill="#9C4A22">Kiwi 형태소 BM25</text>
+  <text class="d" x="62" y="800">한국어 문법으로 단어 분해</text>
+  <text class="mw" x="62" y="824">E-R@20 −0.0572 · 25초</text>
+  <text class="lbl" x="62" y="846">음절 bigram이 조사 변형에 이미 강함</text>
+
+  <text class="t" x="360" y="778" fill="#9C4A22">bge-m3 리랭커 (임베딩)</text>
+  <text class="d" x="360" y="800">BM25 상위 50개를 의미로 재정렬</text>
+  <text class="mw" x="360" y="824">E-R@20 −0.0143 · 77초 (53배)</text>
+  <text class="lbl" x="360" y="846">비슷하게 생긴 다른 표를 끌어올림</text>
+
+  <text class="t" x="700" y="778" fill="#9C4A22">dense 전면 검색 (임베딩)</text>
+  <text class="d" x="700" y="800">모든 조각을 벡터로 바꿔 검색</text>
+  <text class="mw" x="700" y="824">측정 불가 · CPU 3.2조각/초</text>
+  <text class="lbl" x="700" y="846">질문당 1만 조각+ → 조합당 수 시간</text>
+
+  <text class="t" x="990" y="778" fill="#9C4A22">청킹 A1~A5</text>
+  <text class="d" x="990" y="800">문단·표 행·창 크기 변형</text>
+  <text class="mw" x="990" y="824">−0.007 ~ −0.43</text>
+  <text class="lbl" x="990" y="846">표 행 단위는 크게 망가짐</text>
+
+  <text class="lbl" x="62" y="868" fill="#9C4A22">공시는 "매출액 | 59,254,361" 같은 표가 대부분 — 의미 유사도보다 정확한 단어·숫자 일치가 답을 가른다. 그래서 임베딩이 지지 않고 <tspan font-weight="700">진다</tspan>.</text>
+
+  <!-- ================= D. 평가 루프 ================= -->
+  <text class="bandGold" x="1240" y="118">D · 평가 루프 — gold25는 자(尺)</text>
+
+  <rect x="1225" y="132" width="395" height="748" fill="#F5EEDC" stroke="#7A5A12" stroke-width="1.4" rx="12"/>
+
+  <rect class="box" x="1247" y="158" width="351" height="96" fill="#FFFFFF" stroke="#DEDED7" rx="10"/>
+  <text class="t" x="1265" y="186">질문 25개</text>
+  <text class="d" x="1265" y="208">단순추출 9 · 비교계산 8 · 복잡추론 8</text>
+  <text class="mg" x="1265" y="234">data/eval/gold25.jsonl</text>
+
+  <rect class="box" x="1247" y="270" width="351" height="96" fill="#FFFFFF" stroke="#DEDED7" rx="10"/>
+  <text class="t" x="1265" y="298">정답 근거 140개</text>
+  <text class="d" x="1265" y="320">답이 원문 어느 줄에 있는지 사람이 지정</text>
+  <text class="mg" x="1265" y="346">문항당 2~13개 · 평균 5.6개</text>
+
+  <rect class="box" x="1247" y="382" width="351" height="112" fill="#FFFFFF" stroke="#DEDED7" rx="10"/>
+  <text class="t" x="1265" y="410">채점</text>
+  <text class="d" x="1265" y="432">상위 20조각 안에 그 줄이 글자 그대로 있나</text>
+  <text class="mg" x="1265" y="458">E-R@20 = 0.7429  (실제 후보 조건)</text>
+  <text class="lbl" x="1265" y="480">0.9429는 정답 문서를 미리 넣은 낙관 조건 — 혼동 주의</text>
+
+  <rect class="box" x="1247" y="510" width="351" height="96" fill="#FFFFFF" stroke="#DEDED7" rx="10"/>
+  <text class="t" x="1265" y="538">실패 원인 분류</text>
+  <text class="d" x="1265" y="560">문서를 못 찾음 / 조각 순위가 밀림</text>
+  <text class="mg" x="1265" y="586">HIT 103 · P1 2 · P2 6 · P4 29</text>
+
+  <rect class="box" x="1247" y="622" width="351" height="112" fill="#FFFFFF" stroke="#DEDED7" rx="10"/>
+  <text class="t" x="1265" y="650">사람이 판단 → 코드 수정</text>
+  <text class="d" x="1265" y="672">한 라운드에 한 가지만 바꾸고 25문항 재측정</text>
+  <text class="mg" x="1265" y="698">떨어지면 되돌린다 (하락 0으로 확인)</text>
+  <text class="lbl" x="1265" y="720">모델 학습·파인튜닝은 0회 — gold25는 학습에 안 쓰인다</text>
+
+  <rect class="box" x="1247" y="750" width="351" height="108" fill="#E4EFEC" stroke="#1E5F58" stroke-width="1.6" rx="10"/>
+  <text class="t" x="1265" y="778">실호출 결과 (25문항 · 1회)</text>
+  <text class="d" x="1265" y="800">지어낸 숫자 0건 · 빈 답변 0건</text>
+  <text class="d" x="1265" y="820">LLM 문장 채택 5 / 계산 3 / 발췌 17</text>
+  <text class="m" x="1265" y="846">총비용 257원 (예산 3,000원)</text>
+
+  <line x1="1422" y1="254" x2="1422" y2="267" stroke="#7A5A12" stroke-width="1.6" marker-end="url(#arGold)"/>
+  <line x1="1422" y1="366" x2="1422" y2="379" stroke="#7A5A12" stroke-width="1.6" marker-end="url(#arGold)"/>
+  <line x1="1422" y1="494" x2="1422" y2="507" stroke="#7A5A12" stroke-width="1.6" marker-end="url(#arGold)"/>
+  <line x1="1422" y1="606" x2="1422" y2="619" stroke="#7A5A12" stroke-width="1.6" marker-end="url(#arGold)"/>
+  <line x1="1422" y1="734" x2="1422" y2="747" stroke="#7A5A12" stroke-width="1.6" marker-end="url(#arGold)"/>
+
+  <!-- 검색 결과 → 채점 (유일한 접점) -->
+  <path d="M 1170 372 L 1200 372 L 1200 438 L 1244 438" fill="none" stroke="#7A5A12" stroke-width="1.8" stroke-dasharray="7 5" marker-end="url(#arGold)"/>
+  <text class="mg" x="1176" y="360">채점</text>
+
+  <!-- 코드 수정 → 검색/Agent 로 되돌아감 -->
+  <path d="M 1244 678 L 1200 678 L 1200 700 L 128 700 L 128 646" fill="none" stroke="#7A5A12" stroke-width="1.6" stroke-dasharray="7 5" marker-end="url(#arGold)"/>
+  <text class="mg" x="880" y="694">채택되면 코드에 반영 · 떨어지면 되돌림</text>
+
+  <!-- E 미채택 → 기각 표시 -->
+  <path d="M 1170 814 L 1210 814 L 1210 804 L 1244 804" fill="none" stroke="#9C4A22" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#arGrey)"/>
+  <text class="mw" x="1130" y="900">↑ 모두 같은 자로 재고 기각됨</text>
+
+  <!-- 범례 -->
+  <rect x="40" y="912" width="1580" height="86" fill="#FFFFFF" stroke="#DEDED7" rx="10"/>
+  <text class="band" x="62" y="940">범례</text>
+  <rect x="62" y="954" width="16" height="16" fill="#E4EFEC" stroke="#1E5F58" stroke-width="1.4" rx="4"/>
+  <text class="d" x="86" y="967">채택 · 현재 production</text>
+  <rect x="270" y="954" width="16" height="16" fill="#F5EEDC" stroke="#7A5A12" stroke-width="1.4" rx="4"/>
+  <text class="d" x="294" y="967">이번에 새로 넣은 것 / 평가 루프</text>
+  <rect x="560" y="954" width="16" height="16" fill="#F6EAE2" stroke="#9C4A22" stroke-width="1.4" rx="4"/>
+  <text class="d" x="584" y="967">실험 후 미채택</text>
+  <line x1="740" y1="962" x2="790" y2="962" stroke="#1E5F58" stroke-width="1.8" marker-end="url(#ar)"/>
+  <text class="d" x="798" y="967">데이터가 흐르는 방향</text>
+  <line x1="990" y1="962" x2="1040" y2="962" stroke="#7A5A12" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#arGold)"/>
+  <text class="d" x="1048" y="967">측정·판단 (실행 경로 아님)</text>
+  <text class="lbl" x="1330" y="967">수치 출처: experiments/reports/</text>
+</svg>

@@ -1,0 +1,1849 @@
+{
+  "summary": {
+    "evidence_recall@1": 0.2929,
+    "evidence_recall@3": 0.6214,
+    "evidence_recall@5": 0.6786,
+    "evidence_recall@10": 0.8214,
+    "evidence_recall@20": 0.9429,
+    "evidence_recall@2000chars": 0.7071,
+    "evidence_recall@5000chars": 0.8357,
+    "evidence_recall@10000chars": 0.9429,
+    "evidence_recall@20000chars": 0.9429,
+    "doc_ceiling@20": 0.9786,
+    "n_evidence": 140,
+    "n_questions": 25,
+    "mean_chunks_per_question": 3184.7
+  },
+  "baseline": {
+    "evidence_recall@1": 0.2929,
+    "evidence_recall@3": 0.6214,
+    "evidence_recall@5": 0.6786,
+    "evidence_recall@10": 0.8214,
+    "evidence_recall@20": 0.9429,
+    "evidence_recall@2000chars": 0.7071,
+    "evidence_recall@5000chars": 0.8357,
+    "evidence_recall@10000chars": 0.9429,
+    "evidence_recall@20000chars": 0.9429,
+    "doc_ceiling@20": 0.9786,
+    "n_evidence": 140,
+    "n_questions": 25,
+    "mean_chunks_per_question": 3184.7
+  },
+  "deltas": {
+    "evidence_recall@1": 0.0,
+    "evidence_recall@3": 0.0,
+    "evidence_recall@5": 0.0,
+    "evidence_recall@10": 0.0,
+    "evidence_recall@20": 0.0
+  },
+  "verdict_counts": {
+    "HIT": 103,
+    "P1": 2,
+    "P2": 6,
+    "P4": 29
+  },
+  "verdicts": [
+    {
+      "qid": "Q01",
+      "evidence_id": "evidence_4fe3a16a319853c394fd205b",
+      "document_id": "exchange_20230428800439",
+      "rank": 1,
+      "duplicates": 1,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q01",
+      "evidence_id": "evidence_6c69a8e23065fa8a7a73149d",
+      "document_id": "exchange_20230428800439",
+      "rank": 1,
+      "duplicates": 2,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q01",
+      "evidence_id": "evidence_bf5558cef5b0e77499458bfd",
+      "document_id": "exchange_20230428800439",
+      "rank": 1,
+      "duplicates": 2,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q02",
+      "evidence_id": "evidence_05dabd799b44945b5d8d0f61",
+      "document_id": "exchange_20250428800409",
+      "rank": 1,
+      "duplicates": 1,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q02",
+      "evidence_id": "evidence_1a5a2657f50d91751f296525",
+      "document_id": "exchange_20250428800409",
+      "rank": 1,
+      "duplicates": 1,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q03",
+      "evidence_id": "evidence_6a6bab6035e60635631be785",
+      "document_id": "holding_20250520000335",
+      "rank": 1,
+      "duplicates": 3,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q03",
+      "evidence_id": "evidence_de26667ffeffcf7a5726d929",
+      "document_id": "holding_20250520000335",
+      "rank": 1,
+      "duplicates": 2,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q04",
+      "evidence_id": "evidence_ed2a3eb575a695dbeb6279f5",
+      "document_id": "holding_20250124000900",
+      "rank": 2,
+      "duplicates": 4,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q04",
+      "evidence_id": "evidence_a387886c0a93368c23443f2f",
+      "document_id": "holding_20250124000900",
+      "rank": 2,
+      "duplicates": 2,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q04",
+      "evidence_id": "evidence_b005610e9425a278ca531afd",
+      "document_id": "holding_20250124000900",
+      "rank": 1,
+      "duplicates": 5,
+      "doc_in_stage1": true,
+      "verdict": "P4"
+    },
+    {
+      "qid": "Q05",
+      "evidence_id": "evidence_71debde0d638bcc22d945cda",
+      "document_id": "major_20260120000144",
+      "rank": 4,
+      "duplicates": 1,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q05",
+      "evidence_id": "evidence_834a39dc77106d945c0bb77a",
+      "document_id": "major_20260120000144",
+      "rank": 3,
+      "duplicates": 1,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q05",
+      "evidence_id": "evidence_825b8d1a2671e2d83927e35e",
+      "document_id": "major_20260120000144",
+      "rank": 3,
+      "duplicates": 1,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q05",
+      "evidence_id": "evidence_f1eec3feb824c2fbb73365d4",
+      "document_id": "major_20260120000144",
+      "rank": 3,
+      "duplicates": 2,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q05",
+      "evidence_id": "evidence_7a22d6ae73a79a826710b025",
+      "document_id": "major_20260120000144",
+      "rank": 3,
+      "duplicates": 3,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q05",
+      "evidence_id": "evidence_3f217583ac704d9abf5bc3d2",
+      "document_id": "major_20260120000144",
+      "rank": 3,
+      "duplicates": 1,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q06",
+      "evidence_id": "evidence_1a5a2657f50d91751f296525",
+      "document_id": "exchange_20250428800409",
+      "rank": 2,
+      "duplicates": 1,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q06",
+      "evidence_id": "evidence_441902d5bf9434beed4da64d",
+      "document_id": "exchange_20250428800409",
+      "rank": 2,
+      "duplicates": 1,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q06",
+      "evidence_id": "evidence_1a8e753b5c667abbf2a60d73",
+      "document_id": "exchange_20250428800409",
+      "rank": 2,
+      "duplicates": 1,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q06",
+      "evidence_id": "evidence_1b42bdcc4dc7440cc6e4a340",
+      "document_id": "exchange_20250428800407",
+      "rank": 1,
+      "duplicates": 1,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q06",
+      "evidence_id": "evidence_b7fb6a305d22f9a0c936a256",
+      "document_id": "exchange_20250428800407",
+      "rank": 1,
+      "duplicates": 1,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q06",
+      "evidence_id": "evidence_ab530df40bc10feff4d8f7e7",
+      "document_id": "exchange_20250428800407",
+      "rank": 1,
+      "duplicates": 1,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q06",
+      "evidence_id": "evidence_05dabd799b44945b5d8d0f61",
+      "document_id": "exchange_20250428800409",
+      "rank": 2,
+      "duplicates": 1,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q06",
+      "evidence_id": "evidence_ee0081fbf5f0e705b2989ef1",
+      "document_id": "exchange_20250428800407",
+      "rank": 1,
+      "duplicates": 1,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q07",
+      "evidence_id": "evidence_f6596ad0db1c7cad3a4147f5",
+      "document_id": "periodic_20260316001415",
+      "rank": 13,
+      "duplicates": 1,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q07",
+      "evidence_id": "evidence_08c5374a71d91471432a6974",
+      "document_id": "exchange_20250224800001",
+      "rank": 1,
+      "duplicates": 1,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q08",
+      "evidence_id": "evidence_438c937e9d0b66d5f5bf13f0",
+      "document_id": "major_20241118000328",
+      "rank": 52,
+      "duplicates": 1,
+      "doc_in_stage1": true,
+      "verdict": "P2"
+    },
+    {
+      "qid": "Q08",
+      "evidence_id": "evidence_63c94ef1318bfa17c9fc85d9",
+      "document_id": "major_20241118000171",
+      "rank": 7,
+      "duplicates": 3,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q08",
+      "evidence_id": "evidence_3cb2fb6bddf9aac4234402d3",
+      "document_id": "major_20241118000171",
+      "rank": 12,
+      "duplicates": 3,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q08",
+      "evidence_id": "evidence_15875a167f87fdac66704231",
+      "document_id": "major_20241115000375",
+      "rank": 7,
+      "duplicates": 3,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q08",
+      "evidence_id": "evidence_f5e63066232ca0bd0e02bd29",
+      "document_id": "major_20241115000375",
+      "rank": 7,
+      "duplicates": 3,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q08",
+      "evidence_id": "evidence_d9a8ecf2e22c076c8c200aa0",
+      "document_id": "periodic_20250814003156",
+      "rank": null,
+      "duplicates": 0,
+      "doc_in_stage1": false,
+      "verdict": "P1"
+    },
+    {
+      "qid": "Q08",
+      "evidence_id": "evidence_2aa9e7d0fa4e259496aa59f9",
+      "document_id": "major_20241118000328",
+      "rank": 52,
+      "duplicates": 1,
+      "doc_in_stage1": true,
+      "verdict": "P2"
+    },
+    {
+      "qid": "Q08",
+      "evidence_id": "evidence_2cdf5a2e62f4db79d88bd713",
+      "document_id": "major_20241115000375",
+      "rank": 7,
+      "duplicates": 6,
+      "doc_in_stage1": true,
+      "verdict": "P4"
+    },
+    {
+      "qid": "Q08",
+      "evidence_id": "evidence_4ca2e43be9f63350f31867a9",
+      "document_id": "major_20241115000375",
+      "rank": 8,
+      "duplicates": 6,
+      "doc_in_stage1": true,
+      "verdict": "P4"
+    },
+    {
+      "qid": "Q09",
+      "evidence_id": "evidence_d884adf9dc1aa0f2370db58e",
+      "document_id": "major_20250206000192",
+      "rank": 18,
+      "duplicates": 1,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q09",
+      "evidence_id": "evidence_4bb201438fab0e23e64ec747",
+      "document_id": "major_20250206000192",
+      "rank": 18,
+      "duplicates": 2,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q09",
+      "evidence_id": "evidence_97346a2fc6b530faca3c7c21",
+      "document_id": "major_20250623000361",
+      "rank": 7,
+      "duplicates": 1,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q09",
+      "evidence_id": "evidence_53272415be8c7c695d6fea7e",
+      "document_id": "periodic_20250814002920",
+      "rank": 12,
+      "duplicates": 2,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q09",
+      "evidence_id": "evidence_9fa1aaf64e0114f6a09d0372",
+      "document_id": "major_20250623000361",
+      "rank": 15,
+      "duplicates": 2,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q09",
+      "evidence_id": "evidence_df234bf52adff5e717a30b87",
+      "document_id": "major_20250206000192",
+      "rank": 15,
+      "duplicates": 3,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q09",
+      "evidence_id": "evidence_ee774993dd67753740b74480",
+      "document_id": "major_20250206000192",
+      "rank": 15,
+      "duplicates": 3,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q09",
+      "evidence_id": "evidence_bcb37279ae1fd1edb409c064",
+      "document_id": "major_20250206000192",
+      "rank": 15,
+      "duplicates": 3,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q09",
+      "evidence_id": "evidence_d2e257c56114cbb8f8585f73",
+      "document_id": "major_20250623000361",
+      "rank": 15,
+      "duplicates": 1,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q10",
+      "evidence_id": "evidence_de7be27c8aa2cde645113826",
+      "document_id": "periodic_20250814004080",
+      "rank": 2,
+      "duplicates": 8,
+      "doc_in_stage1": true,
+      "verdict": "P4"
+    },
+    {
+      "qid": "Q10",
+      "evidence_id": "evidence_68032d71581d2cbee3fc2eaf",
+      "document_id": "periodic_20230814001827",
+      "rank": 3,
+      "duplicates": 5,
+      "doc_in_stage1": true,
+      "verdict": "P4"
+    },
+    {
+      "qid": "Q10",
+      "evidence_id": "evidence_f193fc659ec1abcd33b8c46b",
+      "document_id": "periodic_20230814001827",
+      "rank": 3,
+      "duplicates": 4,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q10",
+      "evidence_id": "evidence_5c85f81dbc43177fdbac6573",
+      "document_id": "periodic_20250814004080",
+      "rank": 1,
+      "duplicates": 5,
+      "doc_in_stage1": true,
+      "verdict": "P4"
+    },
+    {
+      "qid": "Q11",
+      "evidence_id": "evidence_bad097c7974d2ae142d1ea1e",
+      "document_id": "periodic_20240328001188",
+      "rank": 2,
+      "duplicates": 17,
+      "doc_in_stage1": true,
+      "verdict": "P4"
+    },
+    {
+      "qid": "Q11",
+      "evidence_id": "evidence_57e674bf9029734a14c8693d",
+      "document_id": "periodic_20260318001444",
+      "rank": 2,
+      "duplicates": 15,
+      "doc_in_stage1": true,
+      "verdict": "P4"
+    },
+    {
+      "qid": "Q11",
+      "evidence_id": "evidence_68e24354e947d03bed6e865e",
+      "document_id": "periodic_20240328001188",
+      "rank": 2,
+      "duplicates": 10,
+      "doc_in_stage1": true,
+      "verdict": "P4"
+    },
+    {
+      "qid": "Q11",
+      "evidence_id": "evidence_808aa08d3f16c0d193af8b91",
+      "document_id": "periodic_20260318001444",
+      "rank": 2,
+      "duplicates": 9,
+      "doc_in_stage1": true,
+      "verdict": "P4"
+    },
+    {
+      "qid": "Q12",
+      "evidence_id": "evidence_a7b5760dcdf87ea1771562d6",
+      "document_id": "periodic_20240319000626",
+      "rank": 1,
+      "duplicates": 19,
+      "doc_in_stage1": true,
+      "verdict": "P4"
+    },
+    {
+      "qid": "Q12",
+      "evidence_id": "evidence_2a1aa87979e7bbf762f03bcc",
+      "document_id": "periodic_20240319000626",
+      "rank": 1,
+      "duplicates": 14,
+      "doc_in_stage1": true,
+      "verdict": "P4"
+    },
+    {
+      "qid": "Q12",
+      "evidence_id": "evidence_ca1ec6245dc5e78a18490cce",
+      "document_id": "periodic_20260309001878",
+      "rank": 2,
+      "duplicates": 12,
+      "doc_in_stage1": true,
+      "verdict": "P4"
+    },
+    {
+      "qid": "Q12",
+      "evidence_id": "evidence_f264ca05cb10546293df59b0",
+      "document_id": "periodic_20260309001878",
+      "rank": 2,
+      "duplicates": 14,
+      "doc_in_stage1": true,
+      "verdict": "P4"
+    },
+    {
+      "qid": "Q13",
+      "evidence_id": "evidence_d89ea5a90f5113b891359e19",
+      "document_id": "periodic_20260320000859",
+      "rank": 7,
+      "duplicates": 2,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q13",
+      "evidence_id": "evidence_733562ece8731bb826343739",
+      "document_id": "periodic_20260312001037",
+      "rank": 3,
+      "duplicates": 2,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q13",
+      "evidence_id": "evidence_4629fa6c375bcd04eed5e7a1",
+      "document_id": "periodic_20260320000859",
+      "rank": 7,
+      "duplicates": 3,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q13",
+      "evidence_id": "evidence_b2b690ae1aa577aae20105a3",
+      "document_id": "periodic_20260312001037",
+      "rank": 3,
+      "duplicates": 3,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q14",
+      "evidence_id": "evidence_1afbd29a11f1d0251f0a9f41",
+      "document_id": "periodic_20260318000826",
+      "rank": 2,
+      "duplicates": 8,
+      "doc_in_stage1": true,
+      "verdict": "P4"
+    },
+    {
+      "qid": "Q14",
+      "evidence_id": "evidence_c1cc77d841887188865b111a",
+      "document_id": "periodic_20240502000081",
+      "rank": 11,
+      "duplicates": 6,
+      "doc_in_stage1": true,
+      "verdict": "P4"
+    },
+    {
+      "qid": "Q14",
+      "evidence_id": "evidence_5e05d8741291f84aca522fdb",
+      "document_id": "periodic_20240502000081",
+      "rank": 2354,
+      "duplicates": 3,
+      "doc_in_stage1": true,
+      "verdict": "P2"
+    },
+    {
+      "qid": "Q14",
+      "evidence_id": "evidence_4a3158749e3f2ed2d114fc7f",
+      "document_id": "periodic_20260318000826",
+      "rank": 2354,
+      "duplicates": 3,
+      "doc_in_stage1": true,
+      "verdict": "P2"
+    },
+    {
+      "qid": "Q15",
+      "evidence_id": "evidence_d89ea5a90f5113b891359e19",
+      "document_id": "periodic_20260320000859",
+      "rank": 13,
+      "duplicates": 2,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q15",
+      "evidence_id": "evidence_733562ece8731bb826343739",
+      "document_id": "periodic_20260312001037",
+      "rank": 16,
+      "duplicates": 2,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q15",
+      "evidence_id": "evidence_4629fa6c375bcd04eed5e7a1",
+      "document_id": "periodic_20260320000859",
+      "rank": 13,
+      "duplicates": 3,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q15",
+      "evidence_id": "evidence_b2b690ae1aa577aae20105a3",
+      "document_id": "periodic_20260312001037",
+      "rank": 16,
+      "duplicates": 3,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q16",
+      "evidence_id": "evidence_ca1ec6245dc5e78a18490cce",
+      "document_id": "periodic_20260309001878",
+      "rank": 7,
+      "duplicates": 12,
+      "doc_in_stage1": true,
+      "verdict": "P4"
+    },
+    {
+      "qid": "Q16",
+      "evidence_id": "evidence_808aa08d3f16c0d193af8b91",
+      "document_id": "periodic_20260318001444",
+      "rank": 2,
+      "duplicates": 9,
+      "doc_in_stage1": true,
+      "verdict": "P4"
+    },
+    {
+      "qid": "Q16",
+      "evidence_id": "evidence_2a1aa87979e7bbf762f03bcc",
+      "document_id": "periodic_20240319000626",
+      "rank": 7,
+      "duplicates": 14,
+      "doc_in_stage1": true,
+      "verdict": "P4"
+    },
+    {
+      "qid": "Q16",
+      "evidence_id": "evidence_bad097c7974d2ae142d1ea1e",
+      "document_id": "periodic_20240328001188",
+      "rank": 2,
+      "duplicates": 17,
+      "doc_in_stage1": true,
+      "verdict": "P4"
+    },
+    {
+      "qid": "Q16",
+      "evidence_id": "evidence_f264ca05cb10546293df59b0",
+      "document_id": "periodic_20260309001878",
+      "rank": 7,
+      "duplicates": 13,
+      "doc_in_stage1": true,
+      "verdict": "P4"
+    },
+    {
+      "qid": "Q16",
+      "evidence_id": "evidence_a7b5760dcdf87ea1771562d6",
+      "document_id": "periodic_20240319000626",
+      "rank": 7,
+      "duplicates": 19,
+      "doc_in_stage1": true,
+      "verdict": "P4"
+    },
+    {
+      "qid": "Q16",
+      "evidence_id": "evidence_68e24354e947d03bed6e865e",
+      "document_id": "periodic_20240328001188",
+      "rank": 2,
+      "duplicates": 10,
+      "doc_in_stage1": true,
+      "verdict": "P4"
+    },
+    {
+      "qid": "Q16",
+      "evidence_id": "evidence_57e674bf9029734a14c8693d",
+      "document_id": "periodic_20260318001444",
+      "rank": 2,
+      "duplicates": 15,
+      "doc_in_stage1": true,
+      "verdict": "P4"
+    },
+    {
+      "qid": "Q17",
+      "evidence_id": "evidence_3164630d0f878e59572b470e",
+      "document_id": "exchange_20260203800709",
+      "rank": 3,
+      "duplicates": 3,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q17",
+      "evidence_id": "evidence_491302effc55776de7bb9984",
+      "document_id": "exchange_20250508800712",
+      "rank": 4,
+      "duplicates": 2,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q17",
+      "evidence_id": "evidence_3e3b74b72f1ab4ba58487464",
+      "document_id": "exchange_20260316801038",
+      "rank": 3,
+      "duplicates": 3,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q17",
+      "evidence_id": "evidence_fb0f9bb7b5c9032c6e3140c7",
+      "document_id": "exchange_20260316801038",
+      "rank": 3,
+      "duplicates": 2,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q17",
+      "evidence_id": "evidence_e8aa546f991c7e0f7af17099",
+      "document_id": "exchange_20241104800041",
+      "rank": 4,
+      "duplicates": 2,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q17",
+      "evidence_id": "evidence_5f92f7c834ff7da977e76fcf",
+      "document_id": "exchange_20250508800712",
+      "rank": 4,
+      "duplicates": 2,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q17",
+      "evidence_id": "evidence_ee167778ed4989e074d86e27",
+      "document_id": "exchange_20230602800079",
+      "rank": null,
+      "duplicates": 0,
+      "doc_in_stage1": false,
+      "verdict": "P1"
+    },
+    {
+      "qid": "Q17",
+      "evidence_id": "evidence_cc3c733c83de2d3141364dac",
+      "document_id": "exchange_20241104800041",
+      "rank": 4,
+      "duplicates": 2,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q17",
+      "evidence_id": "evidence_b282b29fb04d79ce12902287",
+      "document_id": "exchange_20230602800079",
+      "rank": 7,
+      "duplicates": 1,
+      "doc_in_stage1": false,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q18",
+      "evidence_id": "evidence_0a4cf7c91cd4106ee481bcb4",
+      "document_id": "major_20240710000577",
+      "rank": 1,
+      "duplicates": 11,
+      "doc_in_stage1": true,
+      "verdict": "P4"
+    },
+    {
+      "qid": "Q18",
+      "evidence_id": "evidence_af0e4041487e1e8bcc8fc2cf",
+      "document_id": "periodic_20241113000191",
+      "rank": 5,
+      "duplicates": 2,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q18",
+      "evidence_id": "evidence_f9de19cfbac52cf0e965fe03",
+      "document_id": "periodic_20241113000191",
+      "rank": 3,
+      "duplicates": 11,
+      "doc_in_stage1": true,
+      "verdict": "P4"
+    },
+    {
+      "qid": "Q18",
+      "evidence_id": "evidence_f5325e42620dffe5b8f0be29",
+      "document_id": "periodic_20241113000191",
+      "rank": 1,
+      "duplicates": 11,
+      "doc_in_stage1": true,
+      "verdict": "P4"
+    },
+    {
+      "qid": "Q18",
+      "evidence_id": "evidence_ce757058c68b8932b0b7c7e0",
+      "document_id": "major_20240710000577",
+      "rank": 1,
+      "duplicates": 2,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q19",
+      "evidence_id": "evidence_ad35189ea41ce52bea5469ec",
+      "document_id": "exchange_20230605800001",
+      "rank": 9,
+      "duplicates": 2,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q19",
+      "evidence_id": "evidence_e97f6165298a097d9175a515",
+      "document_id": "exchange_20240702800160",
+      "rank": 1,
+      "duplicates": 4,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q19",
+      "evidence_id": "evidence_4f74fae1ef9627c2a948b7cc",
+      "document_id": "exchange_20240702800160",
+      "rank": 8,
+      "duplicates": 1,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q19",
+      "evidence_id": "evidence_4bb130780af76ad389c4c53b",
+      "document_id": "exchange_20240702800160",
+      "rank": 1,
+      "duplicates": 2,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q19",
+      "evidence_id": "evidence_793a2f246b4801abf25f5d69",
+      "document_id": "exchange_20240702800160",
+      "rank": 1,
+      "duplicates": 1,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q20",
+      "evidence_id": "evidence_fb63f3d8238a3177b7ecef68",
+      "document_id": "exchange_20241129900159",
+      "rank": 3,
+      "duplicates": 1,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q20",
+      "evidence_id": "evidence_bd88932e8c6fb7c738061ac5",
+      "document_id": "exchange_20241205900548",
+      "rank": 1,
+      "duplicates": 2,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q20",
+      "evidence_id": "evidence_241445396bea6cdd15c802d6",
+      "document_id": "exchange_20240315900173",
+      "rank": 1,
+      "duplicates": 3,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q20",
+      "evidence_id": "evidence_a2e88dae3cbb6013e9a41b08",
+      "document_id": "exchange_20240315900173",
+      "rank": 3,
+      "duplicates": 2,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q20",
+      "evidence_id": "evidence_90fcd3db88bb64b76033b0a1",
+      "document_id": "exchange_20241205900548",
+      "rank": 1,
+      "duplicates": 2,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q21",
+      "evidence_id": "evidence_ebe453fe458e84bfb3511bce",
+      "document_id": "major_20240808000377",
+      "rank": 1,
+      "duplicates": 1,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q21",
+      "evidence_id": "evidence_83d150637527dd2b57c1f586",
+      "document_id": "major_20230313000016",
+      "rank": 21,
+      "duplicates": 7,
+      "doc_in_stage1": true,
+      "verdict": "P2"
+    },
+    {
+      "qid": "Q21",
+      "evidence_id": "evidence_1d125664155348d6ac622cd1",
+      "document_id": "periodic_20241114002449",
+      "rank": 38,
+      "duplicates": 1,
+      "doc_in_stage1": true,
+      "verdict": "P2"
+    },
+    {
+      "qid": "Q21",
+      "evidence_id": "evidence_bf03f1272a34b66cd6a22c38",
+      "document_id": "periodic_20241114002449",
+      "rank": 2,
+      "duplicates": 2,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q21",
+      "evidence_id": "evidence_ff154481fc3f0d736fc70e0c",
+      "document_id": "periodic_20241114002449",
+      "rank": 2,
+      "duplicates": 1,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q21",
+      "evidence_id": "evidence_fa0794927138043eb80b95ad",
+      "document_id": "periodic_20241114002449",
+      "rank": 2,
+      "duplicates": 1,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q22",
+      "evidence_id": "evidence_8c9d51b51ba77eddc29687ce",
+      "document_id": "exchange_20260120800597",
+      "rank": 2,
+      "duplicates": 2,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q22",
+      "evidence_id": "evidence_0d6cf16c46586368c7f2130d",
+      "document_id": "exchange_20250611800358",
+      "rank": 6,
+      "duplicates": 1,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q22",
+      "evidence_id": "evidence_d85dbe0486feb9fa3d5979ce",
+      "document_id": "exchange_20260120800597",
+      "rank": 2,
+      "duplicates": 2,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q22",
+      "evidence_id": "evidence_a34bd361908c0ea26d516f30",
+      "document_id": "exchange_20260120800597",
+      "rank": 2,
+      "duplicates": 1,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q22",
+      "evidence_id": "evidence_d1769a73ca05bd90577b44a6",
+      "document_id": "exchange_20260120800597",
+      "rank": 2,
+      "duplicates": 3,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q22",
+      "evidence_id": "evidence_1b72803c582d23258f7808c8",
+      "document_id": "exchange_20250611800358",
+      "rank": 1,
+      "duplicates": 2,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q22",
+      "evidence_id": "evidence_89b1b905fc40a2039d2e8cda",
+      "document_id": "exchange_20260120800597",
+      "rank": 1,
+      "duplicates": 2,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q23",
+      "evidence_id": "evidence_cc82e7955f2afd9b2fcf8cc4",
+      "document_id": "exchange_20250407800036",
+      "rank": 1,
+      "duplicates": 2,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q23",
+      "evidence_id": "evidence_9e98f18a8c2f60cefa1ce0b9",
+      "document_id": "exchange_20250407800036",
+      "rank": 2,
+      "duplicates": 1,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q23",
+      "evidence_id": "evidence_9a1ca56ef483491dca7bd6bd",
+      "document_id": "exchange_20250407800036",
+      "rank": 1,
+      "duplicates": 1,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q23",
+      "evidence_id": "evidence_c097ab49418b4950758c2e90",
+      "document_id": "exchange_20250407800036",
+      "rank": 1,
+      "duplicates": 2,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q23",
+      "evidence_id": "evidence_5c137ff8795ff68b3c6eafbb",
+      "document_id": "exchange_20250407800036",
+      "rank": 2,
+      "duplicates": 1,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q23",
+      "evidence_id": "evidence_13e132932fdb6646a8c11cd6",
+      "document_id": "exchange_20250407800036",
+      "rank": 2,
+      "duplicates": 1,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q24",
+      "evidence_id": "evidence_860e6e64c3d6a3d2fa24d73a",
+      "document_id": "exchange_20250731800028",
+      "rank": 2,
+      "duplicates": 2,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q24",
+      "evidence_id": "evidence_4137e535b7db4b252d4089eb",
+      "document_id": "exchange_20250728800035",
+      "rank": 2,
+      "duplicates": 4,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q24",
+      "evidence_id": "evidence_2b08f8da3887f8bcf54f80e8",
+      "document_id": "exchange_20250728800035",
+      "rank": 1,
+      "duplicates": 2,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q24",
+      "evidence_id": "evidence_7513404079e58d8f73ea5250",
+      "document_id": "exchange_20250731800028",
+      "rank": 1,
+      "duplicates": 2,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q24",
+      "evidence_id": "evidence_08c886bd658d6611ff354ed0",
+      "document_id": "exchange_20250731800028",
+      "rank": 1,
+      "duplicates": 2,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q24",
+      "evidence_id": "evidence_6e0daa9fb8f628f0763a9155",
+      "document_id": "exchange_20250728800035",
+      "rank": 2,
+      "duplicates": 4,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q24",
+      "evidence_id": "evidence_87dab2e8be9d145b4b533ae2",
+      "document_id": "exchange_20250728800035",
+      "rank": 4,
+      "duplicates": 8,
+      "doc_in_stage1": true,
+      "verdict": "P4"
+    },
+    {
+      "qid": "Q24",
+      "evidence_id": "evidence_18b15aa72d90ad6e828ec11c",
+      "document_id": "exchange_20250728800035",
+      "rank": 4,
+      "duplicates": 2,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q25",
+      "evidence_id": "evidence_d86330c8b03ff845d876c347",
+      "document_id": "exchange_20240531801103",
+      "rank": 8,
+      "duplicates": 3,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q25",
+      "evidence_id": "evidence_e9d54831df04d80560129340",
+      "document_id": "exchange_20240702800163",
+      "rank": 1,
+      "duplicates": 4,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q25",
+      "evidence_id": "evidence_e97f6165298a097d9175a515",
+      "document_id": "exchange_20240702800160",
+      "rank": 1,
+      "duplicates": 4,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q25",
+      "evidence_id": "evidence_fd5009ac95bbc10d74f01117",
+      "document_id": "exchange_20240702800160",
+      "rank": 1,
+      "duplicates": 1,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q25",
+      "evidence_id": "evidence_4bb130780af76ad389c4c53b",
+      "document_id": "exchange_20240702800160",
+      "rank": 1,
+      "duplicates": 2,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q25",
+      "evidence_id": "evidence_23e50c14ae2155eea30e3df0",
+      "document_id": "exchange_20240320800925",
+      "rank": 6,
+      "duplicates": 6,
+      "doc_in_stage1": true,
+      "verdict": "P4"
+    },
+    {
+      "qid": "Q25",
+      "evidence_id": "evidence_cd1c2ea07e77de3196a84020",
+      "document_id": "exchange_20240702800160",
+      "rank": 1,
+      "duplicates": 1,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q25",
+      "evidence_id": "evidence_91a8d0111c99aebb46e596a7",
+      "document_id": "exchange_20231219800348",
+      "rank": 9,
+      "duplicates": 3,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q25",
+      "evidence_id": "evidence_4fcb58233e16db060b63bfe4",
+      "document_id": "exchange_20240702800160",
+      "rank": 1,
+      "duplicates": 1,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q25",
+      "evidence_id": "evidence_b5ef52b48821dfc8e16d5496",
+      "document_id": "exchange_20240625800283",
+      "rank": 8,
+      "duplicates": 3,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q25",
+      "evidence_id": "evidence_4f74fae1ef9627c2a948b7cc",
+      "document_id": "exchange_20240702800160",
+      "rank": 18,
+      "duplicates": 1,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q25",
+      "evidence_id": "evidence_ad35189ea41ce52bea5469ec",
+      "document_id": "exchange_20230605800001",
+      "rank": 11,
+      "duplicates": 2,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    },
+    {
+      "qid": "Q25",
+      "evidence_id": "evidence_793a2f246b4801abf25f5d69",
+      "document_id": "exchange_20240702800160",
+      "rank": 1,
+      "duplicates": 1,
+      "doc_in_stage1": true,
+      "verdict": "HIT"
+    }
+  ],
+  "per_question": {
+    "Q01": {
+      "evidence_recall@1": 1.0,
+      "evidence_recall@3": 1.0,
+      "evidence_recall@5": 1.0,
+      "evidence_recall@10": 1.0,
+      "evidence_recall@20": 1.0,
+      "evidence_recall@2000chars": 1.0,
+      "evidence_recall@5000chars": 1.0,
+      "evidence_recall@10000chars": 1.0,
+      "evidence_recall@20000chars": 1.0,
+      "doc_ceiling@20": 1.0,
+      "n_evidence": 3,
+      "n_chunks": 1538,
+      "chunk_rank": {
+        "evidence_4fe3a16a319853c394fd205b": 1,
+        "evidence_6c69a8e23065fa8a7a73149d": 1,
+        "evidence_bf5558cef5b0e77499458bfd": 1
+      }
+    },
+    "Q02": {
+      "evidence_recall@1": 1.0,
+      "evidence_recall@3": 1.0,
+      "evidence_recall@5": 1.0,
+      "evidence_recall@10": 1.0,
+      "evidence_recall@20": 1.0,
+      "evidence_recall@2000chars": 1.0,
+      "evidence_recall@5000chars": 1.0,
+      "evidence_recall@10000chars": 1.0,
+      "evidence_recall@20000chars": 1.0,
+      "doc_ceiling@20": 1.0,
+      "n_evidence": 2,
+      "n_chunks": 4,
+      "chunk_rank": {
+        "evidence_05dabd799b44945b5d8d0f61": 1,
+        "evidence_1a5a2657f50d91751f296525": 1
+      }
+    },
+    "Q03": {
+      "evidence_recall@1": 1.0,
+      "evidence_recall@3": 1.0,
+      "evidence_recall@5": 1.0,
+      "evidence_recall@10": 1.0,
+      "evidence_recall@20": 1.0,
+      "evidence_recall@2000chars": 1.0,
+      "evidence_recall@5000chars": 1.0,
+      "evidence_recall@10000chars": 1.0,
+      "evidence_recall@20000chars": 1.0,
+      "doc_ceiling@20": 1.0,
+      "n_evidence": 2,
+      "n_chunks": 114,
+      "chunk_rank": {
+        "evidence_6a6bab6035e60635631be785": 1,
+        "evidence_de26667ffeffcf7a5726d929": 1
+      }
+    },
+    "Q04": {
+      "evidence_recall@1": 0.3333,
+      "evidence_recall@3": 1.0,
+      "evidence_recall@5": 1.0,
+      "evidence_recall@10": 1.0,
+      "evidence_recall@20": 1.0,
+      "evidence_recall@2000chars": 1.0,
+      "evidence_recall@5000chars": 1.0,
+      "evidence_recall@10000chars": 1.0,
+      "evidence_recall@20000chars": 1.0,
+      "doc_ceiling@20": 1.0,
+      "n_evidence": 3,
+      "n_chunks": 2832,
+      "chunk_rank": {
+        "evidence_ed2a3eb575a695dbeb6279f5": 2,
+        "evidence_a387886c0a93368c23443f2f": 2,
+        "evidence_b005610e9425a278ca531afd": 1
+      }
+    },
+    "Q05": {
+      "evidence_recall@1": 0.0,
+      "evidence_recall@3": 0.8333,
+      "evidence_recall@5": 1.0,
+      "evidence_recall@10": 1.0,
+      "evidence_recall@20": 1.0,
+      "evidence_recall@2000chars": 1.0,
+      "evidence_recall@5000chars": 1.0,
+      "evidence_recall@10000chars": 1.0,
+      "evidence_recall@20000chars": 1.0,
+      "doc_ceiling@20": 1.0,
+      "n_evidence": 6,
+      "n_chunks": 22,
+      "chunk_rank": {
+        "evidence_71debde0d638bcc22d945cda": 4,
+        "evidence_834a39dc77106d945c0bb77a": 3,
+        "evidence_825b8d1a2671e2d83927e35e": 3,
+        "evidence_f1eec3feb824c2fbb73365d4": 3,
+        "evidence_7a22d6ae73a79a826710b025": 3,
+        "evidence_3f217583ac704d9abf5bc3d2": 3
+      }
+    },
+    "Q06": {
+      "evidence_recall@1": 0.5,
+      "evidence_recall@3": 1.0,
+      "evidence_recall@5": 1.0,
+      "evidence_recall@10": 1.0,
+      "evidence_recall@20": 1.0,
+      "evidence_recall@2000chars": 1.0,
+      "evidence_recall@5000chars": 1.0,
+      "evidence_recall@10000chars": 1.0,
+      "evidence_recall@20000chars": 1.0,
+      "doc_ceiling@20": 1.0,
+      "n_evidence": 8,
+      "n_chunks": 4,
+      "chunk_rank": {
+        "evidence_1a5a2657f50d91751f296525": 2,
+        "evidence_441902d5bf9434beed4da64d": 2,
+        "evidence_1a8e753b5c667abbf2a60d73": 2,
+        "evidence_1b42bdcc4dc7440cc6e4a340": 1,
+        "evidence_b7fb6a305d22f9a0c936a256": 1,
+        "evidence_ab530df40bc10feff4d8f7e7": 1,
+        "evidence_05dabd799b44945b5d8d0f61": 2,
+        "evidence_ee0081fbf5f0e705b2989ef1": 1
+      }
+    },
+    "Q07": {
+      "evidence_recall@1": 0.5,
+      "evidence_recall@3": 0.5,
+      "evidence_recall@5": 0.5,
+      "evidence_recall@10": 0.5,
+      "evidence_recall@20": 1.0,
+      "evidence_recall@2000chars": 0.5,
+      "evidence_recall@5000chars": 0.5,
+      "evidence_recall@10000chars": 1.0,
+      "evidence_recall@20000chars": 1.0,
+      "doc_ceiling@20": 1.0,
+      "n_evidence": 2,
+      "n_chunks": 4328,
+      "chunk_rank": {
+        "evidence_f6596ad0db1c7cad3a4147f5": 13,
+        "evidence_08c5374a71d91471432a6974": 1
+      }
+    },
+    "Q08": {
+      "evidence_recall@1": 0.0,
+      "evidence_recall@3": 0.0,
+      "evidence_recall@5": 0.0,
+      "evidence_recall@10": 0.5556,
+      "evidence_recall@20": 0.6667,
+      "evidence_recall@2000chars": 0.5556,
+      "evidence_recall@5000chars": 0.6667,
+      "evidence_recall@10000chars": 0.6667,
+      "evidence_recall@20000chars": 0.6667,
+      "doc_ceiling@20": 0.8889,
+      "n_evidence": 9,
+      "n_chunks": 79,
+      "chunk_rank": {
+        "evidence_438c937e9d0b66d5f5bf13f0": 52,
+        "evidence_63c94ef1318bfa17c9fc85d9": 7,
+        "evidence_3cb2fb6bddf9aac4234402d3": 12,
+        "evidence_15875a167f87fdac66704231": 7,
+        "evidence_f5e63066232ca0bd0e02bd29": 7,
+        "evidence_d9a8ecf2e22c076c8c200aa0": null,
+        "evidence_2aa9e7d0fa4e259496aa59f9": 52,
+        "evidence_2cdf5a2e62f4db79d88bd713": 7,
+        "evidence_4ca2e43be9f63350f31867a9": 8
+      }
+    },
+    "Q09": {
+      "evidence_recall@1": 0.0,
+      "evidence_recall@3": 0.0,
+      "evidence_recall@5": 0.0,
+      "evidence_recall@10": 0.1111,
+      "evidence_recall@20": 1.0,
+      "evidence_recall@2000chars": 0.0,
+      "evidence_recall@5000chars": 0.1111,
+      "evidence_recall@10000chars": 1.0,
+      "evidence_recall@20000chars": 1.0,
+      "doc_ceiling@20": 1.0,
+      "n_evidence": 9,
+      "n_chunks": 12519,
+      "chunk_rank": {
+        "evidence_d884adf9dc1aa0f2370db58e": 18,
+        "evidence_4bb201438fab0e23e64ec747": 18,
+        "evidence_97346a2fc6b530faca3c7c21": 7,
+        "evidence_53272415be8c7c695d6fea7e": 12,
+        "evidence_9fa1aaf64e0114f6a09d0372": 15,
+        "evidence_df234bf52adff5e717a30b87": 15,
+        "evidence_ee774993dd67753740b74480": 15,
+        "evidence_bcb37279ae1fd1edb409c064": 15,
+        "evidence_d2e257c56114cbb8f8585f73": 15
+      }
+    },
+    "Q10": {
+      "evidence_recall@1": 0.25,
+      "evidence_recall@3": 1.0,
+      "evidence_recall@5": 1.0,
+      "evidence_recall@10": 1.0,
+      "evidence_recall@20": 1.0,
+      "evidence_recall@2000chars": 1.0,
+      "evidence_recall@5000chars": 1.0,
+      "evidence_recall@10000chars": 1.0,
+      "evidence_recall@20000chars": 1.0,
+      "doc_ceiling@20": 1.0,
+      "n_evidence": 4,
+      "n_chunks": 2485,
+      "chunk_rank": {
+        "evidence_de7be27c8aa2cde645113826": 2,
+        "evidence_68032d71581d2cbee3fc2eaf": 3,
+        "evidence_f193fc659ec1abcd33b8c46b": 3,
+        "evidence_5c85f81dbc43177fdbac6573": 1
+      }
+    },
+    "Q11": {
+      "evidence_recall@1": 0.0,
+      "evidence_recall@3": 1.0,
+      "evidence_recall@5": 1.0,
+      "evidence_recall@10": 1.0,
+      "evidence_recall@20": 1.0,
+      "evidence_recall@2000chars": 1.0,
+      "evidence_recall@5000chars": 1.0,
+      "evidence_recall@10000chars": 1.0,
+      "evidence_recall@20000chars": 1.0,
+      "doc_ceiling@20": 1.0,
+      "n_evidence": 4,
+      "n_chunks": 5284,
+      "chunk_rank": {
+        "evidence_bad097c7974d2ae142d1ea1e": 2,
+        "evidence_57e674bf9029734a14c8693d": 2,
+        "evidence_68e24354e947d03bed6e865e": 2,
+        "evidence_808aa08d3f16c0d193af8b91": 2
+      }
+    },
+    "Q12": {
+      "evidence_recall@1": 0.5,
+      "evidence_recall@3": 1.0,
+      "evidence_recall@5": 1.0,
+      "evidence_recall@10": 1.0,
+      "evidence_recall@20": 1.0,
+      "evidence_recall@2000chars": 1.0,
+      "evidence_recall@5000chars": 1.0,
+      "evidence_recall@10000chars": 1.0,
+      "evidence_recall@20000chars": 1.0,
+      "doc_ceiling@20": 1.0,
+      "n_evidence": 4,
+      "n_chunks": 4715,
+      "chunk_rank": {
+        "evidence_a7b5760dcdf87ea1771562d6": 1,
+        "evidence_2a1aa87979e7bbf762f03bcc": 1,
+        "evidence_ca1ec6245dc5e78a18490cce": 2,
+        "evidence_f264ca05cb10546293df59b0": 2
+      }
+    },
+    "Q13": {
+      "evidence_recall@1": 0.0,
+      "evidence_recall@3": 0.5,
+      "evidence_recall@5": 0.5,
+      "evidence_recall@10": 1.0,
+      "evidence_recall@20": 1.0,
+      "evidence_recall@2000chars": 0.5,
+      "evidence_recall@5000chars": 1.0,
+      "evidence_recall@10000chars": 1.0,
+      "evidence_recall@20000chars": 1.0,
+      "doc_ceiling@20": 1.0,
+      "n_evidence": 4,
+      "n_chunks": 6528,
+      "chunk_rank": {
+        "evidence_d89ea5a90f5113b891359e19": 7,
+        "evidence_733562ece8731bb826343739": 3,
+        "evidence_4629fa6c375bcd04eed5e7a1": 7,
+        "evidence_b2b690ae1aa577aae20105a3": 3
+      }
+    },
+    "Q14": {
+      "evidence_recall@1": 0.0,
+      "evidence_recall@3": 0.25,
+      "evidence_recall@5": 0.25,
+      "evidence_recall@10": 0.25,
+      "evidence_recall@20": 0.5,
+      "evidence_recall@2000chars": 0.25,
+      "evidence_recall@5000chars": 0.25,
+      "evidence_recall@10000chars": 0.5,
+      "evidence_recall@20000chars": 0.5,
+      "doc_ceiling@20": 1.0,
+      "n_evidence": 4,
+      "n_chunks": 17264,
+      "chunk_rank": {
+        "evidence_1afbd29a11f1d0251f0a9f41": 2,
+        "evidence_c1cc77d841887188865b111a": 11,
+        "evidence_5e05d8741291f84aca522fdb": 2354,
+        "evidence_4a3158749e3f2ed2d114fc7f": 2354
+      }
+    },
+    "Q15": {
+      "evidence_recall@1": 0.0,
+      "evidence_recall@3": 0.0,
+      "evidence_recall@5": 0.0,
+      "evidence_recall@10": 0.0,
+      "evidence_recall@20": 1.0,
+      "evidence_recall@2000chars": 0.0,
+      "evidence_recall@5000chars": 0.0,
+      "evidence_recall@10000chars": 1.0,
+      "evidence_recall@20000chars": 1.0,
+      "doc_ceiling@20": 1.0,
+      "n_evidence": 4,
+      "n_chunks": 6528,
+      "chunk_rank": {
+        "evidence_d89ea5a90f5113b891359e19": 13,
+        "evidence_733562ece8731bb826343739": 16,
+        "evidence_4629fa6c375bcd04eed5e7a1": 13,
+        "evidence_b2b690ae1aa577aae20105a3": 16
+      }
+    },
+    "Q16": {
+      "evidence_recall@1": 0.0,
+      "evidence_recall@3": 0.5,
+      "evidence_recall@5": 0.5,
+      "evidence_recall@10": 1.0,
+      "evidence_recall@20": 1.0,
+      "evidence_recall@2000chars": 0.5,
+      "evidence_recall@5000chars": 1.0,
+      "evidence_recall@10000chars": 1.0,
+      "evidence_recall@20000chars": 1.0,
+      "doc_ceiling@20": 1.0,
+      "n_evidence": 8,
+      "n_chunks": 9999,
+      "chunk_rank": {
+        "evidence_ca1ec6245dc5e78a18490cce": 7,
+        "evidence_808aa08d3f16c0d193af8b91": 2,
+        "evidence_2a1aa87979e7bbf762f03bcc": 7,
+        "evidence_bad097c7974d2ae142d1ea1e": 2,
+        "evidence_f264ca05cb10546293df59b0": 7,
+        "evidence_a7b5760dcdf87ea1771562d6": 7,
+        "evidence_68e24354e947d03bed6e865e": 2,
+        "evidence_57e674bf9029734a14c8693d": 2
+      }
+    },
+    "Q17": {
+      "evidence_recall@1": 0.0,
+      "evidence_recall@3": 0.3333,
+      "evidence_recall@5": 0.7778,
+      "evidence_recall@10": 0.8889,
+      "evidence_recall@20": 0.8889,
+      "evidence_recall@2000chars": 0.7778,
+      "evidence_recall@5000chars": 0.8889,
+      "evidence_recall@10000chars": 0.8889,
+      "evidence_recall@20000chars": 0.8889,
+      "doc_ceiling@20": 0.7778,
+      "n_evidence": 9,
+      "n_chunks": 11,
+      "chunk_rank": {
+        "evidence_3164630d0f878e59572b470e": 3,
+        "evidence_491302effc55776de7bb9984": 4,
+        "evidence_3e3b74b72f1ab4ba58487464": 3,
+        "evidence_fb0f9bb7b5c9032c6e3140c7": 3,
+        "evidence_e8aa546f991c7e0f7af17099": 4,
+        "evidence_5f92f7c834ff7da977e76fcf": 4,
+        "evidence_ee167778ed4989e074d86e27": null,
+        "evidence_cc3c733c83de2d3141364dac": 4,
+        "evidence_b282b29fb04d79ce12902287": 7
+      }
+    },
+    "Q18": {
+      "evidence_recall@1": 0.6,
+      "evidence_recall@3": 0.8,
+      "evidence_recall@5": 1.0,
+      "evidence_recall@10": 1.0,
+      "evidence_recall@20": 1.0,
+      "evidence_recall@2000chars": 0.8,
+      "evidence_recall@5000chars": 1.0,
+      "evidence_recall@10000chars": 1.0,
+      "evidence_recall@20000chars": 1.0,
+      "doc_ceiling@20": 1.0,
+      "n_evidence": 5,
+      "n_chunks": 1288,
+      "chunk_rank": {
+        "evidence_0a4cf7c91cd4106ee481bcb4": 1,
+        "evidence_af0e4041487e1e8bcc8fc2cf": 5,
+        "evidence_f9de19cfbac52cf0e965fe03": 3,
+        "evidence_f5325e42620dffe5b8f0be29": 1,
+        "evidence_ce757058c68b8932b0b7c7e0": 1
+      }
+    },
+    "Q19": {
+      "evidence_recall@1": 0.6,
+      "evidence_recall@3": 0.6,
+      "evidence_recall@5": 0.6,
+      "evidence_recall@10": 1.0,
+      "evidence_recall@20": 1.0,
+      "evidence_recall@2000chars": 0.6,
+      "evidence_recall@5000chars": 1.0,
+      "evidence_recall@10000chars": 1.0,
+      "evidence_recall@20000chars": 1.0,
+      "doc_ceiling@20": 1.0,
+      "n_evidence": 5,
+      "n_chunks": 29,
+      "chunk_rank": {
+        "evidence_ad35189ea41ce52bea5469ec": 9,
+        "evidence_e97f6165298a097d9175a515": 1,
+        "evidence_4f74fae1ef9627c2a948b7cc": 8,
+        "evidence_4bb130780af76ad389c4c53b": 1,
+        "evidence_793a2f246b4801abf25f5d69": 1
+      }
+    },
+    "Q20": {
+      "evidence_recall@1": 0.6,
+      "evidence_recall@3": 1.0,
+      "evidence_recall@5": 1.0,
+      "evidence_recall@10": 1.0,
+      "evidence_recall@20": 1.0,
+      "evidence_recall@2000chars": 1.0,
+      "evidence_recall@5000chars": 1.0,
+      "evidence_recall@10000chars": 1.0,
+      "evidence_recall@20000chars": 1.0,
+      "doc_ceiling@20": 1.0,
+      "n_evidence": 5,
+      "n_chunks": 15,
+      "chunk_rank": {
+        "evidence_fb63f3d8238a3177b7ecef68": 3,
+        "evidence_bd88932e8c6fb7c738061ac5": 1,
+        "evidence_241445396bea6cdd15c802d6": 1,
+        "evidence_a2e88dae3cbb6013e9a41b08": 3,
+        "evidence_90fcd3db88bb64b76033b0a1": 1
+      }
+    },
+    "Q21": {
+      "evidence_recall@1": 0.1667,
+      "evidence_recall@3": 0.6667,
+      "evidence_recall@5": 0.6667,
+      "evidence_recall@10": 0.6667,
+      "evidence_recall@20": 0.6667,
+      "evidence_recall@2000chars": 0.6667,
+      "evidence_recall@5000chars": 0.6667,
+      "evidence_recall@10000chars": 0.6667,
+      "evidence_recall@20000chars": 0.6667,
+      "doc_ceiling@20": 1.0,
+      "n_evidence": 6,
+      "n_chunks": 1158,
+      "chunk_rank": {
+        "evidence_ebe453fe458e84bfb3511bce": 1,
+        "evidence_83d150637527dd2b57c1f586": 21,
+        "evidence_1d125664155348d6ac622cd1": 38,
+        "evidence_bf03f1272a34b66cd6a22c38": 2,
+        "evidence_ff154481fc3f0d736fc70e0c": 2,
+        "evidence_fa0794927138043eb80b95ad": 2
+      }
+    },
+    "Q22": {
+      "evidence_recall@1": 0.2857,
+      "evidence_recall@3": 0.8571,
+      "evidence_recall@5": 0.8571,
+      "evidence_recall@10": 1.0,
+      "evidence_recall@20": 1.0,
+      "evidence_recall@2000chars": 0.8571,
+      "evidence_recall@5000chars": 1.0,
+      "evidence_recall@10000chars": 1.0,
+      "evidence_recall@20000chars": 1.0,
+      "doc_ceiling@20": 1.0,
+      "n_evidence": 7,
+      "n_chunks": 10,
+      "chunk_rank": {
+        "evidence_8c9d51b51ba77eddc29687ce": 2,
+        "evidence_0d6cf16c46586368c7f2130d": 6,
+        "evidence_d85dbe0486feb9fa3d5979ce": 2,
+        "evidence_a34bd361908c0ea26d516f30": 2,
+        "evidence_d1769a73ca05bd90577b44a6": 2,
+        "evidence_1b72803c582d23258f7808c8": 1,
+        "evidence_89b1b905fc40a2039d2e8cda": 1
+      }
+    },
+    "Q23": {
+      "evidence_recall@1": 0.5,
+      "evidence_recall@3": 1.0,
+      "evidence_recall@5": 1.0,
+      "evidence_recall@10": 1.0,
+      "evidence_recall@20": 1.0,
+      "evidence_recall@2000chars": 1.0,
+      "evidence_recall@5000chars": 1.0,
+      "evidence_recall@10000chars": 1.0,
+      "evidence_recall@20000chars": 1.0,
+      "doc_ceiling@20": 1.0,
+      "n_evidence": 6,
+      "n_chunks": 2,
+      "chunk_rank": {
+        "evidence_cc82e7955f2afd9b2fcf8cc4": 1,
+        "evidence_9e98f18a8c2f60cefa1ce0b9": 2,
+        "evidence_9a1ca56ef483491dca7bd6bd": 1,
+        "evidence_c097ab49418b4950758c2e90": 1,
+        "evidence_5c137ff8795ff68b3c6eafbb": 2,
+        "evidence_13e132932fdb6646a8c11cd6": 2
+      }
+    },
+    "Q24": {
+      "evidence_recall@1": 0.375,
+      "evidence_recall@3": 0.75,
+      "evidence_recall@5": 1.0,
+      "evidence_recall@10": 1.0,
+      "evidence_recall@20": 1.0,
+      "evidence_recall@2000chars": 1.0,
+      "evidence_recall@5000chars": 1.0,
+      "evidence_recall@10000chars": 1.0,
+      "evidence_recall@20000chars": 1.0,
+      "doc_ceiling@20": 1.0,
+      "n_evidence": 8,
+      "n_chunks": 2832,
+      "chunk_rank": {
+        "evidence_860e6e64c3d6a3d2fa24d73a": 2,
+        "evidence_4137e535b7db4b252d4089eb": 2,
+        "evidence_2b08f8da3887f8bcf54f80e8": 1,
+        "evidence_7513404079e58d8f73ea5250": 1,
+        "evidence_08c886bd658d6611ff354ed0": 1,
+        "evidence_6e0daa9fb8f628f0763a9155": 2,
+        "evidence_87dab2e8be9d145b4b533ae2": 4,
+        "evidence_18b15aa72d90ad6e828ec11c": 4
+      }
+    },
+    "Q25": {
+      "evidence_recall@1": 0.5385,
+      "evidence_recall@3": 0.5385,
+      "evidence_recall@5": 0.5385,
+      "evidence_recall@10": 0.8462,
+      "evidence_recall@20": 1.0,
+      "evidence_recall@2000chars": 0.5385,
+      "evidence_recall@5000chars": 0.9231,
+      "evidence_recall@10000chars": 1.0,
+      "evidence_recall@20000chars": 1.0,
+      "doc_ceiling@20": 1.0,
+      "n_evidence": 13,
+      "n_chunks": 29,
+      "chunk_rank": {
+        "evidence_d86330c8b03ff845d876c347": 8,
+        "evidence_e9d54831df04d80560129340": 1,
+        "evidence_e97f6165298a097d9175a515": 1,
+        "evidence_fd5009ac95bbc10d74f01117": 1,
+        "evidence_4bb130780af76ad389c4c53b": 1,
+        "evidence_23e50c14ae2155eea30e3df0": 6,
+        "evidence_cd1c2ea07e77de3196a84020": 1,
+        "evidence_91a8d0111c99aebb46e596a7": 9,
+        "evidence_4fcb58233e16db060b63bfe4": 1,
+        "evidence_b5ef52b48821dfc8e16d5496": 8,
+        "evidence_4f74fae1ef9627c2a948b7cc": 18,
+        "evidence_ad35189ea41ce52bea5469ec": 11,
+        "evidence_793a2f246b4801abf25f5d69": 1
+      }
+    }
+  }
+}
