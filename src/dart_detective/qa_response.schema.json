@@ -72,6 +72,17 @@
         }
       }
     },
+    "confidence": {
+      "type": "object",
+      "description": "답변 신뢰도 — 모델 확률이 아니라 검증 결과·근거 수로 계산한 규칙 점수.",
+      "required": ["score", "level", "reasons"],
+      "additionalProperties": false,
+      "properties": {
+        "score": {"type": "integer", "minimum": 0, "maximum": 100},
+        "level": {"enum": ["높음", "보통", "낮음"]},
+        "reasons": {"type": "array", "items": {"type": "string"}}
+      }
+    },
     "validation": {
       "type": "object",
       "required": ["status", "checks", "n_sources", "n_citations"],

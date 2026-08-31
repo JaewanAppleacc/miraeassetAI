@@ -31,7 +31,7 @@ from dart_corpus.retrieval.lexical import tokenize
 
 from ..corpus_retriever import CorpusRetriever, RetrievedChunk, chunk_lines
 from ..llm import LLMResult, LLMUnavailable
-from . import calculator, validator
+from . import calculator, confidence, validator
 
 MAX_EVIDENCE = 5
 ANSWER_SLOT = "answer"
@@ -150,6 +150,8 @@ class AgentState:
     answer: str = ""
     uncertainty: str = ""
     validation: dict[str, Any] = field(default_factory=dict)
+    # 답변을 얼마나 믿을 수 있는지 — 모델 확률이 아니라 규칙 점수다.
+    confidence: dict[str, Any] = field(default_factory=dict)
     llm: dict[str, Any] = field(default_factory=lambda: {"used": False})
     # 단계별 소요 시간(ms). 어디서 느린지 로그만 보고 알 수 있어야 한다.
     timings: dict[str, int] = field(default_factory=dict)
@@ -176,6 +178,7 @@ class AgentState:
             "evidence_corps": list(self.evidence_corps),
             "warnings": list(self.warnings),
             "derived": [d.to_dict() for d in self.derived],
+            "confidence": dict(self.confidence),
         }
 
 
@@ -764,6 +767,10 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
     state.validation = validator.validate(
         answer, citations, sources,
         derived=calculator.allowed_numbers(state.derived))
+    state.confidence = confidence.assess(
+        validation=state.validation, n_evidence=len(state.evidence_matches),
+        n_derived=len(state.derived), warnings=state.warnings, llm=state.llm,
+        slots=state.slots, filled_slots=[m.slot for m in state.evidence_matches])
     state.timings["total_ms"] = int((time.perf_counter() - t_start) * 1000)
     return state
 
