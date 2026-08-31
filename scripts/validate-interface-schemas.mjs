@@ -77,6 +77,11 @@ const pairs = [
     "domain/agent-comparison/retrieval/interfaces/embedding-config.schema.json",
     "domain/agent-comparison/retrieval/interfaces/examples/embedding-config.example.json",
   ],
+  // Turn P9: provider-neutral Embedding Calibration harness config schema.
+  [
+    "domain/agent-comparison/embedding-calibration/schemas/calibration-config.schema.json",
+    "domain/agent-comparison/embedding-calibration/examples/calibration-config.example.json",
+  ],
   // Turn P6: Benchmark Runner / Gold-blind Scoring Infrastructure schemas.
   [
     "domain/agent-comparison/benchmark/interfaces/dataset-record.schema.json",

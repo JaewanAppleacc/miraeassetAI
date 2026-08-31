@@ -1,0 +1,21 @@
+{
+  "schema_version": "0.1.0",
+  "calibration_id": "calibration_fake_deterministic_smoke_v01",
+  "adapter_kind": "FAKE_DETERMINISTIC",
+  "provider_id": "test-fixture",
+  "model_id": "deterministic-fake-embedding-v1",
+  "endpoint": "unused-for-fake-deterministic",
+  "expected_dimension": 16,
+  "batch_size": 20,
+  "request_timeout_ms": 30000,
+  "maximum_item_count": 200,
+  "maximum_request_count": 20,
+  "maximum_total_input_units": 200000,
+  "sample_salt": "turn-p9-example-salt-v01",
+  "dataset_manifest_sha256": "ebccbeb2f6efcc10c5443f56c9176015e20ee023e5603380bce1fc78f2fd3a52",
+  "code_revision": "turn-p9-example",
+  "cache_policy": { "enabled": true },
+  "retry_policy": { "max_attempts_per_request": 3, "retryable_error_codes": ["EMBEDDING_CALL_TIMEOUT", "EMBEDDING_CALL_HTTP_ERROR"], "backoff_ms": 250 },
+  "input_price_per_million_units": null,
+  "actual_external_call_authorized": false
+}

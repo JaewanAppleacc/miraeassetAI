@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://disclosure-analyst.local/schema/agent-comparison/embedding-calibration/calibration-config.v0.1.json",
+  "title": "Embedding Calibration Config v0.1",
+  "description": "Turn P9: provider-neutral, bounded, Gold-blind calibration run configuration. Layered ON TOP of ../../retrieval/interfaces/embedding-config.schema.json (never modified) -- this schema governs BUDGET/SAFETY/AUTHORIZATION for a calibration run, while provider/model identity construction is still delegated to createEmbeddingAdapter via a derived EmbeddingConfig. provider_id/model_id/endpoint are free-text, config-only fields: no calibration code branches on their literal value.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "calibration_id", "adapter_kind", "provider_id", "model_id", "endpoint",
+    "expected_dimension", "batch_size", "request_timeout_ms", "maximum_item_count", "maximum_request_count",
+    "maximum_total_input_units", "sample_salt", "dataset_manifest_sha256", "code_revision",
+    "cache_policy", "retry_policy", "input_price_per_million_units", "actual_external_call_authorized"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.1.0" },
+    "calibration_id": {
+      "type": "string", "pattern": "^calibration_[a-z0-9_.-]+$",
+      "description": "Stable identifier for this exact calibration run configuration, used to join operational/quality telemetry back to a config without re-deriving it from free text."
+    },
+    "adapter_kind": {
+      "enum": ["FAKE_DETERMINISTIC", "HTTP_EMBEDDINGS"],
+      "description": "Maps 1:1 onto embedding-adapter.mjs's own EmbeddingConfig.kind -- reused, never re-implemented. FAKE_DETERMINISTIC never makes a network call regardless of actual_external_call_authorized."
+    },
+    "provider_id": { "type": "string", "minLength": 1, "description": "Free-text provider label for telemetry only. Never used to select a code branch." },
+    "model_id": { "type": "string", "minLength": 1, "description": "Free-text embedding model label for telemetry only. Never hardcoded inside calibration/runner code." },
+    "endpoint": { "type": "string", "minLength": 1, "description": "Required real content when adapter_kind=HTTP_EMBEDDINGS (the embeddings endpoint URL); a placeholder string is acceptable for FAKE_DETERMINISTIC, which never dereferences it." },
+    "expected_dimension": { "type": "integer", "minimum": 1, "maximum": 4096 },
+    "batch_size": { "type": "integer", "minimum": 1, "maximum": 1000 },
+    "request_timeout_ms": { "type": "integer", "minimum": 1 },
+    "maximum_item_count": { "type": "integer", "minimum": 1, "maximum": 200, "description": "Hard cap on how many calibration dataset items this run may ever process. Checked before the first embedding call is ever issued." },
+    "maximum_request_count": { "type": "integer", "minimum": 1, "description": "Hard cap on the total number of embedding requests (including retries) this run may ever issue." },
+    "maximum_total_input_units": { "type": "integer", "minimum": 1, "description": "Hard cap on total estimated input units (characters) summed across every item this run may ever submit." },
+    "sample_salt": { "type": "string", "minLength": 1, "description": "Deterministic-sampling salt; the SAME salt against the SAME candidate pool always selects the SAME dataset." },
+    "dataset_manifest_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "Pins this config to one already-generated CalibrationDatasetManifest -- a config is never valid against an unpinned or different dataset." },
+    "code_revision": { "type": "string", "minLength": 1 },
+    "api_key_env_var": { "type": "string", "minLength": 1, "description": "Name of the environment variable holding the API key. Required when adapter_kind=HTTP_EMBEDDINGS. The key value itself is never part of this config or of any telemetry/log/report output." },
+    "cache_policy": {
+      "type": "object", "additionalProperties": false, "required": ["enabled"],
+      "properties": { "enabled": { "type": "boolean" } },
+      "description": "When enabled, a text's embedding is requested at most once per run even if it appears more than once in the dataset (never persisted across runs -- in-memory only for this one run)."
+    },
+    "retry_policy": {
+      "type": "object", "additionalProperties": false, "required": ["max_attempts_per_request", "retryable_error_codes", "backoff_ms"],
+      "properties": {
+        "max_attempts_per_request": { "type": "integer", "minimum": 1, "maximum": 10 },
+        "retryable_error_codes": {
+          "type": "array", "items": { "enum": ["EMBEDDING_CALL_TIMEOUT", "EMBEDDING_CALL_HTTP_ERROR", "EMBEDDING_CALL_UNKNOWN_ERROR"] },
+          "description": "Only these EmbeddingCallError codes are ever retried. EMBEDDING_CALL_MALFORMED_RESPONSE and EMBEDDING_ADAPTER_UNAVAILABLE are never retryable -- a malformed/missing-key failure will not resolve itself on a second attempt."
+        },
+        "backoff_ms": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "input_price_per_million_units": {
+      "type": ["number", "null"], "minimum": 0,
+      "description": "Real provider pricing is NEVER hardcoded in code -- when null, estimated_cost in the result is always null. When a number, estimated_cost = (input units actually submitted / 1,000,000) * this value."
+    },
+    "actual_external_call_authorized": {
+      "type": "boolean",
+      "description": "Must be exactly true for an HTTP_EMBEDDINGS adapter to ever be allowed to issue a request. FAKE_DETERMINISTIC never makes a network call regardless of this flag's value. Absent env-var API keys are never auto-used -- this flag is the ONLY authorization signal the runner accepts."
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "adapter_kind": { "const": "HTTP_EMBEDDINGS" } }, "required": ["adapter_kind"] },
+      "then": {
+        "required": ["api_key_env_var"],
+        "properties": { "api_key_env_var": { "type": "string", "minLength": 1 } }
+      }
+    }
+  ]
+}
