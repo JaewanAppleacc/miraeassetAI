@@ -80,15 +80,60 @@ provider actually speaks this protocol shape** (or that its own adapter
 kind exists) -- this module does not probe or negotiate that itself. No
 real network call is made anywhere in this Turn's tests/scripts.
 
+## Turn P11-A: HyperCLOVA X (HCX) generation adapter
+
+`kind: "HCX_CHAT_COMPLETIONS"` is the distinct adapter kind the "Protocol
+scope correction" section above predicted -- HyperCLOVA X's own request
+envelope (`messages`/`topP`/`topK`/`maxTokens`) and response envelope
+(`status`+`result.message.content`) are not the generic
+`HTTP_CHAT_COMPLETIONS` shape. Its construction branch/parsing/security
+logic all live in `hcx-model-adapter.mjs`, never inline in
+`model-adapter.mjs`. No real HCX `model_id`/`endpoint` is hardcoded
+anywhere; both are entirely `ModelConfig`-driven.
+
+Fail-closed construction-time refusals (all `ModelAdapterUnavailableError`,
+code `MODEL_ADAPTER_UNAVAILABLE`, zero `fetch` calls ever made):
+missing API key env var; an unrecognized `request_schema_version`/
+`response_schema_version`; a non-loopback endpoint when
+`actual_external_call_authorized` is not `true`; a real (non-loopback)
+endpoint that is not `https://`. A loopback (127.0.0.1/localhost/::1) mock
+endpoint may still be exercised in a test even with
+`actual_external_call_authorized:false`, but only via an explicit,
+test-only `{ allowLoopbackMockCalls: true }` constructor option -- never
+from `ModelConfig` alone. This Turn never sets
+`actual_external_call_authorized:true` in any registered/production wiring,
+and makes zero real HCX network calls anywhere.
+
+`hcx-mock-server.mjs` is a loopback-only local HTTP server speaking HCX's
+own envelope, used only by this Turn's own tests (14 scenarios: normal,
+empty text, malformed response, unauthorized evidence id, tampered
+number/date/corp_code, HTTP 401/403/429/500, timeout, abort, connection
+failure, non-exposure of the API key/response). `hcx-generation-manifest.mjs`
+builds a schema-validated, secret-free identity/security record per adapter
+usage (`interfaces/hcx-generation-manifest.schema.json`) -- separate from
+`TelemetryEvent`/`BenchmarkRunManifest`, which it does not duplicate or
+replace.
+
+Citation/claim verification is entirely unchanged: `flows/hard-claim-grounding.mjs`
+is reused as-is, and all four registered `AgentFlow` variants connect to an
+HCX-backed adapter exactly the same way they already connect to
+`FAKE_DETERMINISTIC`/`HTTP_CHAT_COMPLETIONS` (`(modelAdapter, options) =>
+Flow`), so an unauthorized citation or an unsupported hard claim from HCX is
+rejected fail-closed by the exact same, unmodified code path.
+
 ## What's here
 
 | File | Role |
 |---|---|
-| `contracts.mjs` | `AGENT_VARIANT_IDS`, `CITATION_BINDING_STATUSES`, `MODEL_CALL_ERROR_CODES`, schema validators |
+| `contracts.mjs` | `AGENT_VARIANT_IDS`, `CITATION_BINDING_STATUSES`, `MODEL_CALL_ERROR_CODES`, `MODEL_ADAPTER_KINDS`, schema validators |
 | `interfaces/model-config.schema.json` | Provider/model identity, injected as config -- never hardcoded |
 | `interfaces/telemetry-event.schema.json` | One measurement record per (question, variant, model) run (v0.2 -- see Turn P1.1 above) |
 | `interfaces/benchmark-run-manifest.schema.json` | Pins everything held fixed for one benchmark run, including reproducibility hashes (v0.2) |
+| `interfaces/hcx-generation-manifest.schema.json` | Turn P11-A: HCX adapter config/security identity + call-performed flags, never a raw secret/prompt/response |
 | `model-adapter.mjs` | `createModelAdapter(config)` -- fails closed with no API key, typed `ModelCallError`s, never leaks raw errors/keys |
+| `hcx-model-adapter.mjs` | Turn P11-A: the `HCX_CHAT_COMPLETIONS` protocol adapter -- HCX's own request/response envelope, loopback-mock authorization |
+| `hcx-generation-manifest.mjs` | Turn P11-A: `buildHcxGenerationManifest()` |
+| `hcx-mock-server.mjs` | Turn P11-A: loopback-only mock HCX HTTP server for tests (14 scenarios) |
 | `fake-model-adapter.mjs` | `createDeterministicFakeModelAdapter()` -- offline, reproducible, can simulate a failure by throwing |
 | `telemetry.mjs` | `instrumentModelAdapter`, `buildTelemetryEvent` -- derives the common measurement fields |
 | `reproducibility.mjs` | Canonical-hash and code-revision helpers for the manifest pins |

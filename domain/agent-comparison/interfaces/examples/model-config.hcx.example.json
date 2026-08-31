@@ -1,0 +1,17 @@
+{
+  "schema_version": "0.1.0",
+  "model_config_id": "model_hcx-test-fixture-v1",
+  "kind": "HCX_CHAT_COMPLETIONS",
+  "provider": "hcx",
+  "model": "test-fixture-model",
+  "endpoint_url": "https://example.invalid/hcx/v3/chat-completions",
+  "api_key_env_var": "AGENT_COMPARISON_HCX_TEST_API_KEY",
+  "max_output_tokens": 512,
+  "temperature": 0.3,
+  "top_p": 0.8,
+  "seed_supported": false,
+  "timeout_ms": 20000,
+  "request_schema_version": "hcx-chat-completions-v3",
+  "response_schema_version": "hcx-chat-completions-v3",
+  "actual_external_call_authorized": false
+}

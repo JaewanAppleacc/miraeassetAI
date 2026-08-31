@@ -38,7 +38,10 @@ export const AGENT_VARIANT_IDS = Object.freeze([
   "DOCUMENT_FIRST_RAG",
 ]);
 
-export const MODEL_ADAPTER_KINDS = Object.freeze(["FAKE_DETERMINISTIC", "HTTP_CHAT_COMPLETIONS"]);
+// Turn P11-A: HCX_CHAT_COMPLETIONS added -- HyperCLOVA X's own distinct
+// request/response envelope, never routed through the generic
+// HTTP_CHAT_COMPLETIONS branch (see model-adapter.mjs / hcx-model-adapter.mjs).
+export const MODEL_ADAPTER_KINDS = Object.freeze(["FAKE_DETERMINISTIC", "HTTP_CHAT_COMPLETIONS", "HCX_CHAT_COMPLETIONS"]);
 
 // Turn P1.1: the closed set of citation_binding_status values a
 // TelemetryEvent may carry -- PASS (a model-generated answer's citations
@@ -71,6 +74,9 @@ function loadSchema(fileName) {
 const modelConfigValidator = ajv.compile(loadSchema("model-config.schema.json"));
 const telemetryEventValidator = ajv.compile(loadSchema("telemetry-event.schema.json"));
 const benchmarkRunManifestValidator = ajv.compile(loadSchema("benchmark-run-manifest.schema.json"));
+// Turn P11-A: see hcx-generation-manifest.schema.json's own header for why
+// this is a separate artifact from TelemetryEvent/BenchmarkRunManifest.
+const hcxGenerationManifestValidator = ajv.compile(loadSchema("hcx-generation-manifest.schema.json"));
 
 function toErrorMessages(validator) {
   return (validator.errors ?? []).map((error) => `${error.instancePath || "(root)"} ${error.message}`);
@@ -91,6 +97,11 @@ export function validateBenchmarkRunManifest(value) {
   return toErrorMessages(benchmarkRunManifestValidator);
 }
 
+export function validateHcxGenerationManifest(value) {
+  if (hcxGenerationManifestValidator(value)) return [];
+  return toErrorMessages(hcxGenerationManifestValidator);
+}
+
 export function isValidModelConfig(value) {
   return validateModelConfig(value).length === 0;
 }
@@ -101,6 +112,10 @@ export function isValidTelemetryEvent(value) {
 
 export function isValidBenchmarkRunManifest(value) {
   return validateBenchmarkRunManifest(value).length === 0;
+}
+
+export function isValidHcxGenerationManifest(value) {
+  return validateHcxGenerationManifest(value).length === 0;
 }
 
 export class InvalidAgentVariantIdError extends Error {

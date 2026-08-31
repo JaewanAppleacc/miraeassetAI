@@ -27,6 +27,16 @@
 // anything in this Turn's tests or scripts -- every HTTP_CHAT_COMPLETIONS
 // test injects its own fetchImpl.
 //
+// Turn P11-A: kind:"HCX_CHAT_COMPLETIONS" is exactly such a distinct
+// adapter kind -- HyperCLOVA X's Chat Completions envelope is NOT the same
+// shape as the generic one above (messages/topP/topK/maxTokens field names,
+// a status+result response envelope). Its construction branch and all
+// HCX-specific request/response/security logic live in
+// hcx-model-adapter.mjs, not inline here, so the two protocol shapes never
+// bleed into each other. See that file's own header comment for the full
+// contract (fail-closed schema-version pinning, loopback-only mock
+// authorization, endpoint HTTPS/hostname checks).
+//
 // RESPONSE CONTRACT (Turn P1.1): generate() resolves to
 // { text, used_fact_ids: string[], used_evidence_ids: string[],
 //   input_tokens, output_tokens, estimated_cost, finish_reason }.
@@ -49,14 +59,15 @@
 // fallback answer of its own.
 import { validateModelConfig } from "./contracts.mjs";
 import { createDeterministicFakeModelAdapter } from "./fake-model-adapter.mjs";
+import { createHcxChatCompletionsModelAdapter } from "./hcx-model-adapter.mjs";
+import { ModelAdapterUnavailableError } from "./model-adapter-unavailable-error.mjs";
+import { ModelCallError } from "./model-call-error.mjs";
+import { parseStructuredAnswer } from "./structured-answer-parsing.mjs";
 
-export class ModelAdapterUnavailableError extends Error {
-  constructor(reason) {
-    super(`model adapter unavailable: ${reason}`);
-    this.name = "ModelAdapterUnavailableError";
-    this.code = "MODEL_ADAPTER_UNAVAILABLE";
-  }
-}
+// Re-exported (see ModelCallError's own re-export comment below): the class
+// itself now lives in model-adapter-unavailable-error.mjs so
+// hcx-model-adapter.mjs can throw it without importing this module.
+export { ModelAdapterUnavailableError };
 
 export class InvalidModelConfigError extends Error {
   constructor(errors) {
@@ -66,49 +77,17 @@ export class InvalidModelConfigError extends Error {
   }
 }
 
-// A single error class carrying one of contracts.mjs's MODEL_CALL_ERROR_CODES.
-// `message` is always a fixed, generic string -- callers that want more
-// detail for their OWN debugging may pass `cause` (never surfaced in
-// `.message`, and this module never logs it either).
-export class ModelCallError extends Error {
-  constructor(code, message, { cause } = {}) {
-    super(message);
-    this.name = "ModelCallError";
-    this.code = code;
-    if (cause !== undefined) this.cause = cause;
-  }
-}
+// Re-exported so existing `import { ModelCallError } from "./model-adapter.mjs"`
+// call sites (tests included) keep working unchanged -- the class itself now
+// lives in model-call-error.mjs (Turn P11-A) so hcx-model-adapter.mjs can
+// throw/catch the exact same class without importing this module (which
+// would create a circular import, since this module also imports FROM
+// hcx-model-adapter.mjs to construct an HCX_CHAT_COMPLETIONS adapter).
+export { ModelCallError };
 
 function costFor(tokens, costPer1k) {
   if (typeof costPer1k !== "number" || !Number.isFinite(costPer1k)) return 0;
   return (tokens / 1000) * costPer1k;
-}
-
-function isPlainArrayOfStrings(value) {
-  return Array.isArray(value) && value.every((item) => typeof item === "string");
-}
-
-// The ONE response shape this module parses: content is expected to be a
-// JSON STRING (Chat Completions APIs return free text in `content`)
-// encoding {answer, used_fact_ids, used_evidence_ids}. Any deviation --
-// non-JSON content, missing/wrong-typed fields -- is a
-// MODEL_CALL_MALFORMED_RESPONSE, never silently coerced.
-function parseStructuredAnswer(rawContent) {
-  let parsed;
-  try {
-    parsed = JSON.parse(rawContent);
-  } catch (error) {
-    throw new ModelCallError("MODEL_CALL_MALFORMED_RESPONSE", "model response content was not valid JSON", { cause: error });
-  }
-  if (!parsed || typeof parsed !== "object" || typeof parsed.answer !== "string") {
-    throw new ModelCallError("MODEL_CALL_MALFORMED_RESPONSE", "model response JSON is missing a string 'answer' field");
-  }
-  const usedFactIds = parsed.used_fact_ids ?? [];
-  const usedEvidenceIds = parsed.used_evidence_ids ?? [];
-  if (!isPlainArrayOfStrings(usedFactIds) || !isPlainArrayOfStrings(usedEvidenceIds)) {
-    throw new ModelCallError("MODEL_CALL_MALFORMED_RESPONSE", "model response used_fact_ids/used_evidence_ids must be arrays of strings");
-  }
-  return { text: parsed.answer, used_fact_ids: usedFactIds, used_evidence_ids: usedEvidenceIds };
 }
 
 // Minimal generic "chat completions" request/response shape (see the
@@ -202,6 +181,9 @@ export function createModelAdapter(config, options = {}) {
   }
   if (config.kind === "HTTP_CHAT_COMPLETIONS") {
     return createHttpChatCompletionsModelAdapter(config, options);
+  }
+  if (config.kind === "HCX_CHAT_COMPLETIONS") {
+    return createHcxChatCompletionsModelAdapter(config, options);
   }
   throw new InvalidModelConfigError([`unsupported kind: ${config.kind}`]);
 }

@@ -56,6 +56,7 @@
     "evaluation-harness:run": "node scripts/run-evaluation-harness.mjs",
     "test:reference-db": "node --test tests/reference-release-contract.test.mjs tests/reference-release-v020-bundle.test.mjs tests/reference-repository.test.mjs tests/reference-repository-no-write-sql.test.mjs tests/coverage-authorized-fact-view.test.mjs",
     "test:agent-comparison": "node --test tests/agent-comparison-contracts.test.mjs tests/agent-comparison-model-adapter.test.mjs tests/agent-comparison-telemetry.test.mjs tests/agent-comparison-variant-registry.test.mjs tests/agent-comparison-hard-claim-grounding.test.mjs tests/agent-comparison-reproducibility.test.mjs tests/agent-comparison-structured-first-agent.test.mjs tests/agent-comparison-benchmark-runner.test.mjs",
+    "test:agent-comparison-hcx": "node --test tests/agent-comparison-hcx-model-adapter.test.mjs tests/agent-comparison-hcx-mock-server.test.mjs tests/agent-comparison-hcx-generation-manifest.test.mjs tests/agent-comparison-hcx-four-agent-smoke.test.mjs",
     "agent-comparison:seed25-smoke": "node scripts/run-agent-comparison-seed25-smoke.mjs",
     "test:agent-comparison:real-bundle-smoke": "node --test tests/agent-comparison-real-bundle-smoke.test.mjs",
     "test:agent-comparison-variants": "node --test tests/agent-comparison-hybrid-retrieval.test.mjs tests/agent-comparison-planner.test.mjs tests/agent-comparison-document-first-rag.test.mjs",

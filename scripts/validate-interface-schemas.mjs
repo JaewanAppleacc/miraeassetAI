@@ -61,9 +61,20 @@ const pairs = [
     "domain/agent-comparison/interfaces/model-config.schema.json",
     "domain/agent-comparison/interfaces/examples/model-config.example.json",
   ],
+  // Turn P11-A: additive HCX_CHAT_COMPLETIONS kind on the same schema.
+  [
+    "domain/agent-comparison/interfaces/model-config.schema.json",
+    "domain/agent-comparison/interfaces/examples/model-config.hcx.example.json",
+  ],
   [
     "domain/agent-comparison/interfaces/telemetry-event.schema.json",
     "domain/agent-comparison/interfaces/examples/telemetry-event.example.json",
+  ],
+  // Turn P11-A: HCX generation adapter manifest (config/security identity,
+  // never a raw API key/prompt/response -- see the schema's own header).
+  [
+    "domain/agent-comparison/interfaces/hcx-generation-manifest.schema.json",
+    "domain/agent-comparison/interfaces/examples/hcx-generation-manifest.example.json",
   ],
   [
     "domain/agent-comparison/interfaces/benchmark-run-manifest.schema.json",

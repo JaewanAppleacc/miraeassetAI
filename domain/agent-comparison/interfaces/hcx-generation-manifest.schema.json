@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://disclosure-analyst.local/schema/agent-comparison/hcx-generation-manifest.v0.1.json",
+  "title": "HCX Generation Adapter Manifest v0.1",
+  "description": "Turn P11-A: one record per HCX_CHAT_COMPLETIONS ModelAdapter construction/usage, carrying only non-secret configuration identity (never a raw API key, raw prompt, or raw provider response body -- only hashes/ids of them) plus honest call-performed flags that distinguish a real external HyperCLOVA X call from a local loopback mock call. This is deliberately separate from telemetry-event.schema.json (which already covers per-question model_call_attempt/success/failure_count, model_failure_code, model_fallback_used, scoring_eligible) and from benchmark-run-manifest.schema.json (which pins agent_variant/dataset/budget reproducibility for a whole run) -- this manifest is scoped ONLY to the generation adapter's own config/security identity and never duplicates or replaces either.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "manifest_id", "created_at", "provider_id", "model_id",
+    "model_config_id", "model_config_sha256", "endpoint_sha256", "endpoint_hostname",
+    "endpoint_is_loopback", "request_schema_version", "response_schema_version",
+    "timeout_ms", "max_output_tokens", "temperature", "top_p", "seed_supported",
+    "code_revision", "actual_external_call_authorized",
+    "actual_external_generation_call_performed", "mock_generation_call_performed",
+    "model_call_attempt_count", "model_call_success_count", "model_call_failure_count",
+    "model_failure_code", "model_fallback_used", "scoring_eligible"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.1.0" },
+    "manifest_id": { "type": "string", "minLength": 1 },
+    "created_at": { "type": "string", "format": "date-time" },
+    "provider_id": { "type": "string", "minLength": 1, "description": "Free-text provider label carried through from ModelConfig.provider (e.g. \"hcx\"). Never used to select a code path." },
+    "model_id": { "type": "string", "minLength": 1, "description": "Free-text model label carried through from ModelConfig.model. Never hardcoded inside adapter code." },
+    "model_config_id": { "type": "string", "pattern": "^model_[a-z0-9_.-]+$" },
+    "model_config_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "sha256 of the canonicalized ModelConfig (reproducibility.mjs's computeModelConfigSha256). ModelConfig never contains the API key itself, so this is always safe to record."
+    },
+    "endpoint_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "sha256 of the full endpoint_url string. Recorded instead of the raw URL so a query-string credential (if a provider ever used one, which HCX's env-var-key contract does not) could never leak through this manifest."
+    },
+    "endpoint_hostname": { "type": "string", "minLength": 1, "description": "Non-secret hostname parsed from endpoint_url (e.g. \"clovastudio.stream.ntruss.com\" or \"127.0.0.1\" for a test mock). A hostname alone never carries a credential." },
+    "endpoint_is_loopback": { "type": "boolean", "description": "true when endpoint_hostname is 127.0.0.1/localhost/::1 -- the ONLY case a mock call could have been authorized without actual_external_call_authorized=true." },
+    "prompt_template_id": { "type": ["string", "null"], "description": "Stable id of the fixed instructional prompt template used, if any (e.g. an AgentFlow's own ANSWER_PROMPT_TEMPLATE_ID). null when no model call was attempted." },
+    "prompt_template_sha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$", "description": "sha256 of the FIXED template text only, never of any per-question filled prompt." },
+    "request_schema_version": { "type": "string", "minLength": 1 },
+    "response_schema_version": { "type": "string", "minLength": 1 },
+    "timeout_ms": { "type": "integer", "minimum": 1 },
+    "max_output_tokens": { "type": "integer", "minimum": 1 },
+    "temperature": { "type": "number", "minimum": 0, "maximum": 2 },
+    "top_p": { "type": "number", "minimum": 0, "maximum": 1 },
+    "seed_supported": { "type": "boolean" },
+    "code_revision": { "type": "string", "minLength": 1, "description": "git revision (optionally \"-dirty\") of the working tree that constructed this adapter (reproducibility.mjs's detectCodeRevision), or \"unknown\"." },
+    "actual_external_call_authorized": { "type": "boolean", "description": "Mirrors ModelConfig.actual_external_call_authorized exactly -- Owner-controlled real-call authorization. false throughout this Turn." },
+    "actual_external_generation_call_performed": { "type": "boolean", "description": "true only if a real, non-loopback HCX network call actually completed. Always false in this Turn -- a mock/loopback call is NEVER counted here, however many times it was made." },
+    "mock_generation_call_performed": { "type": "boolean", "description": "true when this adapter made at least one call against a loopback (127.0.0.1/localhost/::1) mock target this Turn's mock server (see hcx-mock-server.mjs). false for a manifest describing an adapter that was constructed but never called, or that was refused construction entirely." },
+    "model_call_attempt_count": { "type": "integer", "minimum": 0 },
+    "model_call_success_count": { "type": "integer", "minimum": 0 },
+    "model_call_failure_count": { "type": "integer", "minimum": 0 },
+    "model_failure_code": {
+      "anyOf": [
+        { "enum": ["MODEL_ADAPTER_UNAVAILABLE", "MODEL_CALL_TIMEOUT", "MODEL_CALL_HTTP_ERROR", "MODEL_CALL_MALFORMED_RESPONSE", "MODEL_CALL_UNKNOWN_ERROR"] },
+        { "type": "null" }
+      ]
+    },
+    "model_fallback_used": { "type": "boolean" },
+    "scoring_eligible": { "type": "boolean" },
+    "notes": { "type": "string" }
+  }
+}

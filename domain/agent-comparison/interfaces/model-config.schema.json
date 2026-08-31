@@ -14,18 +14,34 @@
       "description": "Stable identifier for this exact provider+model+parameter combination, used to join telemetry back to a configuration without re-deriving it from free text."
     },
     "kind": {
-      "enum": ["FAKE_DETERMINISTIC", "HTTP_CHAT_COMPLETIONS"],
-      "description": "Which generic adapter implementation to construct. FAKE_DETERMINISTIC never makes a network call. HTTP_CHAT_COMPLETIONS is a single generic HTTP client shape reused across providers; the provider/model/endpoint are still fully config-driven, not branched on by name in code."
+      "enum": ["FAKE_DETERMINISTIC", "HTTP_CHAT_COMPLETIONS", "HCX_CHAT_COMPLETIONS"],
+      "description": "Which generic adapter implementation to construct. FAKE_DETERMINISTIC never makes a network call. HTTP_CHAT_COMPLETIONS is a single generic OpenAI-Chat-Completions-shaped HTTP client reused across providers that speak that exact envelope. HCX_CHAT_COMPLETIONS (Turn P11-A) is HyperCLOVA X's own distinct request/response envelope (messages/topP/topK/maxTokens fields, a status+result response shape) -- see hcx-model-adapter.mjs; it is never routed through the generic HTTP_CHAT_COMPLETIONS branch. In every case the provider/model/endpoint are fully config-driven, not branched on by name in code."
     },
     "provider": { "type": "string", "minLength": 1, "description": "Free-text provider label for telemetry/reporting only (e.g. \"anthropic\", \"openai\", \"hcx\"). Never used to select code paths." },
     "model": { "type": "string", "minLength": 1, "description": "Free-text model name for telemetry/reporting only (e.g. \"claude-sonnet-5\"). Never hardcoded inside Agent flow code." },
-    "endpoint_url": { "type": "string", "minLength": 1, "description": "Required when kind=HTTP_CHAT_COMPLETIONS; the full chat-completions-shaped endpoint URL." },
+    "endpoint_url": { "type": "string", "minLength": 1, "description": "Required when kind=HTTP_CHAT_COMPLETIONS or kind=HCX_CHAT_COMPLETIONS; the full chat-completions-shaped endpoint URL. For HCX_CHAT_COMPLETIONS, must be https:// unless the hostname is an explicitly loopback-authorized mock target (see hcx-model-adapter.mjs)." },
     "api_key_env_var": { "type": "string", "minLength": 1, "description": "Name of the environment variable holding the API key. The key value itself is never part of this config or of any telemetry/log output." },
     "max_output_tokens": { "type": "integer", "minimum": 1 },
     "temperature": { "type": "number", "minimum": 0, "maximum": 2 },
+    "top_p": { "type": "number", "minimum": 0, "maximum": 1, "description": "Nucleus-sampling parameter. Required when kind=HCX_CHAT_COMPLETIONS; unused (and optional) for other kinds." },
+    "seed_supported": { "type": "boolean", "description": "Whether this provider/model combination accepts a deterministic sampling seed at all. Required when kind=HCX_CHAT_COMPLETIONS -- a Owner-set false means the adapter never sends a seed field, even if a caller's request supplies one." },
     "timeout_ms": { "type": "integer", "minimum": 1 },
     "input_cost_per_1k_tokens": { "type": "number", "minimum": 0, "description": "Used only to derive telemetry.estimated_cost; absence means estimated_cost is always 0." },
-    "output_cost_per_1k_tokens": { "type": "number", "minimum": 0 }
+    "output_cost_per_1k_tokens": { "type": "number", "minimum": 0 },
+    "request_schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Required when kind=HCX_CHAT_COMPLETIONS. Names the exact HCX request envelope shape this ModelConfig was authored against (see hcx-model-adapter.mjs's SUPPORTED_HCX_REQUEST_SCHEMA_VERSIONS). An unrecognized value fails closed at construction (MODEL_ADAPTER_UNAVAILABLE) rather than guessing a request shape."
+    },
+    "response_schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Required when kind=HCX_CHAT_COMPLETIONS. Names the exact HCX response envelope shape this ModelConfig expects to parse (see hcx-model-adapter.mjs's SUPPORTED_HCX_RESPONSE_SCHEMA_VERSIONS). An unrecognized value fails closed at construction (MODEL_ADAPTER_UNAVAILABLE)."
+    },
+    "actual_external_call_authorized": {
+      "type": "boolean",
+      "description": "Required when kind=HCX_CHAT_COMPLETIONS. Owner-controlled authorization to perform a REAL network call against a non-loopback HCX endpoint. false (the only value this Turn ever sets) means the adapter refuses to call a non-loopback endpoint at all -- see hcx-model-adapter.mjs. A loopback (127.0.0.1/localhost/::1) mock endpoint may still be exercised in a test even when this is false, but ONLY via an explicit test-only constructor option, never by this config field alone; every such mock call is still honestly recorded with actual_external_call_authorized=false and actual_external_generation_call_performed=false."
+    }
   },
   "allOf": [
     {
@@ -35,6 +51,24 @@
         "properties": {
           "endpoint_url": { "type": "string", "minLength": 1 },
           "api_key_env_var": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "HCX_CHAT_COMPLETIONS" } }, "required": ["kind"] },
+      "then": {
+        "required": [
+          "endpoint_url", "api_key_env_var", "top_p", "seed_supported",
+          "request_schema_version", "response_schema_version", "actual_external_call_authorized"
+        ],
+        "properties": {
+          "endpoint_url": { "type": "string", "minLength": 1 },
+          "api_key_env_var": { "type": "string", "minLength": 1 },
+          "top_p": { "type": "number", "minimum": 0, "maximum": 1 },
+          "seed_supported": { "type": "boolean" },
+          "request_schema_version": { "type": "string", "minLength": 1 },
+          "response_schema_version": { "type": "string", "minLength": 1 },
+          "actual_external_call_authorized": { "type": "boolean" }
         }
       }
     }
