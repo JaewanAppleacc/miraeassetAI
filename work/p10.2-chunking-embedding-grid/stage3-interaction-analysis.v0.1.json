@@ -1,11 +1,12 @@
 {
   "schema_version": "0.1.0",
-  "generated_at": "2026-09-01T10:07:51.635Z",
+  "generated_at": "2026-09-01T11:09:42.582Z",
   "chunking_effect_by_model": {
     "kure_v1": {
       "fixed_recall_at_10": 0.868,
       "section_recall_at_10": 0.834,
       "section_minus_fixed": -0.03400000000000003,
+      "fixed_minus_section": 0.03400000000000003,
       "section_wins": false,
       "fixed_wins": true,
       "within_tolerance": false
@@ -14,6 +15,7 @@
       "fixed_recall_at_10": 0.8521666666666667,
       "section_recall_at_10": 0.834,
       "section_minus_fixed": -0.018166666666666775,
+      "fixed_minus_section": 0.018166666666666775,
       "section_wins": false,
       "fixed_wins": true,
       "within_tolerance": false
@@ -22,6 +24,7 @@
       "fixed_recall_at_10": 0.8713333333333334,
       "section_recall_at_10": 0.8489999999999999,
       "section_minus_fixed": -0.022333333333333538,
+      "fixed_minus_section": 0.022333333333333538,
       "section_wins": false,
       "fixed_wins": true,
       "within_tolerance": false
@@ -72,8 +75,25 @@
     "ranking_order_changed": true,
     "any_model_where_section_beats_fixed": false,
     "any_model_where_fixed_beats_section": true,
-    "has_interaction": true
+    "has_interaction": true,
+    "swapped_pairs": [
+      {
+        "pair": [
+          "kure_v1",
+          "bge_m3"
+        ],
+        "fixed_delta": 0.015833333333333255,
+        "section_delta": 0,
+        "tie_driven": true
+      }
+    ],
+    "rank_order_tie_artifact": true,
+    "material_performance_interaction": false,
+    "table_diagnostic_status": "TABLE_DIAGNOSTIC_PENDING"
   },
+  "material_performance_interaction": false,
+  "rank_order_tie_artifact": true,
+  "table_diagnostic_status": "TABLE_DIAGNOSTIC_PENDING",
   "macro_vs_type_conflicts_by_model": {
     "kure_v1": {
       "macro_section_wins": false,

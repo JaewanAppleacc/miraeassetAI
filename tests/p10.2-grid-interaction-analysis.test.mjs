@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { analyzeChunkingByModelDelta, analyzeModelRankingByChunking, detectInteraction, detectMacroVsTypeConflict } from "../domain/agent-comparison/chunking-comparison/grid-interaction-analysis.mjs";
+import { analyzeChunkingByModelDelta, analyzeModelRankingByChunking, detectInteraction, detectMacroVsTypeConflict, TABLE_DIAGNOSTIC_STATUS } from "../domain/agent-comparison/chunking-comparison/grid-interaction-analysis.mjs";
 
 const FIXED = "fixed-token-512-o64.v0.1.0";
 const SECTION = "section-aware-flat-512-o64.v0.1.0";
@@ -19,6 +19,13 @@ test("analyzeChunkingByModelDelta: computes section-minus-fixed per model and fl
   const result = analyzeChunkingByModelDelta(combos, MODELS, FIXED, SECTION);
   assert.equal(result.kure_v1.section_wins, true);
   assert.equal(result.pixie_rune.within_tolerance, true);
+});
+
+test("analyzeChunkingByModelDelta: fixed_minus_section is the exact negation of section_minus_fixed (P10.2 follow-up requirement: Fixed-Section delta recorded)", () => {
+  const combos = [combo("kure_v1", FIXED, 0.868), combo("kure_v1", SECTION, 0.834)];
+  const result = analyzeChunkingByModelDelta(combos, ["kure_v1"], FIXED, SECTION);
+  assert.equal(result.kure_v1.fixed_minus_section, -result.kure_v1.section_minus_fixed);
+  assert.ok(Math.abs(result.kure_v1.fixed_minus_section - 0.034) < 1e-9);
 });
 
 test("analyzeChunkingByModelDelta throws when a combination is missing (never silently treats it as 0)", () => {
@@ -64,6 +71,55 @@ test("detectInteraction: flags interaction when models disagree in DIRECTION eve
   assert.equal(result.any_model_where_section_beats_fixed, true);
   assert.equal(result.any_model_where_fixed_beats_section, true);
   assert.equal(result.has_interaction, true);
+  assert.equal(result.material_performance_interaction, true, "a genuine, non-tied direction disagreement IS a material interaction");
+  assert.equal(result.rank_order_tie_artifact, false);
+});
+
+// Regression test (P10.2 follow-up correction, 2026-09-01): reproduces the
+// REAL P10.2 grid data shape -- Fixed clearly favors kure_v1 over bge_m3,
+// but under Section the two tie EXACTLY, so the alphabetical id tie-break
+// (bge_m3 < kure_v1) swaps their rank order. This must NOT be reported as
+// a material chunking x embedding interaction: it carries zero performance
+// signal, only an artifact of how ties are broken for display ordering.
+test("detectInteraction: a rank-order swap caused ONLY by an exact tie is a tie artifact, not a material interaction", () => {
+  const combos = [
+    combo("pixie_rune", FIXED, 0.8713333333333334), combo("pixie_rune", SECTION, 0.8489999999999999),
+    combo("kure_v1", FIXED, 0.868), combo("kure_v1", SECTION, 0.834),
+    combo("bge_m3", FIXED, 0.8521666666666667), combo("bge_m3", SECTION, 0.834), // exact tie with kure_v1 under Section
+  ];
+  const result = detectInteraction(combos, MODELS, FIXED, SECTION);
+  assert.deepEqual(result.fixed_ranking, ["pixie_rune", "kure_v1", "bge_m3"]);
+  assert.deepEqual(result.section_ranking, ["pixie_rune", "bge_m3", "kure_v1"]);
+  assert.equal(result.ranking_order_changed, true, "the raw rank order DOES change (kure_v1/bge_m3 swap)");
+  assert.equal(result.rank_order_tie_artifact, true, "the swap is fully explained by an exact tie");
+  assert.equal(result.material_performance_interaction, false, "a tie-driven swap must never be treated as a real interaction");
+  // Fixed wins for every model beyond tolerance; Section never wins for any
+  // model -- so there is no genuine direction disagreement either.
+  assert.equal(result.any_model_where_section_beats_fixed, false);
+  assert.equal(result.any_model_where_fixed_beats_section, true);
+});
+
+test("detectInteraction: no rank-order change at all means no tie artifact and no material interaction", () => {
+  const combos = [
+    combo("kure_v1", FIXED, 0.80), combo("kure_v1", SECTION, 0.79),
+    combo("bge_m3", FIXED, 0.85), combo("bge_m3", SECTION, 0.84),
+    combo("pixie_rune", FIXED, 0.70), combo("pixie_rune", SECTION, 0.69),
+  ];
+  const result = detectInteraction(combos, MODELS, FIXED, SECTION);
+  assert.equal(result.ranking_order_changed, false);
+  assert.equal(result.rank_order_tie_artifact, false);
+  assert.equal(result.material_performance_interaction, false);
+});
+
+test("detectInteraction: always reports TABLE_DIAGNOSTIC_PENDING (cleared only by Turn P10.3-TABLE)", () => {
+  const combos = [
+    combo("kure_v1", FIXED, 0.80), combo("kure_v1", SECTION, 0.79),
+    combo("bge_m3", FIXED, 0.85), combo("bge_m3", SECTION, 0.84),
+    combo("pixie_rune", FIXED, 0.70), combo("pixie_rune", SECTION, 0.69),
+  ];
+  const result = detectInteraction(combos, MODELS, FIXED, SECTION);
+  assert.equal(result.table_diagnostic_status, "TABLE_DIAGNOSTIC_PENDING");
+  assert.equal(TABLE_DIAGNOSTIC_STATUS, "TABLE_DIAGNOSTIC_PENDING");
 });
 
 test("detectMacroVsTypeConflict: flags a question type whose verdict contradicts the macro verdict", () => {

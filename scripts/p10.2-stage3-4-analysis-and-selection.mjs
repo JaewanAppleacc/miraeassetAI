@@ -91,6 +91,13 @@ async function main() {
     chunking_effect_by_model: chunkingByModelDelta,
     model_ranking_by_chunking: { [FIXED_CONFIG_ID]: modelRankingByFixed, [SECTION_CONFIG_ID]: modelRankingBySection },
     interaction: interaction,
+    // Promoted to top level (P10.2 follow-up correction) so the corrected
+    // interaction reading -- material_performance_interaction: false,
+    // rank_order_tie_artifact: true -- is visible without traversing into
+    // `interaction`, and so table_diagnostic_status is easy to find.
+    material_performance_interaction: interaction.material_performance_interaction,
+    rank_order_tie_artifact: interaction.rank_order_tie_artifact,
+    table_diagnostic_status: interaction.table_diagnostic_status,
     macro_vs_type_conflicts_by_model: typeConflictsByModel,
     macro_fixed_mean_recall_at_10: macroFixedMean,
     macro_section_mean_recall_at_10: macroSectionMean,
@@ -145,10 +152,16 @@ async function main() {
   } else {
     finalReport = { schema_version: "0.1.0", generated_at: new Date().toISOString(), status: selection.status, reason_trail: selection.reasonTrail, final_embedding_model_selected: false };
   }
+  // P10.2 follow-up correction: the selection above is based on macro
+  // recall@10/nDCG@10/MRR, which is table-content-agnostic. Whether the
+  // winning chunking (Fixed-512) specifically preserves table row/column/
+  // unit/period context is a SEPARATE, still-open question, resolved only
+  // by Turn P10.3-TABLE's dedicated table-structure diagnostic.
+  finalReport.table_diagnostic_status = interaction.table_diagnostic_status;
   finalReport.all_combinations_ranked = combosForSelection;
   await writeFile(path.join(OUT_DIR, "final-selection.v0.1.json"), `${JSON.stringify(finalReport, null, 2)}\n`);
 
-  console.log(JSON.stringify({ status: selection.status, winner: selection.winner, macro_fixed_mean: macroFixedMean, macro_section_mean: macroSectionMean, has_interaction: interaction.has_interaction }, null, 2));
+  console.log(JSON.stringify({ status: selection.status, winner: selection.winner, macro_fixed_mean: macroFixedMean, macro_section_mean: macroSectionMean, has_interaction: interaction.has_interaction, material_performance_interaction: interaction.material_performance_interaction, rank_order_tie_artifact: interaction.rank_order_tie_artifact, table_diagnostic_status: interaction.table_diagnostic_status }, null, 2));
 }
 
 main().catch((error) => {
