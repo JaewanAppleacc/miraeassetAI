@@ -750,13 +750,20 @@ def answer_text(value: Any) -> str:
 
     HCX가 답을 문자열이 아니라 리스트로 내려주는 경우가 있다(Phase 10 Q06·Q25 —
     실제로는 dict의 리스트였다). 내용은 모델이 만든 그대로 두고 타입만 맞춘다.
-    dict 자체가 통째로 온 경우는 복구하지 않는다 — answer가 아니라 다른 구조일 수
-    있어 추측이 된다. 빈 문자열이면 fallback이 받는다.
+
+    dict 통째: Phase1 실측 13문항에서 {"계약상대방": ..., "계약금액": ...}처럼 항목별
+    dict로 왔다 — 값은 전부 원문 그대로였는데 빈 답으로 버려졌다. 리스트 원소 dict와
+    같은 규칙("키: 값" 직렬화)을 적용한다. {"answer": ...} 한 겹 감싼 꼴은 벗긴다.
+    문장으로 다시 쓰지 않는다. 빈 문자열이면 fallback이 받는다.
     """
     if isinstance(value, str):
         return value.strip()
     if isinstance(value, list):
         return "\n".join(p for p in (_element_text(v) for v in value) if p)
+    if isinstance(value, dict):
+        if "answer" in value:
+            return answer_text(value["answer"])
+        return "\n".join(f"{k}: {p}" for k, v in value.items() if (p := _element_text(v)))
     return ""
 
 

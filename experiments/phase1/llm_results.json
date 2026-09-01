@@ -1,0 +1,5054 @@
+{
+ "summary": {
+  "n": 101,
+  "api_calls": 66,
+  "status_ok": 101,
+  "value_full": 49,
+  "value_partial": 28,
+  "value_zero": 15,
+  "n_supported": 92,
+  "llm_kept": 29,
+  "json_fail": 7,
+  "fabricated_total": 0,
+  "tokens": {
+   "in": 224139,
+   "out": 13350
+  },
+  "cost_krw_ex_vat": 346.92,
+  "cost_krw_inc_vat": 381.62,
+  "by_mode": {
+   "CLOSED": "38/66 full",
+   "OPEN": "11/26 full"
+  },
+  "by_type": {
+   "COMPARISON_CALC": "0/12 full",
+   "EVENT_TRACE": "1/5 full",
+   "NARRATIVE_MULTI_DOC": "10/20 full",
+   "NUMERIC_LOOKUP": "38/55 full"
+  }
+ },
+ "rows": [
+  {
+   "qid": "author_0459b5f8f37b0192316cd77c",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "holding"
+   ],
+   "question": "Massachusetts Financial Services Company이(가) (주)아모레퍼시픽에 대해 제출한 주식등의 대량보유상황보고서(보고서작성기준일 2024년 03월 22일)에 따르면, 직전 보고서 대비 이번 보고서의 보유주식등의 수와 보유비율은 각각 어떻게 변동되었는가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "이번 보고서 보유주식등의 수": 2263085,
+     "이번 보고서 보유비율": 3.87,
+     "직전 보고서 보유주식등의 수": 2925317,
+     "직전 보고서 보유비율": 5
+    },
+    "unit": null,
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "4/4",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "skipped": "deterministic_calculation"
+   },
+   "api": "NO_CALL",
+   "json_parse": "N/A",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 100,
+   "n_evidence": 5,
+   "n_derived": 2,
+   "input_tokens": null,
+   "output_tokens": null,
+   "latency_ms": 168,
+   "answer": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 2,925,317 → 2,263,085 (-662,232 변동)\n- 직전 대비 비율(%): 5.00 → 3.87 (-1.13%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서 | 2,925,317 | 5.00\n- [answer] 이번 보고서 | 2,263,085 | 3.87\n- [answer] 이번보고서 | 2024년 03월 22일 | MassachusettsFinancialServicesCompany | 1 | 2,263,085 | 3.87 | 2,263,085 | 3.87 | 58,492,759\n- [answer] 직전보고서 | 2023년 06월 02일 | MassachusettsFinancialServicesCompany | 1 | 2,925,317 | 5.00 | 2,925,317 | 5.00 | 58,492,759\n- [answer] | 보고서작성기준일 | 보고자 | 주식등 | 주권 | 의결권 있는 발행주식총수(주)",
+   "raw_text": ""
+  },
+  {
+   "qid": "author_050b7f96dd361ac0771755a8",
+   "type": "NARRATIVE_MULTI_DOC",
+   "mode": "OPEN",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "major"
+   ],
+   "question": "현대자동차가 2023년 10월 26일 결의한 자기주식 처분 결정의 목적과 처분예정주식수, 처분예정금액은 각각 무엇인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": "목적은 '2023년 단체교섭에 따른 회사주식 지급'이며, 처분예정주식수는 보통주식 963,630주, 처분예정금액은 175,380,660,000원이다(처분예정금액은 이사회 결의일 전일 종가 182,000원 기준으로 산정되어 주가 변동에 따라 달라질 수 있음).",
+    "unit": null,
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "3/4",
+   "value_score": 0.75,
+   "value_ok": false,
+   "llm_used": true,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 3655,
+    "usage": {
+     "promptTokens": 2716,
+     "completionTokens": 117,
+     "totalTokens": 2833
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 3938
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 95,
+   "n_evidence": 5,
+   "n_derived": 0,
+   "input_tokens": 2716,
+   "output_tokens": 117,
+   "latency_ms": 3763,
+   "answer": "현대자동차는 2023년 10월 26일 결의를 통해 자기주식 963,630주를 처분하기로 하였으며, 이는 2023년 단체교섭에 따른 회사주식 지급을 목적으로 합니다. 처분예정금액은 175,380,660,000원입니다.",
+   "raw_text": "{\"answer\": \"현대자동차는 2023년 10월 26일 결의를 통해 자기주식 963,630주를 처분하기로 하였으며, 이는 2023년 단체교섭에 따른 회사주식 지급을 목적으로 합니다. 처분예정금액은 175,380,660,000원입니다.\", \"evidence\": [{\"document_id\": \"major_20231026000201\", \"quote_or_fact\": \"5. 처분목적 | 2023년 단체교섭에 따른 회사주식 지급\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "author_0644c80590c4960192ecdd59",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "exchange"
+   ],
+   "question": "한국항공우주가 2025년 6월 26일 체결한 'KF-21 최초양산(잔여) 항공기 계약'의 계약금액(원)은 얼마인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": 2396990000000,
+    "unit": "KRW",
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "1/1",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": true,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 2059,
+    "usage": {
+     "promptTokens": 1344,
+     "completionTokens": 69,
+     "totalTokens": 1413
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 1378
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "PARTIALLY_SUPPORTED",
+   "fabricated": [],
+   "confidence": 70,
+   "n_evidence": 5,
+   "n_derived": 0,
+   "input_tokens": 1344,
+   "output_tokens": 69,
+   "latency_ms": 2157,
+   "answer": "2,396,990,000,000원",
+   "raw_text": "{\"answer\": \"2,396,990,000,000원\", \"evidence\": [{\"document_id\": \"[exchange_20250626800313]\", \"quote_or_fact\": \"2. 계약내역 | 계약금액(원) | 2,396,990,000,000\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "author_087a90f5918d4e0b3e00959c",
+   "type": "COMPARISON_CALC",
+   "mode": "CLOSED",
+   "difficulty": "HARD",
+   "doc_groups": [
+    "periodic"
+   ],
+   "question": "두산로보틱스의 연결기준 매출액은(는) 2023년와(과) 2025년 사이(같은 연간(사업보고서) 기준)에 얼마나 변동했는가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": -20060,
+    "unit": "백만원",
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "0/1",
+   "value_score": 0.0,
+   "value_ok": false,
+   "llm_used": false,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 3015,
+    "usage": {
+     "promptTokens": 4991,
+     "completionTokens": 78,
+     "totalTokens": 5069
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 7745,
+    "degraded": true,
+    "degraded_reason": "unsupported"
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 80,
+   "n_evidence": 2,
+   "n_derived": 0,
+   "input_tokens": 4991,
+   "output_tokens": 78,
+   "latency_ms": 3459,
+   "answer": "공시에서 확인한 값:\n- 2023년 매출액: 53,038\n- 2025년 매출액: 32,978",
+   "raw_text": "{\"answer\": \"-2171\", \"evidence\": [{\"document_id\": \"[periodic_20260318001562]\", \"quote_or_fact\": \"구 분 | 2025년(제11기) | 2023년(제9기)\\n[매출액] | 32,978 | 53,038\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "author_0be4ca52605cfe6d48181d97",
+   "type": "COMPARISON_CALC",
+   "mode": "CLOSED",
+   "difficulty": "HARD",
+   "doc_groups": [
+    "periodic"
+   ],
+   "question": "에코프로비엠의 연결기준 매출액은(는) 2023년 1분기와(과) 2025년 1분기 사이(같은 1분기(3개월) 기준)에 얼마나 변동했는가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": -1381201196139,
+    "unit": "원",
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "0/1",
+   "value_score": 0.0,
+   "value_ok": false,
+   "llm_used": false,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 4077,
+    "usage": {
+     "promptTokens": 5651,
+     "completionTokens": 60,
+     "totalTokens": 5711
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 8929,
+    "degraded": true,
+    "degraded_reason": "unsupported"
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 80,
+   "n_evidence": 2,
+   "n_derived": 0,
+   "input_tokens": 5651,
+   "output_tokens": 60,
+   "latency_ms": 4303,
+   "answer": "공시에서 확인한 값:\n- 2023년 매출액: 2,010,989,897,316\n- 2025년 매출액: 629,788,701,177",
+   "raw_text": "{\"answer\": \"-1381,201,196,139\", \"evidence\": [{\"document_id\": \"[periodic_20230515001464]\", \"quote_or_fact\": \"매출액 | 2,010,989,897,316\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "author_0dd866177ad6b48052e16a33",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "exchange"
+   ],
+   "question": "대우건설이 2025년 6월 30일 수주한 '과천주공5단지 주택재건축정비사업'의 계약금액(원)은 얼마인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": 638239000000,
+    "unit": "KRW",
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "1/1",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": true,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 2035,
+    "usage": {
+     "promptTokens": 1666,
+     "completionTokens": 65,
+     "totalTokens": 1731
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 1900
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "PARTIALLY_SUPPORTED",
+   "fabricated": [],
+   "confidence": 70,
+   "n_evidence": 5,
+   "n_derived": 0,
+   "input_tokens": 1666,
+   "output_tokens": 65,
+   "latency_ms": 2086,
+   "answer": "638,239,000,000원",
+   "raw_text": "{\"answer\": \"638,239,000,000원\", \"evidence\": [{\"document_id\": \"[exchange_20250701800193]\", \"quote_or_fact\": \"2. 계약내역 | 계약금액(원) | 638,239,000,000\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "author_14dfddbe1d41275533ae3945",
+   "type": "COMPARISON_CALC",
+   "mode": "CLOSED",
+   "difficulty": "HARD",
+   "doc_groups": [
+    "periodic"
+   ],
+   "question": "레인보우로보틱스의 연결기준 매출액은(는) 2023년 1월~12월와(과) 2025년 1월~12월 사이(같은 연간(사업보고서) 기준)에 얼마나 변동했는가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": 18864975,
+    "unit": "천원",
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "0/1",
+   "value_score": 0.0,
+   "value_ok": false,
+   "llm_used": false,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 3093,
+    "usage": {
+     "promptTokens": 5334,
+     "completionTokens": 67,
+     "totalTokens": 5401
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 7997,
+    "degraded": true,
+    "degraded_reason": "unsupported"
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 80,
+   "n_evidence": 2,
+   "n_derived": 0,
+   "input_tokens": 5334,
+   "output_tokens": 67,
+   "latency_ms": 3813,
+   "answer": "공시에서 확인한 값:\n- 2023년 매출액: 15,258,135\n- 2025년 매출액: 34,123,110",
+   "raw_text": "{\"answer\": \"17,755,925\", \"evidence\": [{\"document_id\": \"[periodic_20260320000803]\", \"quote_or_fact\": \"매출액 | 34,123,110 | 19,346,780 | 15,258,135\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "author_17e55323e3a89766f08ec8fc",
+   "type": "COMPARISON_CALC",
+   "mode": "CLOSED",
+   "difficulty": "HARD",
+   "doc_groups": [
+    "periodic"
+   ],
+   "question": "레인보우로보틱스의 연결기준 매출액은(는) 2023년 1월~6월와(과) 2025년 1월~6월 사이(같은 반기(6개월누적) 기준)에 얼마나 변동했는가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": 3500166,
+    "unit": "천원",
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "0/1",
+   "value_score": 0.0,
+   "value_ok": false,
+   "llm_used": true,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 2872,
+    "usage": {
+     "promptTokens": 5362,
+     "completionTokens": 77,
+     "totalTokens": 5439
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 8045
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "PARTIALLY_SUPPORTED",
+   "fabricated": [],
+   "confidence": 65,
+   "n_evidence": 2,
+   "n_derived": 0,
+   "input_tokens": 5362,
+   "output_tokens": 77,
+   "latency_ms": 3307,
+   "answer": "10,301,285-16,368,185",
+   "raw_text": "{\"answer\": \"10,301,285-16,368,185\", \"evidence\": [{\"document_id\": \"[periodic_20250814003089]\", \"quote_or_fact\": \"매출액 | 10,301,285\"}], \"uncertainty\": \"매출액 2023년 1월~6월의 정확한 값을 찾을 수 없음\"}"
+  },
+  {
+   "qid": "author_1bf4c4ba5b261b12bcc01cde",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "holding"
+   ],
+   "question": "(주)한화이(가) 한화에어로스페이스(주)에 대해 제출한 주식등의 대량보유상황보고서(보고서작성기준일 2025년 07월 10일)에 따르면, 직전 보고서 대비 이번 보고서의 보유주식등의 수와 보유비율은 각각 어떻게 변동되었는가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "이번 보고서 보유주식등의 수": 18460818,
+     "이번 보고서 보유비율": 35.8,
+     "직전 보고서 보유주식등의 수": 18568652,
+     "직전 보고서 보유비율": 38.25
+    },
+    "unit": null,
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "4/4",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "skipped": "deterministic_calculation"
+   },
+   "api": "NO_CALL",
+   "json_parse": "N/A",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 100,
+   "n_evidence": 5,
+   "n_derived": 2,
+   "input_tokens": null,
+   "output_tokens": null,
+   "latency_ms": 50,
+   "answer": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 18,568,652 → 18,460,818 (-107,834 변동)\n- 직전 대비 비율(%): 38.25 → 35.80 (-2.45%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서 | 18,568,652 | 38.25\n- [answer] 이번 보고서 | 18,460,818 | 35.80\n- [answer] 직전 보고서 | 113,804 | 0.24\n- [answer] 이번보고서 | 2025년 07월 10일 | (주)한화 | 6 | 18,460,818 | 35.80 | 18,331,035 | 35.55 | 51,563,401\n- [answer] 직전보고서 | 2025년 06월 11일 | (주)한화 | 6 | 18,568,652 | 38.25 | 17,209,670 | 36.39 | 47,296,201",
+   "raw_text": ""
+  },
+  {
+   "qid": "author_2b919170b3f420b30f592dbf",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "exchange"
+   ],
+   "question": "한국항공우주가 Boeing과 체결한 'B787 및 B777X 부품 공급 계약'의 원화 기준 계약금액(2.계약내역 표의 계약금액(원))은 얼마인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": 87337073306,
+    "unit": "KRW",
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "1/1",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": true,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 2163,
+    "usage": {
+     "promptTokens": 1902,
+     "completionTokens": 65,
+     "totalTokens": 1967
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 2434
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "PARTIALLY_SUPPORTED",
+   "fabricated": [],
+   "confidence": 70,
+   "n_evidence": 5,
+   "n_derived": 0,
+   "input_tokens": 1902,
+   "output_tokens": 65,
+   "latency_ms": 2244,
+   "answer": "87,337,073,306원",
+   "raw_text": "{\"answer\": \"87,337,073,306원\", \"evidence\": [{\"document_id\": \"[exchange_20230914800073]\", \"quote_or_fact\": \"2. 계약내역 | 계약금액(원) | 87,337,073,306\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "author_33e6a824ee8b5027f2ab7806",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "holding"
+   ],
+   "question": "미래에셋자산운용㈜이(가) 한미반도체(주)에 대해 제출한 주식등의 대량보유상황보고서(보고서작성기준일 2026년 02월 05일)에 따르면, 신규 보고 기준 보유주식등의 수와 보유비율은 각각 얼마인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "이번 보고서 보유주식등의 수": 4888555,
+     "이번 보고서 보유비율": 5.13
+    },
+    "unit": null,
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "2/2",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": true,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 3213,
+    "usage": {
+     "promptTokens": 3614,
+     "completionTokens": 102,
+     "totalTokens": 3716
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 5427
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "PARTIALLY_SUPPORTED",
+   "fabricated": [],
+   "confidence": 70,
+   "n_evidence": 5,
+   "n_derived": 0,
+   "input_tokens": 3614,
+   "output_tokens": 102,
+   "latency_ms": 3282,
+   "answer": "4,888,555주, 5.13%",
+   "raw_text": "{\"answer\": \"4,888,555주, 5.13%\", \"evidence\": [{\"document_id\": \"[holding_20260211000912]\", \"quote_or_fact\": \"이번보고서 | 2026년 02월 05일 | 미래에셋자산운용 | 0 | 4,888,555 | 5.13 | 4,888,555 | 5.13 | 95,312,200\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "author_39b7a1a229844d5607de32fb",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "exchange"
+   ],
+   "question": "현대건설이 National Grid SA와 체결한 사우디 리야드-쿠드미 500kV HVDC 송전공사(제1구간) 계약의 계약금액(원)은 얼마인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": 1002399908114,
+    "unit": "KRW",
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "1/1",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": true,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 2311,
+    "usage": {
+     "promptTokens": 1486,
+     "completionTokens": 68,
+     "totalTokens": 1554
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 1796
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "PARTIALLY_SUPPORTED",
+   "fabricated": [],
+   "confidence": 70,
+   "n_evidence": 5,
+   "n_derived": 0,
+   "input_tokens": 1486,
+   "output_tokens": 68,
+   "latency_ms": 2455,
+   "answer": "1,002,399,908,114",
+   "raw_text": "{\"answer\": \"1,002,399,908,114\", \"evidence\": [{\"document_id\": \"[exchange_20241112800101]\", \"quote_or_fact\": \"2. 계약내역 | 계약금액(원) | 1,002,399,908,114\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "author_3f205e961b4c70adc216d67e",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "holding"
+   ],
+   "question": "오준호이(가) 주식회사 레인보우로보틱스에 대해 제출한 주식등의 대량보유상황보고서(보고서작성기준일 2025년 03월 12일)에 따르면, 직전 보고서 대비 이번 보고서의 보유주식등의 수와 보유비율은 각각 어떻게 변동되었는가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "이번 보고서 보유주식등의 수": 11371815,
+     "이번 보고서 보유비율": 58.62,
+     "직전 보고서 보유주식등의 수": 11371815,
+     "직전 보고서 보유비율": 58.62
+    },
+    "unit": null,
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "4/4",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "skipped": "deterministic_calculation"
+   },
+   "api": "NO_CALL",
+   "json_parse": "N/A",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 100,
+   "n_evidence": 5,
+   "n_derived": 2,
+   "input_tokens": null,
+   "output_tokens": null,
+   "latency_ms": 171,
+   "answer": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 11,371,815 → 11,371,815 (+0 변동)\n- 직전 대비 비율(%): 58.62 → 58.62 (+0.00%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 이번 보고서 | 11,371,815 | 58.62\n- [answer] 직전 보고서 | 11,371,815 | 58.62\n- [answer] 이번보고서 | 2025년 03월 12일 | 오준호 | 8 | 11,371,815 | 58.62 | 11,371,815 | 58.62 | 19,399,858\n- [answer] 직전보고서 | 2024년 12월 30일 | 오준호 | 8 | 11,371,815 | 58.62 | 11,371,815 | 58.62 | 19,399,858\n- [answer] | 보고서작성기준일 | 보고자 | 주식등 | 주권 | 의결권 있는 발행주식총수(주)",
+   "raw_text": ""
+  },
+  {
+   "qid": "author_40f76302294d317d0c588b5d",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "holding"
+   ],
+   "question": "BlackRock Fund Advisors이(가) 한화솔루션(주)에 대해 제출한 주식등의 대량보유상황보고서(보고서작성기준일 2023년 11월 30일)에 따르면, 직전 보고서 대비 이번 보고서의 보유주식등의 수와 보유비율은 각각 어떻게 변동되었는가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "이번 보고서 보유주식등의 수": 10825137,
+     "이번 보고서 보유비율": 6.2,
+     "직전 보고서 보유주식등의 수": 8932920,
+     "직전 보고서 보유비율": 5.12
+    },
+    "unit": null,
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "4/4",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "skipped": "deterministic_calculation"
+   },
+   "api": "NO_CALL",
+   "json_parse": "N/A",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 100,
+   "n_evidence": 5,
+   "n_derived": 2,
+   "input_tokens": null,
+   "output_tokens": null,
+   "latency_ms": 45,
+   "answer": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 8,932,920 → 10,825,137 (+1,892,217 변동)\n- 직전 대비 비율(%): 5.12 → 6.20 (+1.08%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서 | 8,932,920 | 5.12\n- [answer] 이번 보고서 | 10,825,137 | 6.20\n- [answer] 보유주식등의 수 및 보유비율 |  | 보유주식등의 수 | 보유비율\n- [answer] 이번보고서 | 2023년 11월 30일 | BlackRockFundAdvisors | 13 | 10,825,137 | 6.20 | 10,825,137 | 6.20 | 174,467,885\n- [answer] 직전보고서 | 2023년 10월 05일 | BlackRockFundAdvisors | 13 | 8,932,920 | 5.12 | 8,932,920 | 5.12 | 174,467,885",
+   "raw_text": ""
+  },
+  {
+   "qid": "author_41f346723847e84a051e614a",
+   "type": "ANSWERABILITY",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "major"
+   ],
+   "question": "삼성전기가 자기주식 취득·처분 등과 관련하여 금융위원회에 제출한 주요사항보고서(major 유형 공시)가 현재 코퍼스에 포함되어 있는가?",
+   "expected": {
+    "status": "NOT_FOUND",
+    "value": null,
+    "unit": null,
+    "reason_code": "ZERO_DOCUMENT_IN_CORPUS"
+   },
+   "status": "NOT_FOUND",
+   "expected_status": "NOT_FOUND",
+   "status_ok": true,
+   "value_label": "0/1",
+   "value_score": 0.0,
+   "value_ok": null,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "skipped": "corpus_existence_rule"
+   },
+   "api": "NO_CALL",
+   "json_parse": "N/A",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 15,
+   "n_evidence": 0,
+   "n_derived": 0,
+   "input_tokens": null,
+   "output_tokens": null,
+   "latency_ms": 3,
+   "answer": "삼성전기의 major 공시는 현재 코퍼스에 포함되어 있지 않다.",
+   "raw_text": ""
+  },
+  {
+   "qid": "author_4b8df2cacd43755b56e3c71e",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "holding"
+   ],
+   "question": "주식회사 셀트리온홀딩스이(가) 주식회사 셀트리온에 대해 제출한 주식등의 대량보유상황보고서(보고서작성기준일 2024년 03월 08일)에 따르면, 직전 보고서 대비 이번 보고서의 보유주식등의 수와 보유비율은 각각 어떻게 변동되었는가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "이번 보고서 보유주식등의 수": 62285639,
+     "이번 보고서 보유비율": 28.45,
+     "직전 보고서 보유주식등의 수": 62286559,
+     "직전 보고서 보유비율": 28.45
+    },
+    "unit": null,
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "4/4",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "skipped": "deterministic_calculation"
+   },
+   "api": "NO_CALL",
+   "json_parse": "N/A",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 100,
+   "n_evidence": 5,
+   "n_derived": 2,
+   "input_tokens": null,
+   "output_tokens": null,
+   "latency_ms": 38,
+   "answer": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 62,286,559 → 62,285,639 (-920 변동)\n- 직전 대비 비율(%): 28.45 → 28.45 (+0.00%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서 | 62,286,559 | 28.45\n- [answer] 이번 보고서 | 62,285,639 | 28.45\n- [answer] 직전 보고서 | 16,761,729 | 7.66\n- [answer] 이번보고서 | 2024년 03월 08일 | (주)셀트리온홀딩스 | 105 | 62,285,639 | 28.45 | 61,378,252 | 28.15 | 218,049,762\n- [answer] 직전보고서 | 2024년 02월 02일 | (주)셀트리온홀딩스 | 105 | 62,286,559 | 28.45 | 61,379,172 | 28.15 | 218,049,762",
+   "raw_text": ""
+  },
+  {
+   "qid": "author_4dae7a49dd14e226926c4edf",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "holding"
+   ],
+   "question": "국민연금공단이(가) 에이치엠엠에 대해 제출한 주식등의 대량보유상황보고서(보고서작성기준일 2026년 02월 05일)에 따르면, 직전 보고서 대비 이번 보고서의 보유주식등의 수와 보유비율은 각각 어떻게 변동되었는가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "이번 보고서 보유주식등의 수": 46935853,
+     "이번 보고서 보유비율": 4.98,
+     "직전 보고서 보유주식등의 수": 61421018,
+     "직전 보고서 보유비율": 5.99
+    },
+    "unit": null,
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "4/4",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "skipped": "deterministic_calculation"
+   },
+   "api": "NO_CALL",
+   "json_parse": "N/A",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 80,
+   "n_evidence": 5,
+   "n_derived": 2,
+   "input_tokens": null,
+   "output_tokens": null,
+   "latency_ms": 62,
+   "answer": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 61,421,018 → 46,935,853 (-14,485,165 변동)\n- 직전 대비 비율(%): 5.99 → 4.98 (-1.01%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 이번보고서 | 2026년 02월 05일 | 국민연금공단 | 1 | 46,935,853 | 4.98 | 46,935,853 | 4.98 | 943,237,970\n- [answer] 직전보고서 | 2025년 08월 21일 | 국민연금공단 | 1 | 61,421,018 | 5.99 | 61,421,018 | 5.99 | 1,025,039,496\n- [answer] | 보고서작성기준일 | 보고자 | 주식등 | 주권 | 의결권 있는 발행주식총수(주)\n- [answer] 직전 보고서 | 61,421,018 | 5.99\n- [answer] 이번 보고서 | 46,935,853 | 4.98",
+   "raw_text": ""
+  },
+  {
+   "qid": "author_50eba48b6e3d77f488421b89",
+   "type": "NARRATIVE_MULTI_DOC",
+   "mode": "OPEN",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "major"
+   ],
+   "question": "메리츠금융지주가 2026년 2월 9일 체결한 자기주식취득 신탁계약의 계약금액과 계약목적은 무엇인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": "계약금액은 200,000,000,000원(2,000억원)이며, 계약목적은 '주주가치 제고'이다. 계약체결기관은 한국투자증권주식회사이다.",
+    "unit": null,
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "2/2",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": true,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 3022,
+    "usage": {
+     "promptTokens": 3532,
+     "completionTokens": 104,
+     "totalTokens": 3636
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 5256
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 95,
+   "n_evidence": 5,
+   "n_derived": 0,
+   "input_tokens": 3532,
+   "output_tokens": 104,
+   "latency_ms": 3071,
+   "answer": "계약금액은 200,000,000,000원이고, 계약목적은 주주가치 제고입니다.",
+   "raw_text": "{\"answer\": \"계약금액은 200,000,000,000원이고, 계약목적은 주주가치 제고입니다.\", \"evidence\": [{\"document_id\": \"major_20260209000461\", \"quote_or_fact\": \"1. 계약금액(원) | 200,000,000,000\"}, {\"document_id\": \"major_20260209000461\", \"quote_or_fact\": \"3. 계약목적 | 주주가치 제고\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "author_52e6c0ca8915c4a28c802e4c",
+   "type": "COMPARISON_CALC",
+   "mode": "OPEN",
+   "difficulty": "HARD",
+   "doc_groups": [
+    "periodic"
+   ],
+   "question": "2025 회계연도(2025년 12월 결산) 사업보고서 기준으로, 두산로보틱스와 레인보우로보틱스의 연결 매출액을 같은 단위(백만원)로 환산하여 비교하면 어느 쪽이 더 크며, 그 차이는 얼마인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": "레인보우로보틱스의 연결 매출액이 더 크다. 두산로보틱스의 2025년(제11기) 연결 매출액은 32,978백만원이며, 레인보우로보틱스의 2025년(제15기) 연결 매출액은 34,123,110천원(=34,123.11백만원)이다. 두 값을 백만원 단위로 환산하면 레인보우로보틱스가 두산로보틱스보다 약 1,145.11백만원(약 3.5%) 더 크다.",
+    "unit": null,
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "4/9",
+   "value_score": 0.4444444444444444,
+   "value_ok": false,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "error": "LLMUnavailable: JSON 파싱 실패: Expecting property name enclosed in double quotes: line 1 column 255 (char 254)"
+   },
+   "api": "OK",
+   "json_parse": "FAIL (JSON 파싱 실패: Expecting property name enclosed in double quotes: line 1 column 255 (char 254))",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 60,
+   "n_evidence": 1,
+   "n_derived": 0,
+   "input_tokens": 4931,
+   "output_tokens": 151,
+   "latency_ms": 5265,
+   "answer": "공시에서 확인한 값:\n- 2025년 매출액: 34,123,110",
+   "raw_text": "{\"answer\": \"두 회사의 2025 회계연도 연결 매출액을 비교하면, 두산로보틱스의 매출액이 34,123,110 백만원이고, 레인보우로보틱스의 매출액은 19,346,780 백만원입니다. 따라서 두산로보틱스의 매출액이 더 크며, 그 차이는 14,776,340 백만원입니다.\", \"evidence\": [{\"document_id\": \"[periodic_20260320000803]\", \"quote_or_fact\": \"매출액 | 34,123,110\"}], {\"document_id\": \"[periodic_20260320000803]\", \"quote_or_fact\": \"매출액 | 19,346,780\"}}]"
+  },
+  {
+   "qid": "author_53d266ad714c7b2c4db364b5",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "exchange"
+   ],
+   "question": "우리기술이 두산에너빌리티(주)와 체결한 '비안전계통 DCS 예비품 구매_1차 납품분' 계약의 계약금액 총액(원)은 얼마인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": 3622500000,
+    "unit": "KRW",
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "1/1",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": true,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 1765,
+    "usage": {
+     "promptTokens": 1832,
+     "completionTokens": 57,
+     "totalTokens": 1889
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 2246
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "PARTIALLY_SUPPORTED",
+   "fabricated": [],
+   "confidence": 70,
+   "n_evidence": 5,
+   "n_derived": 0,
+   "input_tokens": 1832,
+   "output_tokens": 57,
+   "latency_ms": 1857,
+   "answer": "3,622,500,000",
+   "raw_text": "{\"answer\": \"3,622,500,000\", \"evidence\": [{\"document_id\": \"[exchange_20251209900091]\", \"quote_or_fact\": \"확정 계약금액 | 3,622,500,000\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "author_558c9267989c17f3e0aa14ad",
+   "type": "EVENT_TRACE",
+   "mode": "OPEN",
+   "difficulty": "HARD",
+   "doc_groups": [
+    "exchange"
+   ],
+   "question": "한국항공우주가 2023년 9월 26일 공시한 '차세대 중형 민항기 주익 개발 및 공급 계약' 해지 공시에 따르면, 해지 사유와 해지일자는 각각 무엇인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": "해지 주요사유는 '계약상대방(Embraer)의 계약이행 불가에 따른 계약해지'이며, 해지일자는 2023-09-26이다. 이는 Embraer社의 차세대 중형 민항기 개발(TPNG) 사업 중단에 따른 것으로, 해지일자는 Embraer社의 사업 종결 공문에 서명한 날로 명시되어 있다.",
+    "unit": null,
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "3/3",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": true,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 2290,
+    "usage": {
+     "promptTokens": 8660,
+     "completionTokens": 79,
+     "totalTokens": 8739
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 15382
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "PARTIALLY_SUPPORTED",
+   "fabricated": [],
+   "confidence": 70,
+   "n_evidence": 5,
+   "n_derived": 0,
+   "input_tokens": 8660,
+   "output_tokens": 79,
+   "latency_ms": 2397,
+   "answer": "계약상대방의 계약이행 불가에 따른 계약해지, 2023-09-26",
+   "raw_text": "{\"answer\": \"계약상대방의 계약이행 불가에 따른 계약해지, 2023-09-26\", \"evidence\": [{\"document_id\": \"[exchange_20230926800443]\", \"quote_or_fact\": \"5. 해지 주요사유 | 계약상대방의 계약이행 불가에 따른 계약해지\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "author_642b260aa50968143920281b",
+   "type": "ANSWERABILITY",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "major"
+   ],
+   "question": "LG에너지솔루션이 조건부자본증권 발행결정 등과 관련하여 금융위원회에 제출한 주요사항보고서(major 유형 공시)가 현재 코퍼스에 포함되어 있는가?",
+   "expected": {
+    "status": "NOT_FOUND",
+    "value": null,
+    "unit": null,
+    "reason_code": "ZERO_DOCUMENT_IN_CORPUS"
+   },
+   "status": "NOT_FOUND",
+   "expected_status": "NOT_FOUND",
+   "status_ok": true,
+   "value_label": "0/1",
+   "value_score": 0.0,
+   "value_ok": null,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "skipped": "corpus_existence_rule"
+   },
+   "api": "NO_CALL",
+   "json_parse": "N/A",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 15,
+   "n_evidence": 0,
+   "n_derived": 0,
+   "input_tokens": null,
+   "output_tokens": null,
+   "latency_ms": 1,
+   "answer": "LG에너지솔루션의 major 공시는 현재 코퍼스에 포함되어 있지 않다.",
+   "raw_text": ""
+  },
+  {
+   "qid": "author_66ddb05e5a3de362ff1c536f",
+   "type": "NARRATIVE_MULTI_DOC",
+   "mode": "OPEN",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "exchange"
+   ],
+   "question": "셀트리온이 2024년 2월 27일 공시한 CT-P13 SC(램시마 피하주사 제형) 유럽 임상 3상 시험계획 신청(Part 1, 궤양성 대장염 소아 환자) 공시 시점에서, 해당 임상시험은 즉시 개시 가능한 상태인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": "아니다. 이 공시는 Part1(임상 디자인 및 연구방법 평가) 신청에 대한 것이며, 본문에 '최종적으로 Part2(임상 기관 및 실행에 관한 평가)까지 승인 완료되어야 임상 시험의 진행이 가능하다'고 명시되어 있어, 이 시점에는 즉시 개시 가능한 상태가 아니다.",
+    "unit": null,
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "0/2",
+   "value_score": 0.0,
+   "value_ok": false,
+   "llm_used": true,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 3341,
+    "usage": {
+     "promptTokens": 2194,
+     "completionTokens": 122,
+     "totalTokens": 2316
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 3287
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "PARTIALLY_SUPPORTED",
+   "fabricated": [],
+   "confidence": 70,
+   "n_evidence": 3,
+   "n_derived": 0,
+   "input_tokens": 2194,
+   "output_tokens": 122,
+   "latency_ms": 3549,
+   "answer": "아니오",
+   "raw_text": "{\"answer\": \"아니오\", \"evidence\": [\"9) 기타사항 :- 유럽 임상시험규정 개정으로 2023년 1월 31일부터 유럽 임상 시험계획 신청/승인 절차가 Part1(임상 디자인 및 연구방법에 관한 평가)과 Part2(임상 기관 및 실행에 관한 평가)로 구분되었습니다. 최종적으로 Part2까지 승인 완료되어야 임상 시험의 진행이 가능하며, 해당 공시는 유럽 임상 3상 시험계획 Part1에 해당하는 점 참고 부탁드립니다.\"], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "author_75966f98e4996bc694606bb2",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "exchange"
+   ],
+   "question": "대우건설이 (주)한강시네폴리스개발과 체결한 '김포한강시네폴리스 주상복합 신축사업' 공사계약의 계약금액(원)은 얼마인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": 940874573200,
+    "unit": "KRW",
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "1/1",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": true,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 3634,
+    "usage": {
+     "promptTokens": 1258,
+     "completionTokens": 65,
+     "totalTokens": 1323
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 1194
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "PARTIALLY_SUPPORTED",
+   "fabricated": [],
+   "confidence": 70,
+   "n_evidence": 5,
+   "n_derived": 0,
+   "input_tokens": 1258,
+   "output_tokens": 65,
+   "latency_ms": 3721,
+   "answer": "940,874,573,200원",
+   "raw_text": "{\"answer\": \"940,874,573,200원\", \"evidence\": [{\"document_id\": \"[exchange_20251112800360]\", \"quote_or_fact\": \"2. 계약내역 | 계약금액(원) | 940,874,573,200\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "author_833ea1a29f055ec369947a98",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "holding"
+   ],
+   "question": "Fidelity Management & Research Company LLC이(가) 한국항공우주산업(주)에 대해 제출한 주식등의 대량보유상황보고서(보고서작성기준일 2023년 10월 11일)에 따르면, 직전 보고서 대비 이번 보고서의 보유주식등의 수와 보유비율은 각각 어떻게 변동되었는가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "이번 보고서 보유주식등의 수": 7046789,
+     "이번 보고서 보유비율": 7.23,
+     "직전 보고서 보유주식등의 수": 6009827,
+     "직전 보고서 보유비율": 6.17
+    },
+    "unit": null,
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "4/4",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "skipped": "deterministic_calculation"
+   },
+   "api": "NO_CALL",
+   "json_parse": "N/A",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 100,
+   "n_evidence": 5,
+   "n_derived": 2,
+   "input_tokens": null,
+   "output_tokens": null,
+   "latency_ms": 43,
+   "answer": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 6,009,827 → 7,046,789 (+1,036,962 변동)\n- 직전 대비 비율(%): 6.17 → 7.23 (+1.06%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서 | 6,009,827 | 6.17\n- [answer] 이번 보고서 | 7,046,789 | 7.23\n- [answer] 보유주식등의 수 및 보유비율 |  | 보유주식등의 수 | 보유비율\n- [answer] 이번보고서 | 2023년 10월 11일 | Fidelity Management & Research Company LLC | 22 | 7,046,789 | 7.23 | 7,046,789 | 7.23 | 97,475,107\n- [answer] 직전보고서 | 2023년 07월 27일 | Fidelity Management & Research Company LLC | 22 | 6,009,827 | 6.17 | 6,009,827 | 6.17 | 97,475,107",
+   "raw_text": ""
+  },
+  {
+   "qid": "author_8db33a880c09102d4903e280",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "holding"
+   ],
+   "question": "삼성물산주식회사이(가) 삼성전자주식회사에 대해 제출한 주식등의 대량보유상황보고서(보고서작성기준일 2024년 07월 17일)에 따르면, 직전 보고서 대비 이번 보고서의 보유주식등의 수와 보유비율은 각각 어떻게 변동되었는가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "이번 보고서 보유주식등의 수": 1198938025,
+     "이번 보고서 보유비율": 20.08,
+     "직전 보고서 보유주식등의 수": 1199285813,
+     "직전 보고서 보유비율": 20.09
+    },
+    "unit": null,
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "4/4",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "skipped": "deterministic_calculation"
+   },
+   "api": "NO_CALL",
+   "json_parse": "N/A",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 100,
+   "n_evidence": 5,
+   "n_derived": 2,
+   "input_tokens": null,
+   "output_tokens": null,
+   "latency_ms": 34,
+   "answer": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 1,199,285,813 → 1,198,938,025 (-347,788 변동)\n- 직전 대비 비율(%): 20.09 → 20.08 (-0.01%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서 | 1,199,285,813 | 20.09\n- [answer] 이번 보고서 | 1,198,938,025 | 20.08\n- [answer] 직전 보고서 | 97,526,980 | 1.63\n- [answer] 이번보고서 | 2024년 07월 17일 | 삼성물산 | 15 | 1,198,938,025 | 20.08 | 1,198,938,025 | 20.08 | 5,969,782,550\n- [answer] 직전보고서 | 2024년 05월 21일 | 삼성물산 | 15 | 1,199,285,813 | 20.09 | 1,199,285,813 | 20.09 | 5,969,782,550",
+   "raw_text": ""
+  },
+  {
+   "qid": "author_95a89db78ffe266ced4d7ea6",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "holding"
+   ],
+   "question": "삼성물산주식회사이(가) 삼성전자주식회사에 대해 제출한 주식등의 대량보유상황보고서(보고서작성기준일 2026년 01월 09일)에 따르면, 직전 보고서 대비 이번 보고서의 보유주식등의 수와 보유비율은 각각 어떻게 변동되었는가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "이번 보고서 보유주식등의 수": 1174107507,
+     "이번 보고서 보유비율": 19.83,
+     "직전 보고서 보유주식등의 수": 1174119441,
+     "직전 보고서 보유비율": 19.83
+    },
+    "unit": null,
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "4/4",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "skipped": "deterministic_calculation"
+   },
+   "api": "NO_CALL",
+   "json_parse": "N/A",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 100,
+   "n_evidence": 5,
+   "n_derived": 2,
+   "input_tokens": null,
+   "output_tokens": null,
+   "latency_ms": 24,
+   "answer": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 1,174,119,441 → 1,174,107,507 (-11,934 변동)\n- 직전 대비 비율(%): 19.83 → 19.83 (+0.00%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서 | 1,174,119,441 | 19.83\n- [answer] 이번 보고서 | 1,174,107,507 | 19.83\n- [answer] 직전 보고서 | 88,134,000 | 1.49\n- [answer] 이번보고서 | 2026년 01월 09일 | 삼성물산 | 15 | 1,174,107,507 | 19.83 | 1,174,107,507 | 19.83 | 5,919,637,922\n- [answer] 직전보고서 | 2026년 01월 08일 | 삼성물산 | 15 | 1,174,119,441 | 19.83 | 1,174,119,441 | 19.83 | 5,919,637,922",
+   "raw_text": ""
+  },
+  {
+   "qid": "author_a09660efd75391b28724e656",
+   "type": "NARRATIVE_MULTI_DOC",
+   "mode": "OPEN",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "major"
+   ],
+   "question": "카카오의 2023년 5월 11일 해외 증권시장 주권등 상장폐지 결정 공시에서, 상장폐지 대상 거래소와 폐지사유는 각각 무엇인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": "상장거래소는 싱가포르 증권거래소이며, 폐지사유는 'GDR 전량 원주 전환에 따른 상장폐지'이다. 폐지(예정)일자는 2023년 5월 25일로 명시되어 있다(싱가포르 증권거래소의 승인 일정에 따라 변경될 수 있음).",
+    "unit": null,
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "3/3",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "error": "LLMUnavailable: 응답에서 JSON을 찾지 못했다"
+   },
+   "api": "OK",
+   "json_parse": "FAIL (응답에서 JSON을 찾지 못했다)",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 70,
+   "n_evidence": 5,
+   "n_derived": 0,
+   "input_tokens": 1522,
+   "output_tokens": 137,
+   "latency_ms": 3640,
+   "answer": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 3. 폐지신청예정일자 | 2023년 05월 11일\n- [answer] 6. 이사회결의일(확인일) | 2023년 05월 11일\n- [answer] 4. 폐지(예정)일자 | 2023년 05월 25일\n- [answer] - 상기 1항의 상장폐지 대상 주식: 해당사항 없음\n- [answer] - 금번 상장폐지되는 증권의 종류는 당사 보통주를 기초로 발행했던 해외 주식예탁증권(Global Depositary Receipts, GDR)임.",
+   "raw_text": "{\"answer\": \"카카오의 2023년 5월 11일 해외 증권시장 주권 등 상장폐지 결정 공시에 따르면, 상장폐지 대상 거래소는 싱가포르 증권거래소이며, 폐지사유는 GDR 전량 원주 전환입니다.\", \"evidence\": [{\"document_id\": \"[major_20230511000691]\", \"quote_or_fact\": \"2. 상장거래소(소재국가): 싱가포르 증권거래소(싱가포르)\"}, {\"document_id\": \"[major_20230511000691]\", \"quote_or_fact\": \"5. 폐지사유: GDR 전량 원주 전환에 따른 상장폐지.\"}]"
+  },
+  {
+   "qid": "author_a24879dc628ff582fdeba8b5",
+   "type": "ANSWERABILITY",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "exchange"
+   ],
+   "question": "KB금융지주가 체결한 단일판매ㆍ공급계약 등과 관련하여 제출한 exchange 유형(수시공시) 공시가 현재 코퍼스에 포함되어 있는가?",
+   "expected": {
+    "status": "NOT_FOUND",
+    "value": null,
+    "unit": null,
+    "reason_code": "ZERO_DOCUMENT_IN_CORPUS"
+   },
+   "status": "NOT_FOUND",
+   "expected_status": "NOT_FOUND",
+   "status_ok": true,
+   "value_label": "0/1",
+   "value_score": 0.0,
+   "value_ok": null,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "skipped": "corpus_existence_rule"
+   },
+   "api": "NO_CALL",
+   "json_parse": "N/A",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 15,
+   "n_evidence": 0,
+   "n_derived": 0,
+   "input_tokens": null,
+   "output_tokens": null,
+   "latency_ms": 1,
+   "answer": "KB금융의 exchange 공시는 현재 코퍼스에 포함되어 있지 않다.",
+   "raw_text": ""
+  },
+  {
+   "qid": "author_a3a6ade04e8f72004e2df4f1",
+   "type": "COMPARISON_CALC",
+   "mode": "CLOSED",
+   "difficulty": "HARD",
+   "doc_groups": [
+    "periodic"
+   ],
+   "question": "신한지주의 연결기준 당기순이익은(는) 2023.09.30 누적와(과) 2025.09.30 누적 사이(같은 3분기 누적(9개월) 기준)에 얼마나 변동했는가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": 644522,
+    "unit": "백만원",
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "0/1",
+   "value_score": 0.0,
+   "value_ok": false,
+   "llm_used": false,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 4713,
+    "usage": {
+     "promptTokens": 7349,
+     "completionTokens": 146,
+     "totalTokens": 7495
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 11336,
+    "degraded": true,
+    "degraded_reason": "unsupported"
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 80,
+   "n_evidence": 2,
+   "n_derived": 0,
+   "input_tokens": 7349,
+   "output_tokens": 146,
+   "latency_ms": 5488,
+   "answer": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [당기순이익_2023] 당기순이익(손실) | 1,297,068 | 4,044,079\n- [당기순이익_2025] 당기순이익(손실) | 1,423,544 | 4,460,943",
+   "raw_text": "{\"answer\": \"신한지주의 연결기준 당기순이익은 2023년 9월 30일부터 2025년 9월 30일까지 약 126,476백만 원 증가했습니다.\", \"evidence\": [{\"document_id\": \"[periodic_20251114002208]\", \"quote_or_fact\": \"당기순이익(손실) | 1,297,068 | 4,044,079\"}, {\"document_id\": \"[periodic_20251114002208]\", \"quote_or_fact\": \"당기순이익(손실) | 1,423,544 | 4,460,943\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "author_a538b0e2240fe01d1a71ebb7",
+   "type": "COMPARISON_CALC",
+   "mode": "CLOSED",
+   "difficulty": "HARD",
+   "doc_groups": [
+    "periodic"
+   ],
+   "question": "LG생활건강의 연결기준 매출액은(는) 2023.01.01~2023.03.31와(과) 2025.01.01~2025.03.31 사이(같은 1분기(3개월) 기준)에 얼마나 변동했는가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": 14154,
+    "unit": "백만원",
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "0/1",
+   "value_score": 0.0,
+   "value_ok": false,
+   "llm_used": false,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 6670,
+    "usage": {
+     "promptTokens": 5808,
+     "completionTokens": 110,
+     "totalTokens": 5918
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 9426,
+    "degraded": true,
+    "degraded_reason": "unsupported"
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 80,
+   "n_evidence": 2,
+   "n_derived": 0,
+   "input_tokens": 5808,
+   "output_tokens": 110,
+   "latency_ms": 6952,
+   "answer": "공시에서 확인한 값:\n- 2023년 매출액: 1,683,723,394,359\n- 2025년 매출액: 1,697,877,264,205",
+   "raw_text": "{\"answer\": \"1,044,154,861,846원 증가\", \"evidence\": [{\"document_id\": \"[periodic_20230515001584]\", \"quote_or_fact\": \"매출액 (주4,35) | 1,683,723,394,359\"}, {\"document_id\": \"[periodic_20250515001309]\", \"quote_or_fact\": \"매출액 (주4,34) | 1,697,877,264,205\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "author_a7d2486c24a01dace51cdbe0",
+   "type": "NARRATIVE_MULTI_DOC",
+   "mode": "OPEN",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "exchange"
+   ],
+   "question": "현대로템의 2024년 4월 24일 이집트 알렉산드리아 트램 사업 관련 공시는 최종 계약 체결을 의미하는가, 낙찰통지서(Notice of Award) 접수를 의미하는가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": "최종 계약 체결이 아니라 낙찰통지서(Notice of Award) 접수 사실을 공시한 것이다. 본문에 '최종계약 체결시 단일판매 공급계약 공시를 진행할 예정'이라고 명시되어 있어 이 시점에는 최종 계약이 체결되지 않았음을 알 수 있다.",
+    "unit": null,
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "1/11",
+   "value_score": 0.09090909090909091,
+   "value_ok": false,
+   "llm_used": true,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 2102,
+    "usage": {
+     "promptTokens": 1337,
+     "completionTokens": 69,
+     "totalTokens": 1406
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 1471
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "PARTIALLY_SUPPORTED",
+   "fabricated": [],
+   "confidence": 70,
+   "n_evidence": 3,
+   "n_derived": 0,
+   "input_tokens": 1337,
+   "output_tokens": 69,
+   "latency_ms": 2285,
+   "answer": "낙찰통지서 접수",
+   "raw_text": "{\"answer\": \"낙찰통지서 접수\", \"evidence\": [{\"document_id\": \"[exchange_20240425800002]\", \"quote_or_fact\": \"1. 제목 | 이집트 알렉산드리아 트램 사업 Notice of Award(낙찰통지서) 접수\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "author_a9f44253b3de69062e704c83",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "holding"
+   ],
+   "question": "조 정 호이(가) (주)메리츠금융지주에 대해 제출한 주식등의 대량보유상황보고서(보고서작성기준일 2025년 11월 20일)에 따르면, 직전 보고서 대비 이번 보고서의 보유주식등의 수와 보유비율은 각각 어떻게 변동되었는가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "이번 보고서 보유주식등의 수": 98361974,
+     "이번 보고서 보유비율": 56.14,
+     "직전 보고서 보유주식등의 수": 98357361,
+     "직전 보고서 보유비율": 54.64
+    },
+    "unit": null,
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "4/4",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "skipped": "deterministic_calculation"
+   },
+   "api": "NO_CALL",
+   "json_parse": "N/A",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 100,
+   "n_evidence": 5,
+   "n_derived": 2,
+   "input_tokens": null,
+   "output_tokens": null,
+   "latency_ms": 29,
+   "answer": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 98,357,361 → 98,361,974 (+4,613 변동)\n- 직전 대비 비율(%): 54.64 → 56.14 (+1.50%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서 | 98,357,361 | 54.64\n- [answer] 이번 보고서 | 98,361,974 | 56.14\n- [answer] 한국거래소 귀중 | 보고서작성기준일 : | 2025년 11월 20일\n- [answer] 금융위원회 귀중 | 보고의무발생일　 : | 2025년 11월 17일\n- [answer] | 보고자 : | 조 정 호",
+   "raw_text": ""
+  },
+  {
+   "qid": "author_acd4f9e29a7188d84c0f1aaa",
+   "type": "NARRATIVE_MULTI_DOC",
+   "mode": "OPEN",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "exchange"
+   ],
+   "question": "삼성SDI의 StarPlus Energy 2공장 투자 공시(2023-09-27)에서 투자금액 2조 6,556억원은 확정된 금액인가, 예정 금액인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": "예정 금액이다. 공시 본문에 '투자 금액 : 2조 6,556억원(예정)'이라고 명시되어 있고, '향후 양사간 협의를 통해 투자 금액이 일부 변동될 수 있다'고 부연하고 있다.",
+    "unit": null,
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "0/2",
+   "value_score": 0.0,
+   "value_ok": false,
+   "llm_used": true,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 1610,
+    "usage": {
+     "promptTokens": 1307,
+     "completionTokens": 54,
+     "totalTokens": 1361
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 1369
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "PARTIALLY_SUPPORTED",
+   "fabricated": [],
+   "confidence": 60,
+   "n_evidence": 3,
+   "n_derived": 0,
+   "input_tokens": 1307,
+   "output_tokens": 54,
+   "latency_ms": 1738,
+   "answer": "예정 금액",
+   "raw_text": "{\"answer\": \"예정 금액\", \"evidence\": [{\"document_id\": \"[exchange_20230927800181]\", \"quote_or_fact\": \"투자 금액 : 2조 6,556억원(예정)\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "author_ad711c9d1d96ebc8950814f0",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "holding"
+   ],
+   "question": "The Capital Group Companies, Inc.이(가) (주)KB금융지주에 대해 제출한 주식등의 대량보유상황보고서(보고서작성기준일 2024년 10월 31일)에 따르면, 직전 보고서 대비 이번 보고서의 보유주식등의 수와 보유비율은 각각 어떻게 변동되었는가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "이번 보고서 보유주식등의 수": 20872564,
+     "이번 보고서 보유비율": 5.3,
+     "직전 보고서 보유주식등의 수": 19865964,
+     "직전 보고서 보유비율": 5.05
+    },
+    "unit": null,
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "4/4",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "skipped": "deterministic_calculation"
+   },
+   "api": "NO_CALL",
+   "json_parse": "N/A",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 100,
+   "n_evidence": 5,
+   "n_derived": 2,
+   "input_tokens": null,
+   "output_tokens": null,
+   "latency_ms": 65,
+   "answer": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 19,865,964 → 20,872,564 (+1,006,600 변동)\n- 직전 대비 비율(%): 5.05 → 5.30 (+0.25%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서 | 19,865,964 | 5.05\n- [answer] 이번 보고서 | 20,872,564 | 5.30\n- [answer] 보유주식등의 수 및 보유비율 |  | 보유주식등의 수 | 보유비율\n- [answer] 이번보고서 | 2024년 10월 31일 | The Capital Group Companies, Inc. | 73 | 20,872,564 | 5.30 | 20,227,959 | 5.14 | 393,528,423\n- [answer] 직전보고서 | 2024년 10월 24일 | The Capital Group Companies, Inc. | 71 | 19,865,964 | 5.05 | 19,222,442 | 4.88 | 393,528,423",
+   "raw_text": ""
+  },
+  {
+   "qid": "author_b81eacbe0cad034dfb7b9dd4",
+   "type": "NARRATIVE_MULTI_DOC",
+   "mode": "OPEN",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "exchange"
+   ],
+   "question": "알테오젠의 테르가제주(ALT-BB4) 관련 2024년 7월 5일 공시는 품목허가 신청 사실을 알리는 것인가, 품목허가 승인 사실을 알리는 것인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": "품목허가 승인 사실을 알리는 것이다. 공시 제목과 본문에 식품의약품안전처(MFDS)가 2024년 7월 5일 테르가제주에 대한 품목허가를 승인했다고 명시되어 있다(신청일은 2023년 2월 7일).",
+    "unit": null,
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "0/6",
+   "value_score": 0.0,
+   "value_ok": false,
+   "llm_used": true,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 2939,
+    "usage": {
+     "promptTokens": 1202,
+     "completionTokens": 64,
+     "totalTokens": 1266
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 1122
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "PARTIALLY_SUPPORTED",
+   "fabricated": [],
+   "confidence": 70,
+   "n_evidence": 3,
+   "n_derived": 0,
+   "input_tokens": 1202,
+   "output_tokens": 64,
+   "latency_ms": 3022,
+   "answer": "품목허가 승인 사실을 알리는 것",
+   "raw_text": "{\"answer\": \"품목허가 승인 사실을 알리는 것\", \"evidence\": [{\"document_id\": \"[exchange_20240705900656]\", \"quote_or_fact\": \"1. 제목 | ALT-BB4(Tergase)테르가제주 품목 허가 승인\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "author_be87975b478c1685b1170e80",
+   "type": "COMPARISON_CALC",
+   "mode": "CLOSED",
+   "difficulty": "HARD",
+   "doc_groups": [
+    "periodic"
+   ],
+   "question": "SK텔레콤의 연결기준 영업수익은(는) 2023.1.1~2023.3.31와(과) 2025.1.1~2025.03.31 사이(같은 1분기(3개월) 기준)에 얼마나 변동했는가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": 81490,
+    "unit": "백만원",
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "0/1",
+   "value_score": 0.0,
+   "value_ok": false,
+   "llm_used": true,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 3081,
+    "usage": {
+     "promptTokens": 5811,
+     "completionTokens": 88,
+     "totalTokens": 5899
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 8894
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "PARTIALLY_SUPPORTED",
+   "fabricated": [],
+   "confidence": 65,
+   "n_evidence": 2,
+   "n_derived": 0,
+   "input_tokens": 5811,
+   "output_tokens": 88,
+   "latency_ms": 3450,
+   "answer": "4,453,717-4,372,227",
+   "raw_text": "{\"answer\": \"4,453,717-4,372,227\", \"evidence\": [{\"document_id\": \"[periodic_20250515001087]\", \"quote_or_fact\": \"영업수익 | 4,453,717\"}, {\"document_id\": \"[periodic_20230512000710]\", \"quote_or_fact\": \"영업수익 | 4,372,227\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "author_bfc0f3bb801bc9eab3faaa3c",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "holding"
+   ],
+   "question": "국민연금공단이(가) 삼성엔지니어링(주)에 대해 제출한 주식등의 대량보유상황보고서(보고서작성기준일 2023년 08월 25일)에 따르면, 직전 보고서 대비 이번 보고서의 보유주식등의 수와 보유비율은 각각 어떻게 변동되었는가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "이번 보고서 보유주식등의 수": 15748903,
+     "이번 보고서 보유비율": 8.04,
+     "직전 보고서 보유주식등의 수": 17730137,
+     "직전 보고서 보유비율": 9.05
+    },
+    "unit": null,
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "4/4",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "skipped": "deterministic_calculation"
+   },
+   "api": "NO_CALL",
+   "json_parse": "N/A",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 80,
+   "n_evidence": 5,
+   "n_derived": 2,
+   "input_tokens": null,
+   "output_tokens": null,
+   "latency_ms": 46,
+   "answer": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 17,730,137 → 15,748,903 (-1,981,234 변동)\n- 직전 대비 비율(%): 9.05 → 8.04 (-1.01%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 이번보고서 | 2023년 08월 25일 | 국민연금공단 | 1 | 15,748,903 | 8.04 | 15,748,903 | 8.04 | 196,000,000\n- [answer] 직전보고서 | 2023년 01월 17일 | 국민연금공단 | 1 | 17,730,137 | 9.05 | 17,730,137 | 9.05 | 196,000,000\n- [answer] | 보고서작성기준일 | 보고자 | 주식등 | 주권 | 의결권 있는 발행주식총수(주)\n- [answer] 직전 보고서 | 17,730,137 | 9.05\n- [answer] 이번 보고서 | 15,748,903 | 8.04",
+   "raw_text": ""
+  },
+  {
+   "qid": "author_c4d4ef2ce48a57ef54ded4db",
+   "type": "NARRATIVE_MULTI_DOC",
+   "mode": "OPEN",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "major"
+   ],
+   "question": "SK텔레콤이 2023년 2월 23일 결의한 자기주식 처분 결정의 목적과 처분예정주식수, 처분예정금액은 각각 무엇인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": "목적은 '자기주식 상여 지급'이며, 처분예정주식수는 보통주식 109,508주, 처분예정금액은 4,938,810,800원이다.",
+    "unit": null,
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "2/2",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": false,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 3251,
+    "usage": {
+     "promptTokens": 3460,
+     "completionTokens": 108,
+     "totalTokens": 3568
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 5069,
+    "degraded": true,
+    "degraded_reason": "unsupported"
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 85,
+   "n_evidence": 5,
+   "n_derived": 0,
+   "input_tokens": 3460,
+   "output_tokens": 108,
+   "latency_ms": 3322,
+   "answer": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] - 상기 1. 처분예정주식 수 2. 처분 대상 주식가격 및 상기 3. 처분예정금액은 이사회 결의일 전일(2023년 2월 22일) 종가 기준입니다.- 실제 처분되는 주식 수와 주식가격 및 처분금액은 처분일 기준으로 변동될 수 있습니다.- 상기 6. 처분방법은 당사의 자기주식 계좌에서 대상 임직원의 주식 계좌로 이체하는 방식입니다.\n- [answer] 3. 처분예정금액(원) | 보통주식 | 4,938,810,800\n- [answer] 1. 처분예정주식(주) | 보통주식 | 109,508\n- [answer] 4. 처분예정기간 | 시작일 | 2023.02.27\n- [answer] 8. 처분 전  자기주식  보유현황 | 배당가능이익범위 내 취득(주) | 보통주식 | 476,511 | 비율(%) | 0.22",
+   "raw_text": "{\"answer\": \"자기주식 상여 지급, 109,508주, 4,938,810,800원\", \"evidence\": [{\"document_id\": \"[major_20230224000002]\", \"quote_or_fact\": \"5. 처분목적 | 자기주식 상여 지급.\"}, {\"document_id\": \"[major_20230224000002]\", \"quote_or_fact\": \"1. 처분예정주식(주) | 보통주식 | 109,508\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "author_c8225552d5982882a3157819",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "holding"
+   ],
+   "question": "Fidelity Management &Research Company LLC이(가) 한국항공우주산업(주)에 대해 제출한 주식등의 대량보유상황보고서(보고서작성기준일 2024년 06월 03일)에 따르면, 직전 보고서 대비 이번 보고서의 보유주식등의 수와 보유비율은 각각 어떻게 변동되었는가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "이번 보고서 보유주식등의 수": 9737763,
+     "이번 보고서 보유비율": 9.99,
+     "직전 보고서 보유주식등의 수": 8513745,
+     "직전 보고서 보유비율": 8.73
+    },
+    "unit": null,
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "4/4",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "skipped": "deterministic_calculation"
+   },
+   "api": "NO_CALL",
+   "json_parse": "N/A",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 100,
+   "n_evidence": 5,
+   "n_derived": 2,
+   "input_tokens": null,
+   "output_tokens": null,
+   "latency_ms": 26,
+   "answer": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 8,513,745 → 9,737,763 (+1,224,018 변동)\n- 직전 대비 비율(%): 8.73 → 9.99 (+1.26%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서 | 8,513,745 | 8.73\n- [answer] 이번 보고서 | 9,737,763 | 9.99\n- [answer] 보유주식등의 수 및 보유비율 |  | 보유주식등의 수 | 보유비율\n- [answer] 이번보고서 | 2024년 06월 03일 | Fidelity Management & Research Company LLC | 22 | 9,737,763 | 9.99 | 9,737,763 | 9.99 | 97,475,107\n- [answer] 직전보고서 | 2024년 04월 30일 | Fidelity Management & Research Company LLC | 22 | 8,513,745 | 8.73 | 8,513,745 | 8.73 | 97,475,107",
+   "raw_text": ""
+  },
+  {
+   "qid": "author_ca4ec294ad36b44faa071043",
+   "type": "NARRATIVE_MULTI_DOC",
+   "mode": "OPEN",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "major"
+   ],
+   "question": "크래프톤이 2023년 3월 28일 결의한 자기주식 처분 결정의 목적과 처분예정주식수, 처분예정금액은 각각 무엇인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": "목적은 직원에 대한 상여 지급(주식기준성과보상제도, RSU)이며, 처분예정주식수는 보통주식 700주, 처분예정금액은 122,430,000원이다.",
+    "unit": null,
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "2/2",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": true,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 4690,
+    "usage": {
+     "promptTokens": 2595,
+     "completionTokens": 179,
+     "totalTokens": 2774
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 3690
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "PARTIALLY_SUPPORTED",
+   "fabricated": [],
+   "confidence": 70,
+   "n_evidence": 5,
+   "n_derived": 0,
+   "input_tokens": 2595,
+   "output_tokens": 179,
+   "latency_ms": 4696,
+   "answer": "크래프톤이 2023년 3월 28일 결의한 자기주식 처분 결정의 목적은 직원의 상여 지급이며, 처분 예정 주식 수는 700주, 처분 예정 금액은 122,430,000원입니다.",
+   "raw_text": "{\"answer\": \"크래프톤이 2023년 3월 28일 결의한 자기주식 처분 결정의 목적은 직원의 상여 지급이며, 처분 예정 주식 수는 700주, 처분 예정 금액은 122,430,000원입니다.\", \"evidence\": [{\"document_id\": \"[major_20230328000605]\", \"quote_or_fact\": \"5. 처분목적 | 직원에 대한 상여 지급\"}, {\"document_id\": \"[major_20230328000605]\", \"quote_or_fact\": \"1. 처분예정주식(주) | 보통주식 | 700\"}, {\"document_id\": \"[major_20230328000605]\", \"quote_or_fact\": \"3. 처분예정금액(원) | 보통주식 | 122,430,000\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "author_cc803e40119274b80d14a65a",
+   "type": "NARRATIVE_MULTI_DOC",
+   "mode": "OPEN",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "major"
+   ],
+   "question": "아모레퍼시픽이 2025년 4월 29일 결의한 자기주식 처분 결정의 목적과 처분예정주식수, 지급 대상 인원수는 각각 무엇인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": "목적은 SPIRIT BONUS제도에 따라 직원에게 상여금으로 자기주식을 지급하는 것이며, 처분예정주식수는 보통주식 6,766주, 지급 대상 인원수는 653명이다.",
+    "unit": null,
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "1/2",
+   "value_score": 0.5,
+   "value_ok": false,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "error": "LLMUnavailable: 응답에서 JSON을 찾지 못했다"
+   },
+   "api": "OK",
+   "json_parse": "FAIL (응답에서 JSON을 찾지 못했다)",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 70,
+   "n_evidence": 5,
+   "n_derived": 0,
+   "input_tokens": 2537,
+   "output_tokens": 136,
+   "latency_ms": 3721,
+   "answer": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 1. 처분예정주식(주) | 보통주식 | 6,766\n- [answer] 2. 처분 대상 주식가격(원) | 보통주식 | 120,200\n- [answer] 3. 처분예정금액(원) | 보통주식 | 813,273,200\n- [answer] 상기 처분주식 수는 지급조건 미충족, 퇴사자 발생 등 자기주식 처분에 관한 이사회 결의일과 처분기간중의 지급대상자 변동에 따라 일부 변동될 수 있음\n- [answer] 3) 상기 처분주식 수는 지급조건 미충족, 퇴사자 발생 등 자기주식 처분에 관한 이사회 결의일과 처분기간중의 지급대상자 변동에 따라 일부 변동될 수 있음",
+   "raw_text": "{\"answer\": \"1. 처분목적은 직원에 대한 상여금으로 자기주식을 지급하기 위함입니다. 2. 처분예정주식수는 6,766주이고, 3. 지급 대상 인원수는 653명입니다.\", \"evidence\": [{\"quote_or_fact\": \"5. 처분목적 | 직원에 대한 상여금으로 자기주식을 지급\"}, {\"quote_or_fact\": \"직원 대상 SPIRIT BONUS제도는 회사 가치에 부합하는 행동을 통해 조직에 기여한 구성원 대상 주식기준보상제도이며, 653명 대상 6,766주를 처분 예정임.\"}]"
+  },
+  {
+   "qid": "author_d640cbedd7330f4b9bcfeeb7",
+   "type": "NARRATIVE_MULTI_DOC",
+   "mode": "OPEN",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "exchange"
+   ],
+   "question": "알테오젠의 ALT-B4 라이선스 계약 공시(2025-03-17, 계약상대방 MedImmune Limited)에서, 계약을 통해 개발하려는 구체적인 의약품(개발 품목)이 공시상 확인 가능한가?",
+   "expected": {
+    "status": "WITHHELD",
+    "value": "확인할 수 없다(WITHHELD). 공시유보 사항에 '1.유보사항: 계약금액 세부 내역 및 개발 품목', '2.유보사유: 계약상 비밀유지'라고 명시되어 있어 구체적 개발 품목은 공개되지 않았다(본문에는 AstraZeneca의 항암 치료제 피하주사제형 개발이라는 정도만 언급됨).",
+    "unit": null,
+    "reason_code": "WITHHELD_DISCLOSURE"
+   },
+   "status": "WITHHELD",
+   "expected_status": "WITHHELD",
+   "status_ok": true,
+   "value_label": "2/2",
+   "value_score": 1.0,
+   "value_ok": null,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "skipped": "withheld_disclosure"
+   },
+   "api": "NO_CALL",
+   "json_parse": "N/A",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 70,
+   "n_evidence": 5,
+   "n_derived": 0,
+   "input_tokens": null,
+   "output_tokens": null,
+   "latency_ms": 126,
+   "answer": "공시유보 사항이다 — 해당 값은 공시에서 확인할 수 없다.\n- 유보사항: 계약금액 세부 내역 및 개발 품목\n- 유보사유: 계약상 비밀유지\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [계약상대] 2. 주요내용 | ※ 투자유의사항본 계약은 의약품규제기관의 허가가 완료되어야 이행되는 조건부 계약으로서, 본 계약을 통한 수익 인식은 임상시험과 품목허가 등의 성공 여부에 따라 달라질 수 있습니다. 계약 조건에 따라, 규제기관에 의한 연구 개발의 중단, 품목허가 실패 등 발생시 계약이 해지될 수 있습니다.1. 계약상대방: MedImmune Limited (영국, AstraZeneca의 자회사)- AstraZeneca 최근사업연도 매출액: US$ 54,073M2. 계약의 내용: 알테오젠의 하이브로자임 플랫폼 기반 인간 히알루로니다제(ALT-B4)를 적용한 AstraZeneca 항암 치료제의 피하주사제형 개발 및 상업화에 대한 독점적 라이선스 계약3. 계약체결일: 2025년 03월 15일4. 계약 기간: 2025.03.17 - 로열티 기간 만료일까지5. 계약 금액1) 계약금: US$ 25,000,000 (36,370,000,000원)- 전년도(2023년도) 매출액(연결 기준) 96,523 백만원 대비 37.68% 해당2) 마일스톤: US$ 725,000,000 (1,054,730,000,000원)- ALT-B4를 적용한 제품의 임상, 품목허가 및 상업화에 따른 각 마일스톤 달성 시 수취3) 판매 로열티: ALT-B4를 적용한 제품의 첫 상업 판매 후 발생한 순매출액의 일정 비율에 해당하는 금액을 판매 로열티로 수취\n- [answer] (1) 해당 계약은 알테오젠의 인간 히알루로니다제 원천 기술(ALT-B4)에 대한 기술수출 계약입니다.(2) 계약상대방 회사는 AstraZeneca의 글로벌 바이오 연구개발부문 자회사입니다.(3) 계약금은 계약효력발생일로부터 30일 이내(2025년 04월 16일 이전)에 수취 예정입니다.(4) 최대 수취가능한 총 계약금액은 계약금 및 ALT-B4를 적용한 2개의 제품 개발 및 상업화에 따른 마일스톤을 포함하여 US$ 750M이나, 임상을 실패하거나 판매금액이 적을 경우 축소될 가능성이 있습니다. (판매 로열티 별도)(5) 상기 계약금 및 마일스톤은 서울외국환거래소 2025년 03월 17일 고시환율(1,454.8원)을 적용하여 원화로 환산한 금액입니다.(6) 상기 사실발생(확인)일은 한국기준시각 계약체결일입니다.(7) 공시유보 관련사항의 유보기한은 계약종료일까지입니다.\n- [answer] 1. 제목 | 인간 히알루로니다제 원천 기술(ALT-B4) 독점적 라이선스 계약 체결\n- [answer] 1. 유보사항 | 계약금액 세부 내역 및 개발 품목\n- [answer] 2. 유보사유 | 계약상 비밀유지",
+   "raw_text": ""
+  },
+  {
+   "qid": "author_e0416a675c6970a7f064bf74",
+   "type": "NARRATIVE_MULTI_DOC",
+   "mode": "OPEN",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "exchange"
+   ],
+   "question": "셀트리온의 유플라이마(CT-P17) 미국 변경허가 승인 공시(사실확인일 2025-04-12)에서, 이번 허가의 허가기관과 승인 내용은 무엇인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": "허가기관은 미국 식품의약국(FDA)이며, 승인 내용은 유플라이마(휴미라 바이오시밀러)가 상호교환성 지위를 확보하는 미국 변경허가이다. 사실확인일은 2025-04-12로, FDA의 최종 변경허가 승인 공문을 수령한 날짜로 명시되어 있다.",
+    "unit": null,
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "3/3",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": false,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 9025,
+    "usage": {
+     "promptTokens": 9942,
+     "completionTokens": 505,
+     "totalTokens": 10447
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 18520,
+    "degraded": true,
+    "degraded_reason": "unsupported"
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 85,
+   "n_evidence": 5,
+   "n_derived": 0,
+   "input_tokens": 9942,
+   "output_tokens": 505,
+   "latency_ms": 9280,
+   "answer": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 2. 주요내용 | 1) 품목명- 유플라이마(CT-P17, 휴미라 바이오시밀러, 성분명: Adalimumab)2) 대상질환명(적응증)- Rheumatoid Arthritis (RA) [류마티스관절염]- Juvenile Idiopathic Arthritis (JIA) [소아 특발성 관절염]- Psoriatic Arthritis (PsA) [건선성 관절염]- Ankylosing Spondylitis (AS) [강직성 척추염]- Crohn's Disease (CD) [크론병]- Ulcerative Colitis (UC) [궤양성 대장염]- Plaque Psoriasis (PsO) [판상 건선]- Hidradenitis Suppurativa (HS) [화농성 한선염]- Uveitis (UV) [포도막염]3) 변경허가 신청일, 허가일 및 허가기관- 신청일 : 2024년 1월 9일 (현지 시간 기준)- 허가일 : 2025년 4월 7월 (현지 시간 기준)- 허가기관 : 미국 식품의약국(FDA)4) 허가 사항- 상기 대상질환명(적응증)에 대해 유플라이마(휴미라 바이오시밀러) 미국 변경허가 승인 획득5) 기대효과- 추후 보다 많은 환자에게 치료 옵션을 제공할 수 있을 것으로 기대함.- 오리지널 제품이 승인 받은 모든 적응증에 대한 품목 허가에 더해 상호교환성까지 추가 입증함으로써, 시장 규모가 큰 미국에서의 점유율 증대를 기대할 수 있음.- 기존 류마티스 관절염 대상 임상 외 건선 환자 대상 임상결과 추가 확보를 통해 마케팅 효과 증대를 기대할 수 있음.6) 기타 참고 사항- 유플라이마는 미국, 유럽, 한국 등 여러 국가에 대해 품목허가 획득을 완료하였으며, 해당 변경허가는 상호교환성 임상 데이터를 기반으로 미국 변경허가를 승인받은 건임.- 상호교환성이란 의사의 개입 없이 오리지널 의약품을 약국 단계에서 대체 의약품(바이오시밀러)으로 처방할 수 있게 되는 지위를 의미함.\n- [answer] - 상기 3. 사실확인일은 미국 식품의약국(FDA)의 최종 변경허가 승인 공문을 수령한 날짜입니다.- 본 공시 내용은 향후 당사의 보도자료 및 IR 자료로 사용될 예정입니다.\n- [answer] 3. 이사회결의일(결정일) 또는 사실확인일 | 2025-04-12\n- [answer] 본 제품의 유럽시장 내 점유율은 2024년 4분기말 기준 18%를 기록하고 있습니다. 공시서류 작성기준일 현재 유플라이마는 총 60개국에서 승인을 득하였으며, 그 밖의 국가에서도 순차적으로 허가 및 출시 과정이 진행 중입니다. 2022년 7월, 유플라이마와 휴미라 간 상호교환성(Interchangeability) 3상 임상시험을 개시하였습니다. 2024년 1월, 상호교환성 지위 확보를 위한 미국 변경허가 신청을 완료하였으며, 추후 미국을 비롯한 글로벌 시장에서 유플라이마 판매 경쟁력을 강화하고 점유율을 확대한다는 계획입니다.6) 베그젤마항암 바이오시밀러 베그젤마(CT-P16)는 2022년 8월, 유럽 EC로부터 최종판매허가를 획득하였으며, 2022년 9월, 미국 FDA와 한국 식약처로부터 판매허가를 획득하였습니다. 베그젤마는 트룩시마, 허쥬마에 이어 당사 세번째  항암 바이오시밀러입니다. 당사의 의약품 개발 및 생산 노하우에서 오는 원가경쟁력을 앞세워 글로벌 시장에 안착할 수 있도록 노력하고 있습니다. 베그젤마의 2024년 4분기말 기준 유럽 점유율은\n- [answer] 휴미라의 바이오시밀러인 유플라이마(CT-P17)는 2021년 2월 유럽 EC로부터 판매허가를 획득하였습니다. 류마티스관절염 등의 치료제인 유플라이마는 고농도 휴미라의 바이오시밀러로 통증을 유발할 수 있는 구연산염을 제거하여 (citrate-free) 복용편의성이 높아진 제품입니다. 2023년 5월 미국 FDA로부터 판매허가를 획득하였으며, 오리지널 개발사와 특허 협의 완료함에 따라 2023년 7월 미국 시장 출시하였습니다.",
+   "raw_text": "{\"answer\": \"셀트리온의 유플라이마(CT-P17) 미국 변경허가 승인 공시에서, 이번 허가의 허가기관은 미국 식품의약국(FDA)이며, 승인 내용은 다음과 같습니다:\\n1. 품목명: 유플라이마(CT-P17, 휴미라 바이오시밀러, 성분명: Adalimumab)\\n2. 대상질환명(적응증):\\n   - Rheumatoid Arthritis (RA) [류마티스관절염]\\n   - Juvenile Idiopathic Arthritis (JIA) [소아 특발성 관절염]\\n   - Psoriatic Arthritis (PsA) [건선성 관절염]\\n   - Ankylosing Spondylitis (AS) [강직성 척추염]\\n   - Crohn's Disease (CD) [크론병]\\n   - Ulcerative Colitis (UC) [궤양성 대장염]\\n   - Plaque Psoriasis (PsO) [판상 건선]\\n   - Hidradenitis Suppurativa (HS) [화농성 한선염]\\n   - Uveitis (UV) [포도막염]\\n3. 변경허가 신청일: 2024년 1월 9일 (현지 시간 기준)\\n4. 허가일: 2025년 4월 7일 (현지 시간 기준)\\n5. 허가 사항: 상기 대상질환명에 대해 유플라이마(휴미라 바이오시밀러) 미국 변경허가 승인 획득\", \"evidence\": [{\"document_id\": \"[exchange_20250414800004]\", \"quote_or_fact\": \"미국 식품의약국(FDA)\"}, {\"document_id\": \"[exchange_20250414800004]\", \"quote_or_fact\": \"변경허가 신청일: 2024년 1월 9일 (현지 시간 기준)- 허가일: 2025년 4월 7일 (현지 시간 기준)- 허가기관 : 미국 식품의약국(FDA)\"}, {\"document_id\": \"[exchange_20250414800004]\", \"quote_or_fact\": \"상기 대상질환명(적응증)에 대해 유플라이마(휴미라 바이오시밀러) 미국 변경허가 승인 획득\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "author_ed4a7d77528a8c5751e9a348",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "holding"
+   ],
+   "question": "Tencent Music Entertainment Hong Kong Limited이(가) (주)에스엠엔터테인먼트에 대해 제출한 주식등의 대량보유상황보고서(보고서작성기준일 2025년 06월 05일)에 따르면, 신규 보고 기준 보유주식등의 수와 보유비율은 각각 얼마인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "이번 보고서 보유주식등의 수": 2212237,
+     "이번 보고서 보유비율": 9.66
+    },
+    "unit": null,
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "2/2",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": true,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 2172,
+    "usage": {
+     "promptTokens": 3276,
+     "completionTokens": 62,
+     "totalTokens": 3338
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 5268
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "PARTIALLY_SUPPORTED",
+   "fabricated": [],
+   "confidence": 70,
+   "n_evidence": 5,
+   "n_derived": 0,
+   "input_tokens": 3276,
+   "output_tokens": 62,
+   "latency_ms": 2215,
+   "answer": "2,212,237, 9.66",
+   "raw_text": "{\"answer\": \"2,212,237, 9.66\", \"evidence\": [{\"document_id\": \"[holding_20250605000220]\", \"quote_or_fact\": \"이번보고서 | 2,212,237 | 9.66\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "author_ef82c30f267ca92d099c7a62",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "exchange"
+   ],
+   "question": "현대로템이 타이중시 정부 도시철도공정국과 체결한 '대만 타이중 블루라인 E&M 공급사업' 계약의 계약금액(원)은 얼마인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": 424899510000,
+    "unit": "KRW",
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "1/1",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": true,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 1840,
+    "usage": {
+     "promptTokens": 1218,
+     "completionTokens": 65,
+     "totalTokens": 1283
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 1234
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "PARTIALLY_SUPPORTED",
+   "fabricated": [],
+   "confidence": 70,
+   "n_evidence": 5,
+   "n_derived": 0,
+   "input_tokens": 1218,
+   "output_tokens": 65,
+   "latency_ms": 1946,
+   "answer": "424,899,510,000원",
+   "raw_text": "{\"answer\": \"424,899,510,000원\", \"evidence\": [{\"document_id\": \"[exchange_20250507800534]\", \"quote_or_fact\": \"2. 계약내역 | 계약금액(원) | 424,899,510,000\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "author_f115e4cb0e6b913c663df555",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "exchange"
+   ],
+   "question": "현대건설이 지티엑스씨 주식회사와 체결한 수도권광역급행철도 C노선(GTX-C) 민간투자시설사업 계약에서, 현대건설 지분(32%)에 해당하는 계약금액(원)은 얼마인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": 1226320960000,
+    "unit": "KRW",
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "1/1",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "error": "LLMUnavailable: JSON 파싱 실패: Expecting property name enclosed in double quotes: line 1 column 16 (char 15)"
+   },
+   "api": "OK",
+   "json_parse": "FAIL (JSON 파싱 실패: Expecting property name enclosed in double quotes: line 1 column 16 (char 15))",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 70,
+   "n_evidence": 5,
+   "n_derived": 0,
+   "input_tokens": 1271,
+   "output_tokens": 66,
+   "latency_ms": 2065,
+   "answer": "공시에서 확인한 값:\n- 계약금액: 1,226,320,960,000\n함께 확인되는 원문 근거:\n- [answer] - 체결계약명 | 수도권광역급행철도 C노선(GTX-C) 민간투자시설사업\n- [answer] 3. 계약상대 | 지티엑스씨 주식회사\n- [answer] - 사업개요 : 86.46km 복선전철(신설 37.95km, 공용 48.51km) 및 정거장 14개소,차량기지 1개소를 건설하는 공사- 상기 2. 계약금액은 당사 지분(32%)에 해당하는 금액임.- 상기 2. 최근 매출액은 2022년말 연결 재무제표 기준임.- 상기 5. 계약기간은 착공일로부터 60개월임.- 공사계약서에서 규정하는 조건 등에 따라 공사기간 및 계약금액 등은 변동될 수 있음.\n- [answer] 7. 계약(수주)일자 | 2023-09-18",
+   "raw_text": "{\"answer\": 613,692,432,000, \"evidence\": [{\"document_id\": \"[exchange_20230918800156]\", \"quote_or_fact\": \"2. 계약내역 | 계약금액(원) | 1,226,320,960,000\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "author_f119c5d79a4e52a359a84caa",
+   "type": "ANSWERABILITY",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "periodic"
+   ],
+   "question": "삼성전자의 2022 회계연도(2022년 12월 결산) 사업보고서가 현재 코퍼스에 포함되어 있는가?",
+   "expected": {
+    "status": "NOT_FOUND",
+    "value": null,
+    "unit": null,
+    "reason_code": "ZERO_DOCUMENT_IN_CORPUS"
+   },
+   "status": "NOT_FOUND",
+   "expected_status": "NOT_FOUND",
+   "status_ok": true,
+   "value_label": "0/1",
+   "value_score": 0.0,
+   "value_ok": null,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "skipped": "corpus_existence_rule"
+   },
+   "api": "NO_CALL",
+   "json_parse": "N/A",
+   "validator": "PARTIALLY_SUPPORTED",
+   "fabricated": [],
+   "confidence": 0,
+   "n_evidence": 0,
+   "n_derived": 0,
+   "input_tokens": null,
+   "output_tokens": null,
+   "latency_ms": 1,
+   "answer": "삼성전자의 2022년 periodic 공시는 현재 코퍼스에 포함되어 있지 않다.",
+   "raw_text": ""
+  },
+  {
+   "qid": "author_f1f0a9f6462da34342fd2cc4",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "holding"
+   ],
+   "question": "Capital Research and Management Company이(가) 에스케이하이닉스(주)에 대해 제출한 주식등의 대량보유상황보고서(보고서작성기준일 2026년 01월 30일)에 따르면, 직전 보고서 대비 이번 보고서의 보유주식등의 수와 보유비율은 각각 어떻게 변동되었는가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "이번 보고서 보유주식등의 수": 36730947,
+     "이번 보고서 보유비율": 5.05,
+     "직전 보고서 보유주식등의 수": 49781704,
+     "직전 보고서 보유비율": 6.84
+    },
+    "unit": null,
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "4/4",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "skipped": "deterministic_calculation"
+   },
+   "api": "NO_CALL",
+   "json_parse": "N/A",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 80,
+   "n_evidence": 5,
+   "n_derived": 2,
+   "input_tokens": null,
+   "output_tokens": null,
+   "latency_ms": 40,
+   "answer": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 49,781,704 → 36,730,947 (-13,050,757 변동)\n- 직전 대비 비율(%): 6.84 → 5.05 (-1.79%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 발행회사명 | 에스케이하이닉스(주) | 발행회사와의 관계 | 기타\n- [answer] 직전 보고서 | 49,781,704 | 6.84\n- [answer] 이번 보고서 | 36,730,947 | 5.05\n- [answer] 이번보고서 | 2026년 01월 30일 | Capital Researchand ManagementCompany | 6 | 36,730,947 | 5.05 | 36,137,758 | 4.96 | 728,002,365\n- [answer] 직전보고서 | 2025년 09월 30일 | Capital Researchand ManagementCompany | 6 | 49,781,704 | 6.84 | 49,328,027 | 6.78 | 728,002,365",
+   "raw_text": ""
+  },
+  {
+   "qid": "author_f55322f4532a9fec91015c34",
+   "type": "NARRATIVE_MULTI_DOC",
+   "mode": "OPEN",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "major"
+   ],
+   "question": "신한지주가 2024년 4월 26일 결의한 자기주식 처분 결정의 목적과 처분예정주식수, 처분방법은 각각 무엇인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": "목적은 '과거 포괄적 주식 교환 과정 등에서 발생한 소량의 자기주식(단주) 매각 처분'이며, 처분예정주식수는 보통주식 6,353주이다. 처분방법은 시장을 통한 매도이다.",
+    "unit": null,
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "1/1",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "error": "LLMUnavailable: JSON 파싱 실패: Expecting property name enclosed in double quotes: line 1 column 207 (char 206)"
+   },
+   "api": "OK",
+   "json_parse": "FAIL (JSON 파싱 실패: Expecting property name enclosed in double quotes: line 1 column 207 (char 206))",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 70,
+   "n_evidence": 5,
+   "n_derived": 0,
+   "input_tokens": 5485,
+   "output_tokens": 166,
+   "latency_ms": 5282,
+   "answer": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] - 상기 '1. 처분예정주식수'는 2024년 4월 25일 현재 당사가 보유하고 있는 자기주식 총수로  2020년 1월 28일 (구)오렌지라이프생명의 완전자회사화를 위한 주식교환, 2020년 12월 30일 (구)네오플럭스의 완전자회사를 위한 주식교환 결과 등 과거 당사의 포괄적 주식교환 과정 등에서 발생한 단주 취득분입니다.\n- [answer] - 상기 '3. 처분예정금액(원)'은 상기 '1.처분예정주식수' 6,353주에 상기 '2.처분대상주식가격인 이사회 결의일 전일(2024년 4월 25일)의 시장 종가를 곱하여 산출한 것이며, 실제 처분 금액은\n- [answer] - 상기 '9.처분결정일-감사(사외이사가 아닌 감사위원) 참석여부 관련하여 당사의 감사위원은 모두 사외이사로 구성되어 있습니다. -  상법 제341조의2(특정목적에 의한 자기주식의 취득)의한 단주 취득분의 처분 결정임에 따라, 상기 '10. 1일 매도 주문수량 한도'를 적용받지 않습니다.\n- [answer] 4. 처분예정기간 | 시작일 | 2024년 04월 27일\n- [answer] 종료일 | 2024년 05월 26일",
+   "raw_text": "{\"answer\": \"과거 포괄적 주식 교환 과정 등에서 발생한 소량의 자기주식(단주) 매각 처분, 6,353주, 시장을 통한 매도\", \"evidence\": [{\"document_id\": \"[major_20240426000320]\", \"quote_or_fact\": \"5. 처분목적 | 과거 포괄적 주식 교환 과정 등에서 발생한 소량의 자기주식(단주) 매각 처분\"}], [\"document_id\": \"[major_20240426000320]\", \"quote_or_fact\": \"1. 처분예정주식(주) | 보통주식 | 6,353\"}], [\"document_id\": \"[major_20240426000320]\", \"quote_or_fact\": \"6. 처분방법 | 시장을 통한 매도(주) | 6,353\"}]}"
+  },
+  {
+   "qid": "author_f61f83f3af47bd86817b5358",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "holding"
+   ],
+   "question": "한국전력공사이(가) 한국전력기술(주)에 대해 제출한 주식등의 대량보유상황보고서(보고서작성기준일 2024.01.04)에 따르면, 직전 보고서 대비 이번 보고서의 보유주식등의 수와 보유비율은 각각 어떻게 변동되었는가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "이번 보고서 보유주식등의 수": 19493600,
+     "이번 보고서 보유비율": 51,
+     "직전 보고서 보유주식등의 수": 25138694,
+     "직전 보고서 보유비율": 65.77
+    },
+    "unit": null,
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "4/4",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "skipped": "deterministic_calculation"
+   },
+   "api": "NO_CALL",
+   "json_parse": "N/A",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 80,
+   "n_evidence": 5,
+   "n_derived": 2,
+   "input_tokens": null,
+   "output_tokens": null,
+   "latency_ms": 119,
+   "answer": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 25,138,694 → 19,493,600 (-5,645,094 변동)\n- 직전 대비 비율(%): 65.77 → 51.00 (-14.77%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서 | 25,138,694 | 65.77\n- [answer] 이번 보고서 | 19,493,600 | 51.00\n- [answer] 이번 보고서 | 5,645,094 | 14.77\n- [answer] 이번보고서 | 2024.01.04 | 한국전력공사 | - | 19,493,600 | 51.00 | 19,493,600 | 51.00 | 38,220,000\n- [answer] 직전보고서 | 2016.12.20 | 한국전력공사 | - | 25,138,694 | 65.77 | 25,138,694 | 65.77 | 38,220,000",
+   "raw_text": ""
+  },
+  {
+   "qid": "author_f87d43f1663f388ab5a57a3b",
+   "type": "NARRATIVE_MULTI_DOC",
+   "mode": "OPEN",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "major"
+   ],
+   "question": "한미반도체가 2024년 7월 22일 결의한 자기주식취득 신탁계약 체결 결정의 계약금액과 계약목적은 무엇인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": "계약금액은 50,000,000,000원(500억원)이며, 계약목적은 '주가안정을 통한 주주가치 제고'이다. 계약체결기관은 현대차증권이다.",
+    "unit": null,
+    "reason_code": null
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "2/2",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": true,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 6455,
+    "usage": {
+     "promptTokens": 3909,
+     "completionTokens": 108,
+     "totalTokens": 4017
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 6172
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 95,
+   "n_evidence": 5,
+   "n_derived": 0,
+   "input_tokens": 3909,
+   "output_tokens": 108,
+   "latency_ms": 6479,
+   "answer": "계약금액은 50,000,000,000원이며, 계약목적은 주가안정을 통한 주주가치 제고입니다.",
+   "raw_text": "{\"answer\": \"계약금액은 50,000,000,000원이며, 계약목적은 주가안정을 통한 주주가치 제고입니다.\", \"evidence\": [{\"document_id\": \"major_20240722000046\", \"quote_or_fact\": \"1. 계약금액(원) | 50,000,000,000\"}, {\"document_id\": \"major_20240722000046\", \"quote_or_fact\": \"3. 계약목적 | 주가안정을 통한 주주가치 제고\"}]}"
+  },
+  {
+   "qid": "author_ffcc4093fb37a87f1a40322d",
+   "type": "NARRATIVE_MULTI_DOC",
+   "mode": "OPEN",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "exchange"
+   ],
+   "question": "알테오젠의 ALT-B4 마일스톤 기술료 수령 공시(2023-04-04)에서, 기술을 이전받은 계약상대방 회사명은 공시상 확인 가능한가?",
+   "expected": {
+    "status": "WITHHELD",
+    "value": "확인할 수 없다(WITHHELD). 공시 본문에 '계약상대방회사의 이름과 신약 개발품목 등의 정보는 계약상 영업비밀유지 사항에 속하며 해당 내역은 공시유보사항에 해당합니다'라고 명시되어 있다(본문에는 2019년에 기술이전한 '글로벌 10대 제약사'라는 표현만 있음).",
+    "unit": null,
+    "reason_code": "WITHHELD_DISCLOSURE"
+   },
+   "status": "WITHHELD",
+   "expected_status": "WITHHELD",
+   "status_ok": true,
+   "value_label": "2/2",
+   "value_score": 1.0,
+   "value_ok": null,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "skipped": "withheld_disclosure"
+   },
+   "api": "NO_CALL",
+   "json_parse": "N/A",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 70,
+   "n_evidence": 3,
+   "n_derived": 0,
+   "input_tokens": null,
+   "output_tokens": null,
+   "latency_ms": 97,
+   "answer": "공시유보 사항이다 — 해당 값은 공시에서 확인할 수 없다.\n- 공시 본문: 계약상대방회사의 이름과 신약 개발품목 등의 정보는 계약상 영업비밀유지 사항에 속하며 해당 내역은 공시유보사항에 해당합니다\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [계약상대] 1. 상기 마일스톤 대금은 미화 $3,000,000(약 39.5억원)입니다.(외화환산 적용 기준환율 : \\1,316.3/$, 2023.04.04 일자 서울외국환중개 매매기준율)2. 사실확인일은 계약상대방회사의 마일스톤 통지를 받고 인보이스를 발행한 날짜입니다.3. 계약상대방회사의 이름과 신약 개발품목 등의 정보는 계약상 영업비밀유지 사항에 속하며 해당 내역은 공시유보사항에 해당합니다.4. 향후 임상시험, 허가, 상업화 미실현시 라이선스계약은 종료될 수 있으며, 계약 종료에 따른 당사의 계약금, 마일스톤 대금의 반환 의무는 없습니다.5. 향후 주요 계약내용의 변경 및 관련 공시의무 발생시 당사는 지체없이 공시를 진행할 예정입니다.\n- [answer] 2. 주요내용 | ※ 투자유의사항동 계약은 의약품규제기관의 허가가 완료되어야 이행되는 조건부 계약으로서, 본 계약을 통한 수익 인식은 임상시험과 품목허가 등의 성공 여부에 따라 달라질 수 있습니다. 계약 조건에 따라, 규제기관에 의한 연구ㆍ개발의 중단 품목허가 실패 등 발생시 계약이 해지될 수 있습니다.1. 기술료 수령 내용- 대상기술 : 인간 히알루로니다제(ALT-B4)- 계약사항 : 지난 2019.11.29자로 글로벌 10대 제약사에 기술수출한 인간 히알루로니다제(ALT-B4)의 원천기술에 대한 마일스톤 달성- 기술료 대상금액 : USD3,000,000 (KRW3,948,900,000원)- Invoice 발행일 : 2023-04-04- 기타 : 기술료는 계약서에 의거하여 당사의 Invoice 발행일로부터 60일 이내 수령할 예정2. 상기 마일스톤 대금은 $3,000,000(약 39.5억원)으로 전년도 매출액(연결기준 288.0억원)의 100분의 10이상 해당하는 금액으로 의무공시 사항입니다.\n- [answer] 1. 제목 | ALT-B4 관련 마일스톤 기술료 수령",
+   "raw_text": ""
+  },
+  {
+   "qid": "gold_b_034334dce8cb5eaaa6589096",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "holding"
+   ],
+   "question": "크래프톤에 대해 2024-06-19 보고서작성기준일로 제출된 주식등의대량보유상황보고서(일반)에서 보고자, 직전/이번 보고서의 보유주식등의 수ㆍ보유비율과 보유목적은 각각 무엇인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "reporter": "장병규",
+     "shares_before": 17876001,
+     "ratio_before_percent": 36.53,
+     "shares_after": 17875501,
+     "ratio_after_percent": 36.53,
+     "holding_purpose": "경영권 영향"
+    },
+    "unit": null,
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "4/4",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": true,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 9579,
+    "usage": {
+     "promptTokens": 3807,
+     "completionTokens": 394,
+     "totalTokens": 4201
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 6078
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "PARTIALLY_SUPPORTED",
+   "fabricated": [],
+   "confidence": 70,
+   "n_evidence": 5,
+   "n_derived": 0,
+   "input_tokens": 3807,
+   "output_tokens": 394,
+   "latency_ms": 9654,
+   "answer": "직전 보고서에서의 보유주식등의 수는 17,876,001주이며, 보유비율은 36.53%입니다. 이번 보고서에서도 보유주식등의 수는 17,875,501주로 거의 동일하며, 보유비율 역시 36.53%로 유지되고 있습니다. 또한, 보유목적은 '경영권 영향'으로 명시되어 있으며, 이는 자본시장과 금융투자업에 관한 법률 시행령 제154조 제1항에 의거하여 회사의 최대주주로서 영향력을 행사하기 위함임을 밝히고 있습니다.",
+   "raw_text": "{\"answer\": \"직전 보고서에서의 보유주식등의 수는 17,876,001주이며, 보유비율은 36.53%입니다. 이번 보고서에서도 보유주식등의 수는 17,875,501주로 거의 동일하며, 보유비율 역시 36.53%로 유지되고 있습니다. 또한, 보유목적은 '경영권 영향'으로 명시되어 있으며, 이는 자본시장과 금융투자업에 관한 법률 시행령 제154조 제1항에 의거하여 회사의 최대주주로서 영향력을 행사하기 위함임을 밝히고 있습니다.\", \"evidence\": [{\"document_id\": \"[holding_20240620000340]\", \"quote_or_fact\": \"직전 보고서 | 17,876,001 | 36.53\"}, {\"document_id\": \"[holding_20240620000340]\", \"quote_or_fact\": \"이번 보고서 | 17,875,501 | 36.53\"}, {\"document_id\": \"[holding_20240620000340]\", \"quote_or_fact\": \"직전보고서 | 13,781,099 | 28.16\"}, {\"document_id\": \"[holding_20240620000340]\", \"quote_or_fact\": \"이번보고서 | 13,781,099 | 28.16\"}, {\"document_id\": \"[holding_20240620000340]\", \"quote_or_fact\": \"직전보고서 | 2024.06.11 | 장병규 | 29 | 17,876,001 | 36.53\"}, {\"document_id\": \"[holding_20240620000340]\", \"quote_or_fact\": \"이번보고서 | 2024.06.19 | 장병규 | 29 | 17,875,501 | 36.53\"}, {\"document_id\": \"[holding_20240620000340]\", \"quote_or_fact\": \"경영권 영향\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "gold_b_04129a579f785f869644167a",
+   "type": "NARRATIVE_MULTI_DOC",
+   "mode": "OPEN",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "exchange"
+   ],
+   "question": "현대건설의 2025-05-26 투자판단 관련 주요경영사항(개포주공6·7단지아파트 재건축정비사업 시공사 선정)에서 사건의 핵심 내용, 현재 상태와 정보 한계를 설명해줘.",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "core_content": "현대건설이 개포주공6·7단지아파트 재건축정비사업조합이 발주한 재건축정비사업의 시공사로 선정되었음을 통보받음 (발주처: 개포주공6·7단지아파트 재건축정비사업조합, 계약금액 약 1조 5,138억원(당사 100%, VAT 별도), 최근매출액 32,670,268,059,918원, 매출액대비 4.63%)",
+     "decision_date": "2025-05-26",
+     "current_status": "본계약 체결 전 단계로 시공사 선정 통보만 이루어진 상태이며 사업 진행과정에서 조건이 변동될 수 있음",
+     "information_limit": "계약금액은 확정 전 추정치('약' 1조 5,138억원)이며 향후 본계약 체결 시 확정 내용을 재공시할 예정"
+    },
+    "unit": null,
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "11/14",
+   "value_score": 0.7857142857142857,
+   "value_ok": false,
+   "llm_used": true,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 8947,
+    "usage": {
+     "promptTokens": 1743,
+     "completionTokens": 364,
+     "totalTokens": 2107
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 2128
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "PARTIALLY_SUPPORTED",
+   "fabricated": [],
+   "confidence": 70,
+   "n_evidence": 5,
+   "n_derived": 0,
+   "input_tokens": 1743,
+   "output_tokens": 364,
+   "latency_ms": 9115,
+   "answer": "현대건설은 2025년 5월 26일 개포주공6·7단지아파트 재건축정비사업조합으로부터 해당 사업의 시공사로 선정되었다는 통보를 받았습니다. 계약금액은 약 1조 5,138억 원이며, 이는 회사의 2024년 말 연결재무제표 기준으로 볼 때 매출액 대비 4.63%에 해당하는 규모입니다. 또한, 이 정보는 사업 진행 과정에서 변경될 가능성이 있으며, 본 계약 체결 시 확정된 내용을 다시 공시할 예정입니다.",
+   "raw_text": "{\"answer\": \"현대건설은 2025년 5월 26일 개포주공6·7단지아파트 재건축정비사업조합으로부터 해당 사업의 시공사로 선정되었다는 통보를 받았습니다. 계약금액은 약 1조 5,138억 원이며, 이는 회사의 2024년 말 연결재무제표 기준으로 볼 때 매출액 대비 4.63%에 해당하는 규모입니다. 또한, 이 정보는 사업 진행 과정에서 변경될 가능성이 있으며, 본 계약 체결 시 확정된 내용을 다시 공시할 예정입니다.\", \"evidence\": [{\"document_id\": \"[exchange_20250526800002]\", \"quote_or_fact\": \"현대건설은 아래와 같이 2025년 5월 26일, 개포주공6·7단지아파트 재건축정비사업조합이 발주한 개포주공6·7단지아파트 재건축정비사업의 시공사로 선정되었음을 통보받음.\"}, {\"document_id\": \"[exchange_20250526800002]\", \"quote_or_fact\": \"- 아 래 -\\n1. 발주처 : 개포주공6·7단지아파트 재건축정비사업조합\\n2. 계약금액 : 약 1조 5,138억원(당사 100%, VAT 별도)\"}, {\"document_id\": \"[exchange_20250526800002]\", \"quote_or_fact\": \"상기 2.주요내용의 최근매출액은 2024년말 연결재무제표 기준임.\"}, {\"document_id\": \"[exchange_20250526800002]\", \"quote_or_fact\": \"본 사항은 사업 진행과정에서 변동될 수 있으며, 향후 본계약 체결 시 확정 내용을 재공시할 예정임.\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "gold_b_0700d8fa5f0028cb712a533d",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "exchange"
+   ],
+   "question": "삼성중공업의 2025-03-17 에탄운반선 2척 공급계약 공시에서 계약상대방, 계약금액, 계약기간과 최근 매출액 대비 비율을 알려줘.",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "counterparty": "아시아 지역 선주",
+     "contract_amount": 466100000000,
+     "period_start": "2025-03-17",
+     "period_end": "2028-02-29",
+     "revenue_ratio_percent": 5.8
+    },
+    "unit": "원",
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "2/8",
+   "value_score": 0.25,
+   "value_ok": false,
+   "llm_used": false,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 5717,
+    "usage": {
+     "promptTokens": 1048,
+     "completionTokens": 244,
+     "totalTokens": 1292
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 858,
+    "degraded": true,
+    "degraded_reason": "empty_answer"
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 75,
+   "n_evidence": 1,
+   "n_derived": 0,
+   "input_tokens": 1048,
+   "output_tokens": 244,
+   "latency_ms": 5794,
+   "answer": "공시에서 확인한 값:\n- 2025년 매출액: 8,009,400,000,000",
+   "raw_text": "{\n    \"answer\": {\n        \"계약상대방\": \"아시아 지역 선주\",\n        \"계약금액\": \"466,100,000,000원\",\n        \"계약기간\": \"2025-03-17 ~ 2028-02-29\",\n        \"최근 매출액 대비 비율\": \"5.8%\"\n    },\n    \"evidence\": [\n        {\n            \"document_id\": \"[exchange_20250318800145]\",\n            \"quote_or_fact\": \"계약상대 | 아시아 지역 선주\"\n        },\n        {\n            \"document_id\": \"[exchange_20250318800145]\",\n            \"quote_or_fact\": \"계약금액(원) | 466,100,000,000\"\n        },\n        {\n            \"document_id\": \"[exchange_20250318800145]\",\n            \"quote_or_fact\": \"계약기간 | 시작일 2025-03-17 종료일 2028-02-29\"\n        },\n        {\n            \"document_id\": \"[exchange_20250318800145]\",\n            \"quote_or_fact\": \"매출액대비(%) | 5.8\"\n        }\n    ],\n    \"uncertainty\": \"\"\n}"
+  },
+  {
+   "qid": "gold_b_0aa8d3979510d78ea122edda",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "exchange"
+   ],
+   "question": "현대글로비스가 2024년 12월 31일 공시한 단일판매ㆍ공급계약체결(완성차 해상운송계약)에서 계약상대방, 계약금액, 계약기간(시작일ㆍ종료일), 최근매출액 대비 비율은 각각 얼마인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "counterparty": "현대자동차(주)",
+     "contract_amount": 3365500000000,
+     "contract_amount_unit": "원",
+     "period_start": "2025-01-01",
+     "period_end": "2029-12-31",
+     "revenue_ratio_percent": 13.1
+    },
+    "unit": "원",
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "1/8",
+   "value_score": 0.125,
+   "value_ok": false,
+   "llm_used": false,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 5944,
+    "usage": {
+     "promptTokens": 1136,
+     "completionTokens": 251,
+     "totalTokens": 1387
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 1001,
+    "degraded": true,
+    "degraded_reason": "empty_answer"
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 75,
+   "n_evidence": 1,
+   "n_derived": 0,
+   "input_tokens": 1136,
+   "output_tokens": 251,
+   "latency_ms": 6035,
+   "answer": "공시에서 확인한 값:\n- 2024년 매출액: 25,683,197,164,064",
+   "raw_text": "{\"answer\": {\"계약상대방\": \"현대자동차(주)\", \"계약금액\": \"3,365,500,000,000원\", \"계약기간(시작일ㆍ종료일)\": \"2025-01-01 ~ 2029-12-31\", \"최근매출액 대비 비율\": \"13.1%\"}, \"evidence\": [{\"document_id\": \"[exchange_20241231800103]\", \"quote_or_fact\": \"계약상대 | 현대자동차(주)\"}, {\"document_id\": \"[exchange_20241231800103]\", \"quote_or_fact\": \"계약금액(원) | 3,365,500,000,000\"}, {\"document_id\": \"[exchange_20241231800103]\", \"quote_or_fact\": \"최근매출액(원) | 25,683,197,164,064\"}, {\"document_id\": \"[exchange_20241231800103]\", \"quote_or_fact\": \"매출액대비(%) | 13.1\"}, {\"document_id\": \"[exchange_20241231800103]\", \"quote_or_fact\": \"계약기간 | 종료일 | 2029-12-31\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "gold_b_0e97c60a0d12c067d46a6f84",
+   "type": "COMPARISON_CALC",
+   "mode": "CLOSED",
+   "difficulty": "HARD",
+   "doc_groups": [
+    "periodic"
+   ],
+   "question": "LIG넥스원의 2023년 1분기보고서(2023.03)와 2025년 1분기보고서(2025.03) 요약연결재무정보에서 매출액과 영업이익을 비교하면 각각 얼마나 증감했는가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "scope": "CONSOLIDATED",
+     "period_type": "CUMULATIVE_QUARTER",
+     "unit": "백만원",
+     "revenue_2023q1": 546799,
+     "revenue_2025q1": 907623,
+     "revenue_change_amount": 360824,
+     "revenue_change_percent": 65.99,
+     "operating_profit_2023q1": 68185,
+     "operating_profit_2025q1": 113597,
+     "operating_profit_change_amount": 45412,
+     "operating_profit_change_percent": 66.6
+    },
+    "unit": "백만원",
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP_PLUS_CALCULATOR"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "4/8",
+   "value_score": 0.5,
+   "value_ok": false,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "skipped": "deterministic_calculation"
+   },
+   "api": "NO_CALL",
+   "json_parse": "N/A",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 100,
+   "n_evidence": 4,
+   "n_derived": 4,
+   "input_tokens": null,
+   "output_tokens": null,
+   "latency_ms": 341,
+   "answer": "계산 결과(원문 값에서 코드가 계산):\n- 매출액 증감액: 360,823,616,193\n- 매출액: 546,799,032,026 → 907,622,648,219 (65.99% 변동)\n- 영업이익 증감액: 45,412,251,030\n- 영업이익: 68,184,674,906 → 113,596,925,936 (66.60% 변동)\n\n공시에서 확인한 값:\n- 2023년 매출액: 546,799,032,026\n- 2025년 매출액: 907,622,648,219\n- 2023년 영업이익: 68,184,674,906\n- 2025년 영업이익: 113,596,925,936",
+   "raw_text": ""
+  },
+  {
+   "qid": "gold_b_137f1bfd5c69987d009ae50c",
+   "type": "EVENT_TRACE",
+   "mode": "OPEN",
+   "difficulty": "HARD",
+   "doc_groups": [
+    "major"
+   ],
+   "question": "엔씨소프트의 [기재정정]주요사항보고서(회사분할결정, 2024-11-28)에서 정정된 핵심 내용(분할신설회사 상호)과 분할기일, 정정 후 현재 유효한 상호를 공시 근거로 설명해줘.",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "core_event": "엔씨소프트가 TL/LLL/AI서비스연구/TACTAN 4개 사업부문을 물적분할하여 4개 신설회사를 설립하는 회사분할 결정에 대한 정정 신고 (신설회사 상호 확정)",
+     "split_effective_date": "2025-02-01",
+     "correction_target": "분할신설회사 1~4의 상호(가칭 -> 확정 상호)",
+     "corrections": [
+      {
+       "company": "신설회사1(TL사업부)",
+       "before": "주식회사 스튜디오엑스(가칭)",
+       "after": "주식회사 퍼스트스파크게임즈"
+      },
+      {
+       "company": "신설회사2(LLL사업부)",
+       "before": "주식회사 스튜디오와이(가칭)",
+       "after": "주식회사 빅파이어게임즈"
+      },
+      {
+       "company": "신설회사3(AI서비스연구사업부)",
+       "before": "주식회사 엔씨에이아이(가칭)",
+       "after": "주식회사 엔씨에이아이"
+      },
+      {
+       "company": "신설회사4(TACTAN사업부)",
+       "before": "주식회사 스튜디오지(가칭)",
+       "after": "주식회사 루디우스게임즈"
+      }
+     ],
+     "latest_effective_status": "이 [기재정정] 공시가 최신 유효 버전이며 정정 후 상호가 현재 유효함"
+    },
+    "unit": null,
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "3/11",
+   "value_score": 0.2727272727272727,
+   "value_ok": false,
+   "llm_used": false,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 10614,
+    "usage": {
+     "promptTokens": 9328,
+     "completionTokens": 606,
+     "totalTokens": 9934
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 16404,
+    "degraded": true,
+    "degraded_reason": "unsupported"
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 85,
+   "n_evidence": 5,
+   "n_derived": 0,
+   "input_tokens": 9328,
+   "output_tokens": 606,
+   "latency_ms": 10789,
+   "answer": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 주요사항보고서(회사분할결정)\n- [answer] 1. 정정대상 공시서류 :\n- [answer] 16. 기타 투자판단과 관련한 중요사항 (1)번 - 분할신설회사3 회사명 | 주식회사 엔씨에이아이(NC AI Corporation) | 주식회사 엔씨에이아이(NC AI Co., Ltd)\n- [answer] 1. 분할방법 (1)번 - 신설회사3(분할신설회사3)의 상호 | 신설회사3(분할신설회사3)의 상호 변경 | 주식회사 엔씨에이아이(가칭) | 주식회사 엔씨에이아이\n- [answer] 항  목 | 정정사유 | 정 정 전 | 정 정 후",
+   "raw_text": "```json\n{\n  \"answer\": \"엔씨소프트의 [기재정정]주요사항보고서(회사분할결정)에서 정정된 핵심 내용은 다음과 같습니다.\\n\\n1. 분할신설회사 상호:\\n   - 분할신설회사3: 주식회사 엔씨에이아이(NC AI Corporation)\\n   - 분할신설회사4: 주식회사 루디우스게임즈(Ludius Games Co., Ltd)\\n\\n2. 분할기일:\\n   - 분할기일은 2025년 2월 1일(0시)입니다. 다만, 분할회사의 이사회 결의 또는 이사회의 위임을 받은 대표이사의 결정으로 분할기일을 변경할 수 있습니다.\\n\\n3. 정정 후 현재 유효한 상호:\\n   - 분할신설회사3의 현재 유효한 상호는 주식회사 엔씨에이아이(NC AI Corporation)입니다.\",\n  \"evidence\": [\n    {\n      \"document_id\": \"[major_20241128001098]\",\n      \"quote_or_fact\": \"16. 기타 투자판단과 관련한 중요사항 (1)번 - 분할신설회사3 회사명 | 주식회사 엔씨에이아이(NC AI Corporation) | 주식회사 엔씨에이아이(NC AI Co., Ltd)\"\n    },\n    {\n      \"document_id\": \"[major_20241128001098]\",\n      \"quote_or_fact\": \"1. 분할방법 (1)번 - 신설회사4(분할신설회사4)의 상호 | 신설회사4(분할신설회사4)의 상호 변경 | 주식회사 스튜디오지(가칭) | 주식회사 루디우스게임즈\"\n    },\n    {\n      \"document_id\": \"[major_20241128001098]\",\n      \"quote_or_fact\": \"1. 분할방법 (1)번 - 신설회사3(분할신설회사3)의 상호 | 신설회사3(분할신설회사3)의 상호 변경 | 주식회사 엔씨에이아이(가칭) | 주식회사 엔씨에이아이\"\n    },\n    {\n      \"document_id\": \"[major_20241128001098]\",\n      \"quote_or_fact\": \"7. 분할설립회사 | 회사명 | (아래 16.기타 투자판단과 관련한 주요사항을 참고하시기 바랍니다.\"\n    },\n    {\n      \"document_id\": \"[major_20241128001098]\",\n      \"quote_or_fact\": \"※ 각 신설회사의 분할기일은 2025년 2월 1일(0시)로 합니다. 다만, 분할회사의 이사회 결의 또는 이사회의 위임을 받은 대표이사의 결정으로 분할기일을 변경할 수 있습니다.\"\n    }\n  ],\n  \"uncertainty\": \"\"\n}\n```"
+  },
+  {
+   "qid": "gold_b_192fa6ea90c0cdefc2616fc0",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "exchange"
+   ],
+   "question": "HD현대일렉트릭의 2025-12-19 안좌 BESS 발전소 건설공사 공급계약 공시에서 계약상대방, 계약금액, 계약기간과 최근 매출액 대비 비율을 알려줘.",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "counterparty": "주민산들바람발전 주식회사",
+     "contract_amount": 181200000000,
+     "period_start": "2025-12-19",
+     "period_end": "2027-03-31",
+     "revenue_ratio_percent": 5.45
+    },
+    "unit": "원",
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "1/8",
+   "value_score": 0.125,
+   "value_ok": false,
+   "llm_used": false,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 5202,
+    "usage": {
+     "promptTokens": 1065,
+     "completionTokens": 218,
+     "totalTokens": 1283
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 899,
+    "degraded": true,
+    "degraded_reason": "unsupported"
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 75,
+   "n_evidence": 1,
+   "n_derived": 0,
+   "input_tokens": 1065,
+   "output_tokens": 218,
+   "latency_ms": 5273,
+   "answer": "공시에서 확인한 값:\n- 2025년 매출액: 3,322,300,000,000",
+   "raw_text": "{\"answer\": \"계약상대는 '주민산들바람발전 주식회사'이며, 계약금액은 181,200억 원입니다. 계약기간은 2025년 12월 19일부터 2027년 3월 31일까지이고, 최근 매출액 대비 비율은 5.45%입니다.\", \"evidence\": [{\"document_id\": \"[exchange_20251222800814]\", \"quote_or_fact\": \"계약상대 | 주민산들바람발전 주식회사\"}, {\"document_id\": \"[exchange_20251222800814]\", \"quote_or_fact\": \"계약금액(원) | 181,200,000,000\"}, {\"document_id\": \"[exchange_20251222800814]\", \"quote_or_fact\": \"매출액대비(%) | 5.45\"}, {\"document_id\": \"[exchange_20251222800814]\", \"quote_or_fact\": \"계약기간 | 시작일 | 2025-12-19 종료일 | 2027-03-31\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "gold_b_23f454a11d52f107c1c7e8a2",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "exchange"
+   ],
+   "question": "한미반도체가 2025-11-17에 공시한 단일판매ㆍ공급계약체결(자율공시)에서 계약상대방, 계약금액, 계약기간(시작일ㆍ종료일)과 최근매출액 대비 비율은 각각 얼마인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "counterparty": "SK하이닉스(SK Hynix Inc.)",
+     "contract_amount": 1567500000,
+     "contract_amount_unit": "원",
+     "period_start": "2025-11-14",
+     "period_end": "2025-12-01",
+     "revenue_ratio_percent": 0.28
+    },
+    "unit": null,
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "2/8",
+   "value_score": 0.25,
+   "value_ok": false,
+   "llm_used": false,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 6019,
+    "usage": {
+     "promptTokens": 1036,
+     "completionTokens": 259,
+     "totalTokens": 1295
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 842,
+    "degraded": true,
+    "degraded_reason": "empty_answer"
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 75,
+   "n_evidence": 1,
+   "n_derived": 0,
+   "input_tokens": 1036,
+   "output_tokens": 259,
+   "latency_ms": 6044,
+   "answer": "공시에서 확인한 값:\n- 2025년 매출액: 558,917,191,547",
+   "raw_text": "{\"answer\": {\"계약상대방\": \"SK하이닉스(SK Hynix Inc.)\", \"계약금액\": \"1,567,500,000원\", \"계약기간\": {\"시작일\": \"2025-11-14\", \"종료일\": \"2025-12-01\"}, \"최근매출액 대비 비율\": \"0.28%\"}, \"evidence\": [{\"document_id\": \"[exchange_20251117800179]\", \"quote_or_fact\": \"계약상대 | SK하이닉스(SK Hynix Inc.)\"}, {\"document_id\": \"[exchange_20251117800179]\", \"quote_or_fact\": \"계약금액(원) | 1,567,500,000\"}, {\"document_id\": \"[exchange_20251117800179]\", \"quote_or_fact\": \"최근매출액(원) | 558,917,191,547\"}, {\"document_id\": \"[exchange_20251117800179]\", \"quote_or_fact\": \"매출액대비(%) | 0.28\"}, {\"document_id\": \"[exchange_20251117800179]\", \"quote_or_fact\": \"계약기간 | 시작일 | 2025-11-14\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "gold_b_277f68d0497188039d68f632",
+   "type": "EVENT_TRACE",
+   "mode": "OPEN",
+   "difficulty": "HARD",
+   "doc_groups": [
+    "exchange"
+   ],
+   "question": "효성중공업이 2025-04-28 제출한 판매·공급계약 해지 공시(20250429800893)는 어떤 원계약을 해지했으며, 해지 사유와 해지 후 상태는 무엇인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "terminated_contract": "부산 온천동 주상복합 공사도급계약",
+     "counterparty": "주식회사 온천동디에이",
+     "termination_amount_krw": 112461800000,
+     "termination_reason": "계약 효력 소멸에 따른 해지 (2024-12-20 채무인수결정에 따라 도급인 지위 획득)",
+     "termination_date": "2025-04-28",
+     "original_contract_reference": "2022-06-27 단일판매ㆍ공급계약체결",
+     "post_termination_status": "계약 효력 소멸(해지 완료), 유보사항 없음"
+    },
+    "unit": null,
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "0/10",
+   "value_score": 0.0,
+   "value_ok": false,
+   "llm_used": true,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 2189,
+    "usage": {
+     "promptTokens": 4119,
+     "completionTokens": 63,
+     "totalTokens": 4182
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 6380
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 95,
+   "n_evidence": 5,
+   "n_derived": 0,
+   "input_tokens": 4119,
+   "output_tokens": 63,
+   "latency_ms": 2232,
+   "answer": "부산 온천동 주상복합 공사도급계약",
+   "raw_text": "{\"answer\": \"부산 온천동 주상복합 공사도급계약\", \"evidence\": [{\"document_id\": \"exchange_20250429800893\", \"quote_or_fact\": \"- 해지계약명 | 부산 온천동 주상복합 공사도급계약\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "gold_b_27ca59a117b25eafd17a5eaa",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "exchange"
+   ],
+   "question": "두산에너빌리티가 2025년 12월 17일 공시한 신규시설투자등 공시에서 투자금액, 자기자본 대비 비율, 투자목적과 확정/예정 여부는 무엇인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "investment_amount": 806800000000,
+     "investment_amount_unit": "원",
+     "equity_ratio_percent": 6.92,
+     "purpose": "SMR 사업확대에 따른 제작 Capacity 확보",
+     "confirmation_status": "확정 공시 (2025-12-12자 풍문또는보도에 대한 해명(미확정) 공시에 대한 확정 공시임)"
+    },
+    "unit": "원",
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "5/5",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "error": "LLMUnavailable: 응답에서 JSON을 찾지 못했다"
+   },
+   "api": "OK",
+   "json_parse": "FAIL (응답에서 JSON을 찾지 못했다)",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 70,
+   "n_evidence": 5,
+   "n_derived": 0,
+   "input_tokens": 2041,
+   "output_tokens": 204,
+   "latency_ms": 5126,
+   "answer": "공시에서 확인한 값:\n- 투자금액: 806,800,000,000\n- 자기자본대비: 6.92\n함께 확인되는 원문 근거:\n- [투자목적] 3. 투자목적 | SMR 사업확대에 따른 제작 Capacity 확보\n- [answer] 5. 이사회결의일(결정일) | 2025-12-17\n- [answer] 7. 기타 투자판단과 관련한 중요사항 | - 상기 2. 투자내역은 데이터 센터 등 글로벌 전력 수요 증가에 따른 SMR 수주 물량 증가에 대응하기 위하여, 창원공장 부지에 SMR 전용공장 신축 및 기존공장 최적화, 혁신제조시설 구축하는 건으로, 건축물 및 기계설비 등 관련 유형자산의 취득을 포함하고 있습니다.- 상기 2. 투자내역의 투자금액은 향후 경영환경 및 투자 진행과정에서 변경될 수 있습니다.- 상기 2. 투자내역의 자기자본은 최근 사업연도말(2024.12.31) K-IFRS에 따라 작성된 연결재무제표 기준 입니다.- 상기 4. 투자기간의 시작일과 종료일은 착공예정일을 기준으로 산정되었으며, 향후 경영환경 및 투자 진행 과정에서 변경될 수 있습니다.- 본 공시는 2025년 12월 12일자 보도에 대한 '풍문 또는 보도에 대한 해명(미확정)'에 관한 확정 공시 사항입니다.",
+   "raw_text": "{\"answer\": \"투자금액은 806,800,000,000원이며, 자기자본 대비 비율은 6.92%입니다. 투자 목적은 SMR 사업 확대에 따른 제작 Capacity 확보이며, 이 투자는 아직 확정되지 않았습니다.\", \"evidence\": [{\"document_id\": \"[exchange_20251217800832]\", \"quote_or_fact\": \"2. 투자내역 | 투자금액(원) | 806,800,000,000\"}, {\"document_id\": \"[exchange_20251217800832]\", \"quote_or_fact\": \"자기자본대비(%) | 6.92\"}, {\"document_id\": \"[exchange_20251217800832]\", \"quote_or_fact\": \"3. 투자목적 | SMMR 사업확대에 따른 제작 Capacity 확보\"}, {\"document_id\": \"[exchange_20251217800832]\", \"quote_or_fact\": \"- 상기 2. 투자내역의 투자금액은 향후 경영환경 및 투자 진행과정에서 변경될 수 있습니다.\"}]"
+  },
+  {
+   "qid": "gold_b_2cd479eccfda82d5d6e549bb",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "exchange"
+   ],
+   "question": "LG에너지솔루션의 2025-07-30 LFP 배터리 공급계약 공시에서 계약상대방, 계약금액, 계약기간과 최근 매출액 대비 비율을 알려줘.",
+   "expected": {
+    "status": "WITHHELD",
+    "value": {
+     "counterparty_status": "WITHHELD",
+     "counterparty_withheld_reason": "경영상 비밀유지",
+     "counterparty_withheld_until": "2030-07-31",
+     "contract_amount": 5944227336000,
+     "period_start": "2027-08-01",
+     "period_end": "2030-07-31",
+     "revenue_ratio_percent": 23.2
+    },
+    "unit": "원",
+    "reason_code": "DISCLOSURE_WITHHELD_STATED"
+   },
+   "status": "WITHHELD",
+   "expected_status": "WITHHELD",
+   "status_ok": true,
+   "value_label": "7/11",
+   "value_score": 0.6363636363636364,
+   "value_ok": null,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "skipped": "withheld_disclosure"
+   },
+   "api": "NO_CALL",
+   "json_parse": "N/A",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 60,
+   "n_evidence": 1,
+   "n_derived": 0,
+   "input_tokens": null,
+   "output_tokens": null,
+   "latency_ms": 58,
+   "answer": "공시유보 사항이다 — 해당 값은 공시에서 확인할 수 없다.\n- 유보사유: 경영상 비밀유지\n- 유보기한: 2030-07-31\n\n공시에서 확인한 값:\n- 2025년 매출액: 25,619,585,140,102",
+   "raw_text": ""
+  },
+  {
+   "qid": "gold_b_2ef301d8b4157cd002c79279",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "exchange"
+   ],
+   "question": "HD현대중공업이 2023-01-20에 공시한 단일판매ㆍ공급계약체결(VLGC 2척, 공사수주)에서 계약상대방, 계약금액, 계약기간(시작일ㆍ종료일)과 최근매출액 대비 비율은 각각 얼마인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "counterparty": "아프리카 소재 선사",
+     "contract_amount": 240800000000,
+     "contract_amount_unit": "원",
+     "period_start": "2023-01-19",
+     "period_end": "2026-02-28",
+     "revenue_ratio_percent": 2.9
+    },
+    "unit": null,
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "2/8",
+   "value_score": 0.25,
+   "value_ok": false,
+   "llm_used": false,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 6151,
+    "usage": {
+     "promptTokens": 1014,
+     "completionTokens": 253,
+     "totalTokens": 1267
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 791,
+    "degraded": true,
+    "degraded_reason": "empty_answer"
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 75,
+   "n_evidence": 1,
+   "n_derived": 0,
+   "input_tokens": 1014,
+   "output_tokens": 253,
+   "latency_ms": 6194,
+   "answer": "공시에서 확인한 값:\n- 2023년 매출액: 8,311,300,000,000",
+   "raw_text": "{\"answer\": {\"계약상대방\": \"아프리카 소재 선사\", \"계약금액\": \"240,800,000,000원\", \"계약기간\": {\"시작일\": \"2023-01-19\", \"종료일\": \"2026-02-28\"}, \"최근매출액 대비 비율\": \"2.90%\"}, \"evidence\": [{\"document_id\": \"[exchange_20230120800061]\", \"quote_or_fact\": \"계약상대 | 아프리카 소재 선사\"}, {\"document_id\": \"[exchange_20230120800061]\", \"quote_or_fact\": \"계약금액(원) | 240,800,000,000\"}, {\"document_id\": \"[exchange_20230120800061]\", \"quote_or_fact\": \"최근매출액(원) | 8,311,300,000,000\"}, {\"document_id\": \"[exchange_20230120800061]\", \"quote_or_fact\": \"매출액대비(%) | 2.90\"}, {\"document_id\": \"[exchange_20230120800061]\", \"quote_or_fact\": \"계약기간 | 종료일 | 2026-02-28\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "gold_b_30089ee2275a48721e228ae2",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "holding"
+   ],
+   "question": "HD현대일렉트릭에 대한 HD현대㈜의 2024-06-19 대량보유상황보고서(일반)에서 직전보고서 대비 이번보고서의 보유주식수·비율 변화와 보유목적은 무엇인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "reporter": "HD현대㈜",
+     "prior_report_date": "2019-12-24",
+     "prior_shares": 14456491,
+     "prior_ratio_percent": 40.1,
+     "current_report_date": "2024-06-19",
+     "current_shares": 14023639,
+     "current_ratio_percent": 38.9,
+     "change_shares": -432852,
+     "change_ratio_percent": -1.2,
+     "holding_purpose": "경영권 영향"
+    },
+    "unit": "주",
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "10/12",
+   "value_score": 0.8333333333333334,
+   "value_ok": false,
+   "llm_used": false,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 8635,
+    "usage": {
+     "promptTokens": 4043,
+     "completionTokens": 353,
+     "totalTokens": 4396
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 6477,
+    "degraded": true,
+    "degraded_reason": "unsupported"
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 85,
+   "n_evidence": 5,
+   "n_derived": 0,
+   "input_tokens": 4043,
+   "output_tokens": 353,
+   "latency_ms": 8704,
+   "answer": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서 | 14,456,491 | 40.10\n- [answer] 이번 보고서 | 14,023,639 | 38.90\n- [answer] 보유주식등의 수 및 보유비율 |  | 보유주식등의 수 | 보유비율\n- [answer] 이번보고서 | 2024년 06월 19일 | HD현대㈜ | 5 | 14,023,639 | 38.90 | 14,023,639 | 38.90 | 36,047,135\n- [answer] 직전보고서 | 2019년 12월 24일 | HD현대㈜ | 8 | 14,456,491 | 40.10 | 14,456,491 | 40.10 | 36,047,135",
+   "raw_text": "{\"answer\": \"HD현대㈜는 직전 보고서 대비 이번 보고서에서 보유주식수가 432,852주 감소했으며, 보유비율은 1.20% p 감소했습니다. 보유목적은 경영권 영향과 관련된 다양한 활동을 포함하며, 구체적으로는 이사 및 감사의 선임, 해임 또는 직무의 정지, 이사회 등 회사 기관과 관련된 정관의 변경 등이 있습니다.\", \"evidence\": [{\"document_id\": \"[holding_20240620000036]\", \"quote_or_fact\": \"직전 보고서 | 14,456,491 | 40.10\"}, {\"document_id\": \"[holding_20240620000036]\", \"quote_or_fact\": \"이번 보고서 | 14,023,639 | 38.90\"}, {\"document_id\": \"[holding_20240620000036]\", \"quote_or_fact\": \"경영권 영향\\n가. 보유목적의 개요 (1) 이사 및 감사의 선임 해임 또는 직무의 정지, (2) 이사회 등 회사의 기관과 관련된 정관의 변경, (3) 회사의 자본금의 변경, (4) 회사의 배당의 결정, (5) 회사의 합병, 분할 및 분할합병, (6) 주식의 포괄적 교환 및 이전, (7) 영업전부의 양수 양도 또는 금융위원회가 정하여 고시하는 중요한 일부의 양수 양도, (8) 자산의 전부의 처분 또는 금융위원회가 정하여 고시하는 중요한 일부의 처분, (9) 영업전부의 임대 또는 경영위임, 타인과 영업의 손익전부를 같이 하는 계약, 그 밖에 이에 준하는 계약의 체결 변경 또는 해약, (10) 회사의 해산\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "gold_b_3054ffad4d0cb92473806459",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "holding"
+   ],
+   "question": "고려아연(주)에 대한 2024-12-19 대량보유상황보고서(보고자: (주)영풍)에서 보고자, 보유주식등의 수·보유비율의 직전/이번 보고서 변화와 보유목적을 알려줘.",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "reporter": "(주)영풍",
+     "shares_before": 8246783,
+     "ratio_before_percent": 39.83,
+     "shares_after": 8481234,
+     "ratio_after_percent": 40.97,
+     "purpose": "보고자는 자본시장법 시행령 제154조 제1항 각 호의 사항에 대하여 발행회사의 경영권 참여 및 지배구조의 개선 등을 위하여 발행회사의 주식에 투자를 하여서 영향력을 행사하고자 합니다."
+    },
+    "unit": null,
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "5/6",
+   "value_score": 0.8333333333333334,
+   "value_ok": false,
+   "llm_used": false,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 2573,
+    "usage": {
+     "promptTokens": 3068,
+     "completionTokens": 86,
+     "totalTokens": 3154
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 4604,
+    "degraded": true,
+    "degraded_reason": "unsupported"
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 85,
+   "n_evidence": 5,
+   "n_derived": 0,
+   "input_tokens": 3068,
+   "output_tokens": 86,
+   "latency_ms": 2630,
+   "answer": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서 | 7,368,124 | 35.59\n- [answer] 이번 보고서 | 7,602,575 | 36.72\n- [answer] 직전 보고서 | 8,246,783 | 39.83\n- [answer] 이번 보고서 | 8,481,234 | 40.97\n- [answer] 보고사유 | 보유주식수 변동, 보유주식등에 관한 계약 변경",
+   "raw_text": "{\"answer\": \"(주)영풍\", \"evidence\": [\". 보고자 : (주)영풍\", \"보고자는 자본시장법 시행령 제154조 제1항 각 호의 사항에 대하여 발행회사의 경영권 참여 및 지배구조의 개선 등을 위하여 발행회사의 주식에 투자를 하여서 영향력을 행사하고자 합니다.\"], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "gold_b_34e53426cab01c72ec76bfca",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "exchange"
+   ],
+   "question": "삼성E&A의 2024-04-17 단일판매ㆍ공급계약체결 공시에서 계약상대방, 계약금액, 계약기간과 최근 매출액 대비 비율을 알려줘.",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "counterparty": "Aramco Asia Japan",
+     "contract_amount_krw": 160038036031,
+     "recent_revenue_krw": 10624917993595,
+     "revenue_ratio_percent": 1.51,
+     "period_start": "2024-04-15",
+     "period_end": "2027-09-16"
+    },
+    "unit": "원",
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "2/9",
+   "value_score": 0.2222222222222222,
+   "value_ok": false,
+   "llm_used": false,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 5767,
+    "usage": {
+     "promptTokens": 1110,
+     "completionTokens": 248,
+     "totalTokens": 1358
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 996,
+    "degraded": true,
+    "degraded_reason": "empty_answer"
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 75,
+   "n_evidence": 1,
+   "n_derived": 0,
+   "input_tokens": 1110,
+   "output_tokens": 248,
+   "latency_ms": 5786,
+   "answer": "공시에서 확인한 값:\n- 2024년 매출액: 10,624,917,993,595",
+   "raw_text": "{\n    \"answer\": {\n        \"계약상대방\": \"Aramco Asia Japan\",\n        \"계약금액\": \"160,038,036,031원\",\n        \"계약기간\": \"2024-04-15 ~ 2027-09-16\",\n        \"최근 매출액 대비 비율\": \"1.51%\"\n    },\n    \"evidence\": [\n        {\n            \"document_id\": \"[exchange_20240417800519]\",\n            \"quote_or_fact\": \"계약상대 | Aramco Asia Japan\"\n        },\n        {\n            \"document_id\": \"[exchange_20240417800519]\",\n            \"quote_or_fact\": \"계약금액(원) | 160,038,036,031\"\n        },\n        {\n            \"document_id\": \"[exchange_20240417800519]\",\n            \"quote_or_fact\": \"계약기간 | 시작일 | 2024-04-15 종료일 | 2027-09-16\"\n        },\n        {\n            \"document_id\": \"[exchange_20240417800519]\",\n            \"quote_or_fact\": \"매출액대비(%) | 1.51\"\n        }\n    ],\n    \"uncertainty\": \"\"\n}"
+  },
+  {
+   "qid": "gold_b_446afacf23798f1091ca19df",
+   "type": "EVENT_TRACE",
+   "mode": "OPEN",
+   "difficulty": "HARD",
+   "doc_groups": [
+    "major"
+   ],
+   "question": "신한지주가 2025-02-03 제출한 [기재정정]주요사항보고서(상각형조건부자본증권발행결정)에서, 최초 공시서류 제출일과 원금상환방법·옵션 조항의 정정 전·후 핵심 변경 내용은 무엇인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "original_filing_date": "2024-12-05",
+     "correction_reason": "증권신고서 제출에 따른 정정",
+     "corrected_item": "7. 원금상환방법 / 9-1. 옵션에 관한 사항",
+     "condition_before": "발행일로부터 5년 이후 10년 이내의 기간동안 도래하는 매 이자(배당)기일마다 중도상환 가능",
+     "condition_after": "발행일로부터 5년이 경과(5년이 되는 날 포함)한 이후 매 이자(배당)기일마다 중도상환 가능(상한 10년 제한 삭제)",
+     "latest_effective_status": "정정 후(2025-02-03) 조건이 현재 유효"
+    },
+    "unit": null,
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "0/14",
+   "value_score": 0.0,
+   "value_ok": false,
+   "llm_used": true,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 5755,
+    "usage": {
+     "promptTokens": 4059,
+     "completionTokens": 216,
+     "totalTokens": 4275
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 5866
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "PARTIALLY_SUPPORTED",
+   "fabricated": [],
+   "confidence": 70,
+   "n_evidence": 3,
+   "n_derived": 0,
+   "input_tokens": 4059,
+   "output_tokens": 216,
+   "latency_ms": 6147,
+   "answer": "정정대상 공시서류는 '주요사항보고서(상각형 조건부 자본증권 발행결정)'이며, 정정 전후의 핵심 변경 내용을 알 수 없습니다.",
+   "raw_text": "{\"answer\": \"정정대상 공시서류는 '주요사항보고서(상각형 조건부 자본증권 발행결정)'이며, 정정 전후의 핵심 변경 내용을 알 수 없습니다.\", \"evidence\": [{\"document_id\": \"[기재정정]주요사항보고서(상각형조건부자본증권발행결정)\", \"quote_or_fact\": \"1. 정정대상 공시서류 : 주요사항보고서 (상각형 조건부 자본증권 발행결정)\"}, {\"document_id\": \"[기재정정]주요사항보고서(상각형조건부자본증권발행결정)\", \"quote_or_fact\": \"17회 상각형 조건부자본증권 | 2025-02-13 | - | 400,000 | 2025-02-03 | 한국증권금융\"}], \"uncertainty\": \"공시 발췌에서는 원금상환방법 및 옵션 조항에 대한 구체적인 내용이 포함되어 있지 않아, 해당 내용의 정정 전후 핵심 변경 사항을 확인할 수 없습니다.\"}"
+  },
+  {
+   "qid": "gold_b_4dbdfc5d0b451f1d7a207e74",
+   "type": "COMPARISON_CALC",
+   "mode": "CLOSED",
+   "difficulty": "HARD",
+   "doc_groups": [
+    "periodic"
+   ],
+   "question": "삼성전자의 2023년 3분기보고서와 2025년 3분기보고서 연결 손익계산서에서 매출액과 영업이익을 같은 기준(연결·누적 9개월)으로 비교하고 증감률을 계산해줘.",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "basis": "연결, 누적 9개월(1~9월), 단위 백만원",
+     "revenue_2023_cum_million_krw": 191155556,
+     "revenue_2025_cum_million_krw": 239768567,
+     "revenue_growth_percent": 25.43,
+     "operating_income_2023_cum_million_krw": 3742259,
+     "operating_income_2025_cum_million_krw": 23527391,
+     "operating_income_growth_percent": 528.69
+    },
+    "unit": "백만원",
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "3/9",
+   "value_score": 0.3333333333333333,
+   "value_ok": false,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "skipped": "deterministic_calculation"
+   },
+   "api": "NO_CALL",
+   "json_parse": "N/A",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 100,
+   "n_evidence": 4,
+   "n_derived": 4,
+   "input_tokens": null,
+   "output_tokens": null,
+   "latency_ms": 516,
+   "answer": "계산 결과(원문 값에서 코드가 계산):\n- 매출액 증감액: 18,657,095\n- 매출액: 67,404,652 → 86,061,747 (27.68% 변동)\n- 영업이익 증감액: 9,732,528\n- 영업이익: 2,433,534 → 12,166,062 (399.93% 변동)\n\n공시에서 확인한 값:\n- 2023년 매출액: 67,404,652\n- 2025년 매출액: 86,061,747\n- 2023년 영업이익: 2,433,534\n- 2025년 영업이익: 12,166,062",
+   "raw_text": ""
+  },
+  {
+   "qid": "gold_b_4e766ea7213345a7d5bbb527",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "holding"
+   ],
+   "question": "크래프톤의 2025년 8월 5일 주식등의대량보유상황보고서(일반)에서 보고자 본인 성명, 직전보고서(2025.07.15) 대비 이번보고서(2025.08.04)의 주식등의 수ㆍ비율 및 주권 수ㆍ비율 변화, 보유목적은 무엇인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "reporter": "장병규",
+     "before_report_date": "2025-07-15",
+     "before_shares_total": 18844031,
+     "before_shares_total_ratio_percent": 38.96,
+     "before_share_certificates": 17863636,
+     "before_share_certificates_ratio_percent": 37.69,
+     "after_report_date": "2025-08-04",
+     "after_shares_total": 18844031,
+     "after_shares_total_ratio_percent": 38.96,
+     "after_share_certificates": 17864736,
+     "after_share_certificates_ratio_percent": 37.69,
+     "change_shares_total": 0,
+     "change_share_certificates": 1100,
+     "purpose": "경영권 영향"
+    },
+    "unit": "주",
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "15/16",
+   "value_score": 0.9375,
+   "value_ok": false,
+   "llm_used": false,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 4350,
+    "usage": {
+     "promptTokens": 3768,
+     "completionTokens": 142,
+     "totalTokens": 3910
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 5983,
+    "degraded": true,
+    "degraded_reason": "unsupported"
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 85,
+   "n_evidence": 5,
+   "n_derived": 0,
+   "input_tokens": 3768,
+   "output_tokens": 142,
+   "latency_ms": 4388,
+   "answer": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서 | 18,844,031 | 38.96\n- [answer] 이번 보고서 | 18,844,031 | 38.96\n- [answer] 직전 보고서 | 13,775,291 | 28.48\n- [answer] 직전보고서 | 2025.07.15 | 장병규 | 31 | 18,844,031 | 38.96 | 17,863,636 | 37.69 | 47,392,026\n- [answer] 이번보고서 | 2025.08.04 | 장병규 | 31 | 18,844,031 | 38.96 | 17,864,736 | 37.69 | 47,393,226",
+   "raw_text": "{\"answer\": \"장병규, 18,844,031주 동일, 17,864,736주 증가, 경영권 영향\", \"evidence\": [{\"document_id\": \"[holding_20250805000192]\", \"quote_or_fact\": \"장병규\"}, {\"document_id\": \"[holding_20250805000192]\", \"quote_or_fact\": \"18,844,031주 동일\"}, {\"document_id\": \"[holding_20250805000192]\", \"quote_or_fact\": \"17,864,736주 증가\"}, {\"document_id\": \"[holding_20250805000192]\", \"quote_or_fact\": \"경영권 영향\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "gold_b_5271576ebada8221bcc3056a",
+   "type": "COMPARISON_CALC",
+   "mode": "CLOSED",
+   "difficulty": "HARD",
+   "doc_groups": [
+    "periodic"
+   ],
+   "question": "현대제철의 2023년 반기보고서(2023.06)와 2025년 반기보고서(2025.06) 요약연결재무정보에서 매출액과 영업이익을 비교하면 각각 얼마나 증감했는가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "scope": "CONSOLIDATED",
+     "period_type": "CUMULATIVE_HALF_YEAR",
+     "unit": "백만원",
+     "revenue_2023h1": 13527367,
+     "revenue_2025h1": 11509020,
+     "revenue_change_amount": -2018347,
+     "revenue_change_percent": -14.92,
+     "operating_profit_2023h1": 798986,
+     "operating_profit_2025h1": 82740,
+     "operating_profit_change_amount": -716246,
+     "operating_profit_change_percent": -89.64
+    },
+    "unit": "백만원",
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP_PLUS_CALCULATOR"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "0/8",
+   "value_score": 0.0,
+   "value_ok": false,
+   "llm_used": true,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 3094,
+    "usage": {
+     "promptTokens": 6497,
+     "completionTokens": 85,
+     "totalTokens": 6582
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 10597
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "PARTIALLY_SUPPORTED",
+   "fabricated": [],
+   "confidence": 70,
+   "n_evidence": 4,
+   "n_derived": 0,
+   "input_tokens": 6497,
+   "output_tokens": 85,
+   "latency_ms": 3541,
+   "answer": "발췌에 제시된 정보로는 현대제철의 2023년 반기보고서와 2025년 반기보고서의 매출액과 영업이익을 비교하기에 충분하지 않습니다.",
+   "raw_text": "{\"answer\": \"발췌에 제시된 정보로는 현대제철의 2023년 반기보고서와 2025년 반기보고서의 매출액과 영업이익을 비교하기에 충분하지 않습니다.\", \"uncertainty\": \"비교하려면 각 보고서별 정확한 매출액과 영업이익 수치가 필요합니다. 그러나 제공된 발췌에서는 해당 정보가 충분히 명시되어 있지 않아 직접적인 비교가 어렵습니다.\"}"
+  },
+  {
+   "qid": "gold_b_5335116f30b3102f5ce22cbb",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "exchange"
+   ],
+   "question": "삼성바이오로직스가 2024년 6월 25일 공시한 단일판매ㆍ공급계약체결(의약품 위탁생산계약)에서 계약상대방, 계약금액, 계약기간(시작일ㆍ종료일), 최근매출액 대비 비율은 각각 얼마인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "counterparty": "Kiniksa Pharmaceuticals (UK), Ltd",
+     "contract_amount": 211468250378,
+     "contract_amount_unit": "원",
+     "period_start": "2024-06-21",
+     "period_end": "2031-12-31",
+     "revenue_ratio_percent": 5.72
+    },
+    "unit": "원",
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "2/8",
+   "value_score": 0.25,
+   "value_ok": false,
+   "llm_used": false,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 5578,
+    "usage": {
+     "promptTokens": 1066,
+     "completionTokens": 236,
+     "totalTokens": 1302
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 917,
+    "degraded": true,
+    "degraded_reason": "empty_answer"
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 75,
+   "n_evidence": 1,
+   "n_derived": 0,
+   "input_tokens": 1066,
+   "output_tokens": 236,
+   "latency_ms": 5598,
+   "answer": "공시에서 확인한 값:\n- 2024년 매출액: 3,694,588,767,068",
+   "raw_text": "{\"answer\": {\"계약상대방\": \"Kiniksa Pharmaceuticals (UK), Ltd\", \"계약금액\": \"211,468,250,378원\", \"계약기간\": \"2024-06-21 ~ 2031-12-31\", \"최근매출액 대비 비율\": \"5.72%\"}, \"evidence\": [{\"document_id\": \"[exchange_20240625800286]\", \"quote_or_fact\": \"계약상대 | Kiniksa Pharmaceuticals (UK), Ltd\"}, {\"document_id\": \"[exchange_20240625800286]\", \"quote_or_fact\": \"계약금액(원) | 211,468,250,378\"}, {\"document_id\": \"[exchange_20240625800286]\", \"quote_or_fact\": \"계약기간 | 시작일 | 2024-06-21 종료일 | 2031-12-31\"}, {\"document_id\": \"[exchange_20240625800286]\", \"quote_or_fact\": \"최근매출액(원) | 3,694,588,767,068 매출액대비(%) | 5.72\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "gold_b_60268d8a3d15da2a26a59fd6",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "exchange"
+   ],
+   "question": "한화에어로스페이스의 2023-12-04 단일판매ㆍ공급계약체결 공시에서 계약상대방, 계약금액, 계약기간과 최근 매출액 대비 비율을 알려줘.",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "counterparty": "폴란드 군비청",
+     "contract_amount_krw": 3447474448960,
+     "recent_revenue_krw": 6539605817572,
+     "revenue_ratio_percent": 52.7,
+     "period_start": "2023-12-01",
+     "period_end": "2031-11-29"
+    },
+    "unit": "원",
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "3/9",
+   "value_score": 0.3333333333333333,
+   "value_ok": false,
+   "llm_used": false,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 5049,
+    "usage": {
+     "promptTokens": 1177,
+     "completionTokens": 216,
+     "totalTokens": 1393
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 1101,
+    "degraded": true,
+    "degraded_reason": "empty_answer"
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 75,
+   "n_evidence": 1,
+   "n_derived": 0,
+   "input_tokens": 1177,
+   "output_tokens": 216,
+   "latency_ms": 5056,
+   "answer": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [매출액_2023] - 상기 2항의 최근사업연도 매출액은 한화에어로스페이스의 2022년 연결기준 매출액임.- 상기 2항의 계약금액은 2023년 12월 1일 서울외국환중개 매매기준율(1,290.40원/USD)로 원화환산한 금액임.- 계약기간 및 금액 등은 진행과정에서 변경될 수 있으며, 주요 사항에 대한 변경이 있을 시 정정공시 예정임.",
+   "raw_text": "{\"answer\": {\"계약상대방\": \"폴란드 군비청\", \"계약금액\": \"3,447,474,448,960원\", \"계약기간\": \"2023-12-01 ~ 2031-11-29\", \"최근 매출액 대비 비율\": \"52.7%\"}, \"evidence\": [{\"document_id\": \"[exchange_20231204800003]\", \"quote_or_fact\": \"계약상대 | 폴란드 군비청\"}, {\"document_id\": \"[exchange_20231204800003]\", \"quote_or_fact\": \"계약금액(원) | 3,447,474,448,960\"}, {\"document_id\": \"[exchange_20231204800003]\", \"quote_or_fact\": \"계약기간 | 시작일 | 2023-12-01 종료일 | 2031-11-29\"}, {\"document_id\": \"[exchange_20231204800003]\", \"quote_or_fact\": \"매출액대비(%) | 52.7\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "gold_b_6064d1699deee9470756d9d2",
+   "type": "NARRATIVE_MULTI_DOC",
+   "mode": "OPEN",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "exchange"
+   ],
+   "question": "셀트리온의 2026-03-12 투자판단 관련 주요경영사항(CT-P55 미국 임상 3상 시험계획 변경신청)에서 사건의 핵심 내용, 기준일, 현재 상태와 정보 한계를 설명해줘.",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "event_summary": "CT-P55(코센틱스 바이오시밀러) 미국 임상 3상 시험계획 변경신청",
+     "determination_date": "2026-03-12",
+     "current_status": "미국 식품의약국(FDA)에 임상시험계획 변경신청을 제출한 상태로, 승인 여부는 아직 확정되지 않음. 앞서 2024-08-14 최초 3상 시험계획이 승인된 바 있고, 이번 공시는 그 계획에 대한 변경신청임.",
+     "uncertainty_note": "문서는 임상시험 약물이 최종 허가받을 확률이 통계적으로 약 10% 수준이라고 명시하며, 결과에 따라 상업화 계획이 변경되거나 포기될 가능성이 있다고 밝힘 — 승인 여부·상업화 여부 모두 미확정."
+    },
+    "unit": null,
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "9/10",
+   "value_score": 0.9,
+   "value_ok": false,
+   "llm_used": false,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 12780,
+    "usage": {
+     "promptTokens": 1778,
+     "completionTokens": 532,
+     "totalTokens": 2310
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 2302,
+    "degraded": true,
+    "degraded_reason": "unsupported"
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 85,
+   "n_evidence": 3,
+   "n_derived": 0,
+   "input_tokens": 1778,
+   "output_tokens": 532,
+   "latency_ms": 12815,
+   "answer": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] ※ 관련공시 | 2024-08-14 투자판단 관련 주요경영사항(CTP55(코센틱스 바이오시밀러) 미국 임상 3상 시험계획 승인)2024-07-01 투자판단 관련 주요경영사항(CT-P55코센틱스 바이오시밀러 미국 임상 3상 시험계획 신청)\n- [answer] 2. 주요내용 | ※ 투자유의사항임상시험 약물이 의약품으로 최종 허가받을 확률은 통계적으로 약 10% 수준으로 알려져 있습니다.임상시험 및 품목허가 과정에서 기대에 상응하지 못하는 결과가 나올 수 있으며, 이에 따라 당사가 상업화 계획을 변경하거나 포기할 수 있는 가능성도 상존합니다.투자자는 수시공시 및 사업보고서 등을 통해 공시된 투자 위험을 종합적으로 고려하여 신중히 투자하시기 바랍니다.1) 임상시험 제목 :- 중등도에서 중증 판상형 건선 환자 대상 CT-P55와 코센틱스의 유효성 및 안전성을 비교하기 위한 무작위배정, 활성대조군, 이중 눈가림, 3상 임상시험2) 임상시험 단계 :- 글로벌 제 3상 임상3) 대상질환명(적응증) :- 판상형 건선 (Plaque psoriasis)4) 임상시험 신청일 및 신청기관 :- 신청일 : 2026년 3월 12일 (현지 시간 기준)- 임상시험 신청기관 : 미국 식품의약국(FDA)5) 임상시험 등록번호 :- EU CT number: 2024-513348-27-006) 임상시험 목적 :- CT-P55와 코센틱스 간의 유효성 및 안전성을 비교7) 임상시험 시행 방법 :- 임상시험 대상자 : 153명- 임상시험 기간 : 56주- 임상시험 디자인 : 무작위배정, 활성대조군, 이중 눈가림, 3상 임상시험8) 향후 계획 :- 본 3상 임상시험을 통해 CT-P55 약물의 오리지널 약물 코센틱스(Cosentyx)에 대한 유효성 및 안전성 결과를 통해 유사성(biosimilarity)를 입증할 예정입니다.\n- [answer] 1. 제목 | CT-P55(코센틱스 바이오시밀러) 미국 임상 3상 시험계획 변경신청",
+   "raw_text": "```json\n{\n  \"answer\": \"셀트리온의 2026년 3월 12일에 CT-P55(코센틱스 바이오시밀러) 미국 임상 3상 시험계획 변경 신청을 했습니다. 이는 중등도에서 중증 판상형 건선 환자 대상으로 하며, 임상시험 신청기관은 미국 식품의약국(FDA), 신청일은 현지 시간 기준 2026년 3월 12일이며, 임상시험 등록 번호는 EU CT number: 2024-513348-27-R입니다. 임상시험 목적은 CT-P55와 코센틱스 간 유효성 및 안전성을 비교하며, 임상시험 대상자는 153명이고 기간은 56주입니다. 향후 계획으로는 본 시험을 통해 CT-P55 약물과 오리지널 약물인 코센틱스에 대한 유효성과 안전성 결과로 유사성을 입증할 예정입니다.\",\n  \"evidence\": [\n    {\n      \"document_id\": \"[exchange_20260312800806]\",\n      \"quote_or_fact\": \"셀트리온의 2026년 3월 12일에 CT-P55(코센틱스 바이오시밀러) 미국 임상 3상 시험계획 변경 신청을 했습니다.\"\n    },\n    {\n      \"document_id\": \"[exchange_20260312800806]\",\n      \"quote_or_fact\": \"임상시험 신청기관은 미국 식품의약국(FDA), 신청일은 현지 시간 기준 2026년 3월 12일이며\"\n    },\n    {\n      \"document_id\": \"[exchange_20260312800806]\",\n      \"quote_or_fact\": \"임상시험 등록 번호는 EU CT number: 2024-513348-27-R입니다.\"\n    },\n    {\n      \"document_id\": \"[exchange_20260312800806]\",\n      \"quote_or_fact\": \"임상시험 목적은 CT-P55와 코센틱스 간 유효성 및 안전성을 비교하며,\"\n    },\n    {\n      \"document_id\": \"[exchange_20260312800806]\",\n      \"quote_or_fact\": \"임상시험 대상자는 153명이고 기간은 56주입니다.\"\n    },\n    {\n      \"document_id\": \"[exchange_20260312800806]\",\n      \"quote_or_fact\": \"향후 계획으로는 본 시험을 통해 CT-P55 약물과 오리지널 약물인 코센틱스에 대한 유효성과 안전성 결과로 유사성을 입증할 예정입니다.\"\n    }\n  ],\n  \"uncertainty\": \"\"\n}\n```"
+  },
+  {
+   "qid": "gold_b_649e0385533d6ed2ad3bd978",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "holding"
+   ],
+   "question": "시프트업의 2025-12-05 대량보유상황보고서(변동)에서 보고자, 보유주식등의 수ㆍ보유비율의 직전ㆍ이번 보고서 변화와 보유목적을 알려줘.",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "reporter": "김형태",
+     "shares_before": 24083650,
+     "ratio_before_percent": 41.11,
+     "shares_after": 24083650,
+     "ratio_after_percent": 40.85,
+     "holding_purpose": "경영권 영향"
+    },
+    "unit": null,
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "4/4",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "skipped": "deterministic_calculation"
+   },
+   "api": "NO_CALL",
+   "json_parse": "N/A",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 100,
+   "n_evidence": 5,
+   "n_derived": 2,
+   "input_tokens": null,
+   "output_tokens": null,
+   "latency_ms": 17,
+   "answer": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 24,083,650 → 24,083,650 (+0 변동)\n- 직전 대비 비율(%): 41.11 → 40.85 (-0.26%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서 | 24,083,650 | 41.11\n- [answer] 이번 보고서 | 24,083,650 | 40.85\n- [answer] 직전 보고서 | 0 | 0\n- [answer] 이번 보고서 | 0 | 0\n- [answer] 의결권의 수 및 보유비율 |  | 의결권의 수 | 보유비율",
+   "raw_text": ""
+  },
+  {
+   "qid": "gold_b_6af756dd84b32fc13513f0bd",
+   "type": "NARRATIVE_MULTI_DOC",
+   "mode": "OPEN",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "exchange"
+   ],
+   "question": "현대건설이 2025-06-23 제출한 투자판단관련주요경영사항(수택동 재개발 정비사업 시공사 선정)의 핵심 내용과 현재 확정 여부는 무엇인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "event": "수택동 재개발 정비사업 시공사 선정 통보",
+     "client": "수택동 재개발 정비사업조합",
+     "company_share_contract_amount": "약 1조 9,648억원(당사분 70%, VAT 별도)",
+     "total_contract_amount": "2조 8,069억원",
+     "recent_revenue_krw": 32670268059918,
+     "revenue_ratio_percent": 6.01,
+     "fact_confirmation_date": "2025-06-21",
+     "certainty_status": "예정/미확정 — 향후 본계약 체결 시 확정 내용을 재공시할 예정"
+    },
+    "unit": null,
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "10/10",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": false,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 7855,
+    "usage": {
+     "promptTokens": 1733,
+     "completionTokens": 342,
+     "totalTokens": 2075
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 2105,
+    "degraded": true,
+    "degraded_reason": "unsupported"
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 85,
+   "n_evidence": 5,
+   "n_derived": 0,
+   "input_tokens": 1733,
+   "output_tokens": 342,
+   "latency_ms": 7922,
+   "answer": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 2. 주요내용 | - 현대건설은 아래와 같이 2025년 6월 21일, 수택동 재개발 정비사업조합이 발주한 수택동 재개발 정비사업의 시공사로 선정되었음을 통보받음.- 아  래 -1. 발주처 : 수택동 재개발 정비사업조합2. 계약금액 : 약 1조 9,648억원(당사분 70%, VAT 별도)3. 최근매출액 : 32,670,268,059,9184. 매출액대비 : 6.01%\n- [answer] 1. 제목 | 수택동 재개발 정비사업 시공사 선정\n- [answer] - 상기2. 주요내용의 계약금액은 총 계약금액 2조 8,069억원 중 당사분(70%)에 해당하는 금액임.- 상기 2.주요내용의 최근매출액은 2024년말 연결재무제표 기준임.- 상기 3.사실확인일은 시공자 선정 사실을 통보받은 일자임.- 본 사항은 사업 진행과정에서 변동될 수 있으며, 향후 본계약 체결 시 확정 내용을 재공시할 예정임.\n- [answer] 2. 주요내용 | - 현대건설은 아래와 같이 2025년 5월 26일, 개포주공6·7단지아파트 재건축정비사업조합이 발주한 개포주공6·7단지아파트 재건축정비사업의 시공사로 선정되었음을 통보받음.- 아  래 -1. 발주처 : 개포주공6·7단지아파트 재건축정비사업조합2. 계약금액 : 약 1조 5,138억원(당사 100%, VAT 별도)3. 최근매출액 : 32,670,268,059,9184. 매출액대비 : 4.63%\n- [answer] - 상기 2.주요내용의 최근매출액은 2024년말 연결재무제표 기준임.- 상기 3.사실확인일은 시공자 선정 사실을 통보받은 일자임.- 본 사항은 사업 진행과정에서 변동될 수 있으며, 향후 본계약 체결 시 확정 내용을 재공시할 예정임.",
+   "raw_text": "{\"answer\": \"현대건설은 2025년 6월 21일, 수택동 재개발 정비사업조합이 발주한 수택동 재개발 정비사업의 시공사로 선정되었으며, 계약금액은 약 1조 9,648억원이고, 이는 총 계약금액 2조 8,069억원 중 당사분(70%)에 해당합니다. 또한, 최근매출액 대비 비율은 6.01%입니다.\", \"evidence\": [{\"document_id\": \"[exchange_20250623800001]\", \"quote_or_fact\": \"현대건설은 아래와 같이 2025년 6월 21일, 수택동 재개발 정비사업조합이 발주한 수택동 재개발 정비사업의 시공사로 선정되었음을 통보받음.\"}, {\"document_id\": \"[exchange_20250623800001]\", \"quote_or_fact\": \"계약금액 : 약 1조 9,648억원(당사분 70%, VAT 별도)\"}, {\"document_id\": \"[exchange_20250623800001]\", \"quote_or_fact\": \"상기2. 주요내용의 계약금액은 총 계약금액 2조 8,069억원 중 당사분(70%)에 해당하는 금액임.\"}, {\"document_id\": \"[exchange_20250623800001]\", \"quote_or_fact\": \"최근매출액 대비 비율 : 6.01%\"}, {\"document_id\": \"[exchange_20250623800001]\", \"quote_or_fact\": \"본 사항은 사업 진행과정에서 변동될 수 있으며, 향후 본계약 체결 시 확정 내용을 재공시할 예정임.\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "gold_b_75e2226d84ae9c1e8bfad1bd",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "exchange"
+   ],
+   "question": "효성중공업이 2025-01-10에 공시한 단일판매ㆍ공급계약체결에서 계약상대방, 계약금액, 계약기간과 최근매출액 대비 비율은 각각 얼마인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "counterparty": "팔달동 재건축정비사업조합",
+     "contract_amount": 107890908203,
+     "contract_amount_unit": "원",
+     "revenue_ratio_percent": 2.51,
+     "period_start": "-",
+     "period_end": "-",
+     "period_note": "계약기간은 실착공일로부터 34개월임."
+    },
+    "unit": null,
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "0/3",
+   "value_score": 0.0,
+   "value_ok": false,
+   "llm_used": false,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 5478,
+    "usage": {
+     "promptTokens": 3713,
+     "completionTokens": 210,
+     "totalTokens": 3923
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 5759,
+    "degraded": true,
+    "degraded_reason": "empty_answer"
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 75,
+   "n_evidence": 1,
+   "n_derived": 0,
+   "input_tokens": 3713,
+   "output_tokens": 210,
+   "latency_ms": 5504,
+   "answer": "공시에서 확인한 값:\n- 2025년 매출액: 4,300,571,503,251",
+   "raw_text": "{\"answer\": {\"계약상대방\": \"팔달동 재건축정비사업조합\", \"계약금액\": \"174,131,367,853원\", \"계약기간\": \"실착공일로부터 34개월\", \"최근매출액 대비 비율\": \"2.51%\"}, \"evidence\": [{\"document_id\": \"[exchange_20250110800527]\", \"quote_or_fact\": \"계약상대 | 팔달동 재건축정비사업조합\"}, {\"document_id\": \"[exchange_20250110800527]\", \"quote_or_fact\": \"상기 계약의 총 금액은 174,131,367,853원(부가가치세 포함)\"}, {\"document_id\": \"[exchange_20250110800527]\", \"quote_or_fact\": \"계약기간은 실착공일로부터 34개월입니다.\"}, {\"document_id\": \"[exchange_20250110800527]\", \"quote_or_fact\": \"매출액대비(%) | 2.51\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "gold_b_7c610de1801a78e791b92f60",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "exchange"
+   ],
+   "question": "두산에너빌리티가 2025년 3월 13일 공시한 판매ㆍ공급계약체결(Rumah #1 IPP 공사수주)에서 계약상대방, 계약금액, 계약기간(시작일ㆍ종료일), 최근매출액 대비 비율은 각각 얼마인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "counterparty": "Rumal Energy Company",
+     "contract_amount": 1128260775513,
+     "contract_amount_unit": "원",
+     "period_start": "2025-03-12",
+     "period_end": "2028-05-31",
+     "revenue_ratio_percent": 6.41
+    },
+    "unit": "원",
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "1/8",
+   "value_score": 0.125,
+   "value_ok": false,
+   "llm_used": false,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 5268,
+    "usage": {
+     "promptTokens": 1770,
+     "completionTokens": 216,
+     "totalTokens": 1986
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 2174,
+    "degraded": true,
+    "degraded_reason": "empty_answer"
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 75,
+   "n_evidence": 1,
+   "n_derived": 0,
+   "input_tokens": 1770,
+   "output_tokens": 216,
+   "latency_ms": 5311,
+   "answer": "공시에서 확인한 값:\n- 2025년 매출액: 17,589,887,709,510",
+   "raw_text": "{\"answer\": {\"계약상대방\": \"Rumal Energy Company\", \"계약금액\": \"1,128,260,775,513원\", \"계약기간\": \"2025-03-12 ~ 2028-05-31\", \"최근매출액 대비 비율\": \"6.41%\"}, \"evidence\": [{\"document_id\": \"[exchange_20250313800043]\", \"quote_or_fact\": \"계약상대 | Rumal Energy Company\"}, {\"document_id\": \"[exchange_20250313800043]\", \"quote_or_fact\": \"계약금액(원) | 1,128,260,775,513\"}, {\"document_id\": \"[exchange_20250313800043]\", \"quote_or_fact\": \"계약기간 | 시작일 | 2025-03-12 종료일 | 2028-05-31\"}, {\"document_id\": \"[exchange_20250313800043]\", \"quote_or_fact\": \"매출액대비(%) | 6.41\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "gold_b_7d494870b3a53946dd2232c8",
+   "type": "NARRATIVE_MULTI_DOC",
+   "mode": "OPEN",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "major"
+   ],
+   "question": "우리기술의 주요사항보고서(제3자의 전환사채매수선택권 행사)에서 핵심 결정내용(회차·행사금액·행사비율·전환조건)과 기준일(전환사채 매수선택권 행사일)을 공시 근거로 설명해줘.",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "event": "제3자의 전환사채매수선택권 행사",
+     "bond_series": "14회차 무기명식 이권부 무보증 사모 전환사채",
+     "bond_issue_date": "2023-12-07",
+     "bond_maturity_date": "2028-12-07",
+     "exercised_face_amount_krw": 1000000000,
+     "total_face_amount_krw": 10000000000,
+     "exercise_ratio_percent": 10,
+     "exercise_date": "2025-08-18",
+     "exercise_price_krw_per_share": 1349,
+     "converted_shares": 741289,
+     "converted_ratio_percent": 0.45,
+     "current_status": "행사대가 1,035,529,000원(적용이자율 103.5529%)을 지급기일 2025-09-07에 지급 예정이며, 행사자 5인(노갑선 등)에게 매수선택권 행사 전환사채가 배분됨"
+    },
+    "unit": null,
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "9/23",
+   "value_score": 0.391304347826087,
+   "value_ok": false,
+   "llm_used": false,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 13146,
+    "usage": {
+     "promptTokens": 4862,
+     "completionTokens": 518,
+     "totalTokens": 5380
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 7292,
+    "degraded": true,
+    "degraded_reason": "unsupported"
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 85,
+   "n_evidence": 5,
+   "n_derived": 0,
+   "input_tokens": 4862,
+   "output_tokens": 518,
+   "latency_ms": 13279,
+   "answer": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 6. 전환사채 매수선택권 행사일 | 2025년 08월 18일\n- [answer] 5. 전환사채   매수선택권   행사 내역 | 매수선택권이 행사된 전환사채의권면(전자등록) 금액(원) (A) | 1,000,000,000\n- [answer] 행사비율(%) (A/B) | 10\n- [answer] 7. 행사대가   (사채 매수금액) | 금액(원) | 1,035,529,000\n- [answer] 9. 전환에 관한   사항 | 전환비율(%) | 100",
+   "raw_text": "{\"answer\": \"우리기술의 제3자 전환사채 매수선택권 행사에 대한 핵심 결정 내용은 다음과 같습니다.\\n\\n1. 회차: 14회차\\n2. 행사금액: 1,000,000,000원\\n3. 행사비율: 10%\\n4. 전환조건:\\n   - 전환비율: 100%\\n   - 보고일 현재 전환가액: 1,349원\\n   - 전환에 따라 발행할 주식: 741,289주\\n   - 주식총수 대비 비율: 0.45%\\n\\n또한, 전환사채 매수선택권 행사일의 기준일은 **2025년 08월 18일**입니다.\", \"evidence\": [{\"document_id\": \"major_20250818000219\", \"quote_or_fact\": \"1. 사채의 종류 | 회차 | 14 | 종류 | 무기명식 이권부 무보증 사모 전환사채\"}, {\"document_id\": \"major_20250818000219\", \"quote_or_fact\": \"5. 전환사채 매수선택권 행사 내역 | 매수선택권이 행사된 전환사채의권면(전자등록) 금액(원) (A) | 1,000,000,000\"}, {\"document_id\": \"major_20250818000219\", \"quote_or_fact\": \"행사비율(%) (A/B) | 10\"}, {\"document_id\": \"major_20250818000219\", \"quote_or_fact\": \"9. 전환에 관한 사항 | 전환비율(%) | 100\"}, {\"document_id\": \"major_20250818000219\", \"quote_or_fact\": \"보고일 현재 전환가액(원/주) | 1,349\"}, {\"document_id\": \"major_20250818000219\", \"quote_or_fact\": \"전환에 따라 발행할 주식 | 주식수 | 741,289\"}, {\"document_id\": \"major_20250818000219\", \"quote_or_fact\": \"주식총수 대비비율(%) | 0.45\"}, {\"document_id\": \"major_20250818000219\", \"quote_or_fact\": \"6. 전환사채 매수선택권 행사일 | 2025년 08월 18일\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "gold_b_8440e15f1cb9f79c66a6b787",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "exchange"
+   ],
+   "question": "삼성E&A가 2025-01-10 공시한 단일판매ㆍ공급계약체결(말레이시아 New Biorefinery Project)에서 계약상대방, 계약금액, 계약기간(시작일ㆍ종료일), 최근매출액 대비 비율과 공시유보 여부를 알려줘.",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "counterparty": "PENGERANG BIOREFINERY SDN. BHD",
+     "contract_amount": 817610116698,
+     "contract_amount_unit": "원",
+     "period_start": "2025-01-08",
+     "period_end": "2028-09-07",
+     "revenue_ratio_percent": 7.7,
+     "withheld": false
+    },
+    "unit": "원",
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "2/9",
+   "value_score": 0.2222222222222222,
+   "value_ok": false,
+   "llm_used": false,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 8103,
+    "usage": {
+     "promptTokens": 1224,
+     "completionTokens": 331,
+     "totalTokens": 1555
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 1274,
+    "degraded": true,
+    "degraded_reason": "empty_answer"
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 75,
+   "n_evidence": 1,
+   "n_derived": 0,
+   "input_tokens": 1224,
+   "output_tokens": 331,
+   "latency_ms": 8178,
+   "answer": "공시에서 확인한 값:\n- 2025년 매출액: 10,624,917,993,595",
+   "raw_text": "{\n    \"answer\": {\n        \"계약상대방\": \"PENGERANG BIOREFINERY SDN. BHD\",\n        \"계약금액\": \"817,610,116,698원\",\n        \"계약기간\": {\n            \"시작일\": \"2025-01-08\",\n            \"종료일\": \"2028-09-07\"\n        },\n        \"최근매출액 대비 비율\": \"7.70%\",\n        \"공시유보 여부\": \"유보사유 없음\"\n    },\n    \"evidence\": [\n        {\n            \"document_id\": \"[exchange_20250110800218]\",\n            \"quote_or_fact\": \"계약상대 | PENGERANG BIOREFINERY SDN. BHD\"\n        },\n        {\n            \"document_id\": \"[exchange_20250110800218]\",\n            \"quote_or_fact\": \"계약금액(원) | 817,610,116,698\"\n        },\n        {\n            \"document_id\": \"[exchange_20250110800218]\",\n            \"quote_or_fact\": \"계약기간 | 시작일 | 2025-01-08 종료일 | 2028-09-07\"\n        },\n        {\n            \"document_id\": \"[exchange_20250110800218]\",\n            \"quote_or_fact\": \"매출액대비(%) | 7.70\"\n        },\n        {\n            \"document_id\": \"[exchange_20250110800218]\",\n            \"quote_or_fact\": \"공시유보 관련내용 | 유보사유 | -\"\n        }\n    ],\n    \"uncertainty\": \"\"\n}"
+  },
+  {
+   "qid": "gold_b_8e8c9c7e2994614110d072bf",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "exchange"
+   ],
+   "question": "한미반도체가 2023년 6월 12일 공시한 단일판매ㆍ공급계약체결(반도체 제조용 장비 수주)에서 계약상대방, 계약금액, 계약기간(시작일ㆍ종료일), 최근매출액 대비 비율은 각각 얼마인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "counterparty": "Infineon Technologies Asia Pacific Pte Ltd",
+     "contract_amount": 1218731800,
+     "contract_amount_unit": "원",
+     "period_start": "2023-06-12",
+     "period_end": "2023-10-24",
+     "revenue_ratio_percent": 0.37
+    },
+    "unit": "원",
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "2/8",
+   "value_score": 0.25,
+   "value_ok": false,
+   "llm_used": false,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 5223,
+    "usage": {
+     "promptTokens": 1005,
+     "completionTokens": 221,
+     "totalTokens": 1226
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 823,
+    "degraded": true,
+    "degraded_reason": "empty_answer"
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 75,
+   "n_evidence": 1,
+   "n_derived": 0,
+   "input_tokens": 1005,
+   "output_tokens": 221,
+   "latency_ms": 5276,
+   "answer": "공시에서 확인한 값:\n- 2023년 매출액: 327,592,058,714",
+   "raw_text": "{\"answer\": {\"계약상대방\": \"Infineon Technologies Asia Pacific Pte Ltd\", \"계약금액\": \"1,218,731,800원\", \"계약기간\": \"2023-06-12 ~ 2023-10-24\", \"최근매출액 대비 비율\": \"0.37%\"}, \"evidence\": [{\"document_id\": \"[exchange_20230612800469]\", \"quote_or_fact\": \"계약상대 | Infineon Technologies Asia Pacific Pte Ltd\"}, {\"document_id\": \"[exchange_20230612800469]\", \"quote_or_fact\": \"계약금액(원) | 1,218,731,800\"}, {\"document_id\": \"[exchange_20230612800469]\", \"quote_or_fact\": \"계약기간 | 시작일 | 2023-06-12 종료일 | 2023-10-24\"}, {\"document_id\": \"[exchange_20230612800469]\", \"quote_or_fact\": \"매출액대비(%) | 0.37\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "gold_b_926d98d28ea51ea8bb8e6ea1",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "holding"
+   ],
+   "question": "한미반도체의 2024년 3월 6일 주식등의대량보유상황보고서(일반)에서 보고자 본인 성명, 직전보고서 대비 이번보고서의 보유주식등의 수ㆍ비율 변화, 보유목적은 무엇인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "reporter": "곽동신",
+     "before_report_date": "2023-12-01",
+     "before_shares": 53541672,
+     "before_ratio_percent": 55.01,
+     "after_report_date": "2024-03-06",
+     "after_shares": 53569672,
+     "after_ratio_percent": 55.03,
+     "change_shares": 28000,
+     "change_ratio_percent": 0.02,
+     "purpose": "경영권 영향"
+    },
+    "unit": "주",
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "10/12",
+   "value_score": 0.8333333333333334,
+   "value_ok": false,
+   "llm_used": false,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 3792,
+    "usage": {
+     "promptTokens": 4710,
+     "completionTokens": 124,
+     "totalTokens": 4834
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 7537,
+    "degraded": true,
+    "degraded_reason": "unsupported"
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 85,
+   "n_evidence": 5,
+   "n_derived": 0,
+   "input_tokens": 4710,
+   "output_tokens": 124,
+   "latency_ms": 3816,
+   "answer": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서 | 53,541,672 | 55.01\n- [answer] 이번 보고서 | 53,569,672 | 55.03\n- [answer] 직전 보고서 | 9,964,535 | 10.24\n- [answer] 이번보고서 | 2024년 03월 06일 | 곽동신 | 8 | 53,569,672 | 55.03 | 53,569,672 | 55.03 | 97,339,302\n- [answer] 직전보고서 | 2023년 12월 01일 | 곽동신 | 9 | 53,541,672 | 55.01 | 53,541,672 | 55.01 | 97,339,302",
+   "raw_text": "{\"answer\": \"곽동신, 28,000주, 0.02%, 경영권 영향\", \"evidence\": [{\"document_id\": \"[holding_20240306000024]\", \"quote_or_fact\": \"보고자 본인의 성명 | 곽동신\"} ,{\"document_id\": \"[holding_20240306000024]\", \"quote_or_fact\": \"증 감 | 28,000 | 0.02\"} ,{\"document_id\": \"[holding_20240306000024]\", \"quote_or_fact\": \"보유목적 | 경영권 영향\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "gold_b_9498154347fd9a2ceef8aa63",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "holding"
+   ],
+   "question": "LG씨엔에스의 2025-11-05 대량보유상황보고서(변동)에서 보고자, 보유주식등의 수·비율의 직전·이번 보고서 변화, 보고사유와 보유목적을 알려줘.",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "reporter": "크리스탈코리아 유한회사",
+     "issuer": "(주)엘지씨엔에스",
+     "relationship": "주요주주",
+     "shares_before": 15430479,
+     "ratio_before_percent": 15.93,
+     "shares_after": 8026799,
+     "ratio_after_percent": 8.28,
+     "report_reason": "시간외대량매매에 따른 보유지분율 1% 이상 변동, 주요계약의 주식등의 수 변경",
+     "holding_purpose": "경영권 영향 관련 세부계획 없음(의결권 행사 고려 예정)"
+    },
+    "unit": "주",
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "5/5",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "skipped": "deterministic_calculation"
+   },
+   "api": "NO_CALL",
+   "json_parse": "N/A",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 100,
+   "n_evidence": 5,
+   "n_derived": 2,
+   "input_tokens": null,
+   "output_tokens": null,
+   "latency_ms": 47,
+   "answer": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 15,430,479 → 8,026,799 (-7,403,680 변동)\n- 직전 대비 비율(%): 15.93 → 8.28 (-7.65%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서 | 15,430,479 | 15.93\n- [answer] 이번 보고서 | 8,026,799 | 8.28\n- [answer] 보고사유 | - 시간외대량매매에 따른 보유지분율 1% 이상 변동- 주요계약의 주식등의 수 변경\n- [answer] 의결권의 수 및 보유비율 |  | 의결권의 수 | 보유비율\n- [answer] 이번보고서 | 2025년 11월 05일 | 크리스탈코리아 유한회사 | 3 | 8,026,799 | 8.28 | 8,026,799 | 8.28 | 96,885,948",
+   "raw_text": ""
+  },
+  {
+   "qid": "gold_b_94c41243826898e3879b933e",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "holding"
+   ],
+   "question": "고려아연의 2024-09-04 대량보유상황보고서(변동)에서 보고자, 보유주식등의 수ㆍ보유비율의 직전ㆍ이번 보고서 변화와 보유목적을 알려줘.",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "reporter": "최윤범",
+     "shares_before": 10071580,
+     "ratio_before_percent": 48.65,
+     "shares_after": 10098385,
+     "ratio_after_percent": 48.78,
+     "holding_purpose": "경영권 영향"
+    },
+    "unit": null,
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "4/4",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "skipped": "deterministic_calculation"
+   },
+   "api": "NO_CALL",
+   "json_parse": "N/A",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 100,
+   "n_evidence": 5,
+   "n_derived": 2,
+   "input_tokens": null,
+   "output_tokens": null,
+   "latency_ms": 27,
+   "answer": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 10,071,580 → 10,098,385 (+26,805 변동)\n- 직전 대비 비율(%): 48.65 → 48.78 (+0.13%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서 | 10,071,580 | 48.65\n- [answer] 이번 보고서 | 10,098,385 | 48.78\n- [answer] 직전 보고서 | 291,188 | 1.41\n- [answer] 이번 보고서 | 291,188 | 1.41\n- [answer] 보고사유 | - 보유주식수 변동- 보유주식 등에 관한 계약의 변경",
+   "raw_text": ""
+  },
+  {
+   "qid": "gold_b_9d2e358034ea16bcee7d8edf",
+   "type": "COMPARISON_CALC",
+   "mode": "CLOSED",
+   "difficulty": "HARD",
+   "doc_groups": [
+    "periodic"
+   ],
+   "question": "셀트리온의 2023년 1분기보고서(2023.01.01~2023.03.31 연결 누적)와 2025년 1분기보고서(2025.01.01~2025.03.31 연결 누적)에 공시된 매출액과 영업이익을 같은 기준(연결, 분기 누적)으로 비교하고 각각의 증감률을 계산하면 얼마인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "basis": "연결, 분기 누적(1.1~3.31)",
+     "revenue_2023q1": 597564003593,
+     "revenue_2025q1": 841911660218,
+     "revenue_growth_percent": 40.89,
+     "operating_income_2023q1": 182434934168,
+     "operating_income_2025q1": 149420804340,
+     "operating_income_growth_percent": -18.1
+    },
+    "unit": "원",
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "6/8",
+   "value_score": 0.75,
+   "value_ok": false,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "skipped": "deterministic_calculation"
+   },
+   "api": "NO_CALL",
+   "json_parse": "N/A",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 100,
+   "n_evidence": 4,
+   "n_derived": 4,
+   "input_tokens": null,
+   "output_tokens": null,
+   "latency_ms": 281,
+   "answer": "계산 결과(원문 값에서 코드가 계산):\n- 매출액 증감액: 244,347,656,625\n- 매출액: 597,564,003,593 → 841,911,660,218 (40.89% 변동)\n- 영업이익 증감액: -33,014,129,828\n- 영업이익: 182,434,934,168 → 149,420,804,340 (-18.10% 변동)\n\n공시에서 확인한 값:\n- 2023년 매출액: 597,564,003,593\n- 2025년 매출액: 841,911,660,218\n- 2023년 영업이익: 182,434,934,168\n- 2025년 영업이익: 149,420,804,340",
+   "raw_text": ""
+  },
+  {
+   "qid": "gold_b_a534bc30d3414f2d094e7461",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "holding"
+   ],
+   "question": "(주)엘지유플러스에 대한 2024-01-11 대량보유상황보고서(신규, 보고자: Kopernik GlobalInvestors, LLC)에서 보고자, 보유주식등의 수·보유비율의 직전/이번 보고서 변화와 보유목적을 알려줘.",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "reporter": "Kopernik GlobalInvestors, LLC",
+     "shares_before": 0,
+     "ratio_before_percent": 0,
+     "shares_after": 22272289,
+     "ratio_after_percent": 5.1,
+     "purpose": "단순투자"
+    },
+    "unit": null,
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "4/4",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "error": "LLMUnavailable: JSON 파싱 실패: Expecting property name enclosed in double quotes: line 5 column 23 (char 90)"
+   },
+   "api": "OK",
+   "json_parse": "FAIL (JSON 파싱 실패: Expecting property name enclosed in double quotes: line 5 column 23 (char 90))",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 45,
+   "n_evidence": 5,
+   "n_derived": 0,
+   "input_tokens": 3174,
+   "output_tokens": 331,
+   "latency_ms": 8111,
+   "answer": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서 | 0 | 0\n- [answer] 이번 보고서 | 22,272,289 | 5.10\n- [answer] 직전 보고서 | 8,513,745 | 8.73\n- [answer] 이번 보고서 | 9,737,763 | 9.99\n- [answer] 보유주식등의 수 및 보유비율 |  | 보유주식등의 수 | 보유비율",
+   "raw_text": "```json\n{\n  \"answer\": {\n    \"직전 보고서\": [\n      { \"보유주식등의 수\": 0, \"보유비율\": 0 },\n      { \"보유주식등의 수\": 8,513,745, \"보유비율\": 8.73 }\n    ],\n    \"이번 보고서\": [\n      { \"보유주식등의 수\": 22,272,289, \"보유비율\": 5.10 },\n      { \"보유주식등의 수\": 9,737,763, \"보유비율\": 9.99 }\n    ],\n    \"보유목적\": \"단순투자\"\n  },\n  \"evidence\": [\n    { \"document_id\": \"[holding_20240111000046]\", \"quote_or_fact\": \"직전 보고서 | 0 | 0\" },\n    { \"document_id\": \"[holding_20240111000046]\", \"quote_or_fact\": \"이번 보고서 | 22,272,289 | 5.10\" },\n    { \"document_id\": \"[holding_20240607000069]\", \"quote_or_fact\": \"직전 보고서 | 8,513,745 | 8.73\" },\n    { \"document_id\": \"[holding_20240607000069]\", \"quote_or_fact\": \"이번 보고서 | 9,737,763 | 9.99\" },\n    { \"document_id\": \"[holding_20240111000046]\", \"quote_or_fact\": \"보유목적 | 단순투자\" }\n  ],\n  \"uncertainty\": \"\"\n}\n```"
+  },
+  {
+   "qid": "gold_b_ab2d46f2496fe203c8405cad",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "holding"
+   ],
+   "question": "삼성전기에 대해 2026-02-12 보고서작성기준일로 제출된 주식등의대량보유상황보고서(약식)에서 보고자, 직전/이번 보고서의 보유주식등의 수ㆍ보유비율과 보유목적은 각각 무엇인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "reporter": "BlackRock Fund Advisors위 대리인  변호사 윤태한               변호사 한병하",
+     "report_type": "신규",
+     "shares_before": null,
+     "ratio_before_percent": null,
+     "shares_after": 3739817,
+     "ratio_after_percent": 5.01,
+     "holding_purpose": "단순투자"
+    },
+    "unit": null,
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "2/2",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": true,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 6982,
+    "usage": {
+     "promptTokens": 4561,
+     "completionTokens": 262,
+     "totalTokens": 4823
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 8105
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "PARTIALLY_SUPPORTED",
+   "fabricated": [],
+   "confidence": 70,
+   "n_evidence": 5,
+   "n_derived": 0,
+   "input_tokens": 4561,
+   "output_tokens": 262,
+   "latency_ms": 7011,
+   "answer": "이번 보고서의 보고자는 BlackRockFundAdvisors이며, 보유주식등의 수는 3,739,817주, 보유비율은 5.01%, 보유목적은 단순투자입니다. 직전 보고서 또한 동일한 보고자로, 보유주식등의 수는 3,730,598주, 보유비율은 4.99%였습니다.",
+   "raw_text": "{\"answer\": \"이번 보고서의 보고자는 BlackRockFundAdvisors이며, 보유주식등의 수는 3,739,817주, 보유비율은 5.01%, 보유목적은 단순투자입니다. 직전 보고서 또한 동일한 보고자로, 보유주식등의 수는 3,730,598주, 보유비율은 4.99%였습니다.\", \"evidence\": [{\"document_id\": \"[holding_20260220000569]\", \"quote_or_fact\": \"이번보고서 | 2026년 02월 12일 | BlackRockFundAdvisors | 13 | 3,739,817 | 5.01 | 3,739,817 | 5.01 | 74,693,696\"}, {\"document_id\": \"[holding_20260220000569]\", \"quote_or_fact\": \"직전보고서 | 2026년 02월 11일 | BlackRockFundAdvisors | 13 | 3,730,598 | 4.99 | 3,730,598 | 4.99 | 74,693,696\"}, {\"document_id\": \"[holding_20260220000569]\", \"quote_or_fact\": \"보유목적 | 단순투자\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "gold_b_ad6f430084e4c5312283ab1a",
+   "type": "NARRATIVE_MULTI_DOC",
+   "mode": "OPEN",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "major"
+   ],
+   "question": "고려아연의 주요사항보고서(자기주식처분결정, 2025-02-05)에서 처분예정주식ㆍ금액, 처분목적, 처분결정일과 근거를 설명해줘.",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "shares_to_dispose": 6324,
+     "amount_krw": 5052876000,
+     "purpose": "우리사주조합 무상출연",
+     "decision_date": "2025-02-05",
+     "basis": "이 문서는 정정 표시가 없는 원 공시이며, 본 anchor 문서 범위 내에서 별도 정정공시가 확인되지 않음"
+    },
+    "unit": "원",
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "5/5",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": true,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 7776,
+    "usage": {
+     "promptTokens": 2619,
+     "completionTokens": 326,
+     "totalTokens": 2945
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 3787
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "PARTIALLY_SUPPORTED",
+   "fabricated": [],
+   "confidence": 70,
+   "n_evidence": 5,
+   "n_derived": 0,
+   "input_tokens": 2619,
+   "output_tokens": 326,
+   "latency_ms": 7823,
+   "answer": "고려아연의 주요사항보고서에 따르면, 처분 예정 주식 및 금액은 각각 6,324주와 5,052,876,000원이며, 처분 목적은 우리사주조합 무상출연입니다. 처분 결정일은 2025년 02월 05일이고, 처분 전 자기주식 보유 현황은 보통주식 2,539,726주로 이는 발행 주식 총수의 12.3%에 해당합니다.",
+   "raw_text": "{\"answer\": \"고려아연의 주요사항보고서에 따르면, 처분 예정 주식 및 금액은 각각 6,324주와 5,052,876,000원이며, 처분 목적은 우리사주조합 무상출연입니다. 처분 결정일은 2025년 02월 05일이고, 처분 전 자기주식 보유 현황은 보통주식 2,539,726주로 이는 발행 주식 총수의 12.3%에 해당합니다.\", \"evidence\": [{\"document_id\": \"[major_20250205000509]\", \"quote_or_fact\": \"1. 처분예정주식(주) | 보통주식 | 6,324\"}, {\"document_id\": \"[major_20250205000509]\", \"quote_or_fact\": \"3. 처분예정금액(원) | 보통주식 | 5,052,876,000\"}, {\"document_id\": \"[major_20250205000509]\", \"quote_or_fact\": \"5. 처분목적 | 우리사주조합 무상출연\"}, {\"document_id\": \"[major_20250205000509]\", \"quote_or_fact\": \"9. 처분결정일 | 2025년 02월 05일\"}, {\"document_id\": \"[major_20250205000509]\", \"quote_or_fact\": \"8. 처분 전 자기주식 보유현황 | 배당가능이익범위 내 취득(주) | 보통주식 | 2,539,726 | 비율(%) | 12.3\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "gold_b_b6f4714fd3c652594f5d82c1",
+   "type": "NARRATIVE_MULTI_DOC",
+   "mode": "OPEN",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "major"
+   ],
+   "question": "신한지주가 2024-12-05에 공시한 주요사항보고서(상각형조건부자본증권발행결정)의 핵심 결정내용(회차ㆍ종류ㆍ사채총액)과 이사회결의일(기준일)은 공시 근거로 각각 무엇인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "event_type": "상각형조건부자본증권발행결정",
+     "bond_series": "17",
+     "bond_kind": "국내 무기명식 무보증 무담보 상각형 조건부자본증권(신종자본증권)",
+     "bond_amount": 270000000000,
+     "bond_amount_unit": "원",
+     "resolution_date": "2024-12-05",
+     "current_status_basis": "본 문서(major_20241205000527) 자체는 문서 등록 메타데이터 기준 정정공시가 아닌 원공시이며, 발행결정 내용은 이사회결의일(2024-12-05) 기준으로 최초 공시된 내용임"
+    },
+    "unit": null,
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "8/9",
+   "value_score": 0.8888888888888888,
+   "value_ok": false,
+   "llm_used": false,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 6878,
+    "usage": {
+     "promptTokens": 5223,
+     "completionTokens": 270,
+     "totalTokens": 5493
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 8377,
+    "degraded": true,
+    "degraded_reason": "empty_answer"
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 85,
+   "n_evidence": 5,
+   "n_derived": 0,
+   "input_tokens": 5223,
+   "output_tokens": 270,
+   "latency_ms": 6930,
+   "answer": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [이사회결의일] 14. 이사회결의일(결정일) | 2024년 12월 05일\n- [answer] 1. 사채의 종류 | 회차 | 17 | 종류 | 국내 무기명식 무보증 무담보 상각형 조건부자본증권(신종자본증권)\n- [answer] 2. 사채의 권면(전자등록)총액 (원) | 270,000,000,000\n- [answer] 2-1. (해외발행) | 권면(전자등록)총액(통화단위) | - | -\n- [answer] 15. 증권신고서 제출대상 여부 | 예",
+   "raw_text": "```json\n{\n  \"answer\": {\n    \"회차ㆍ종류ㆍ사채총액\": \"회차 17, 국내 무기명식 무보증 무담보 상각형 조건부자본증권(신종자본증권), 270,000,000,000원\",\n    \"이사회결의일(기준일)\": \"2024년 12월 05일\"\n  },\n  \"evidence\": [\n    {\n      \"document_id\": \"[major_20241205000527]\",\n      \"quote_or_fact\": \"1. 사채의 종류 | 회차 | 17 | 종류 | 국내 무기명식 무보증 무담보 상각형 조건부자본증권(신종자본증권)\"\n    },\n    {\n      \"document_id\": \"[major_20241205000527]\",\n      \"quote_or_fact\": \"2. 사채의 권면(전자등록)총액 (원) | 270,000,000,000\"\n    },\n    {\n      \"document_id\": \"[major_20241205000527]\",\n      \"quote_or_fact\": \"14. 이사회결의일(결정일) | 2024년 12월 05일\"\n    }\n  ],\n  \"uncertainty\": \"\"\n}\n```"
+  },
+  {
+   "qid": "gold_b_bbde1cf7dec999a7915f4b4a",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "holding"
+   ],
+   "question": "와이지엔터테인먼트에 대해 2023-04-25 보고서작성기준일로 제출된 주식등의대량보유상황보고서(일반)에서 보고자, 직전/이번 보고서의 보유주식등의 수ㆍ보유비율과 보유목적은 각각 무엇인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "reporter": "양현석",
+     "shares_before": 4650276,
+     "ratio_before_percent": 24.92,
+     "shares_after": 4646276,
+     "ratio_after_percent": 24.89,
+     "holding_purpose": "경영권 영향"
+    },
+    "unit": null,
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "4/4",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": true,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 4821,
+    "usage": {
+     "promptTokens": 3692,
+     "completionTokens": 178,
+     "totalTokens": 3870
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 5808
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "PARTIALLY_SUPPORTED",
+   "fabricated": [],
+   "confidence": 70,
+   "n_evidence": 5,
+   "n_derived": 0,
+   "input_tokens": 3692,
+   "output_tokens": 178,
+   "latency_ms": 4837,
+   "answer": "직전 보고서에서는 4,650,276주를 보유하고 있었으며, 이는 24.92%에 해당하는 비율이었습니다. 이번 보고서에서는 4,646,276주를 보유하고 있으며, 이는 24.89%입니다. 또한, 직전 보고서에서의 보유 목적은 경영권 영향이었으며, 이번 보고서에서도 동일한 목적이 유지되고 있습니다.",
+   "raw_text": "{\"answer\": \"직전 보고서에서는 4,650,276주를 보유하고 있었으며, 이는 24.92%에 해당하는 비율이었습니다. 이번 보고서에서는 4,646,276주를 보유하고 있으며, 이는 24.89%입니다. 또한, 직전 보고서에서의 보유 목적은 경영권 영향이었으며, 이번 보고서에서도 동일한 목적이 유지되고 있습니다.\", \"evidence\": [{\"document_id\": \"[holding_20230425000545]\", \"quote_or_fact\": \"직전 보고서 | 4,650,276 | 24.92\"}, {\"document_id\": \"[holding_20230425000545]\", \"quote_or_fact\": \"이번 보고서 | 4,646,276 | 24.89\"}, {\"document_id\": \"[holding_20230425000545]\", \"quote_or_fact\": \"경영권 영향\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "gold_b_c6076b4bb1e65e4bf8f3efeb",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "exchange"
+   ],
+   "question": "LG씨엔에스가 2025-12-29 공시한 단일판매ㆍ공급계약체결(「프로젝트 NEO」계정계 차세대 구축, 계약상대방 NH농협은행)에서 계약금액은 얼마이며, 공시되지 않았다면 그 유보사유와 유보기한은?",
+   "expected": {
+    "status": "WITHHELD",
+    "value": {
+     "counterparty": "NH농협은행",
+     "contract_amount": null,
+     "withheld": true,
+     "withholding_reason": "경영상 비밀유지",
+     "withholding_deadline": "2029-04-04",
+     "recent_revenue": 5982627063218,
+     "period_start": "2026-01-05",
+     "period_end": "2028-04-04"
+    },
+    "unit": "원",
+    "reason_code": "DISCLOSURE_WITHHELD_STATED"
+   },
+   "status": "WITHHELD",
+   "expected_status": "WITHHELD",
+   "status_ok": true,
+   "value_label": "9/11",
+   "value_score": 0.8181818181818182,
+   "value_ok": null,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "skipped": "withheld_disclosure"
+   },
+   "api": "NO_CALL",
+   "json_parse": "N/A",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 70,
+   "n_evidence": 5,
+   "n_derived": 0,
+   "input_tokens": null,
+   "output_tokens": null,
+   "latency_ms": 145,
+   "answer": "공시유보 사항이다 — 해당 값은 공시에서 확인할 수 없다.\n- 유보사유: 경영상 비밀유지\n- 유보기한: 2029-04-04\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [계약금액] 2. 계약내역 | 계약금액(원) | -\n- [계약상대] 3. 계약상대 | NH농협은행\n- [answer] - 체결계약명 | 「프로젝트 NEO」계정계 차세대 구축\n- [answer] 5. 계약기간 | 시작일 | 2026-01-05\n- [answer] 유보기한 | 2029-04-04",
+   "raw_text": ""
+  },
+  {
+   "qid": "gold_b_da1f1a3f66383d37ae6bd524",
+   "type": "EVENT_TRACE",
+   "mode": "OPEN",
+   "difficulty": "HARD",
+   "doc_groups": [
+    "major"
+   ],
+   "question": "신한지주의 [기재정정]주요사항보고서(상각형조건부자본증권발행결정, 2025-02-07)에서 정정된 핵심 내용(권면총액·이율)과 기준일, 정정 후 현재 유효한 값을 공시 근거로 설명해줘.",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "core_event": "신한지주 상각형조건부자본증권(신종자본증권) 발행조건 확정에 따른 정정 신고",
+     "correction_basis": "발행조건 결정에 따른 정정",
+     "corrections": [
+      {
+       "item": "사채의 권면(전자등록)총액(원)",
+       "before": 270000000000,
+       "after": 400000000000
+      },
+      {
+       "item": "사채의 이율",
+       "before": "미확정(-)",
+       "after": "표면이자율(%): 3.90"
+      }
+     ],
+     "latest_effective_status": "이 [기재정정] 공시가 최신 유효 버전이며 정정 후 권면총액 4,000억원·표면이자율 3.90%가 현재 유효함"
+    },
+    "unit": null,
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "0/5",
+   "value_score": 0.0,
+   "value_ok": false,
+   "llm_used": false,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 10060,
+    "usage": {
+     "promptTokens": 5417,
+     "completionTokens": 407,
+     "totalTokens": 5824
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 8278,
+    "degraded": true,
+    "degraded_reason": "unsupported"
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 85,
+   "n_evidence": 4,
+   "n_derived": 0,
+   "input_tokens": 5417,
+   "output_tokens": 407,
+   "latency_ms": 10492,
+   "answer": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 1. 정정대상 공시서류 : 주요사항보고서 (상각형 조건부 자본증권 발행결정)\n- [answer] 구 분 | 회차 | 납입일 | 주요사항보고서의 자금사용 계획 | 실제 자금사용 내역 | 차이발생 사유 등\n- [answer] (기준일 : | 2025년 09월 30일 | ) | (단위 : 백만원)\n- [answer] 신종자본증권 | 499 | 2024.08.12 | 운영자금 | 100,000 | 운영자금 | 100,000 | -",
+   "raw_text": "```json\n{\n  \"answer\": \"정정된 핵심 내용은 권면총액이 400,000백만원에서 499,000백만원으로 변경되었고, 이율은 4.25%에서 4.56%로 변경되었습니다. 기준일은 2025년 09월 30일이며, 정정 후 현재 유효한 값은 권면총액 499,000백만원, 이율 4.56%입니다.\",\n  \"evidence\": [\n    {\n      \"document_id\": \"[major_20250207000299]\",\n      \"quote_or_fact\": \"1. 정정대상 공시서류 : 주요사항보고서 (상각형 조건부 자본증권 발행결정)\"\n    },\n    {\n      \"document_id\": \"[periodic_20251114002208]\",\n      \"quote_or_fact\": \"(기준일 : | 2025년 09월 30일 | )\"\n    },\n    {\n      \"document_id\": \"[periodic_20251114002208]\",\n      \"quote_or_fact\": \"신종자본증권 | 499 | 2024.08.12 | 운영자금 | 100,000\"\n    },\n    {\n      \"document_id\": \"[periodic_20251114002208]\",\n      \"quote_or_fact\": \"17회 상각형 조건부자본증권 | 2025-02-13 | - | 400,000\"\n    },\n    {\n      \"document_id\": \"[periodic_20251114002208]\",\n      \"quote_or_fact\": \"17회 상각형 조건부자본증권 | 2025-02-13 | - | 499,000\"\n    },\n    {\n      \"document_id\": \"[periodic_20251114002208]\",\n      \"quote_or_fact\": \"발행금리 | 4.25% | 4.56%\"\n    }\n  ],\n  \"uncertainty\": \"\"\n}\n```"
+  },
+  {
+   "qid": "gold_b_e2808b0ce73a5ddd72f7508b",
+   "type": "NARRATIVE_MULTI_DOC",
+   "mode": "OPEN",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "major"
+   ],
+   "question": "엔씨소프트가 2024-10-21 제출한 주요사항보고서(회사분할결정)의 핵심 결정 내용과 이사회결의일, 분할기일 등 주요 일정은 무엇인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "decision_type": "회사분할 결정(단순·물적분할, 4개 사업부문 분할하여 신설회사 4곳 설립)",
+     "target_divisions": "TL사업부문, LLL사업부문, AI서비스연구사업부문, TACTAN사업부문",
+     "board_resolution_date": "2024-10-21",
+     "shareholder_meeting_date": "2024-11-28",
+     "split_effective_date": "2025-02-01",
+     "split_registration_date": "2025-02-03",
+     "status": "이사회결의 완료, 분할기일(2025-02-01) 기준 진행 예정"
+    },
+    "unit": null,
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "17/17",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": true,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 16880,
+    "usage": {
+     "promptTokens": 8215,
+     "completionTokens": 993,
+     "totalTokens": 9208
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 14099
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "PARTIALLY_SUPPORTED",
+   "fabricated": [],
+   "confidence": 70,
+   "n_evidence": 5,
+   "n_derived": 0,
+   "input_tokens": 8215,
+   "output_tokens": 993,
+   "latency_ms": 16960,
+   "answer": "엔씨소프트의 2024-10-21 제출한 주요사항보고서(회사분할결정)의 핵심 결정 내용은 다음과 같습니다.\n\n1. 분할방법: 상법 제530조의2 내지 제530조의12의 규정 및 본 분할계획서에서 정하는 바에 따라 엔씨소프트는 영위하는 사업 중 TL사업부문, LLL사업부문, AI서비스연구사업부문 및 TACTAN사업부문을 각 분할하여 신설회사들을 설립하고, 이와 함께 엔씨소프트가 존속하면서 각 신설회사 발행주식의 100%를 배정받는 단순물적분할 방식으로 분할합니다. 분할 후 엔씨소프트는 상장법인으로 존속하고 각 신설회사는 비상장법인으로 합니다.\n2. 분할목적: 분할회사가 영위하는 사업 중 분할대상부문을 각 분할하여 사업의 전문성을 제고하고, 핵심경쟁력 강화에 집중하고자 합니다.\n3. 분할의 중요영향 및 효과: 본건 분할은 상법 제530조의2 내지 제530조의12 규정이 정하는 바에 따라 단순·물적분할 방식으로 진행됩니다. 이에 본건 분할 전·후 엔씨소프트의 최대주주 소유주식 및 지분율의 변동은 없습니다.\n4. 분할비율: 분할회사가 각 분할신설회사 발행주식의 100%를 배정받는 단순·물적분할 방식이므로 분할비율을 산정하지 않습니다.\n5. 분할로 이전할 사업 및 재산의 내용: 분할회사는 본 분할계획서가 정하는 바에 따라 분할대상부문에 속하는 일체의 적극, 소극재산과 공법상의 권리·의무를 포함한 기타의 권리·의무와 재산적 가치 있는 사실관계를 각 신설회사에게 이전합니다.\n6. 분할 후 존속회사: 주식회사 엔씨소프트(NCSOFT Corporation)\n   - 분할후 재무내용(원): 자산총계 4,062,862,461,952원, 부채총계 840,574,370,325원, 자본총계 3,222,288,091,627원, 자본금 10,977,011,000원\n   - 주요사업: 게임소프트웨어 제작업, 기타\n\n주요 일정은 다음과 같습니다:\n- 이사회결의일: 2024년 10월 21일\n- 주주확정기준일: 2024년 11월 05일\n- 주주명부폐쇄기간: 시작일 없음, 종료일 없음\n- 분할반대의사통지 접수기간: 2024년 11월 13일부터 2024년 11월 27일까지\n- 주주총회예정일자: 2024년 11월 28일\n- 주식매수청구권 행사기간: 2024년 11월 28일부터 2024년 12월 18일까지\n- 분할기일: 2025년 02월 01일\n- 종료보고 총회일: 2025년 02월 03일\n- 분할등기예정일자: 2025년 02월 03일",
+   "raw_text": "{\"answer\": \"엔씨소프트의 2024-10-21 제출한 주요사항보고서(회사분할결정)의 핵심 결정 내용은 다음과 같습니다.\\n\\n1. 분할방법: 상법 제530조의2 내지 제530조의12의 규정 및 본 분할계획서에서 정하는 바에 따라 엔씨소프트는 영위하는 사업 중 TL사업부문, LLL사업부문, AI서비스연구사업부문 및 TACTAN사업부문을 각 분할하여 신설회사들을 설립하고, 이와 함께 엔씨소프트가 존속하면서 각 신설회사 발행주식의 100%를 배정받는 단순물적분할 방식으로 분할합니다. 분할 후 엔씨소프트는 상장법인으로 존속하고 각 신설회사는 비상장법인으로 합니다.\\n2. 분할목적: 분할회사가 영위하는 사업 중 분할대상부문을 각 분할하여 사업의 전문성을 제고하고, 핵심경쟁력 강화에 집중하고자 합니다.\\n3. 분할의 중요영향 및 효과: 본건 분할은 상법 제530조의2 내지 제530조의12 규정이 정하는 바에 따라 단순·물적분할 방식으로 진행됩니다. 이에 본건 분할 전·후 엔씨소프트의 최대주주 소유주식 및 지분율의 변동은 없습니다.\\n4. 분할비율: 분할회사가 각 분할신설회사 발행주식의 100%를 배정받는 단순·물적분할 방식이므로 분할비율을 산정하지 않습니다.\\n5. 분할로 이전할 사업 및 재산의 내용: 분할회사는 본 분할계획서가 정하는 바에 따라 분할대상부문에 속하는 일체의 적극, 소극재산과 공법상의 권리·의무를 포함한 기타의 권리·의무와 재산적 가치 있는 사실관계를 각 신설회사에게 이전합니다.\\n6. 분할 후 존속회사: 주식회사 엔씨소프트(NCSOFT Corporation)\\n   - 분할후 재무내용(원): 자산총계 4,062,862,461,952원, 부채총계 840,574,370,325원, 자본총계 3,222,288,091,627원, 자본금 10,977,011,000원\\n   - 주요사업: 게임소프트웨어 제작업, 기타\\n\\n주요 일정은 다음과 같습니다:\\n- 이사회결의일: 2024년 10월 21일\\n- 주주확정기준일: 2024년 11월 05일\\n- 주주명부폐쇄기간: 시작일 없음, 종료일 없음\\n- 분할반대의사통지 접수기간: 2024년 11월 13일부터 2024년 11월 27일까지\\n- 주주총회예정일자: 2024년 11월 28일\\n- 주식매수청구권 행사기간: 2024년 11월 28일부터 2024년 12월 18일까지\\n- 분할기일: 2025년 02월 01일\\n- 종료보고 총회일: 2025년 02월 03일\\n- 분할등기예정일자: 2025년 02월 03일\", \"evidence\": [{\"document_id\": \"major_20241021000037\", \"quote_or_fact\": \"주요사항보고서(회사분할결정)\"}, {\"document_id\": \"major_20241021000037\", \"quote_or_fact\": \"주요사업 | 게임소프트웨어 제작업, 기타(주식회사 엔씨소프트 정관 참조)\"}, {\"document_id\": \"major_20241021000037\", \"quote_or_fact\": \"6. 분할 후 존속회사 | 회사명 | 주식회사 엔씨소프트(NCSOFT Corporation)\"}, {\"document_id\": \"major_20241021000037\", \"quote_or_fact\": \"분할후 재무내용(원) | 자산총계 | 4,062,862,461,952 | 부채총계 | 840,574,370,325\\n자본총계 | 3,222,288,091,627 | 자본금 | 10,977,011,000\\n2024년 06월 30일 | 현재기준\"}, {\"document_id\": \"major_20241021000037\", \"quote_or_fact\": \"9. 분할일정 | 이사회결의일 | 2024년 10월 21일\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "gold_b_e5cc91d1b8a8bef8695cb6cd",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "holding"
+   ],
+   "question": "KB금융의 2026-03-11 대량보유상황보고서(약식, 변동)에서 보고자, 보유주식등의 수ㆍ보유비율의 직전ㆍ이번 보고서 변화와 보유목적을 알려줘.",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "reporter": "BlackRock Fund Advisors (대리인: 변호사 윤태한, 변호사 한병하)",
+     "shares_before": 25050939,
+     "ratio_before_percent": 6.02,
+     "shares_after": 26288623,
+     "ratio_after_percent": 7.05,
+     "holding_purpose": "단순투자"
+    },
+    "unit": null,
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "4/4",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "skipped": "deterministic_calculation"
+   },
+   "api": "NO_CALL",
+   "json_parse": "N/A",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 100,
+   "n_evidence": 5,
+   "n_derived": 2,
+   "input_tokens": null,
+   "output_tokens": null,
+   "latency_ms": 131,
+   "answer": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 25,050,939 → 26,288,623 (+1,237,684 변동)\n- 직전 대비 비율(%): 6.02 → 7.05 (+1.03%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서 | 25,050,939 | 6.02\n- [answer] 이번 보고서 | 26,288,623 | 7.05\n- [answer] 보유주식등의 수 및 보유비율 |  | 보유주식등의 수 | 보유비율\n- [answer] ※ 보고자 본인은 보고서작성기준일 현재 본인과 특별관계자의 주식등의 보유상황을 관련 법규 및 기재상의 주의에 따라 정확하게 작성하였고, 중요한 사항의 허위기재 또는 기재누락이 없음을 확인합니다.\n- [answer] 이번보고서 | 2026년 02월 18일 | BlackRockFundAdvisors | 15 | 26,288,623 | 7.05 | 24,280,424 | 6.51 | 372,850,455",
+   "raw_text": ""
+  },
+  {
+   "qid": "gold_b_e95de359f794df64ffab5044",
+   "type": "ANSWERABILITY",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "major"
+   ],
+   "question": "제공된 코퍼스 스냅샷 내에 현대제철(corp_code 00145880)의 major 유형(주요사항보고서) 공시가 존재하는가?",
+   "expected": {
+    "status": "NOT_FOUND",
+    "value": {
+     "corp_code": "00145880",
+     "corp_name": "현대제철",
+     "queried_doc_group": "major",
+     "document_count": 0
+    },
+    "unit": null,
+    "reason_code": "ZERO_DOCUMENT_IN_CORPUS_MANIFEST_CHECK"
+   },
+   "status": "NOT_FOUND",
+   "expected_status": "NOT_FOUND",
+   "status_ok": true,
+   "value_label": "0/2",
+   "value_score": 0.0,
+   "value_ok": null,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "skipped": "corpus_existence_rule"
+   },
+   "api": "NO_CALL",
+   "json_parse": "N/A",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 15,
+   "n_evidence": 0,
+   "n_derived": 0,
+   "input_tokens": null,
+   "output_tokens": null,
+   "latency_ms": 1,
+   "answer": "현대제철의 major 공시는 현재 코퍼스에 포함되어 있지 않다.",
+   "raw_text": ""
+  },
+  {
+   "qid": "gold_b_ebc8414ef6c306d4ead0cbe0",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "exchange"
+   ],
+   "question": "LIG넥스원이 2023년 12월 22일 공시한 단일판매ㆍ공급계약체결('23년 무전기세트 외 3항목)에서 계약상대방, 계약금액, 계약기간(시작일ㆍ종료일), 최근매출액 대비 비율은 각각 얼마인가?",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "counterparty": "대한민국 방위사업청",
+     "contract_amount": 64300000000,
+     "contract_amount_unit": "원",
+     "period_start": "2023-12-21",
+     "period_end": "2026-10-30",
+     "revenue_ratio_percent": 2.9
+    },
+    "unit": "원",
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "1/8",
+   "value_score": 0.125,
+   "value_ok": false,
+   "llm_used": false,
+   "llm_meta": {
+    "used": true,
+    "provider": "clova",
+    "model": "HCX-005",
+    "latency_ms": 9112,
+    "usage": {
+     "promptTokens": 4816,
+     "completionTokens": 242,
+     "totalTokens": 5058
+    },
+    "prompt_version": "qa-2026-08-31.1",
+    "prompt_chars": 7376,
+    "degraded": true,
+    "degraded_reason": "empty_answer"
+   },
+   "api": "OK",
+   "json_parse": "PASS",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 75,
+   "n_evidence": 1,
+   "n_derived": 0,
+   "input_tokens": 4816,
+   "output_tokens": 242,
+   "latency_ms": 9266,
+   "answer": "공시에서 확인한 값:\n- 2023년 매출액: 546,799",
+   "raw_text": "{\"answer\": {\"계약상대방\": \"대한민국 방위사업청\", \"계약금액\": \"64,300,000,000원\", \"계약기간\": {\"시작일\": \"2023-12-21\", \"종료일\": \"2026-10-30\"}, \"최근매출액 대비 비율\": \"2.90%\"}, \"evidence\": [{\"document_id\": \"[exchange_20231222800008]\", \"quote_or_fact\": \"계약상대방 | 대한민국 방위사업청\"}, {\"document_id\": \"[exchange_20231222800008]\", \"quote_or_fact\": \"계약금액(원) | 64,300,000,000\"}, {\"document_id\": \"[exchange_20231222800008]\", \"quote_or_fact\": \"계약기간 | 시작일 | 2023-12-21 종료일 | 2026-10-30\"}, {\"document_id\": \"[exchange_20231222800008]\", \"quote_or_fact\": \"최근매출액(원) | 2,220,751,868,438 매출액대비(%) | 2.90%\"}], \"uncertainty\": \"\"}"
+  },
+  {
+   "qid": "gold_b_ec84639c43268bb42cc60c83",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "holding"
+   ],
+   "question": "파마리서치의 2025-01-06 대량보유상황보고서(약식, 변동)에서 보고자, 보유주식등의 수ㆍ보유비율의 직전ㆍ이번 보고서 변화와 보유목적을 알려줘.",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "reporter": "국민연금공단",
+     "shares_before": 603804,
+     "ratio_before_percent": 5.8,
+     "shares_after": 550225,
+     "ratio_after_percent": 4.71,
+     "holding_purpose": "단순투자",
+     "report_basis_date": "2024-11-07"
+    },
+    "unit": null,
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "7/7",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "skipped": "deterministic_calculation"
+   },
+   "api": "NO_CALL",
+   "json_parse": "N/A",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 100,
+   "n_evidence": 5,
+   "n_derived": 2,
+   "input_tokens": null,
+   "output_tokens": null,
+   "latency_ms": 12,
+   "answer": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 603,804 → 550,225 (-53,579 변동)\n- 직전 대비 비율(%): 5.80 → 4.71 (-1.09%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서 | 603,804 | 5.80\n- [answer] 이번 보고서 | 550,225 | 4.71\n- [answer] 보유주식등의 수 및 보유비율 |  | 보유주식등의 수 | 보유비율\n- [answer] 직전보고서 | 2024년 06월 27일 | 국민연금공단 | 1 | 603,804 | 5.80 | 603,804 | 5.80 | 10,413,023\n- [answer] 이번보고서 | 2024년 11월 07일 | 국민연금공단 | 1 | 550,225 | 4.71 | 550,225 | 4.71 | 11,685,247",
+   "raw_text": ""
+  },
+  {
+   "qid": "gold_b_f23bcdcee714d7436867d683",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "holding"
+   ],
+   "question": "효성중공업의 2025-04-16 대량보유상황보고서(변동)에서 보고자, 보유주식등의 수·비율의 직전·이번 보고서 변화, 보고사유와 보유목적을 알려줘.",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "reporter": "(주)효성",
+     "issuer": "효성중공업(주)",
+     "relationship": "최대주주",
+     "shares_before": 4549887,
+     "ratio_before_percent": 48.79,
+     "shares_after": 4555604,
+     "ratio_after_percent": 48.86,
+     "report_reason": "특별관계자 추가 및 보유주식수 변동, 보유주식에 관한 담보계약 변경",
+     "holding_purpose": "경영권 영향(세부계획 없음, 최대주주로서 영향력 행사 가능)"
+    },
+    "unit": "주",
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "4/4",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "skipped": "deterministic_calculation"
+   },
+   "api": "NO_CALL",
+   "json_parse": "N/A",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 100,
+   "n_evidence": 5,
+   "n_derived": 2,
+   "input_tokens": null,
+   "output_tokens": null,
+   "latency_ms": 19,
+   "answer": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 4,549,887 → 4,555,604 (+5,717 변동)\n- 직전 대비 비율(%): 48.79 → 48.86 (+0.07%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서 | 4,549,887 | 48.79\n- [answer] 이번 보고서 | 4,555,604 | 48.86\n- [answer] 직전 보고서 | 479,780 | 5.15\n- [answer] 이번 보고서 | 456,510 | 4.90\n- [answer] 보고사유 | 특별관계자 추가 및 보유주식수 변동, 보유주식에 관한 담보계약 변경",
+   "raw_text": ""
+  },
+  {
+   "qid": "gold_b_f9b84c1e14bca2d1befcce62",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "holding"
+   ],
+   "question": "하나금융지주의 2023-06-08 대량보유상황보고서(약식, 변동)에서 보고자, 보유주식등의 수·비율의 직전·이번 보고서 변화와 보유목적을 알려줘.",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "reporter": "The Capital Group Companies, Inc.(대리인 법무법인(유) 세종)",
+     "issuer": "(주)하나금융지주",
+     "shares_before": 16421618,
+     "ratio_before_percent": 5.55,
+     "shares_after": 16421779,
+     "ratio_after_percent": 5.55,
+     "holding_purpose": "단순투자"
+    },
+    "unit": "주",
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "4/4",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "skipped": "deterministic_calculation"
+   },
+   "api": "NO_CALL",
+   "json_parse": "N/A",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 100,
+   "n_evidence": 5,
+   "n_derived": 2,
+   "input_tokens": null,
+   "output_tokens": null,
+   "latency_ms": 19,
+   "answer": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 16,421,618 → 16,421,779 (+161 변동)\n- 직전 대비 비율(%): 5.55 → 5.55 (+0.00%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서 | 16,421,618 | 5.55\n- [answer] 이번 보고서 | 16,421,779 | 5.55\n- [answer] 보유주식등의 수 및 보유비율 |  | 보유주식등의 수 | 보유비율\n- [answer] ※ 보고자 본인은 보고서작성기준일 현재 본인과 특별관계자의 주식등의 보유상황을 관련 법규 및 기재상의 주의에 따라 정확하게 작성하였고, 중요한 사항의 허위기재 또는 기재누락이 없음을 확인합니다.\n- [answer] 직전보고서 | 2023년 04월 28일 | The Capital Group Companies, Inc. | 32 | 16,421,618 | 5.55 | 16,421,618 | 5.55 | 295,903,476",
+   "raw_text": ""
+  },
+  {
+   "qid": "gold_b_faeb66b34981643d354f6655",
+   "type": "NUMERIC_LOOKUP",
+   "mode": "CLOSED",
+   "difficulty": "MEDIUM",
+   "doc_groups": [
+    "holding"
+   ],
+   "question": "고려아연의 2024-12-19 대량보유상황보고서(변동)에서 보고자, 보유주식등의 수·비율의 직전·이번 보고서 변화, 보고사유와 보유목적을 알려줘.",
+   "expected": {
+    "status": "SUPPORTED",
+    "value": {
+     "reporter": "주식회사 한국기업투자홀딩스",
+     "issuer": "고려아연(주)",
+     "relationship": "주주",
+     "shares_before": 7368124,
+     "ratio_before_percent": 35.59,
+     "shares_after": 7602575,
+     "ratio_after_percent": 36.72,
+     "report_reason": "보유주식수 변동, 보유주식등에 관한 계약 변경",
+     "holding_purpose": "경영권 참여 및 지배구조 개선 목적의 영향력 행사"
+    },
+    "unit": "주",
+    "reason_code": "DOCUMENTIR_VERBATIM_LOOKUP"
+   },
+   "status": "SUPPORTED",
+   "expected_status": "SUPPORTED",
+   "status_ok": true,
+   "value_label": "4/4",
+   "value_score": 1.0,
+   "value_ok": true,
+   "llm_used": false,
+   "llm_meta": {
+    "used": false,
+    "skipped": "deterministic_calculation"
+   },
+   "api": "NO_CALL",
+   "json_parse": "N/A",
+   "validator": "SUPPORTED",
+   "fabricated": [],
+   "confidence": 100,
+   "n_evidence": 5,
+   "n_derived": 2,
+   "input_tokens": null,
+   "output_tokens": null,
+   "latency_ms": 21,
+   "answer": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 7,368,124 → 7,602,575 (+234,451 변동)\n- 직전 대비 비율(%): 35.59 → 36.72 (+1.13%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서 | 7,368,124 | 35.59\n- [answer] 이번 보고서 | 7,602,575 | 36.72\n- [answer] 직전 보고서 | 8,246,783 | 39.83\n- [answer] 이번 보고서 | 8,481,234 | 40.97\n- [answer] 보고사유 | 보유주식수 변동, 보유주식등에 관한 계약 변경",
+   "raw_text": ""
+  }
+ ]
+}

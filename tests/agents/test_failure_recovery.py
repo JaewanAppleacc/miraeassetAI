@@ -47,9 +47,30 @@ def test_answer_none_or_empty_stays_empty():
     assert qa_agent.answer_text([""]) == ""
 
 
-def test_answer_dict_is_not_invented():
-    """dict를 문장으로 재작성하지 않는다 — 복구 대상이 아니다."""
-    assert qa_agent.answer_text({"answer": "x"}) == ""
+def test_answer_dict_of_fields_is_serialized_not_rewritten():
+    """Phase1 실측 형태 — 항목별 dict. 값은 그대로 두고 "키: 값"으로만 편다."""
+    got = qa_agent.answer_text({"계약상대방": "현대자동차(주)", "계약금액": "3,365,500,000,000원",
+                                "계약기간": {"시작일": "2025-01-01", "종료일": "2029-12-31"}})
+    assert got == ("계약상대방: 현대자동차(주)\n계약금액: 3,365,500,000,000원\n"
+                   "계약기간: 시작일: 2025-01-01 · 종료일: 2029-12-31")
+
+
+def test_answer_wrapped_dict_is_unwrapped():
+    assert qa_agent.answer_text({"answer": "x"}) == "x"
+    assert qa_agent.answer_text({"answer": ["a", "b"]}) == "a\nb"
+
+
+def test_answer_dict_values_still_go_through_validator():
+    from dart_detective.agents import validator
+    answer = qa_agent.answer_text({"계약금액": "999,999원"})
+    assert validator.validate(answer, [], [{"document_id": "d1", "text": "계약금액 | 100"}]
+                              )["status"] == "UNSUPPORTED"
+
+
+def test_change_question_wakes_calculator():
+    from dart_detective.agents import calculator
+    assert calculator.is_comparison_question(
+        "두산로보틱스의 연결기준 매출액은 2023년과 2025년 사이에 얼마나 변동했는가?")
 
 
 # ---------- B. JSON object 추출 ----------
