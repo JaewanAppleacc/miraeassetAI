@@ -1,0 +1,22 @@
+{
+  "schema_version": "0.1.0",
+  "generated_at": "2026-09-01T13:21:53.174Z",
+  "status": "ADAPTIVE_TABLE_CHUNKING_REQUIRED",
+  "reason_trail": [
+    "FIXED_512_TABLE_SAFE 미충족: critical_violations=162, misattribution=121, recall_never_behind=true, multi_cell_ok=true",
+    "SECTION_FLAT_PREFERRED_FOR_TABLES 미충족: models_beating_by_margin=0, only_fixed_has_violations=false, determinism_stable=true",
+    "일반 문서는 Fixed 우세(P10.2 기존 선정), 표 문서는 구조 보존에서 Section이 우세(critical_violations Fixed=162 > Section=108)하나 검색 우위로 이어지지 않아 단일 청킹으로 양쪽을 만족 못함"
+  ],
+  "adaptive_design": {
+    "paragraph_title": "fixed-token-512-o64.v0.1.0",
+    "table_table_row": "table-aware chunk preserving title/unit/row/column context (design only, NOT implemented this Turn)",
+    "combination": "동일 문서 내 두 결과를 공통 retrieval ranker에서 결합"
+  },
+  "inputs_summary": {
+    "table_evaluation_item_count": 49,
+    "fixed_critical_violation_count": 162,
+    "section_critical_violation_count": 108,
+    "locator_deterministically_resolvable": true,
+    "cache_or_ranking_data_missing": false
+  }
+}

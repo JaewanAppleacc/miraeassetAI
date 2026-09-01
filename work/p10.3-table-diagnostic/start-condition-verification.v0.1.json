@@ -1,0 +1,75 @@
+{
+  "schema_version": "0.1.0",
+  "generated_at": "2026-09-01T11:39:07.440Z",
+  "gate_status": "GREEN",
+  "worktree_head_sha": "14adb49fcacf9104613b351b4544f1eddf0f3ac0",
+  "input_pins": {
+    "p10_1_final_sha": "35fd52e",
+    "p10_1_1_final_sha": "7288055",
+    "p10_2_final_push_sha": "14adb49"
+  },
+  "p10_2_combinations_completed": 6,
+  "p10_2_final_selection_status": "FINAL_CHUNKING_AND_EMBEDDING_SELECTED",
+  "p10_2_final_chunking_strategy": "fixed-token-512-o64.v0.1.0",
+  "p10_2_final_embedding_repository": "nlpai-lab/KURE-v1",
+  "p10_2_table_diagnostic_status": "TABLE_DIAGNOSTIC_PENDING",
+  "dev_tune_gold_sha256_pinned": "7941144c09ce25debeeab6c3fbdfbd4c16761a6be06ab3a844ad159c832f102b",
+  "dev_tune_gold_row_count": 101,
+  "checks": [
+    {
+      "id": "worktree_head_resolved",
+      "pass": true,
+      "detail": "14adb49fcacf9104613b351b4544f1eddf0f3ac0"
+    },
+    {
+      "id": "p10_1_final_sha_is_ancestor_of_head",
+      "pass": true,
+      "detail": "35fd52e -> HEAD 14adb49fcacf9104613b351b4544f1eddf0f3ac0"
+    },
+    {
+      "id": "p10_1_1_final_sha_is_ancestor_of_head",
+      "pass": true,
+      "detail": "7288055 -> HEAD 14adb49fcacf9104613b351b4544f1eddf0f3ac0"
+    },
+    {
+      "id": "p10_2_final_push_sha_is_ancestor_of_head",
+      "pass": true,
+      "detail": "14adb49 -> HEAD 14adb49fcacf9104613b351b4544f1eddf0f3ac0"
+    },
+    {
+      "id": "base_is_p10_2_final_push_sha",
+      "pass": true,
+      "detail": "expected base 14adb49"
+    },
+    {
+      "id": "p10_2_stage2_results_readable",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "id": "p10_2_six_combinations_complete",
+      "pass": true,
+      "detail": "combinations_completed=6"
+    },
+    {
+      "id": "p10_2_final_selection_readable",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "id": "p10_2_selection_status_resolved",
+      "pass": true,
+      "detail": "FINAL_CHUNKING_AND_EMBEDDING_SELECTED"
+    },
+    {
+      "id": "hierarchical_absent_from_p10_2_combinations",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "id": "dev_tune_input_gate",
+      "pass": true,
+      "detail": ""
+    }
+  ]
+}

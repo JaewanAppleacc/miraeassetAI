@@ -1,0 +1,150 @@
+{
+  "schema_version": "0.1.0",
+  "generated_at": "2026-09-01T13:21:53.027Z",
+  "status": "PARTIAL_REAL_DATA",
+  "table_evaluation_item_count": 49,
+  "multi_cell_evaluation_item_count": 45,
+  "source_p10_2_per_item_results": "../agent-chunking-embedding-grid-v01/work/p10.2-chunking-embedding-grid/stage2-per-item-results.v0.1.jsonl",
+  "new_embedding_calls": 0,
+  "new_model_servers_spawned": 0,
+  "combinations": [
+    {
+      "frozen_candidate_id": "kure_v1",
+      "chunking_config_id": "fixed-token-512-o64.v0.1.0",
+      "table_item_count": 49,
+      "computable": {
+        "table_recall_at_5": 0.8775510204081632,
+        "table_recall_at_10": 0.9285714285714286,
+        "table_recall_at_20": 0.9387755102040817,
+        "table_mrr": 0.8528911564625852,
+        "table_ndcg_at_10": 0.9063244604105939,
+        "multi_cell_complete_evidence_recall_at_10": 0.9111111111111111,
+        "multi_cell_item_count": 45
+      },
+      "not_computable": {
+        "cell_level_recall_at_10": null,
+        "row_header_aware_recall_at_10": null,
+        "unit_aware_recall_at_10": null,
+        "period_column_aware_recall_at_10": null,
+        "table_boilerplate_false_positive_rate": null,
+        "ambiguous_numeric_collision_rate_retrieval": null,
+        "reason": "P10.2's per-item results store only item-level scalar aggregates (evidence_slot_coverage_fraction_at_k, reciprocal_rank, ndcg_at_10); the raw ranked candidate-chunk list per item was never persisted, and recomputing it requires a new embedding call, which this Turn forbids. Categorized under this Turn's own TABLE_DIAGNOSTIC_INCONCLUSIVE trigger \"P10.2 cache/ranking 결과 누락\" for this specific sub-metric only."
+      }
+    },
+    {
+      "frozen_candidate_id": "kure_v1",
+      "chunking_config_id": "section-aware-flat-512-o64.v0.1.0",
+      "table_item_count": 49,
+      "computable": {
+        "table_recall_at_5": 0.8673469387755102,
+        "table_recall_at_10": 0.8979591836734694,
+        "table_recall_at_20": 0.9183673469387755,
+        "table_mrr": 0.7840136054421768,
+        "table_ndcg_at_10": 0.8906164428288512,
+        "multi_cell_complete_evidence_recall_at_10": 0.8666666666666667,
+        "multi_cell_item_count": 45
+      },
+      "not_computable": {
+        "cell_level_recall_at_10": null,
+        "row_header_aware_recall_at_10": null,
+        "unit_aware_recall_at_10": null,
+        "period_column_aware_recall_at_10": null,
+        "table_boilerplate_false_positive_rate": null,
+        "ambiguous_numeric_collision_rate_retrieval": null,
+        "reason": "P10.2's per-item results store only item-level scalar aggregates (evidence_slot_coverage_fraction_at_k, reciprocal_rank, ndcg_at_10); the raw ranked candidate-chunk list per item was never persisted, and recomputing it requires a new embedding call, which this Turn forbids. Categorized under this Turn's own TABLE_DIAGNOSTIC_INCONCLUSIVE trigger \"P10.2 cache/ranking 결과 누락\" for this specific sub-metric only."
+      }
+    },
+    {
+      "frozen_candidate_id": "bge_m3",
+      "chunking_config_id": "fixed-token-512-o64.v0.1.0",
+      "table_item_count": 49,
+      "computable": {
+        "table_recall_at_5": 0.8571428571428571,
+        "table_recall_at_10": 0.8979591836734694,
+        "table_recall_at_20": 0.9387755102040817,
+        "table_mrr": 0.7852283770651116,
+        "table_ndcg_at_10": 0.8736202127796435,
+        "multi_cell_complete_evidence_recall_at_10": 0.8666666666666667,
+        "multi_cell_item_count": 45
+      },
+      "not_computable": {
+        "cell_level_recall_at_10": null,
+        "row_header_aware_recall_at_10": null,
+        "unit_aware_recall_at_10": null,
+        "period_column_aware_recall_at_10": null,
+        "table_boilerplate_false_positive_rate": null,
+        "ambiguous_numeric_collision_rate_retrieval": null,
+        "reason": "P10.2's per-item results store only item-level scalar aggregates (evidence_slot_coverage_fraction_at_k, reciprocal_rank, ndcg_at_10); the raw ranked candidate-chunk list per item was never persisted, and recomputing it requires a new embedding call, which this Turn forbids. Categorized under this Turn's own TABLE_DIAGNOSTIC_INCONCLUSIVE trigger \"P10.2 cache/ranking 결과 누락\" for this specific sub-metric only."
+      }
+    },
+    {
+      "frozen_candidate_id": "bge_m3",
+      "chunking_config_id": "section-aware-flat-512-o64.v0.1.0",
+      "table_item_count": 49,
+      "computable": {
+        "table_recall_at_5": 0.8673469387755102,
+        "table_recall_at_10": 0.8979591836734694,
+        "table_recall_at_20": 0.9183673469387755,
+        "table_mrr": 0.7808360186179735,
+        "table_ndcg_at_10": 0.8772086870490681,
+        "multi_cell_complete_evidence_recall_at_10": 0.8666666666666667,
+        "multi_cell_item_count": 45
+      },
+      "not_computable": {
+        "cell_level_recall_at_10": null,
+        "row_header_aware_recall_at_10": null,
+        "unit_aware_recall_at_10": null,
+        "period_column_aware_recall_at_10": null,
+        "table_boilerplate_false_positive_rate": null,
+        "ambiguous_numeric_collision_rate_retrieval": null,
+        "reason": "P10.2's per-item results store only item-level scalar aggregates (evidence_slot_coverage_fraction_at_k, reciprocal_rank, ndcg_at_10); the raw ranked candidate-chunk list per item was never persisted, and recomputing it requires a new embedding call, which this Turn forbids. Categorized under this Turn's own TABLE_DIAGNOSTIC_INCONCLUSIVE trigger \"P10.2 cache/ranking 결과 누락\" for this specific sub-metric only."
+      }
+    },
+    {
+      "frozen_candidate_id": "pixie_rune",
+      "chunking_config_id": "fixed-token-512-o64.v0.1.0",
+      "table_item_count": 49,
+      "computable": {
+        "table_recall_at_5": 0.8979591836734694,
+        "table_recall_at_10": 0.9285714285714286,
+        "table_recall_at_20": 0.9387755102040817,
+        "table_mrr": 0.831856426781239,
+        "table_ndcg_at_10": 0.8978823497747094,
+        "multi_cell_complete_evidence_recall_at_10": 0.9111111111111111,
+        "multi_cell_item_count": 45
+      },
+      "not_computable": {
+        "cell_level_recall_at_10": null,
+        "row_header_aware_recall_at_10": null,
+        "unit_aware_recall_at_10": null,
+        "period_column_aware_recall_at_10": null,
+        "table_boilerplate_false_positive_rate": null,
+        "ambiguous_numeric_collision_rate_retrieval": null,
+        "reason": "P10.2's per-item results store only item-level scalar aggregates (evidence_slot_coverage_fraction_at_k, reciprocal_rank, ndcg_at_10); the raw ranked candidate-chunk list per item was never persisted, and recomputing it requires a new embedding call, which this Turn forbids. Categorized under this Turn's own TABLE_DIAGNOSTIC_INCONCLUSIVE trigger \"P10.2 cache/ranking 결과 누락\" for this specific sub-metric only."
+      }
+    },
+    {
+      "frozen_candidate_id": "pixie_rune",
+      "chunking_config_id": "section-aware-flat-512-o64.v0.1.0",
+      "table_item_count": 49,
+      "computable": {
+        "table_recall_at_5": 0.8979591836734694,
+        "table_recall_at_10": 0.9183673469387755,
+        "table_recall_at_20": 0.9489795918367347,
+        "table_mrr": 0.8006802721088435,
+        "table_ndcg_at_10": 0.8924608428456875,
+        "multi_cell_complete_evidence_recall_at_10": 0.9111111111111111,
+        "multi_cell_item_count": 45
+      },
+      "not_computable": {
+        "cell_level_recall_at_10": null,
+        "row_header_aware_recall_at_10": null,
+        "unit_aware_recall_at_10": null,
+        "period_column_aware_recall_at_10": null,
+        "table_boilerplate_false_positive_rate": null,
+        "ambiguous_numeric_collision_rate_retrieval": null,
+        "reason": "P10.2's per-item results store only item-level scalar aggregates (evidence_slot_coverage_fraction_at_k, reciprocal_rank, ndcg_at_10); the raw ranked candidate-chunk list per item was never persisted, and recomputing it requires a new embedding call, which this Turn forbids. Categorized under this Turn's own TABLE_DIAGNOSTIC_INCONCLUSIVE trigger \"P10.2 cache/ranking 결과 누락\" for this specific sub-metric only."
+      }
+    }
+  ]
+}

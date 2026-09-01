@@ -1,0 +1,1436 @@
+{
+  "schema_version": "0.1.0",
+  "generated_at": "2026-09-01T13:21:39.503Z",
+  "dev_tune_item_count": 101,
+  "table_evaluation_item_count": 49,
+  "non_table_evaluation_item_count": 52,
+  "tag_distribution": {
+    "SINGLE_CELL_LOOKUP": 0,
+    "ROW_HEADER_VALUE": 45,
+    "COLUMN_PERIOD_VALUE": 7,
+    "UNIT_SENSITIVE": 1,
+    "MULTI_ROW_CALCULATION": 32,
+    "MULTI_COLUMN_COMPARISON": 45,
+    "CROSS_TABLE": 18,
+    "CROSS_DOCUMENT_TABLE": 8,
+    "TABLE_WITH_REPEATED_BOILERPLATE": 0
+  },
+  "total_table_kind_sources": 75,
+  "total_unresolvable_sources_all_kinds": 266,
+  "total_unresolvable_table_cells": 4,
+  "per_item": [
+    {
+      "question_id": "author_0459b5f8f37b0192316cd77c",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": true,
+      "tags": [
+        "CROSS_TABLE",
+        "MULTI_COLUMN_COMPARISON",
+        "MULTI_ROW_CALCULATION",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 2,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 4,
+      "distinct_cells_touched": 13,
+      "distinct_table_nodes_touched": 2,
+      "distinct_documents_touched": 1
+    },
+    {
+      "question_id": "author_050b7f96dd361ac0771755a8",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "is_table_item": true,
+      "tags": [
+        "MULTI_COLUMN_COMPARISON",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 1,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 1,
+      "distinct_cells_touched": 6,
+      "distinct_table_nodes_touched": 1,
+      "distinct_documents_touched": 1
+    },
+    {
+      "question_id": "author_0644c80590c4960192ecdd59",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": true,
+      "tags": [
+        "MULTI_COLUMN_COMPARISON",
+        "MULTI_ROW_CALCULATION",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 1,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 4,
+      "distinct_cells_touched": 12,
+      "distinct_table_nodes_touched": 1,
+      "distinct_documents_touched": 1
+    },
+    {
+      "question_id": "author_087a90f5918d4e0b3e00959c",
+      "question_type": "COMPARISON_CALC",
+      "is_table_item": true,
+      "tags": [
+        "COLUMN_PERIOD_VALUE",
+        "CROSS_DOCUMENT_TABLE",
+        "MULTI_COLUMN_COMPARISON",
+        "MULTI_ROW_CALCULATION",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 2,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 86,
+      "distinct_cells_touched": 344,
+      "distinct_table_nodes_touched": 2,
+      "distinct_documents_touched": 2
+    },
+    {
+      "question_id": "author_0be4ca52605cfe6d48181d97",
+      "question_type": "COMPARISON_CALC",
+      "is_table_item": true,
+      "tags": [
+        "COLUMN_PERIOD_VALUE",
+        "CROSS_DOCUMENT_TABLE",
+        "MULTI_COLUMN_COMPARISON",
+        "MULTI_ROW_CALCULATION",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 2,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 85,
+      "distinct_cells_touched": 340,
+      "distinct_table_nodes_touched": 2,
+      "distinct_documents_touched": 2
+    },
+    {
+      "question_id": "author_0dd866177ad6b48052e16a33",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": true,
+      "tags": [
+        "MULTI_COLUMN_COMPARISON",
+        "MULTI_ROW_CALCULATION",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 1,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 4,
+      "distinct_cells_touched": 12,
+      "distinct_table_nodes_touched": 1,
+      "distinct_documents_touched": 1
+    },
+    {
+      "question_id": "author_14dfddbe1d41275533ae3945",
+      "question_type": "COMPARISON_CALC",
+      "is_table_item": true,
+      "tags": [
+        "COLUMN_PERIOD_VALUE",
+        "CROSS_DOCUMENT_TABLE",
+        "MULTI_COLUMN_COMPARISON",
+        "MULTI_ROW_CALCULATION",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 2,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 51,
+      "distinct_cells_touched": 204,
+      "distinct_table_nodes_touched": 2,
+      "distinct_documents_touched": 2
+    },
+    {
+      "question_id": "author_17e55323e3a89766f08ec8fc",
+      "question_type": "COMPARISON_CALC",
+      "is_table_item": true,
+      "tags": [
+        "COLUMN_PERIOD_VALUE",
+        "CROSS_DOCUMENT_TABLE",
+        "MULTI_COLUMN_COMPARISON",
+        "MULTI_ROW_CALCULATION",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 2,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 53,
+      "distinct_cells_touched": 212,
+      "distinct_table_nodes_touched": 2,
+      "distinct_documents_touched": 2
+    },
+    {
+      "question_id": "author_1bf4c4ba5b261b12bcc01cde",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": true,
+      "tags": [
+        "CROSS_TABLE",
+        "MULTI_COLUMN_COMPARISON",
+        "MULTI_ROW_CALCULATION",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 2,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 4,
+      "distinct_cells_touched": 13,
+      "distinct_table_nodes_touched": 2,
+      "distinct_documents_touched": 1
+    },
+    {
+      "question_id": "author_2b919170b3f420b30f592dbf",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": true,
+      "tags": [],
+      "table_source_count": 1,
+      "unresolvable_table_cell_count": 1,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "author_33e6a824ee8b5027f2ab7806",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": true,
+      "tags": [
+        "CROSS_TABLE",
+        "MULTI_COLUMN_COMPARISON",
+        "MULTI_ROW_CALCULATION",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 2,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 4,
+      "distinct_cells_touched": 13,
+      "distinct_table_nodes_touched": 2,
+      "distinct_documents_touched": 1
+    },
+    {
+      "question_id": "author_39b7a1a229844d5607de32fb",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": true,
+      "tags": [],
+      "table_source_count": 1,
+      "unresolvable_table_cell_count": 1,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "author_3f205e961b4c70adc216d67e",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": true,
+      "tags": [
+        "CROSS_TABLE",
+        "MULTI_COLUMN_COMPARISON",
+        "MULTI_ROW_CALCULATION",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 2,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 4,
+      "distinct_cells_touched": 13,
+      "distinct_table_nodes_touched": 2,
+      "distinct_documents_touched": 1
+    },
+    {
+      "question_id": "author_40f76302294d317d0c588b5d",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": true,
+      "tags": [
+        "CROSS_TABLE",
+        "MULTI_COLUMN_COMPARISON",
+        "MULTI_ROW_CALCULATION",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 2,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 4,
+      "distinct_cells_touched": 13,
+      "distinct_table_nodes_touched": 2,
+      "distinct_documents_touched": 1
+    },
+    {
+      "question_id": "author_41f346723847e84a051e614a",
+      "question_type": "ANSWERABILITY",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "author_4b8df2cacd43755b56e3c71e",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": true,
+      "tags": [
+        "CROSS_TABLE",
+        "MULTI_COLUMN_COMPARISON",
+        "MULTI_ROW_CALCULATION",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 2,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 4,
+      "distinct_cells_touched": 13,
+      "distinct_table_nodes_touched": 2,
+      "distinct_documents_touched": 1
+    },
+    {
+      "question_id": "author_4dae7a49dd14e226926c4edf",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": true,
+      "tags": [
+        "CROSS_TABLE",
+        "MULTI_COLUMN_COMPARISON",
+        "MULTI_ROW_CALCULATION",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 2,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 4,
+      "distinct_cells_touched": 13,
+      "distinct_table_nodes_touched": 2,
+      "distinct_documents_touched": 1
+    },
+    {
+      "question_id": "author_50eba48b6e3d77f488421b89",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "is_table_item": true,
+      "tags": [
+        "MULTI_COLUMN_COMPARISON",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 1,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 1,
+      "distinct_cells_touched": 6,
+      "distinct_table_nodes_touched": 1,
+      "distinct_documents_touched": 1
+    },
+    {
+      "question_id": "author_52e6c0ca8915c4a28c802e4c",
+      "question_type": "COMPARISON_CALC",
+      "is_table_item": true,
+      "tags": [
+        "COLUMN_PERIOD_VALUE",
+        "CROSS_DOCUMENT_TABLE",
+        "MULTI_COLUMN_COMPARISON",
+        "MULTI_ROW_CALCULATION",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 2,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 69,
+      "distinct_cells_touched": 276,
+      "distinct_table_nodes_touched": 2,
+      "distinct_documents_touched": 2
+    },
+    {
+      "question_id": "author_53d266ad714c7b2c4db364b5",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": true,
+      "tags": [
+        "MULTI_COLUMN_COMPARISON",
+        "MULTI_ROW_CALCULATION",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 1,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 4,
+      "distinct_cells_touched": 12,
+      "distinct_table_nodes_touched": 1,
+      "distinct_documents_touched": 1
+    },
+    {
+      "question_id": "author_558c9267989c17f3e0aa14ad",
+      "question_type": "EVENT_TRACE",
+      "is_table_item": true,
+      "tags": [],
+      "table_source_count": 1,
+      "unresolvable_table_cell_count": 1,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "author_642b260aa50968143920281b",
+      "question_type": "ANSWERABILITY",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "author_66ddb05e5a3de362ff1c536f",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "is_table_item": true,
+      "tags": [
+        "MULTI_COLUMN_COMPARISON",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 1,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 1,
+      "distinct_cells_touched": 3,
+      "distinct_table_nodes_touched": 1,
+      "distinct_documents_touched": 1
+    },
+    {
+      "question_id": "author_75966f98e4996bc694606bb2",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": true,
+      "tags": [
+        "MULTI_COLUMN_COMPARISON",
+        "MULTI_ROW_CALCULATION",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 1,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 4,
+      "distinct_cells_touched": 12,
+      "distinct_table_nodes_touched": 1,
+      "distinct_documents_touched": 1
+    },
+    {
+      "question_id": "author_833ea1a29f055ec369947a98",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": true,
+      "tags": [
+        "CROSS_TABLE",
+        "MULTI_COLUMN_COMPARISON",
+        "MULTI_ROW_CALCULATION",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 2,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 4,
+      "distinct_cells_touched": 13,
+      "distinct_table_nodes_touched": 2,
+      "distinct_documents_touched": 1
+    },
+    {
+      "question_id": "author_8db33a880c09102d4903e280",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": true,
+      "tags": [
+        "CROSS_TABLE",
+        "MULTI_COLUMN_COMPARISON",
+        "MULTI_ROW_CALCULATION",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 2,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 4,
+      "distinct_cells_touched": 13,
+      "distinct_table_nodes_touched": 2,
+      "distinct_documents_touched": 1
+    },
+    {
+      "question_id": "author_95a89db78ffe266ced4d7ea6",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": true,
+      "tags": [
+        "CROSS_TABLE",
+        "MULTI_COLUMN_COMPARISON",
+        "MULTI_ROW_CALCULATION",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 2,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 4,
+      "distinct_cells_touched": 13,
+      "distinct_table_nodes_touched": 2,
+      "distinct_documents_touched": 1
+    },
+    {
+      "question_id": "author_a09660efd75391b28724e656",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "is_table_item": true,
+      "tags": [
+        "MULTI_COLUMN_COMPARISON",
+        "MULTI_ROW_CALCULATION",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 1,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 2,
+      "distinct_cells_touched": 6,
+      "distinct_table_nodes_touched": 1,
+      "distinct_documents_touched": 1
+    },
+    {
+      "question_id": "author_a24879dc628ff582fdeba8b5",
+      "question_type": "ANSWERABILITY",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "author_a3a6ade04e8f72004e2df4f1",
+      "question_type": "COMPARISON_CALC",
+      "is_table_item": true,
+      "tags": [
+        "COLUMN_PERIOD_VALUE",
+        "CROSS_DOCUMENT_TABLE",
+        "MULTI_COLUMN_COMPARISON",
+        "MULTI_ROW_CALCULATION",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 2,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 34,
+      "distinct_cells_touched": 170,
+      "distinct_table_nodes_touched": 2,
+      "distinct_documents_touched": 2
+    },
+    {
+      "question_id": "author_a538b0e2240fe01d1a71ebb7",
+      "question_type": "COMPARISON_CALC",
+      "is_table_item": true,
+      "tags": [
+        "COLUMN_PERIOD_VALUE",
+        "CROSS_DOCUMENT_TABLE",
+        "MULTI_COLUMN_COMPARISON",
+        "MULTI_ROW_CALCULATION",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 2,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 58,
+      "distinct_cells_touched": 232,
+      "distinct_table_nodes_touched": 2,
+      "distinct_documents_touched": 2
+    },
+    {
+      "question_id": "author_a7d2486c24a01dace51cdbe0",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "is_table_item": true,
+      "tags": [
+        "MULTI_COLUMN_COMPARISON",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 1,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 1,
+      "distinct_cells_touched": 3,
+      "distinct_table_nodes_touched": 1,
+      "distinct_documents_touched": 1
+    },
+    {
+      "question_id": "author_a9f44253b3de69062e704c83",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": true,
+      "tags": [
+        "CROSS_TABLE",
+        "MULTI_COLUMN_COMPARISON",
+        "MULTI_ROW_CALCULATION",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 2,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 4,
+      "distinct_cells_touched": 13,
+      "distinct_table_nodes_touched": 2,
+      "distinct_documents_touched": 1
+    },
+    {
+      "question_id": "author_acd4f9e29a7188d84c0f1aaa",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "is_table_item": true,
+      "tags": [
+        "MULTI_COLUMN_COMPARISON",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 1,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 1,
+      "distinct_cells_touched": 3,
+      "distinct_table_nodes_touched": 1,
+      "distinct_documents_touched": 1
+    },
+    {
+      "question_id": "author_ad711c9d1d96ebc8950814f0",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": true,
+      "tags": [
+        "CROSS_TABLE",
+        "MULTI_COLUMN_COMPARISON",
+        "MULTI_ROW_CALCULATION",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 2,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 4,
+      "distinct_cells_touched": 13,
+      "distinct_table_nodes_touched": 2,
+      "distinct_documents_touched": 1
+    },
+    {
+      "question_id": "author_b81eacbe0cad034dfb7b9dd4",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "is_table_item": true,
+      "tags": [
+        "MULTI_COLUMN_COMPARISON",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 1,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 1,
+      "distinct_cells_touched": 3,
+      "distinct_table_nodes_touched": 1,
+      "distinct_documents_touched": 1
+    },
+    {
+      "question_id": "author_be87975b478c1685b1170e80",
+      "question_type": "COMPARISON_CALC",
+      "is_table_item": true,
+      "tags": [
+        "CROSS_DOCUMENT_TABLE",
+        "MULTI_COLUMN_COMPARISON",
+        "MULTI_ROW_CALCULATION",
+        "ROW_HEADER_VALUE",
+        "UNIT_SENSITIVE"
+      ],
+      "table_source_count": 2,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 72,
+      "distinct_cells_touched": 288,
+      "distinct_table_nodes_touched": 2,
+      "distinct_documents_touched": 2
+    },
+    {
+      "question_id": "author_bfc0f3bb801bc9eab3faaa3c",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": true,
+      "tags": [
+        "CROSS_TABLE",
+        "MULTI_COLUMN_COMPARISON",
+        "MULTI_ROW_CALCULATION",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 2,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 4,
+      "distinct_cells_touched": 13,
+      "distinct_table_nodes_touched": 2,
+      "distinct_documents_touched": 1
+    },
+    {
+      "question_id": "author_c4d4ef2ce48a57ef54ded4db",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "is_table_item": true,
+      "tags": [
+        "MULTI_COLUMN_COMPARISON",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 1,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 1,
+      "distinct_cells_touched": 6,
+      "distinct_table_nodes_touched": 1,
+      "distinct_documents_touched": 1
+    },
+    {
+      "question_id": "author_c8225552d5982882a3157819",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": true,
+      "tags": [
+        "CROSS_TABLE",
+        "MULTI_COLUMN_COMPARISON",
+        "MULTI_ROW_CALCULATION",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 2,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 4,
+      "distinct_cells_touched": 13,
+      "distinct_table_nodes_touched": 2,
+      "distinct_documents_touched": 1
+    },
+    {
+      "question_id": "author_ca4ec294ad36b44faa071043",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "is_table_item": true,
+      "tags": [
+        "MULTI_COLUMN_COMPARISON",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 1,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 1,
+      "distinct_cells_touched": 6,
+      "distinct_table_nodes_touched": 1,
+      "distinct_documents_touched": 1
+    },
+    {
+      "question_id": "author_cc803e40119274b80d14a65a",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "is_table_item": true,
+      "tags": [
+        "MULTI_COLUMN_COMPARISON",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 1,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 1,
+      "distinct_cells_touched": 6,
+      "distinct_table_nodes_touched": 1,
+      "distinct_documents_touched": 1
+    },
+    {
+      "question_id": "author_d640cbedd7330f4b9bcfeeb7",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "is_table_item": true,
+      "tags": [
+        "CROSS_TABLE",
+        "MULTI_COLUMN_COMPARISON",
+        "MULTI_ROW_CALCULATION",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 2,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 4,
+      "distinct_cells_touched": 9,
+      "distinct_table_nodes_touched": 2,
+      "distinct_documents_touched": 1
+    },
+    {
+      "question_id": "author_e0416a675c6970a7f064bf74",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "is_table_item": true,
+      "tags": [
+        "MULTI_COLUMN_COMPARISON",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 1,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 1,
+      "distinct_cells_touched": 3,
+      "distinct_table_nodes_touched": 1,
+      "distinct_documents_touched": 1
+    },
+    {
+      "question_id": "author_ed4a7d77528a8c5751e9a348",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": true,
+      "tags": [
+        "CROSS_TABLE",
+        "MULTI_COLUMN_COMPARISON",
+        "MULTI_ROW_CALCULATION",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 2,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 4,
+      "distinct_cells_touched": 13,
+      "distinct_table_nodes_touched": 2,
+      "distinct_documents_touched": 1
+    },
+    {
+      "question_id": "author_ef82c30f267ca92d099c7a62",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": true,
+      "tags": [
+        "MULTI_COLUMN_COMPARISON",
+        "MULTI_ROW_CALCULATION",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 1,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 4,
+      "distinct_cells_touched": 12,
+      "distinct_table_nodes_touched": 1,
+      "distinct_documents_touched": 1
+    },
+    {
+      "question_id": "author_f115e4cb0e6b913c663df555",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": true,
+      "tags": [],
+      "table_source_count": 1,
+      "unresolvable_table_cell_count": 1,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "author_f119c5d79a4e52a359a84caa",
+      "question_type": "ANSWERABILITY",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "author_f1f0a9f6462da34342fd2cc4",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": true,
+      "tags": [
+        "CROSS_TABLE",
+        "MULTI_COLUMN_COMPARISON",
+        "MULTI_ROW_CALCULATION",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 2,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 4,
+      "distinct_cells_touched": 13,
+      "distinct_table_nodes_touched": 2,
+      "distinct_documents_touched": 1
+    },
+    {
+      "question_id": "author_f55322f4532a9fec91015c34",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "is_table_item": true,
+      "tags": [
+        "MULTI_COLUMN_COMPARISON",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 1,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 1,
+      "distinct_cells_touched": 6,
+      "distinct_table_nodes_touched": 1,
+      "distinct_documents_touched": 1
+    },
+    {
+      "question_id": "author_f61f83f3af47bd86817b5358",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": true,
+      "tags": [
+        "CROSS_TABLE",
+        "MULTI_COLUMN_COMPARISON",
+        "MULTI_ROW_CALCULATION",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 2,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 4,
+      "distinct_cells_touched": 13,
+      "distinct_table_nodes_touched": 2,
+      "distinct_documents_touched": 1
+    },
+    {
+      "question_id": "author_f87d43f1663f388ab5a57a3b",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "is_table_item": true,
+      "tags": [
+        "MULTI_COLUMN_COMPARISON",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 1,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 1,
+      "distinct_cells_touched": 6,
+      "distinct_table_nodes_touched": 1,
+      "distinct_documents_touched": 1
+    },
+    {
+      "question_id": "author_ffcc4093fb37a87f1a40322d",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "is_table_item": true,
+      "tags": [
+        "MULTI_COLUMN_COMPARISON",
+        "ROW_HEADER_VALUE"
+      ],
+      "table_source_count": 1,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 1,
+      "distinct_cells_touched": 3,
+      "distinct_table_nodes_touched": 1,
+      "distinct_documents_touched": 1
+    },
+    {
+      "question_id": "gold_b_034334dce8cb5eaaa6589096",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_04129a579f785f869644167a",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_0700d8fa5f0028cb712a533d",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_0aa8d3979510d78ea122edda",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_0e97c60a0d12c067d46a6f84",
+      "question_type": "COMPARISON_CALC",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_137f1bfd5c69987d009ae50c",
+      "question_type": "EVENT_TRACE",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_192fa6ea90c0cdefc2616fc0",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_23f454a11d52f107c1c7e8a2",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_277f68d0497188039d68f632",
+      "question_type": "EVENT_TRACE",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_27ca59a117b25eafd17a5eaa",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_2cd479eccfda82d5d6e549bb",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_2ef301d8b4157cd002c79279",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_30089ee2275a48721e228ae2",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_3054ffad4d0cb92473806459",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_34e53426cab01c72ec76bfca",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_446afacf23798f1091ca19df",
+      "question_type": "EVENT_TRACE",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_4dbdfc5d0b451f1d7a207e74",
+      "question_type": "COMPARISON_CALC",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_4e766ea7213345a7d5bbb527",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_5271576ebada8221bcc3056a",
+      "question_type": "COMPARISON_CALC",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_5335116f30b3102f5ce22cbb",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_60268d8a3d15da2a26a59fd6",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_6064d1699deee9470756d9d2",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_649e0385533d6ed2ad3bd978",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_6af756dd84b32fc13513f0bd",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_75e2226d84ae9c1e8bfad1bd",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_7c610de1801a78e791b92f60",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_7d494870b3a53946dd2232c8",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_8440e15f1cb9f79c66a6b787",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_8e8c9c7e2994614110d072bf",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_926d98d28ea51ea8bb8e6ea1",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_9498154347fd9a2ceef8aa63",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_94c41243826898e3879b933e",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_9d2e358034ea16bcee7d8edf",
+      "question_type": "COMPARISON_CALC",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_a534bc30d3414f2d094e7461",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_ab2d46f2496fe203c8405cad",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_ad6f430084e4c5312283ab1a",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_b6f4714fd3c652594f5d82c1",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_bbde1cf7dec999a7915f4b4a",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_c6076b4bb1e65e4bf8f3efeb",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_da1f1a3f66383d37ae6bd524",
+      "question_type": "EVENT_TRACE",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_e2808b0ce73a5ddd72f7508b",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_e5cc91d1b8a8bef8695cb6cd",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_e95de359f794df64ffab5044",
+      "question_type": "ANSWERABILITY",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_ebc8414ef6c306d4ead0cbe0",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_ec84639c43268bb42cc60c83",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_f23bcdcee714d7436867d683",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_f9b84c1e14bca2d1befcce62",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    },
+    {
+      "question_id": "gold_b_faeb66b34981643d354f6655",
+      "question_type": "NUMERIC_LOOKUP",
+      "is_table_item": false,
+      "tags": [],
+      "table_source_count": 0,
+      "unresolvable_table_cell_count": 0,
+      "distinct_rows_touched": 0,
+      "distinct_cells_touched": 0,
+      "distinct_table_nodes_touched": 0,
+      "distinct_documents_touched": 0
+    }
+  ]
+}

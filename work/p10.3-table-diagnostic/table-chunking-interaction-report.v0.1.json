@@ -1,0 +1,53 @@
+{
+  "schema_version": "0.1.0",
+  "generated_at": "2026-09-01T13:21:53.172Z",
+  "structural_delta": {
+    "critical_violation_delta_section_minus_fixed": -54,
+    "fixed_critical_violation_count": 162,
+    "section_critical_violation_count": 108,
+    "section_has_fewer_critical_violations": true,
+    "fixed_multi_cell_completeness_rate": 1,
+    "section_multi_cell_completeness_rate": 1
+  },
+  "retrieval_interaction": {
+    "model_recall_deltas": [
+      {
+        "frozen_candidate_id": "kure_v1",
+        "fixed_table_recall_at_10": 0.9285714285714286,
+        "section_table_recall_at_10": 0.8979591836734694,
+        "section_minus_fixed": -0.030612244897959218,
+        "is_tie": false,
+        "section_wins": false,
+        "fixed_wins": true,
+        "within_tolerance": false
+      },
+      {
+        "frozen_candidate_id": "bge_m3",
+        "fixed_table_recall_at_10": 0.8979591836734694,
+        "section_table_recall_at_10": 0.8979591836734694,
+        "section_minus_fixed": 0,
+        "is_tie": true,
+        "section_wins": false,
+        "fixed_wins": false,
+        "within_tolerance": true
+      },
+      {
+        "frozen_candidate_id": "pixie_rune",
+        "fixed_table_recall_at_10": 0.9285714285714286,
+        "section_table_recall_at_10": 0.9183673469387755,
+        "section_minus_fixed": -0.010204081632653073,
+        "is_tie": false,
+        "section_wins": false,
+        "fixed_wins": true,
+        "within_tolerance": false
+      }
+    ],
+    "any_model_where_section_recall_wins": false,
+    "any_model_where_fixed_recall_wins": true,
+    "material_recall_interaction": false,
+    "chunking_structural_advantage": "SECTION",
+    "retrieval_succeeded_but_context_preservation_failed": true
+  },
+  "fixed_misattribution_count": 121,
+  "section_misattribution_count": 78
+}
