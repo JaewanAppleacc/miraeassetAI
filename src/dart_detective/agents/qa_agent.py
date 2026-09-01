@@ -739,6 +739,12 @@ def normalize_citations(value: Any) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     for item in value:
         if isinstance(item, dict):
+            doc_id = item.get("document_id")
+            if isinstance(doc_id, str):
+                # 프롬프트가 발췌를 "[doc_id]"로 보여 주므로 모델이 대괄호째 베낀다
+                # (Phase1 실측 5문항 — 값은 다 맞았는데 "문서 불일치"로 통째 폐기됐다).
+                # 괄호·공백만 벗긴다. id 자체를 고치거나 추측하지 않는다.
+                item = {**item, "document_id": doc_id.strip().strip("[]()").strip()}
             out.append(item)
         elif isinstance(item, str) and item.strip():
             out.append({"document_id": "", "quote_or_fact": item.strip()})

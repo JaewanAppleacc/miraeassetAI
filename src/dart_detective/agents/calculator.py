@@ -128,7 +128,7 @@ def compute(metric: str, old_slot: str, old_raw: str,
         Decimal("1." + "0" * PERCENT_DECIMALS), rounding=ROUND_HALF_UP)
     slots = (old_slot, new_slot)
     values = (_fmt(old), _fmt(new))
-    return [
+    out = [
         Derived(metric=metric, kind="increase_amount",
                 formula=f"{_fmt(new)} - {_fmt(old)}",
                 value=_fmt(diff), unit=unit, source_slots=slots, source_values=values),
@@ -136,6 +136,31 @@ def compute(metric: str, old_slot: str, old_raw: str,
                 formula=f"({_fmt(new)} - {_fmt(old)}) / {_fmt(old)} × 100",
                 value=f"{rate}", unit="%", source_slots=slots, source_values=values),
     ]
+    out.extend(million_conversion(metric, old, new, diff, unit, slots))
+    return out
+
+
+MILLION = Decimal(1_000_000)
+MILLION_MIN = Decimal(10_000_000)   # 이보다 작은 값은 이미 백만원 단위 표일 가능성이 크다
+
+
+def million_conversion(metric: str, old: Decimal, new: Decimal, diff: Decimal,
+                       unit: str, slots: tuple[str, str]) -> list[Derived]:
+    """원 단위 값을 백만원으로도 적어 준다(ROUND_HALF_UP 정수).
+
+    팀 Gold는 원문 표가 원 단위여도 기대값을 백만원으로 적는 문항이 있다(Phase1 실측
+    LG생활건강·LIG넥스원). 환산은 결정론이고, 원값은 그대로 남긴다.
+    """
+    if unit not in ("원", "") or min(abs(old), abs(new)) < MILLION_MIN:
+        return []
+    q = Decimal("1")
+    old_m = (old / MILLION).quantize(q, rounding=ROUND_HALF_UP)
+    new_m = (new / MILLION).quantize(q, rounding=ROUND_HALF_UP)
+    diff_m = (diff / MILLION).quantize(q, rounding=ROUND_HALF_UP)
+    return [Derived(metric=metric, kind="amount_million",
+                    formula=f"({_fmt(new)} - {_fmt(old)}) / 1,000,000",
+                    value=_fmt(diff_m), unit="백만원", source_slots=slots,
+                    source_values=(_fmt(old_m), _fmt(new_m)))]
 
 
 def plan_entity_comparisons(question: str,
@@ -230,7 +255,7 @@ def report_pair_diffs(question: str, lines: Sequence[str]) -> list[Derived]:
     질문이 변동·차이를 물을 때만. 두 줄의 숫자 칸 수가 같을 때만 — 어긋나면
     어느 칸끼리 짝인지 알 수 없으므로 계산하지 않는다.
     """
-    if not any(w in question for w in ("변동", "변했", "차이", "증감", "얼마나")):
+    if not any(w in question for w in ("변동", "변했", "변화", "차이", "증감", "얼마나")):
         return []
     def cells(line):
         return [parse_number(x) for x in line.split("|")[1:] if x.strip()]
@@ -293,6 +318,9 @@ def describe(derived: Sequence[Derived]) -> str:
                          f"({'+' if not d.value.startswith('-') else ''}{d.value}{unit.strip() or ''} 변동)")
         elif d.kind == "larger_side":
             lines.append(f"- {d.metric}{subject_particle(d.metric)} 더 큰 쪽: {d.value}")
+        elif d.kind == "amount_million":
+            lines.append(f"- {d.metric} 백만원 환산: {d.source_values[0]} → "
+                         f"{d.source_values[1]} (증감 {d.value} 백만원)")
         else:
             lines.append(f"- {d.metric} 증감액: {d.value}{unit}")
     return "계산 결과(원문 값에서 코드가 계산):\n" + "\n".join(lines)
@@ -304,7 +332,8 @@ def allowed_numbers(derived: Sequence[Derived]) -> list[str]:
     for d in derived:
         if not any(ch.isdigit() for ch in d.value):
             continue            # 기업명 같은 값(larger_side)은 숫자 허용 목록이 아니다
-        for v in (d.value, display_value(d)):   # 원값(채점용)과 표시값 둘 다 허용
+        extra = d.source_values if d.kind == "amount_million" else ()
+        for v in (d.value, display_value(d), *extra):   # 원값(채점용)과 표시값 둘 다 허용
             out.append(v)
             out.append(v.replace(",", ""))
             out.append(v.lstrip("-"))
