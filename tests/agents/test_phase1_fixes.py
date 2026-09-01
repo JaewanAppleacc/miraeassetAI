@@ -35,6 +35,36 @@ def test_document_id_is_not_guessed():
     assert got[0]["document_id"] == "exchange_999"
 
 
+# ---------- 표 인용 셀 단위 대조 ----------
+
+DOC = [{"document_id": "ex1", "text": "5. 계약기간 | 시작일 | 2025-01-01\n종료일 | 2029-12-31\n계약금액(원) | 100"}]
+
+
+def test_joined_table_row_quote_passes_softly():
+    cites = [{"document_id": "ex1", "quote_or_fact": "계약기간 | 종료일 | 2029-12-31"}]
+    check = validator.validate("종료일: 2029-12-31", cites, DOC)
+    q = [c for c in check["checks"] if c["check"] == "quote_grounded"][0]
+    assert q["passed"] and "셀 단위" in q["note"]
+    assert check["status"] == "PARTIALLY_SUPPORTED"
+
+
+def test_invented_cell_still_fails():
+    cites = [{"document_id": "ex1", "quote_or_fact": "계약기간 | 종료일 | 2030-12-31"}]
+    assert validator.validate("종료일: 2030-12-31", cites, DOC)["status"] == "UNSUPPORTED"
+
+
+def test_paraphrase_without_cells_still_fails():
+    cites = [{"document_id": "ex1", "quote_or_fact": "계약은 2029년 말에 끝난다"}]
+    assert validator.validate("계약금액: 100", cites, DOC)["status"] == "UNSUPPORTED"
+
+
+def test_cells_found_only_in_other_doc_is_soft():
+    other = DOC + [{"document_id": "ex2", "text": "무관"}]
+    cites = [{"document_id": "ex2", "quote_or_fact": "계약기간 | 종료일 | 2029-12-31"}]
+    check = validator.validate("종료일: 2029-12-31", cites, other)
+    assert check["status"] == "PARTIALLY_SUPPORTED"
+
+
 # ---------- 대량보유 '변화' ----------
 
 LINES = ["직전 보고서 | 14,456,491 | 5.06", "이번 보고서 | 14,023,639 | 4.91"]

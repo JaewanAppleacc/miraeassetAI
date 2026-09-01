@@ -58,6 +58,15 @@ def _normalize_ws(s: str) -> str:
     return re.sub(r"\s+", " ", s).strip()
 
 
+def _table_cells(quote: str) -> list[str]:
+    """'a | b | c' 꼴 인용의 셀 목록(공백 제거). 셀이 둘 미만이거나 짧은 조각뿐이면 빈 목록."""
+    if "|" not in (quote or ""):
+        return []
+    cells = [_squash(x) for x in quote.split("|")]
+    cells = [x for x in cells if len(x) >= 2]
+    return cells if len(cells) >= 2 else []
+
+
 def _squash(s: str) -> str:
     """공백을 전부 제거한 형태. 인용 대조 전용.
 
@@ -144,22 +153,31 @@ def validate(
     # 1) 인용 검사 — quote_or_fact가 실제 원문의 부분 문자열인가
     haystack_squashed = _squash(haystack)
     for c in citations:
-        quote = _squash(c.get("quote_or_fact", ""))
+        raw_quote = c.get("quote_or_fact", "")
+        quote = _squash(raw_quote)
         doc_id = c.get("document_id", "")
         scope = _squash("\n".join(by_doc.get(doc_id, []))) if doc_id in by_doc else ""
         ok_in_doc = bool(quote) and quote in scope
         ok_anywhere = bool(quote) and quote in haystack_squashed
+        # 표 인용은 머리글 행과 값 행을 한 줄로 이어 붙여 오는 경우가 있다
+        # ("계약기간 | 종료일 | 2029-12-31" — 원문은 두 줄). 셀마다 원문 그대로면
+        # 인정하되 soft로 남긴다. 셀 하나라도 원문에 없으면 그대로 실패다.
+        cells = _table_cells(raw_quote)
+        cells_in_doc = bool(cells) and all(x in scope for x in cells)
+        cells_anywhere = bool(cells) and all(x in haystack_squashed for x in cells)
+        passed = ok_in_doc or cells_in_doc
         checks.append({
             "check": "quote_grounded",
             "document_id": doc_id,
-            "quote": c.get("quote_or_fact", "")[:120],
-            "passed": ok_in_doc,
+            "quote": raw_quote[:120],
+            "passed": passed,
             "note": "" if ok_in_doc else (
-                "다른 문서에서는 발견됨(document_id 불일치)" if ok_anywhere
+                "셀 단위로 일치(행이 합쳐진 인용)" if cells_in_doc
+                else "다른 문서에서는 발견됨(document_id 불일치)" if (ok_anywhere or cells_anywhere)
                 else "검색된 원문에서 찾을 수 없음"
             ),
         })
-        if not ok_anywhere:
+        if not (ok_anywhere or cells_anywhere):
             hard_fail = True
         elif not ok_in_doc:
             soft_fail = True
