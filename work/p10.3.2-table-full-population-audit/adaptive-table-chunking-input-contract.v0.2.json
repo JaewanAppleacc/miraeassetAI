@@ -1,0 +1,43 @@
+{
+  "schema_version": "0.2.0",
+  "generated_at": "2026-09-01T15:28:47.305Z",
+  "status": "DESIGN_CONTRACT_ONLY_NOT_IMPLEMENTED",
+  "applies_to": "Turn P10.4 (or later) table-aware chunk design -- this Turn implements nothing",
+  "supersedes": "work/p10.3.1-table-locator-audit/adaptive-table-chunking-input-contract.v0.1.json (not modified, kept as historical record)",
+  "required_fields": [
+    "document_id",
+    "node_id",
+    "row",
+    "column",
+    "row_header",
+    "column_header",
+    "period_header",
+    "unit",
+    "table_title",
+    "section_title",
+    "cell_value",
+    "canonical_source_locator",
+    "inherited_context_provenance"
+  ],
+  "chunk_kinds": {
+    "ATOMIC_TABLE_ROW": "one table row, self-contained: row_header + all column values, no inherited context needed beyond the row itself",
+    "TABLE_ROW_WITH_HEADERS": "one table row PLUS its column/period header row and any unit-declaring row, explicitly carried as provenance fields rather than relying on chunk adjacency",
+    "MULTI_ROW_CONTEXT": "a bounded set of rows needed together for a calculation/comparison (per Stage 1-2's MULTI_ROW_CALCULATION/MULTI_COLUMN_COMPARISON tags), sharing one inherited_context_provenance block",
+    "TABLE_SUMMARY_CONTEXT": "table_title/section_title only, for retrieval-time context injection without duplicating every row's content"
+  },
+  "invariants": [
+    "원문에 없는 header/unit을 추론하지 않는다",
+    "ambiguous locator를 임의 해소하지 않는다 (fails closed to GOLD_LOCATOR_AMBIGUOUS)",
+    "동일 숫자만으로 셀을 선택하지 않는다",
+    "row/column provenance를 잃지 않는다",
+    "Gold 내용을 청킹 규칙에 하드코딩하지 않는다"
+  ],
+  "exclusions_pending_parser_recovery": [
+    "4 PARSE_RECOVERY_REQUIRED source(s) excluded from table-aware chunk scoring until parser recovery"
+  ],
+  "input_pins": {
+    "p10_2_final_sha": "14adb49",
+    "p10_3_final_sha": "dacf1aa402125d46e62892e97aadc3d51d10141b",
+    "p10_3_1_final_sha": "3962975adb2b65946650f8543c76575d4593a509"
+  }
+}

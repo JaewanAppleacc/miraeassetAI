@@ -1,0 +1,41 @@
+{
+  "schema_version": "0.2.0",
+  "generated_at": "2026-09-01T15:28:47.305Z",
+  "status": "ADAPTIVE_TABLE_CHUNKING_CONFIRMED_FULL_POPULATION",
+  "reason_trail": [
+    "table item count 92 >= 15, determinism confirmed",
+    "metadata-only rate 0.0% is below the 70% threshold -- genuine text-boundary loss dominates",
+    "Fixed retains 197 and Section retains 141 genuine chunking-attributable violations -- Section is not a complete alternative",
+    "parse-limited rate 0.00% is below the 5% materiality threshold"
+  ],
+  "p10_3_original_verdict": "ADAPTIVE_TABLE_CHUNKING_REQUIRED",
+  "p10_3_1_verdict": "ADAPTIVE_TABLE_CHUNKING_CONFIRMED",
+  "corrected_full_population_summary": {
+    "table_evaluation_item_count": 92,
+    "unique_table_source_count": 339,
+    "fixed_chunking_attributable_violations": 197,
+    "section_chunking_attributable_violations": 141,
+    "parse_limited_source_count": 0
+  },
+  "p10_4_implementation_eligible": true,
+  "parse_recovery_blocking": false,
+  "unresolved_gold_locator_blocking": true,
+  "required_exclusions": [
+    "4 PARSE_RECOVERY_REQUIRED source(s) excluded from table-aware chunk scoring until parser recovery"
+  ],
+  "required_table_context_fields": [
+    "document_id",
+    "node_id",
+    "row",
+    "column",
+    "row_header",
+    "column_header",
+    "period_header",
+    "unit",
+    "table_title",
+    "section_title",
+    "cell_value",
+    "canonical_source_locator",
+    "inherited_context_provenance"
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "schema_version": "0.2.0",
+  "generated_at": "2026-09-01T15:28:44.601Z",
+  "strategies": {
+    "fixed-token-512-o64.v0.1.0": {
+      "total_critical_violations": 197,
+      "by_type": {
+        "LOCATOR_RESOLVES_TO_WRONG_CELL": 55,
+        "ROW_HEADER_VALUE_MISMATCH": 8,
+        "PERIOD_COLUMN_VALUE_MISMATCH": 82,
+        "UNIT_MISSING_OR_MISCOMBINED": 45,
+        "MULTI_CELL_CONTEXT_INCOMPLETE": 7,
+        "LOCATOR_PROVENANCE_LOST": 0
+      },
+      "by_attribution": {
+        "CHUNKING_ATTRIBUTABLE": 197,
+        "SOURCE_PARSE_LIMITATION": 0,
+        "GOLD_LOCATOR_AMBIGUOUS": 0,
+        "LOCATOR_PROVENANCE_CONFLICT": 0,
+        "RESOLVER_IMPLEMENTATION_BUG": 0,
+        "NOT_A_VIOLATION": 0
+      },
+      "chunking_attributable_total": 197
+    },
+    "section-aware-flat-512-o64.v0.1.0": {
+      "total_critical_violations": 141,
+      "by_type": {
+        "LOCATOR_RESOLVES_TO_WRONG_CELL": 42,
+        "ROW_HEADER_VALUE_MISMATCH": 8,
+        "PERIOD_COLUMN_VALUE_MISMATCH": 37,
+        "UNIT_MISSING_OR_MISCOMBINED": 47,
+        "MULTI_CELL_CONTEXT_INCOMPLETE": 7,
+        "LOCATOR_PROVENANCE_LOST": 0
+      },
+      "by_attribution": {
+        "CHUNKING_ATTRIBUTABLE": 141,
+        "SOURCE_PARSE_LIMITATION": 0,
+        "GOLD_LOCATOR_AMBIGUOUS": 0,
+        "LOCATOR_PROVENANCE_CONFLICT": 0,
+        "RESOLVER_IMPLEMENTATION_BUG": 0,
+        "NOT_A_VIOLATION": 0
+      },
+      "chunking_attributable_total": 141
+    }
+  }
+}

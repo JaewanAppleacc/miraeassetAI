@@ -1,0 +1,403 @@
+{
+  "schema_version": "0.2.0",
+  "generated_at": "2026-09-01T15:28:46.968Z",
+  "status": "COMPUTABLE_FROM_PERSISTED_RESULTS",
+  "table_evaluation_item_count": 92,
+  "new_embedding_calls": 0,
+  "new_model_servers_spawned": 0,
+  "source_p10_2_per_item_results": "../agent-chunking-embedding-grid-v01/work/p10.2-chunking-embedding-grid/stage2-per-item-results.v0.1.jsonl",
+  "model_fixed_minus_section_deltas": [
+    {
+      "frozen_candidate_id": "kure_v1",
+      "fixed_table_recall_at_10": 0.9,
+      "section_table_recall_at_10": 0.8630434782608695,
+      "section_minus_fixed": -0.036956521739130554
+    },
+    {
+      "frozen_candidate_id": "bge_m3",
+      "fixed_table_recall_at_10": 0.8827898550724638,
+      "section_table_recall_at_10": 0.8630434782608695,
+      "section_minus_fixed": -0.0197463768115943
+    },
+    {
+      "frozen_candidate_id": "pixie_rune",
+      "fixed_table_recall_at_10": 0.9036231884057971,
+      "section_table_recall_at_10": 0.8793478260869564,
+      "section_minus_fixed": -0.024275362318840754
+    }
+  ],
+  "combinations": [
+    {
+      "frozen_candidate_id": "kure_v1",
+      "chunking_config_id": "fixed-token-512-o64.v0.1.0",
+      "table_item_count": 92,
+      "computable_from_persisted_results": {
+        "table_recall_at_5": 0.8471014492753624,
+        "table_recall_at_10": 0.9,
+        "table_recall_at_20": 0.9257246376811594,
+        "table_item_hit_rate_at_10": 1,
+        "table_mrr": 0.7794384057971016,
+        "table_ndcg_at_10": 0.8525567622078599,
+        "non_table_recall_at_10": 0.5,
+        "table_vs_non_table_recall_at_10_delta": 0.4,
+        "recall_at_10_by_tag": {
+          "SINGLE_CELL_LOOKUP": {
+            "item_count": 0,
+            "recall_at_10": null
+          },
+          "ROW_HEADER_VALUE": {
+            "item_count": 92,
+            "recall_at_10": 0.9
+          },
+          "COLUMN_PERIOD_VALUE": {
+            "item_count": 16,
+            "recall_at_10": 0.53125
+          },
+          "UNIT_SENSITIVE": {
+            "item_count": 2,
+            "recall_at_10": 0.5
+          },
+          "MULTI_ROW_CALCULATION": {
+            "item_count": 79,
+            "recall_at_10": 0.8835443037974683
+          },
+          "MULTI_COLUMN_COMPARISON": {
+            "item_count": 65,
+            "recall_at_10": 0.9097435897435897
+          },
+          "CROSS_TABLE": {
+            "item_count": 35,
+            "recall_at_10": 0.9514285714285714
+          },
+          "CROSS_DOCUMENT_TABLE": {
+            "item_count": 12,
+            "recall_at_10": 0.4583333333333333
+          },
+          "TABLE_WITH_REPEATED_BOILERPLATE": {
+            "item_count": 0,
+            "recall_at_10": null
+          }
+        }
+      },
+      "not_computable_without_raw_rankings": {
+        "cell_level_recall_at_10": null,
+        "row_header_aware_recall_at_10": null,
+        "unit_aware_recall_at_10": null,
+        "period_column_aware_recall_at_10": null,
+        "table_boilerplate_false_positive_rate": null,
+        "ambiguous_numeric_collision_rate_retrieval": null,
+        "reason": "P10.2's per-item results store only item-level scalar aggregates; the raw ranked candidate-chunk list per item was never persisted, and recomputing it requires a new embedding call, which this Turn forbids."
+      }
+    },
+    {
+      "frozen_candidate_id": "kure_v1",
+      "chunking_config_id": "section-aware-flat-512-o64.v0.1.0",
+      "table_item_count": 92,
+      "computable_from_persisted_results": {
+        "table_recall_at_5": 0.8358695652173912,
+        "table_recall_at_10": 0.8630434782608695,
+        "table_recall_at_20": 0.9038043478260869,
+        "table_item_hit_rate_at_10": 1,
+        "table_mrr": 0.7619398360030512,
+        "table_ndcg_at_10": 0.8600378721016945,
+        "non_table_recall_at_10": 0.5,
+        "table_vs_non_table_recall_at_10_delta": 0.36304347826086947,
+        "recall_at_10_by_tag": {
+          "SINGLE_CELL_LOOKUP": {
+            "item_count": 0,
+            "recall_at_10": null
+          },
+          "ROW_HEADER_VALUE": {
+            "item_count": 92,
+            "recall_at_10": 0.8630434782608695
+          },
+          "COLUMN_PERIOD_VALUE": {
+            "item_count": 16,
+            "recall_at_10": 0.4375
+          },
+          "UNIT_SENSITIVE": {
+            "item_count": 2,
+            "recall_at_10": 0.5
+          },
+          "MULTI_ROW_CALCULATION": {
+            "item_count": 79,
+            "recall_at_10": 0.8405063291139241
+          },
+          "MULTI_COLUMN_COMPARISON": {
+            "item_count": 65,
+            "recall_at_10": 0.8702564102564102
+          },
+          "CROSS_TABLE": {
+            "item_count": 35,
+            "recall_at_10": 0.920952380952381
+          },
+          "CROSS_DOCUMENT_TABLE": {
+            "item_count": 12,
+            "recall_at_10": 0.2916666666666667
+          },
+          "TABLE_WITH_REPEATED_BOILERPLATE": {
+            "item_count": 0,
+            "recall_at_10": null
+          }
+        }
+      },
+      "not_computable_without_raw_rankings": {
+        "cell_level_recall_at_10": null,
+        "row_header_aware_recall_at_10": null,
+        "unit_aware_recall_at_10": null,
+        "period_column_aware_recall_at_10": null,
+        "table_boilerplate_false_positive_rate": null,
+        "ambiguous_numeric_collision_rate_retrieval": null,
+        "reason": "P10.2's per-item results store only item-level scalar aggregates; the raw ranked candidate-chunk list per item was never persisted, and recomputing it requires a new embedding call, which this Turn forbids."
+      }
+    },
+    {
+      "frozen_candidate_id": "bge_m3",
+      "chunking_config_id": "fixed-token-512-o64.v0.1.0",
+      "table_item_count": 92,
+      "computable_from_persisted_results": {
+        "table_recall_at_5": 0.8307971014492754,
+        "table_recall_at_10": 0.8827898550724638,
+        "table_recall_at_20": 0.9257246376811594,
+        "table_item_hit_rate_at_10": 1,
+        "table_mrr": 0.7298422687152666,
+        "table_ndcg_at_10": 0.8261251669210365,
+        "non_table_recall_at_10": 0.5,
+        "table_vs_non_table_recall_at_10_delta": 0.38278985507246377,
+        "recall_at_10_by_tag": {
+          "SINGLE_CELL_LOOKUP": {
+            "item_count": 0,
+            "recall_at_10": null
+          },
+          "ROW_HEADER_VALUE": {
+            "item_count": 92,
+            "recall_at_10": 0.8827898550724638
+          },
+          "COLUMN_PERIOD_VALUE": {
+            "item_count": 16,
+            "recall_at_10": 0.5
+          },
+          "UNIT_SENSITIVE": {
+            "item_count": 2,
+            "recall_at_10": 0.5
+          },
+          "MULTI_ROW_CALCULATION": {
+            "item_count": 79,
+            "recall_at_10": 0.8635021097046411
+          },
+          "MULTI_COLUMN_COMPARISON": {
+            "item_count": 65,
+            "recall_at_10": 0.893076923076923
+          },
+          "CROSS_TABLE": {
+            "item_count": 35,
+            "recall_at_10": 0.9157142857142856
+          },
+          "CROSS_DOCUMENT_TABLE": {
+            "item_count": 12,
+            "recall_at_10": 0.375
+          },
+          "TABLE_WITH_REPEATED_BOILERPLATE": {
+            "item_count": 0,
+            "recall_at_10": null
+          }
+        }
+      },
+      "not_computable_without_raw_rankings": {
+        "cell_level_recall_at_10": null,
+        "row_header_aware_recall_at_10": null,
+        "unit_aware_recall_at_10": null,
+        "period_column_aware_recall_at_10": null,
+        "table_boilerplate_false_positive_rate": null,
+        "ambiguous_numeric_collision_rate_retrieval": null,
+        "reason": "P10.2's per-item results store only item-level scalar aggregates; the raw ranked candidate-chunk list per item was never persisted, and recomputing it requires a new embedding call, which this Turn forbids."
+      }
+    },
+    {
+      "frozen_candidate_id": "bge_m3",
+      "chunking_config_id": "section-aware-flat-512-o64.v0.1.0",
+      "table_item_count": 92,
+      "computable_from_persisted_results": {
+        "table_recall_at_5": 0.8240942028985507,
+        "table_recall_at_10": 0.8630434782608695,
+        "table_recall_at_20": 0.893840579710145,
+        "table_item_hit_rate_at_10": 1,
+        "table_mrr": 0.7393989956775999,
+        "table_ndcg_at_10": 0.8355468137679671,
+        "non_table_recall_at_10": 0.5,
+        "table_vs_non_table_recall_at_10_delta": 0.36304347826086947,
+        "recall_at_10_by_tag": {
+          "SINGLE_CELL_LOOKUP": {
+            "item_count": 0,
+            "recall_at_10": null
+          },
+          "ROW_HEADER_VALUE": {
+            "item_count": 92,
+            "recall_at_10": 0.8630434782608695
+          },
+          "COLUMN_PERIOD_VALUE": {
+            "item_count": 16,
+            "recall_at_10": 0.4375
+          },
+          "UNIT_SENSITIVE": {
+            "item_count": 2,
+            "recall_at_10": 0.5
+          },
+          "MULTI_ROW_CALCULATION": {
+            "item_count": 79,
+            "recall_at_10": 0.8405063291139241
+          },
+          "MULTI_COLUMN_COMPARISON": {
+            "item_count": 65,
+            "recall_at_10": 0.8702564102564102
+          },
+          "CROSS_TABLE": {
+            "item_count": 35,
+            "recall_at_10": 0.920952380952381
+          },
+          "CROSS_DOCUMENT_TABLE": {
+            "item_count": 12,
+            "recall_at_10": 0.2916666666666667
+          },
+          "TABLE_WITH_REPEATED_BOILERPLATE": {
+            "item_count": 0,
+            "recall_at_10": null
+          }
+        }
+      },
+      "not_computable_without_raw_rankings": {
+        "cell_level_recall_at_10": null,
+        "row_header_aware_recall_at_10": null,
+        "unit_aware_recall_at_10": null,
+        "period_column_aware_recall_at_10": null,
+        "table_boilerplate_false_positive_rate": null,
+        "ambiguous_numeric_collision_rate_retrieval": null,
+        "reason": "P10.2's per-item results store only item-level scalar aggregates; the raw ranked candidate-chunk list per item was never persisted, and recomputing it requires a new embedding call, which this Turn forbids."
+      }
+    },
+    {
+      "frozen_candidate_id": "pixie_rune",
+      "chunking_config_id": "fixed-token-512-o64.v0.1.0",
+      "table_item_count": 92,
+      "computable_from_persisted_results": {
+        "table_recall_at_5": 0.8485507246376811,
+        "table_recall_at_10": 0.9036231884057971,
+        "table_recall_at_20": 0.9420289855072465,
+        "table_item_hit_rate_at_10": 1,
+        "table_mrr": 0.7676010678871094,
+        "table_ndcg_at_10": 0.8385840109744689,
+        "non_table_recall_at_10": 0.5,
+        "table_vs_non_table_recall_at_10_delta": 0.40362318840579714,
+        "recall_at_10_by_tag": {
+          "SINGLE_CELL_LOOKUP": {
+            "item_count": 0,
+            "recall_at_10": null
+          },
+          "ROW_HEADER_VALUE": {
+            "item_count": 92,
+            "recall_at_10": 0.9036231884057971
+          },
+          "COLUMN_PERIOD_VALUE": {
+            "item_count": 16,
+            "recall_at_10": 0.5625
+          },
+          "UNIT_SENSITIVE": {
+            "item_count": 2,
+            "recall_at_10": 0.5
+          },
+          "MULTI_ROW_CALCULATION": {
+            "item_count": 79,
+            "recall_at_10": 0.8877637130801689
+          },
+          "MULTI_COLUMN_COMPARISON": {
+            "item_count": 65,
+            "recall_at_10": 0.9071794871794872
+          },
+          "CROSS_TABLE": {
+            "item_count": 35,
+            "recall_at_10": 0.9466666666666664
+          },
+          "CROSS_DOCUMENT_TABLE": {
+            "item_count": 12,
+            "recall_at_10": 0.5
+          },
+          "TABLE_WITH_REPEATED_BOILERPLATE": {
+            "item_count": 0,
+            "recall_at_10": null
+          }
+        }
+      },
+      "not_computable_without_raw_rankings": {
+        "cell_level_recall_at_10": null,
+        "row_header_aware_recall_at_10": null,
+        "unit_aware_recall_at_10": null,
+        "period_column_aware_recall_at_10": null,
+        "table_boilerplate_false_positive_rate": null,
+        "ambiguous_numeric_collision_rate_retrieval": null,
+        "reason": "P10.2's per-item results store only item-level scalar aggregates; the raw ranked candidate-chunk list per item was never persisted, and recomputing it requires a new embedding call, which this Turn forbids."
+      }
+    },
+    {
+      "frozen_candidate_id": "pixie_rune",
+      "chunking_config_id": "section-aware-flat-512-o64.v0.1.0",
+      "table_item_count": 92,
+      "computable_from_persisted_results": {
+        "table_recall_at_5": 0.8403985507246376,
+        "table_recall_at_10": 0.8793478260869564,
+        "table_recall_at_20": 0.9201086956521738,
+        "table_item_hit_rate_at_10": 1,
+        "table_mrr": 0.759368530020704,
+        "table_ndcg_at_10": 0.8485586600279036,
+        "non_table_recall_at_10": 0.5,
+        "table_vs_non_table_recall_at_10_delta": 0.3793478260869564,
+        "recall_at_10_by_tag": {
+          "SINGLE_CELL_LOOKUP": {
+            "item_count": 0,
+            "recall_at_10": null
+          },
+          "ROW_HEADER_VALUE": {
+            "item_count": 92,
+            "recall_at_10": 0.8793478260869564
+          },
+          "COLUMN_PERIOD_VALUE": {
+            "item_count": 16,
+            "recall_at_10": 0.53125
+          },
+          "UNIT_SENSITIVE": {
+            "item_count": 2,
+            "recall_at_10": 0.5
+          },
+          "MULTI_ROW_CALCULATION": {
+            "item_count": 79,
+            "recall_at_10": 0.859493670886076
+          },
+          "MULTI_COLUMN_COMPARISON": {
+            "item_count": 65,
+            "recall_at_10": 0.8856410256410255
+          },
+          "CROSS_TABLE": {
+            "item_count": 35,
+            "recall_at_10": 0.920952380952381
+          },
+          "CROSS_DOCUMENT_TABLE": {
+            "item_count": 12,
+            "recall_at_10": 0.4166666666666667
+          },
+          "TABLE_WITH_REPEATED_BOILERPLATE": {
+            "item_count": 0,
+            "recall_at_10": null
+          }
+        }
+      },
+      "not_computable_without_raw_rankings": {
+        "cell_level_recall_at_10": null,
+        "row_header_aware_recall_at_10": null,
+        "unit_aware_recall_at_10": null,
+        "period_column_aware_recall_at_10": null,
+        "table_boilerplate_false_positive_rate": null,
+        "ambiguous_numeric_collision_rate_retrieval": null,
+        "reason": "P10.2's per-item results store only item-level scalar aggregates; the raw ranked candidate-chunk list per item was never persisted, and recomputing it requires a new embedding call, which this Turn forbids."
+      }
+    }
+  ]
+}
