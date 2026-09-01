@@ -1,0 +1,75 @@
+{
+  "schema_version": "0.1.0",
+  "generated_at": "2026-09-01T14:23:56.391Z",
+  "note": "table_title_loss and multi_cell_context_loss are carried forward from P10.3 as aggregate rates (no per-cell violation record existed to audit for root cause); all other categories are re-derived from Stage 2's per-cell root-cause audit.",
+  "strategies": {
+    "fixed-token-512-o64.v0.1.0": {
+      "original_critical_violation_count": 162,
+      "corrected_chunking_attributable_count": 162,
+      "excluded_count": 0,
+      "by_category_corrected": {
+        "row_header_loss": 0,
+        "column_period_header_loss": 76,
+        "unit_loss": 45,
+        "gold_cells_not_recoverable": 0,
+        "locator_provenance_loss": 41
+      },
+      "by_category_excluded": {
+        "row_header_loss": 0,
+        "column_period_header_loss": 0,
+        "unit_loss": 0,
+        "gold_cells_not_recoverable": 0,
+        "locator_provenance_loss": 0
+      },
+      "table_title_loss_carried_forward": {
+        "preserved": 360,
+        "applicable": 615,
+        "loss_count": 255
+      },
+      "multi_cell_context_loss_carried_forward": {
+        "items_ok": 45,
+        "items_evaluated": 45,
+        "loss_count": 0
+      }
+    },
+    "section-aware-flat-512-o64.v0.1.0": {
+      "original_critical_violation_count": 108,
+      "corrected_chunking_attributable_count": 108,
+      "excluded_count": 0,
+      "by_category_corrected": {
+        "row_header_loss": 0,
+        "column_period_header_loss": 31,
+        "unit_loss": 47,
+        "gold_cells_not_recoverable": 0,
+        "locator_provenance_loss": 30
+      },
+      "by_category_excluded": {
+        "row_header_loss": 0,
+        "column_period_header_loss": 0,
+        "unit_loss": 0,
+        "gold_cells_not_recoverable": 0,
+        "locator_provenance_loss": 0
+      },
+      "table_title_loss_carried_forward": {
+        "preserved": 517,
+        "applicable": 615,
+        "loss_count": 98
+      },
+      "multi_cell_context_loss_carried_forward": {
+        "items_ok": 45,
+        "items_evaluated": 45,
+        "loss_count": 0
+      }
+    }
+  },
+  "side_by_side": {
+    "fixed-token-512-o64.v0.1.0": {
+      "original_162_or_actual": 162,
+      "corrected": 162
+    },
+    "section-aware-flat-512-o64.v0.1.0": {
+      "original_108_or_actual": 108,
+      "corrected": 108
+    }
+  }
+}

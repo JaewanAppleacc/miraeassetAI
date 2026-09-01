@@ -1,0 +1,80 @@
+{
+  "schema_version": "0.1.0",
+  "generated_at": "2026-09-01T14:23:56.530Z",
+  "status": "ADAPTIVE_TABLE_CHUNKING_CONFIRMED",
+  "reason_trail": [
+    "cell determination impossible rate 5.3% is below the 50% rebuild threshold",
+    "0.0% of Fixed's original violations were excluded, below the 30% threshold",
+    "CHUNK_METADATA_LOSS is 0.0% of Fixed's corrected violations (CHUNK_BOUNDARY_CONTEXT_LOSS: 162) -- the loss is a genuine text-boundary artifact, not a metadata-pass-through gap",
+    "after correction, Fixed still has 162 genuine chunking-attributable violations and Section still has 108 (not a complete alternative) -- adaptive direction confirmed"
+  ],
+  "p10_3_original_verdict": "ADAPTIVE_TABLE_CHUNKING_REQUIRED",
+  "corrected_numbers": {
+    "fixed": {
+      "original_critical_violation_count": 162,
+      "corrected_chunking_attributable_count": 162,
+      "excluded_count": 0,
+      "by_category_corrected": {
+        "row_header_loss": 0,
+        "column_period_header_loss": 76,
+        "unit_loss": 45,
+        "gold_cells_not_recoverable": 0,
+        "locator_provenance_loss": 41
+      },
+      "by_category_excluded": {
+        "row_header_loss": 0,
+        "column_period_header_loss": 0,
+        "unit_loss": 0,
+        "gold_cells_not_recoverable": 0,
+        "locator_provenance_loss": 0
+      },
+      "table_title_loss_carried_forward": {
+        "preserved": 360,
+        "applicable": 615,
+        "loss_count": 255
+      },
+      "multi_cell_context_loss_carried_forward": {
+        "items_ok": 45,
+        "items_evaluated": 45,
+        "loss_count": 0
+      }
+    },
+    "section": {
+      "original_critical_violation_count": 108,
+      "corrected_chunking_attributable_count": 108,
+      "excluded_count": 0,
+      "by_category_corrected": {
+        "row_header_loss": 0,
+        "column_period_header_loss": 31,
+        "unit_loss": 47,
+        "gold_cells_not_recoverable": 0,
+        "locator_provenance_loss": 30
+      },
+      "by_category_excluded": {
+        "row_header_loss": 0,
+        "column_period_header_loss": 0,
+        "unit_loss": 0,
+        "gold_cells_not_recoverable": 0,
+        "locator_provenance_loss": 0
+      },
+      "table_title_loss_carried_forward": {
+        "preserved": 517,
+        "applicable": 615,
+        "loss_count": 98
+      },
+      "multi_cell_context_loss_carried_forward": {
+        "items_ok": 45,
+        "items_evaluated": 45,
+        "loss_count": 0
+      }
+    }
+  },
+  "sample_coverage_caveat": {
+    "p10_3_resolver_only_examined_scheme": "NODE_ONLY_COLON",
+    "p10_3_examined_table_kind_sources": 75,
+    "true_total_table_kind_sources": 339,
+    "p10_3_reported_table_evaluation_item_count": 49,
+    "corrected_table_evaluation_item_count": 92,
+    "finding": "P10.3's 162/108 critical violations were computed over only the NODE_ONLY_COLON-scheme sources P10.3's resolver could parse -- 75/339 (22.1%) of the true table-kind sources, covering 49/92 (53.3%) of the true table evaluation items. Every one of those examined violations audited as a genuine chunking artifact (0 excluded), which is a strong within-sample signal, but a full re-run over the corrected 92-item/339-source population would require re-invoking chunker.mjs, which this Turn's explicit boundary (no chunking implementation/embedding execution) forbids. Recommended as an explicit follow-up Turn."
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "schema_version": "0.1.0",
+  "generated_at": "2026-09-01T14:23:56.189Z",
+  "authority_order": [
+    "1. source_locator's own document_id/node_id/row/column (CELL_QUALIFIED scheme)",
+    "2. extensions.evidence_verification or other cell-qualified provenance (verified ABSENT from this Gold release's schema -- see extensions_evidence_verification_present below)",
+    "3. node_id + table structure (NODE_ONLY_HASH scheme, node resolved by rel_path+order_index)",
+    "4. evidence_span exact/broad text match against normalized_rows (NODE_ONLY_COLON scheme, and NODE_ONLY_HASH once the node is found)"
+  ],
+  "extensions_evidence_verification_present": false,
+  "extensions_evidence_verification_check_note": "checked every one of the 345 acceptable_sources and all 101 items' item-level `extensions` objects -- acceptable_source only ever has {document_id, source_locator, evidence_span}; extensions carries only authoring/workflow fields (assignment_id, chain_component_id, gold_pool_role, authoring_eligibility, split_lock_status, artifact_status, verification_note), never per-cell row/col provenance",
+  "locator_scheme_distribution": {
+    "CELL_QUALIFIED": 260,
+    "NODE_ONLY_HASH": 6,
+    "NODE_ONLY_COLON": 79,
+    "UNRECOGNIZED": 0
+  },
+  "locator_scheme_table_kind_distribution": {
+    "CELL_QUALIFIED": 260,
+    "NODE_ONLY_HASH": 4,
+    "NODE_ONLY_COLON": 75
+  },
+  "total_sources": 345,
+  "p10_3_resolver_coverage_gap": {
+    "p10_3_resolver_only_handled_scheme": "NODE_ONLY_COLON",
+    "p10_3_attempted_sources": 79,
+    "p10_3_missed_table_kind_sources": 264,
+    "finding": "P10.3's table-evidence-resolver.mjs matched source_locator against node_id via EXACT STRING EQUALITY only. This only ever satisfies the NODE_ONLY_COLON shape (docId::relPath::nodeId). The CELL_QUALIFIED shape (docId/relPath#node=N&row=R&col=C, 260/345 = 75.4% of ALL Gold sources, and the MOST authoritative locator format available -- an explicit row+col, not a text-matched guess) and the NODE_ONLY_HASH shape (docId/relPath#node=N, 6/345) were never even attempted: findNodeById() returned null for every one, silently classifying them as non-table/unresolvable rather than resolving them via order_index+rel_path lookup.",
+    "p10_3_reported_table_evaluation_item_count": 49,
+    "corrected_table_evaluation_item_count": 92
+  }
+}
