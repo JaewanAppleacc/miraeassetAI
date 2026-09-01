@@ -1,0 +1,8 @@
+{
+  "schema_version": "0.1.0",
+  "bm25_evidence_coverage": {
+    "at_30": 0.839862542955326,
+    "at_100": 0.8566666666666665
+  },
+  "note": "fraction of required_evidence_slots covered by the raw BM25 candidate set alone, BEFORE dense/RRF -- config C (raw-flat, full search-eligible pool)"
+}

@@ -1,0 +1,52 @@
+{
+  "schema_version": "0.1.0",
+  "generated_at": "2026-09-01T04:25:59.311Z",
+  "causes": {
+    "PARENT_SIZE_1536_DEGRADATION": {
+      "triggered": true,
+      "evidence": "C(parent=1024, top-30) recall@10=0.7259450171821304 vs B(parent=1536, top-30) recall@10=0.7001666666666665, gain=0.0258 (threshold 0.01)"
+    },
+    "BM25_CANDIDATE_STARVATION": {
+      "triggered": false,
+      "evidence": "BM25 evidence coverage@100=0.8566666666666665 vs @30=0.839862542955326, gap=0.0168 (threshold 0.05)"
+    },
+    "SIBLING_RESULT_CROWDING": {
+      "triggered": true,
+      "evidence": "mean sibling-crowded slots in top-20 (raw-flat, top-100 funnel) = 5.90 (threshold 3)"
+    },
+    "PARENT_EXPANSION_MISSING": {
+      "triggered": false,
+      "evidence": "D(parent-aware) recall@10=0.6020000000000001 vs C(raw-flat, same top-100 funnel) recall@10=0.6875, gain=-0.0855 (threshold 0.01)"
+    },
+    "TABLE_ROW_CROWDING": {
+      "triggered": true,
+      "evidence": "TABLE_ROW share of crowded-out sibling members = 0.963 of 596 total (threshold 0.5)"
+    },
+    "GOLD_LOCATOR_SCORING_MISMATCH": {
+      "triggered": false,
+      "evidence": "(node_hit - locator_hit) gap: Fixed=0.0000, D=0.0300, delta=0.0300 (threshold 0.05)"
+    },
+    "NONE_OF_THE_ABOVE": {
+      "triggered": false,
+      "evidence": "at least one other cause was triggered above threshold"
+    }
+  },
+  "retention_decision": {
+    "status": "HIERARCHICAL_ELIMINATED_AFTER_PARENT_AWARE_RETEST",
+    "reason": "Fixed leads D by 0.2502 (>= 0.03) and D exceeds 2x Fixed on 2/3 cost dimensions (chunks/latency/RSS)",
+    "cost_dimension_detail": {
+      "search_eligible_chunks": { "fixed": 25361, "d": 83618, "ratio": 3.298, "exceeds_2x": true },
+      "dense_latency_p50_ms_bounded_10item_sample": { "fixed": 24788, "d": 14080, "ratio": 0.568, "exceeds_2x": false },
+      "peak_rss_bytes_bounded_10item_sample": { "fixed": 382484480, "d": 1163788288, "ratio": 3.043, "exceeds_2x": true }
+    },
+    "data_provenance_note": "The main 101-item diagnostic run (scripts/p10.1.1-hierarchical-diagnostic.mjs) measured search_eligible_chunks for all configs but did not separately capture dense_latency_p50_ms/peak_rss_bytes for the Hierarchical-1024 configs (C/D), an implementation gap discovered after that run completed. Rather than change the pinned decision rule (hierarchical-retention-rule.mjs, unmodified) to work around missing inputs, a bounded 10-item companion run (scripts/p10.1.1-determinism-and-latency-check.mjs, real local BGE-M3, same fixed prefix sample used for the determinism check) supplied the missing latency/RSS figures under the SAME rule. This is completing the rule's required inputs, not altering the rule or its thresholds after seeing the recall result."
+  },
+  "summary": {
+    "fixed_recall_at_10": 0.8521666666666667,
+    "hier1536_recall_at_10_reused": 0.7001666666666665,
+    "hier1024_raw_flat_top30_recall_at_10": 0.7259450171821304,
+    "hier1024_raw_flat_top100_recall_at_10": 0.6875,
+    "hier1024_parent_aware_top100_recall_at_10": 0.6020000000000001
+  },
+  "empirical_note_leaf_pool_vs_full_pool": "In this real corpus, D's leaf-only candidate pool was set-identical to C's full search-eligible pool for 101/101 items -- domain/chunking/chunker.mjs's own retrieval_eligible rule already excludes SECTION_PARENT/EVENT_PARENT/HOLDING_STATUS_PARENT/TABLE_WHOLE from the searchable index for these documents, so parent-role chunks were never actually competing for top-k slots even in C's \"raw-flat\" treatment. Any C-vs-D difference in this Turn's results therefore comes from the sibling-collapse + document-diversity-cap step alone, not from candidate-pool composition."
+}

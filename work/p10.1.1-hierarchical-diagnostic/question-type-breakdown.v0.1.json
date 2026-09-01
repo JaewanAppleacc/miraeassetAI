@@ -1,0 +1,133 @@
+{
+  "schema_version": "0.1.0",
+  "by_question_type": {
+    "NUMERIC_LOOKUP": {
+      "A_FIXED_TOP100": {
+        "recall_at_10_mean": 0.9482456140350877,
+        "n": 57
+      },
+      "C_HIER1024_TOP100": {
+        "recall_at_10_mean": 0.7374269005847954,
+        "n": 57
+      },
+      "D_HIER1024_PARENT_AWARE": {
+        "recall_at_10_mean": 0.6365497076023394,
+        "n": 57
+      }
+    },
+    "NARRATIVE_MULTI_DOC": {
+      "A_FIXED_TOP100": {
+        "recall_at_10_mean": 0.9848484848484849,
+        "n": 22
+      },
+      "C_HIER1024_TOP100": {
+        "recall_at_10_mean": 0.9053030303030302,
+        "n": 22
+      },
+      "D_HIER1024_PARENT_AWARE": {
+        "recall_at_10_mean": 0.8257575757575755,
+        "n": 22
+      }
+    },
+    "COMPARISON_CALC": {
+      "A_FIXED_TOP100": {
+        "recall_at_10_mean": 0.375,
+        "n": 12
+      },
+      "C_HIER1024_TOP100": {
+        "recall_at_10_mean": 0.1875,
+        "n": 12
+      },
+      "D_HIER1024_PARENT_AWARE": {
+        "recall_at_10_mean": 0.14583333333333334,
+        "n": 12
+      }
+    },
+    "ANSWERABILITY": {
+      "A_FIXED_TOP100": {
+        "recall_at_10_mean": 0,
+        "n": 4
+      },
+      "C_HIER1024_TOP100": {
+        "recall_at_10_mean": 0,
+        "n": 4
+      },
+      "D_HIER1024_PARENT_AWARE": {
+        "recall_at_10_mean": 0,
+        "n": 4
+      }
+    },
+    "EVENT_TRACE": {
+      "A_FIXED_TOP100": {
+        "recall_at_10_mean": 1,
+        "n": 5
+      },
+      "C_HIER1024_TOP100": {
+        "recall_at_10_mean": 0.9099999999999999,
+        "n": 5
+      },
+      "D_HIER1024_PARENT_AWARE": {
+        "recall_at_10_mean": 0.8,
+        "n": 5
+      }
+    }
+  },
+  "by_doc_group": {
+    "holding": {
+      "A_FIXED_TOP100": {
+        "recall_at_10_mean": 0.9106060606060606,
+        "n": 33
+      },
+      "C_HIER1024_TOP100": {
+        "recall_at_10_mean": 0.6282828282828283,
+        "n": 33
+      },
+      "D_HIER1024_PARENT_AWARE": {
+        "recall_at_10_mean": 0.6085858585858586,
+        "n": 33
+      }
+    },
+    "major": {
+      "A_FIXED_TOP100": {
+        "recall_at_10_mean": 0.8627450980392156,
+        "n": 17
+      },
+      "C_HIER1024_TOP100": {
+        "recall_at_10_mean": 0.7941176470588235,
+        "n": 17
+      },
+      "D_HIER1024_PARENT_AWARE": {
+        "recall_at_10_mean": 0.7117647058823531,
+        "n": 17
+      }
+    },
+    "exchange": {
+      "A_FIXED_TOP100": {
+        "recall_at_10_mean": 0.972972972972973,
+        "n": 37
+      },
+      "C_HIER1024_TOP100": {
+        "recall_at_10_mean": 0.8720720720720723,
+        "n": 37
+      },
+      "D_HIER1024_PARENT_AWARE": {
+        "recall_at_10_mean": 0.7099099099099102,
+        "n": 37
+      }
+    },
+    "periodic": {
+      "A_FIXED_TOP100": {
+        "recall_at_10_mean": 0.34615384615384615,
+        "n": 13
+      },
+      "C_HIER1024_TOP100": {
+        "recall_at_10_mean": 0.17307692307692307,
+        "n": 13
+      },
+      "D_HIER1024_PARENT_AWARE": {
+        "recall_at_10_mean": 0.1346153846153846,
+        "n": 13
+      }
+    }
+  }
+}
