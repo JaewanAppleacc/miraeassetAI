@@ -1,0 +1,694 @@
+{
+  "schema_version": "0.1.0",
+  "generated_at": "2026-09-01T10:00:57.652Z",
+  "bm25_top_k": 100,
+  "return_top_k": 20,
+  "rrf_k_constant": 60,
+  "embedding_candidates": [
+    {
+      "frozen_candidate_id": "kure_v1",
+      "provider_organization": "nlpai-lab (Korea University NLP&AI Lab)",
+      "repository_id": "nlpai-lab/KURE-v1",
+      "immutable_revision": "4ed4540949c70b7da2c74004a915e1f2d5e46e4f",
+      "model_architecture": "XLMRobertaModel, 24 layers -- fine-tuned from BAAI/bge-m3 via CachedGISTEmbedLoss on ~1.88M Korean query-document pairs. Pure bidirectional encoder, never a decoder-only/generative architecture.",
+      "embedding_dimension": 1024,
+      "max_input_length": 8192,
+      "pooling_method": "CLS",
+      "normalization": {
+        "applied_by_default": true,
+        "mechanism": "sentence-transformers pipeline module 2 = Normalize (L2), per modules.json"
+      },
+      "supported_languages": "Korean, English (primary training focus); base BAAI/bge-m3 itself covers 100+ languages",
+      "license": "MIT",
+      "requires_remote_code": false,
+      "runnable_locally": true,
+      "official_http_endpoint_available": false,
+      "required_runtime": [
+        "python>=3.9",
+        "sentence-transformers>=3.3",
+        "transformers>=4.47",
+        "torch>=2.4"
+      ],
+      "estimated_memory_gb_range": {
+        "min_gb": 2.5,
+        "max_gb": 5,
+        "basis": "model.safetensors is 2.27GB (fp32, ~560M-param XLM-RoBERTa-large scale). Range assumes typical CPU inference overhead (activations, tokenizer, batching) on top of resident weights; not independently profiled this Turn (no model download performed)."
+      },
+      "query_prefix": "",
+      "document_prefix": "",
+      "competition_status": "ELIGIBLE_FOR_BOUNDED_CALIBRATION",
+      "competition_status_reason": "Pure XLM-RoBERTa bidirectional encoder (via BAAI/bge-m3 lineage + RetroMAE pretraining), architecturally incapable of autoregressive generation -- not derived from any generative/decoder LLM (the CLAUDE.md concern, exemplified by the Qwen-embedding family, does not apply to this BERT/RoBERTa-lineage architecture). MIT license, immutable revision and dimension both confirmed from the official HuggingFace repository -- no blocker identified for a bounded, Gold-blind calibration smoke.",
+      "adapter_compatibility": {
+        "classification": "COMPATIBLE_VIA_LOCAL_OPENAI_SHAPED_SERVER",
+        "reason": "No provider-hosted official HTTP embeddings endpoint exists for this open-weight model. It CAN be served locally via HuggingFace's own Text Embeddings Inference (TEI), whose /v1/embeddings endpoint already accepts {input, model} and returns {data:[{embedding}]} -- byte-shape-compatible with the existing HTTP_EMBEDDINGS adapter contract with zero new protocol code. This Turn does not install or run any such server."
+      },
+      "sources": [
+        {
+          "url": "https://huggingface.co/nlpai-lab/KURE-v1",
+          "accessed_at": "2026-08-31T10:24:33Z",
+          "note": "official model card: base model, training method, license, languages, usage example"
+        },
+        {
+          "url": "https://huggingface.co/api/models/nlpai-lab/KURE-v1",
+          "accessed_at": "2026-08-31T10:24:33Z",
+          "note": "official HF API response: sha=4ed4540949c70b7da2c74004a915e1f2d5e46e4f, license=MIT, tags (xlm-roberta, base_model:BAAI/bge-m3), confirmed via two independent fetches"
+        },
+        {
+          "url": "https://huggingface.co/nlpai-lab/KURE-v1/raw/main/1_Pooling/config.json",
+          "accessed_at": "2026-08-31T10:24:33Z",
+          "note": "pooling_mode_cls_token: true, word_embedding_dimension: 1024"
+        },
+        {
+          "url": "https://huggingface.co/nlpai-lab/KURE-v1/raw/main/sentence_bert_config.json",
+          "accessed_at": "2026-08-31T10:24:33Z",
+          "note": "max_seq_length: 8192"
+        },
+        {
+          "url": "https://huggingface.co/nlpai-lab/KURE-v1/raw/main/config_sentence_transformers.json",
+          "accessed_at": "2026-08-31T10:24:33Z",
+          "note": "similarity_fn_name: cosine"
+        },
+        {
+          "url": "https://huggingface.co/nlpai-lab/KURE-v1/raw/main/modules.json",
+          "accessed_at": "2026-08-31T10:24:33Z",
+          "note": "pipeline = Transformer -> Pooling -> Normalize"
+        },
+        {
+          "url": "https://huggingface.co/nlpai-lab/KURE-v1/tree/main",
+          "accessed_at": "2026-08-31T10:24:33Z",
+          "note": "model.safetensors = 2.27 GB"
+        }
+      ]
+    },
+    {
+      "frozen_candidate_id": "bge_m3",
+      "provider_organization": "BAAI (Beijing Academy of Artificial Intelligence)",
+      "repository_id": "BAAI/bge-m3",
+      "immutable_revision": "5617a9f61b028005a4858fdac845db406aefb181",
+      "model_architecture": "XLMRobertaModel (RetroMAE-pretrained encoder extended to 8192 tokens); supports Dense/Sparse/ColBERT multi-vector retrieval from one encoding pass. Pure bidirectional encoder, never a decoder-only/generative architecture.",
+      "embedding_dimension": 1024,
+      "max_input_length": 8192,
+      "pooling_method": "CLS",
+      "normalization": {
+        "applied_by_default": true,
+        "mechanism": "sentence-transformers pipeline module 2 = Normalize (L2), per modules.json"
+      },
+      "supported_languages": "100+ languages (official card: \"more than 100 working languages\")",
+      "license": "MIT",
+      "requires_remote_code": false,
+      "runnable_locally": true,
+      "official_http_endpoint_available": false,
+      "required_runtime": [
+        "python>=3.9",
+        "FlagEmbedding (primary) or sentence-transformers>=3.3",
+        "transformers",
+        "torch"
+      ],
+      "estimated_memory_gb_range": {
+        "min_gb": 2.5,
+        "max_gb": 5,
+        "basis": "pytorch_model.bin is 2.27GB (fp32, ~560M-param XLM-RoBERTa-large scale). Range assumes typical CPU inference overhead on top of resident weights; not independently profiled this Turn (no model download performed)."
+      },
+      "query_prefix": "",
+      "document_prefix": "",
+      "competition_status": "ELIGIBLE_FOR_BOUNDED_CALIBRATION",
+      "competition_status_reason": "Official model card explicitly states the architecture is XLM-RoBERTa + RetroMAE, and that BGE-M3 'no longer requires adding instructions to the queries' (symmetric encoder, not an instruction-tuned generative-derived model). Architecturally incapable of autoregressive generation -- not the Qwen-style generative-LLM-derived pattern CLAUDE.md flags. MIT license, immutable revision and dimension both confirmed from the official HuggingFace repository -- no blocker identified for a bounded, Gold-blind calibration smoke.",
+      "adapter_compatibility": {
+        "classification": "COMPATIBLE_VIA_LOCAL_OPENAI_SHAPED_SERVER",
+        "reason": "No provider-hosted official HTTP embeddings endpoint exists (the 'text-embeddings-inference'/'endpoints_compatible' HF tags describe SELF-hostable deployment options, not an already-running BAAI-operated endpoint). Self-hosted TEI's /v1/embeddings endpoint is byte-shape-compatible with the existing HTTP_EMBEDDINGS adapter contract with zero new protocol code. This Turn does not install or run any such server."
+      },
+      "sources": [
+        {
+          "url": "https://huggingface.co/BAAI/bge-m3",
+          "accessed_at": "2026-08-31T10:24:33Z",
+          "note": "official model card: dimension, max length, no-instruction-required statement, architecture, FlagEmbedding usage"
+        },
+        {
+          "url": "https://huggingface.co/api/models/BAAI/bge-m3",
+          "accessed_at": "2026-08-31T10:24:33Z",
+          "note": "official HF API response: sha=5617a9f61b028005a4858fdac845db406aefb181, license=MIT, tags (xlm-roberta, text-embeddings-inference, endpoints_compatible), confirmed via two independent fetches"
+        },
+        {
+          "url": "https://huggingface.co/BAAI/bge-m3/raw/main/1_Pooling/config.json",
+          "accessed_at": "2026-08-31T10:24:33Z",
+          "note": "pooling_mode_cls_token: true, word_embedding_dimension: 1024"
+        },
+        {
+          "url": "https://huggingface.co/BAAI/bge-m3/raw/main/sentence_bert_config.json",
+          "accessed_at": "2026-08-31T10:24:33Z",
+          "note": "max_seq_length: 8192"
+        },
+        {
+          "url": "https://huggingface.co/BAAI/bge-m3/raw/main/modules.json",
+          "accessed_at": "2026-08-31T10:24:33Z",
+          "note": "pipeline = Transformer -> Pooling -> Normalize"
+        },
+        {
+          "url": "https://huggingface.co/BAAI/bge-m3/tree/main",
+          "accessed_at": "2026-08-31T10:24:33Z",
+          "note": "pytorch_model.bin = 2.27 GB"
+        }
+      ]
+    },
+    {
+      "frozen_candidate_id": "pixie_rune",
+      "provider_organization": "TelePIX Co., Ltd.",
+      "repository_id": "telepix/PIXIE-Rune-v1.5",
+      "immutable_revision": "29dd334196af53e6cfc16674379e743334f5fa66",
+      "model_architecture": "XLMRobertaModel, 24 layers. Pure bidirectional encoder, never a decoder-only/generative architecture, per the v1.5 model card.",
+      "embedding_dimension": 1024,
+      "max_input_length": 6144,
+      "pooling_method": "CLS",
+      "normalization": {
+        "applied_by_default": true,
+        "mechanism": "sentence-transformers pipeline module 2 = Normalize (L2), per modules.json"
+      },
+      "supported_languages": "Korean, English (primary; v1.5 card states 74 total languages)",
+      "license": "Apache-2.0",
+      "requires_remote_code": false,
+      "runnable_locally": true,
+      "official_http_endpoint_available": false,
+      "required_runtime": [
+        "python>=3.9",
+        "sentence-transformers",
+        "transformers",
+        "torch"
+      ],
+      "estimated_memory_gb_range": {
+        "min_gb": 2.5,
+        "max_gb": 5,
+        "basis": "v1.5's model.safetensors is 2.27GB (fp32, ~560M-param XLM-RoBERTa-large scale) + typical CPU inference overhead; not independently profiled this Turn (no model download performed)."
+      },
+      "query_prefix": "query: ",
+      "document_prefix": "",
+      "competition_status": "ELIGIBLE_FOR_BOUNDED_CALIBRATION",
+      "competition_status_reason": "Turn P9.2 Owner decision: identity ambiguity (Section B of Turn P9.1) resolved -- the Owner has confirmed telepix/PIXIE-Rune-v1.5 @ 29dd334196af53e6cfc16674379e743334f5fa66 as the exact pinned build. Architecture is a pure XLM-RoBERTa bidirectional encoder (confirmed independently in Turn P9.1, not re-derived here), architecturally incapable of generation -- not the Qwen-style generative-derived pattern CLAUDE.md flags. Apache-2.0 license, immutable revision and dimension both independently verified. Query prefix is asymmetric (\"query: \" for queries, none for documents) -- any use of this candidate MUST route text through query/document-mode-aware preparation (see registry.mjs's prepareTextForMode); a caller embedding raw, unprefixed text as a query would silently misrepresent this model.",
+      "pixie_rune_variants_researched": [
+        {
+          "repository_id": "telepix/PIXIE-Rune-v1.0",
+          "immutable_revision": "091fe5a6682119cfc02451f37fdece163ddf38de",
+          "license": "apache-2.0",
+          "note": "earlier stable release; architecture/dimension not independently re-verified this Turn beyond the shared family README. Not the pinned build -- kept here only as research context, never as an alternative active pin (exactly one PIXIE-Rune build may be active at a time)."
+        },
+        {
+          "repository_id": "telepix/PIXIE-Rune-Preview",
+          "immutable_revision": "5103ecbda7dd9e502f8414c54731da0c3f2dc72b",
+          "license": "apache-2.0",
+          "note": "explicitly named 'Preview' -- presumed experimental/pre-release, not independently re-verified. Not the pinned build."
+        }
+      ],
+      "adapter_compatibility": {
+        "classification": "COMPATIBLE_VIA_LOCAL_OPENAI_SHAPED_SERVER",
+        "reason": "No provider-hosted official HTTP embeddings endpoint exists for this open-weight model. It CAN be served locally via HuggingFace's own Text Embeddings Inference (TEI), whose /v1/embeddings endpoint already accepts {input, model} and returns {data:[{embedding}]} -- byte-shape-compatible with the existing HTTP_EMBEDDINGS adapter contract with zero new protocol code. Requires a query-only prefix (\"query: \") applied asymmetrically to queries vs. documents -- any adapter wiring for this candidate must route text through a query/document-mode-aware preparation step, never embed the identical raw text the same way for both roles (see registry.mjs's prepareTextForMode). This Turn does not install or run any such server against the real model; only a fake loopback mock server is used for protocol/handshake tests."
+      },
+      "sources": [
+        {
+          "url": "https://huggingface.co/telepix/PIXIE-Rune-v1.5",
+          "accessed_at": "2026-08-31T10:24:33Z",
+          "note": "official model card: dimension, max length, architecture, prompt_name usage, apache-2.0 license, non-generative-derivation statement"
+        },
+        {
+          "url": "https://huggingface.co/api/models/telepix/PIXIE-Rune-v1.5",
+          "accessed_at": "2026-08-31T10:24:33Z",
+          "note": "official HF API response: sha=29dd334196af53e6cfc16674379e743334f5fa66, license=apache-2.0 (confirmed via two independent fetches)"
+        },
+        {
+          "url": "https://huggingface.co/telepix/PIXIE-Rune-v1.5/raw/main/config_sentence_transformers.json",
+          "accessed_at": "2026-08-31T10:24:33Z",
+          "note": "prompts: {query: \"query: \", document: \"\"}, similarity_fn_name: cosine"
+        },
+        {
+          "url": "https://huggingface.co/telepix/PIXIE-Rune-v1.5/raw/main/modules.json",
+          "accessed_at": "2026-08-31T10:24:33Z",
+          "note": "pipeline = Transformer -> Pooling -> Normalize"
+        },
+        {
+          "url": "https://huggingface.co/telepix/PIXIE-Rune-v1.5/raw/main/sentence_bert_config.json",
+          "accessed_at": "2026-08-31T10:24:33Z",
+          "note": "max_seq_length: 6144"
+        },
+        {
+          "url": "https://huggingface.co/telepix/PIXIE-Rune-v1.5/raw/main/config.json",
+          "accessed_at": "2026-08-31T10:24:33Z",
+          "note": "architectures: XLMRobertaModel, model_type: xlm-roberta, 24 layers"
+        },
+        {
+          "url": "https://huggingface.co/telepix/PIXIE-Rune-v1.5/tree/main",
+          "accessed_at": "2026-08-31T10:24:33Z",
+          "note": "model.safetensors = 2.27 GB"
+        },
+        {
+          "url": "https://huggingface.co/api/models/telepix/PIXIE-Rune-v1.0",
+          "accessed_at": "2026-08-31T10:24:33Z",
+          "note": "official HF API response (research context, not the pinned build): sha=091fe5a6682119cfc02451f37fdece163ddf38de, license=apache-2.0"
+        },
+        {
+          "url": "https://huggingface.co/api/models/telepix/PIXIE-Rune-Preview",
+          "accessed_at": "2026-08-31T10:24:33Z",
+          "note": "official HF API response (research context, not the pinned build): sha=5103ecbda7dd9e502f8414c54731da0c3f2dc72b, license=apache-2.0"
+        },
+        {
+          "url": "owner-decision:turn-p9.2",
+          "accessed_at": "2026-08-31T00:00:00Z",
+          "note": "Owner explicitly confirmed telepix/PIXIE-Rune-v1.5 @ 29dd334196af53e6cfc16674379e743334f5fa66 as the exact pinned PIXIE-Rune build, resolving the Turn P9.1 identity ambiguity."
+        }
+      ]
+    }
+  ],
+  "retry_count_total": 0,
+  "failure_count_total": 0,
+  "combinations_completed": 6,
+  "combinations": [
+    {
+      "frozen_candidate_id": "kure_v1",
+      "chunking_config_id": "fixed-token-512-o64.v0.1.0",
+      "total_chunks": 25361,
+      "search_eligible_chunks": 25361,
+      "locator_provenance_violations": 0,
+      "rrf": {
+        "item_count": 101,
+        "items_with_required_slots": 100,
+        "macro_evidence_recall_at_k": {
+          "5": 0.8193333333333334,
+          "10": 0.868,
+          "20": 0.8916666666666667
+        },
+        "macro_mrr": 0.7520833333333331,
+        "macro_ndcg_at_10": 0.8557387774301722,
+        "document_hit_rate_at_10": 0.9504950495049505,
+        "node_hit_rate_at_10": 0.89,
+        "locator_hit_rate_at_10": 0.89,
+        "not_found_false_positive_rate_at_10": 0.2,
+        "not_found_item_count": 5
+      },
+      "bm25_only": {
+        "item_count": 101,
+        "items_with_required_slots": 100,
+        "macro_evidence_recall_at_k": {
+          "5": 0.7865000000000001,
+          "10": 0.8468333333333333,
+          "20": 0.8625
+        },
+        "macro_mrr": 0.7309786967418545,
+        "macro_ndcg_at_10": 0.8409492005480378,
+        "document_hit_rate_at_10": 0.9504950495049505,
+        "node_hit_rate_at_10": 0.89,
+        "locator_hit_rate_at_10": 0.89,
+        "not_found_false_positive_rate_at_10": 0.2,
+        "not_found_item_count": 5
+      },
+      "dense_only": {
+        "item_count": 101,
+        "items_with_required_slots": 100,
+        "macro_evidence_recall_at_k": {
+          "5": 0.743,
+          "10": 0.835,
+          "20": 0.89
+        },
+        "macro_mrr": 0.6744307081807084,
+        "macro_ndcg_at_10": 0.821122678941145,
+        "document_hit_rate_at_10": 0.9504950495049505,
+        "node_hit_rate_at_10": 0.85,
+        "locator_hit_rate_at_10": 0.85,
+        "not_found_false_positive_rate_at_10": 0.2,
+        "not_found_item_count": 5
+      },
+      "latency_ms": {
+        "bm25_p50": 33,
+        "bm25_p95": 621,
+        "bm25_max": 2545,
+        "dense_p50": 10623,
+        "dense_p95": 72497,
+        "dense_max": 89313
+      },
+      "throughput_items_per_sec": 0.045749300436599256,
+      "peak_rss_bytes": 260653056,
+      "wall_time_ms": 2142192,
+      "cache_stats_cumulative": {
+        "cache_hits": 7266,
+        "cache_misses": 24114,
+        "unique_keys_cached": 22521
+      }
+    },
+    {
+      "frozen_candidate_id": "kure_v1",
+      "chunking_config_id": "section-aware-flat-512-o64.v0.1.0",
+      "total_chunks": 30765,
+      "search_eligible_chunks": 30765,
+      "locator_provenance_violations": 0,
+      "rrf": {
+        "item_count": 101,
+        "items_with_required_slots": 100,
+        "macro_evidence_recall_at_k": {
+          "5": 0.8089999999999999,
+          "10": 0.834,
+          "20": 0.8714999999999999
+        },
+        "macro_mrr": 0.7359846491228069,
+        "macro_ndcg_at_10": 0.8628836576658573,
+        "document_hit_rate_at_10": 0.9504950495049505,
+        "node_hit_rate_at_10": 0.89,
+        "locator_hit_rate_at_10": 0.89,
+        "not_found_false_positive_rate_at_10": 0.2,
+        "not_found_item_count": 5
+      },
+      "bm25_only": {
+        "item_count": 101,
+        "items_with_required_slots": 100,
+        "macro_evidence_recall_at_k": {
+          "5": 0.7873333333333333,
+          "10": 0.8206666666666667,
+          "20": 0.8306666666666667
+        },
+        "macro_mrr": 0.7086230158730159,
+        "macro_ndcg_at_10": 0.8402833749452683,
+        "document_hit_rate_at_10": 0.9504950495049505,
+        "node_hit_rate_at_10": 0.89,
+        "locator_hit_rate_at_10": 0.88,
+        "not_found_false_positive_rate_at_10": 0.2,
+        "not_found_item_count": 5
+      },
+      "dense_only": {
+        "item_count": 101,
+        "items_with_required_slots": 100,
+        "macro_evidence_recall_at_k": {
+          "5": 0.7075,
+          "10": 0.8284999999999999,
+          "20": 0.8765000000000001
+        },
+        "macro_mrr": 0.5647860374919199,
+        "macro_ndcg_at_10": 0.7168418828877561,
+        "document_hit_rate_at_10": 0.9504950495049505,
+        "node_hit_rate_at_10": 0.88,
+        "locator_hit_rate_at_10": 0.88,
+        "not_found_false_positive_rate_at_10": 0.2,
+        "not_found_item_count": 5
+      },
+      "latency_ms": {
+        "bm25_p50": 41,
+        "bm25_p95": 774,
+        "bm25_max": 1533,
+        "dense_p50": 17680,
+        "dense_p95": 85219,
+        "dense_max": 114182
+      },
+      "throughput_items_per_sec": 0.031773723916475066,
+      "peak_rss_bytes": 254459904,
+      "wall_time_ms": 3083212,
+      "cache_stats_cumulative": {
+        "cache_hits": 7266,
+        "cache_misses": 24114,
+        "unique_keys_cached": 22521
+      }
+    },
+    {
+      "frozen_candidate_id": "bge_m3",
+      "chunking_config_id": "fixed-token-512-o64.v0.1.0",
+      "total_chunks": 25361,
+      "search_eligible_chunks": 25361,
+      "locator_provenance_violations": 0,
+      "rrf": {
+        "item_count": 101,
+        "items_with_required_slots": 100,
+        "macro_evidence_recall_at_k": {
+          "5": 0.8043333333333333,
+          "10": 0.8521666666666667,
+          "20": 0.8916666666666667
+        },
+        "macro_mrr": 0.7064548872180452,
+        "macro_ndcg_at_10": 0.8305447775566404,
+        "document_hit_rate_at_10": 0.9504950495049505,
+        "node_hit_rate_at_10": 0.88,
+        "locator_hit_rate_at_10": 0.88,
+        "not_found_false_positive_rate_at_10": 0.2,
+        "not_found_item_count": 5
+      },
+      "bm25_only": {
+        "item_count": 101,
+        "items_with_required_slots": 100,
+        "macro_evidence_recall_at_k": {
+          "5": 0.7865000000000001,
+          "10": 0.8468333333333333,
+          "20": 0.8625
+        },
+        "macro_mrr": 0.7309786967418545,
+        "macro_ndcg_at_10": 0.8409492005480378,
+        "document_hit_rate_at_10": 0.9504950495049505,
+        "node_hit_rate_at_10": 0.89,
+        "locator_hit_rate_at_10": 0.89,
+        "not_found_false_positive_rate_at_10": 0.2,
+        "not_found_item_count": 5
+      },
+      "dense_only": {
+        "item_count": 101,
+        "items_with_required_slots": 100,
+        "macro_evidence_recall_at_k": {
+          "5": 0.6916666666666668,
+          "10": 0.8271666666666667,
+          "20": 0.88
+        },
+        "macro_mrr": 0.5913499278499279,
+        "macro_ndcg_at_10": 0.753069502775997,
+        "document_hit_rate_at_10": 0.9504950495049505,
+        "node_hit_rate_at_10": 0.85,
+        "locator_hit_rate_at_10": 0.85,
+        "not_found_false_positive_rate_at_10": 0.2,
+        "not_found_item_count": 5
+      },
+      "latency_ms": {
+        "bm25_p50": 39,
+        "bm25_p95": 798,
+        "bm25_max": 3173,
+        "dense_p50": 13619,
+        "dense_p95": 81610,
+        "dense_max": 96391
+      },
+      "throughput_items_per_sec": 0.03785745536235244,
+      "peak_rss_bytes": 267829248,
+      "wall_time_ms": 2591253,
+      "cache_stats_cumulative": {
+        "cache_hits": 7266,
+        "cache_misses": 24114,
+        "unique_keys_cached": 22521
+      }
+    },
+    {
+      "frozen_candidate_id": "bge_m3",
+      "chunking_config_id": "section-aware-flat-512-o64.v0.1.0",
+      "total_chunks": 30765,
+      "search_eligible_chunks": 30765,
+      "locator_provenance_violations": 0,
+      "rrf": {
+        "item_count": 101,
+        "items_with_required_slots": 100,
+        "macro_evidence_recall_at_k": {
+          "5": 0.7981666666666666,
+          "10": 0.834,
+          "20": 0.8623333333333334
+        },
+        "macro_mrr": 0.7152470760233919,
+        "macro_ndcg_at_10": 0.8394933210549941,
+        "document_hit_rate_at_10": 0.9504950495049505,
+        "node_hit_rate_at_10": 0.89,
+        "locator_hit_rate_at_10": 0.89,
+        "not_found_false_positive_rate_at_10": 0.2,
+        "not_found_item_count": 5
+      },
+      "bm25_only": {
+        "item_count": 101,
+        "items_with_required_slots": 100,
+        "macro_evidence_recall_at_k": {
+          "5": 0.7873333333333333,
+          "10": 0.8206666666666667,
+          "20": 0.8306666666666667
+        },
+        "macro_mrr": 0.7086230158730159,
+        "macro_ndcg_at_10": 0.8402833749452683,
+        "document_hit_rate_at_10": 0.9504950495049505,
+        "node_hit_rate_at_10": 0.89,
+        "locator_hit_rate_at_10": 0.88,
+        "not_found_false_positive_rate_at_10": 0.2,
+        "not_found_item_count": 5
+      },
+      "dense_only": {
+        "item_count": 101,
+        "items_with_required_slots": 100,
+        "macro_evidence_recall_at_k": {
+          "5": 0.6496666666666667,
+          "10": 0.8185000000000001,
+          "20": 0.8665
+        },
+        "macro_mrr": 0.5284447676506501,
+        "macro_ndcg_at_10": 0.6938903428415101,
+        "document_hit_rate_at_10": 0.9504950495049505,
+        "node_hit_rate_at_10": 0.87,
+        "locator_hit_rate_at_10": 0.86,
+        "not_found_false_positive_rate_at_10": 0.2,
+        "not_found_item_count": 5
+      },
+      "latency_ms": {
+        "bm25_p50": 36,
+        "bm25_p95": 837,
+        "bm25_max": 2859,
+        "dense_p50": 11946,
+        "dense_p95": 75040,
+        "dense_max": 94823
+      },
+      "throughput_items_per_sec": 0.03896796752722937,
+      "peak_rss_bytes": 46858240,
+      "wall_time_ms": 2513709,
+      "cache_stats_cumulative": {
+        "cache_hits": 7266,
+        "cache_misses": 24114,
+        "unique_keys_cached": 22521
+      }
+    },
+    {
+      "frozen_candidate_id": "pixie_rune",
+      "chunking_config_id": "fixed-token-512-o64.v0.1.0",
+      "total_chunks": 25361,
+      "search_eligible_chunks": 25361,
+      "locator_provenance_violations": 0,
+      "rrf": {
+        "item_count": 101,
+        "items_with_required_slots": 100,
+        "macro_evidence_recall_at_k": {
+          "5": 0.8206666666666667,
+          "10": 0.8713333333333334,
+          "20": 0.9066666666666667
+        },
+        "macro_mrr": 0.7461929824561405,
+        "macro_ndcg_at_10": 0.8448660636994721,
+        "document_hit_rate_at_10": 0.9504950495049505,
+        "node_hit_rate_at_10": 0.9,
+        "locator_hit_rate_at_10": 0.9,
+        "not_found_false_positive_rate_at_10": 0.2,
+        "not_found_item_count": 5
+      },
+      "bm25_only": {
+        "item_count": 101,
+        "items_with_required_slots": 100,
+        "macro_evidence_recall_at_k": {
+          "5": 0.7865000000000001,
+          "10": 0.8468333333333333,
+          "20": 0.8625
+        },
+        "macro_mrr": 0.7309786967418545,
+        "macro_ndcg_at_10": 0.8409492005480378,
+        "document_hit_rate_at_10": 0.9504950495049505,
+        "node_hit_rate_at_10": 0.89,
+        "locator_hit_rate_at_10": 0.89,
+        "not_found_false_positive_rate_at_10": 0.2,
+        "not_found_item_count": 5
+      },
+      "dense_only": {
+        "item_count": 101,
+        "items_with_required_slots": 100,
+        "macro_evidence_recall_at_k": {
+          "5": 0.7826666666666666,
+          "10": 0.8771666666666667,
+          "20": 0.91
+        },
+        "macro_mrr": 0.6894786967418547,
+        "macro_ndcg_at_10": 0.7984179433790202,
+        "document_hit_rate_at_10": 0.9504950495049505,
+        "node_hit_rate_at_10": 0.9,
+        "locator_hit_rate_at_10": 0.9,
+        "not_found_false_positive_rate_at_10": 0.2,
+        "not_found_item_count": 5
+      },
+      "latency_ms": {
+        "bm25_p50": 31,
+        "bm25_p95": 779,
+        "bm25_max": 1349,
+        "dense_p50": 9559,
+        "dense_p95": 63867,
+        "dense_max": 69185
+      },
+      "throughput_items_per_sec": 0.05042287639117756,
+      "peak_rss_bytes": 283869184,
+      "wall_time_ms": 1950472,
+      "cache_stats_cumulative": {
+        "cache_hits": 7266,
+        "cache_misses": 24114,
+        "unique_keys_cached": 22521
+      }
+    },
+    {
+      "frozen_candidate_id": "pixie_rune",
+      "chunking_config_id": "section-aware-flat-512-o64.v0.1.0",
+      "total_chunks": 30765,
+      "search_eligible_chunks": 30765,
+      "locator_provenance_violations": 0,
+      "rrf": {
+        "item_count": 101,
+        "items_with_required_slots": 100,
+        "macro_evidence_recall_at_k": {
+          "5": 0.8131666666666666,
+          "10": 0.8489999999999999,
+          "20": 0.8865
+        },
+        "macro_mrr": 0.7386190476190477,
+        "macro_ndcg_at_10": 0.8543973950171986,
+        "document_hit_rate_at_10": 0.9504950495049505,
+        "node_hit_rate_at_10": 0.9,
+        "locator_hit_rate_at_10": 0.9,
+        "not_found_false_positive_rate_at_10": 0.2,
+        "not_found_item_count": 5
+      },
+      "bm25_only": {
+        "item_count": 101,
+        "items_with_required_slots": 100,
+        "macro_evidence_recall_at_k": {
+          "5": 0.7873333333333333,
+          "10": 0.8206666666666667,
+          "20": 0.8306666666666667
+        },
+        "macro_mrr": 0.7086230158730159,
+        "macro_ndcg_at_10": 0.8402833749452683,
+        "document_hit_rate_at_10": 0.9504950495049505,
+        "node_hit_rate_at_10": 0.89,
+        "locator_hit_rate_at_10": 0.88,
+        "not_found_false_positive_rate_at_10": 0.2,
+        "not_found_item_count": 5
+      },
+      "dense_only": {
+        "item_count": 101,
+        "items_with_required_slots": 100,
+        "macro_evidence_recall_at_k": {
+          "5": 0.7016666666666667,
+          "10": 0.8514999999999999,
+          "20": 0.8831666666666667
+        },
+        "macro_mrr": 0.5898479853479855,
+        "macro_ndcg_at_10": 0.7208792530340548,
+        "document_hit_rate_at_10": 0.9504950495049505,
+        "node_hit_rate_at_10": 0.9,
+        "locator_hit_rate_at_10": 0.9,
+        "not_found_false_positive_rate_at_10": 0.2,
+        "not_found_item_count": 5
+      },
+      "latency_ms": {
+        "bm25_p50": 36,
+        "bm25_p95": 898,
+        "bm25_max": 2930,
+        "dense_p50": 17123,
+        "dense_p95": 94456,
+        "dense_max": 107771
+      },
+      "throughput_items_per_sec": 0.03311926452015137,
+      "peak_rss_bytes": 45875200,
+      "wall_time_ms": 2956722,
+      "cache_stats_cumulative": {
+        "cache_hits": 7266,
+        "cache_misses": 24114,
+        "unique_keys_cached": 22521
+      }
+    }
+  ],
+  "final_embedding_cache_stats": {
+    "cache_hits": 7266,
+    "cache_misses": 24114,
+    "unique_keys_cached": 22521
+  }
+}
