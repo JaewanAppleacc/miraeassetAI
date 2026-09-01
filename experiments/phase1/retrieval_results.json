@@ -1,0 +1,4624 @@
+[
+ {
+  "qid": "author_0459b5f8f37b0192316cd77c",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "holding"
+  ],
+  "question": "Massachusetts Financial Services Company이(가) (주)아모레퍼시픽에 대해 제출한 주식등의 대량보유상황보고서(보고서작성기준일 2024년 03월 22일)에 따르면, 직전 보고서 대비 이번 보고서의 보유주식등의 수와 보유비율은 각각 어떻게 변동되었는가?",
+  "corps_detected": [
+   "아모레퍼시픽"
+  ],
+  "years_detected": [
+   2024
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "holding_20240403000410"
+  ],
+  "top5_docs": [
+   "holding_20240403000410",
+   "holding_20240403000410",
+   "holding_20240403000410",
+   "holding_20240403000410",
+   "holding_20240403000410"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 2,
+  "slots_top20": 2,
+  "slots_cited": 1,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 2,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 100,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 2,925,317 → 2,263,085 (-662,232 변동)\n- 직전 대비 비율(%): 5.00 → 3.87 (-1.13%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서 |",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_050b7f96dd361ac0771755a8",
+  "type": "NARRATIVE_MULTI_DOC",
+  "mode": "OPEN",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "major"
+  ],
+  "question": "현대자동차가 2023년 10월 26일 결의한 자기주식 처분 결정의 목적과 처분예정주식수, 처분예정금액은 각각 무엇인가?",
+  "corps_detected": [
+   "현대자동차"
+  ],
+  "years_detected": [
+   2023
+  ],
+  "n_retrieved": 10,
+  "gold_docs": [
+   "major_20231026000201"
+  ],
+  "top5_docs": [
+   "major_20231026000201",
+   "major_20231026000201",
+   "major_20231026000201",
+   "major_20231026000201",
+   "major_20231026000201"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 2,
+  "slots_top20": 2,
+  "slots_cited": 2,
+  "value_forms": [
+   "2023",
+   "963,630",
+   "175,380,660,000",
+   "182,000"
+  ],
+  "value_in_evidence": true,
+  "value_in_top20": true,
+  "n_evidence": 5,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 4. 처분예정기간 | 시작일 | 2023년 11월 30일\n- [answer] 3. 처분예정금액(원) | 보통주식 | 175,380,660,000\n- [answer] 1. 처분예정주식(주) | 보통주식 | 963,630\n-",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_0644c80590c4960192ecdd59",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "exchange"
+  ],
+  "question": "한국항공우주가 2025년 6월 26일 체결한 'KF-21 최초양산(잔여) 항공기 계약'의 계약금액(원)은 얼마인가?",
+  "corps_detected": [
+   "한국항공우주"
+  ],
+  "years_detected": [
+   2025
+  ],
+  "n_retrieved": 2,
+  "gold_docs": [
+   "exchange_20250626800313"
+  ],
+  "top5_docs": [
+   "exchange_20250626800313",
+   "exchange_20250626800313"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 1,
+  "slots_top20": 1,
+  "slots_cited": 1,
+  "value_forms": [
+   "2396990000000",
+   "2,396,990,000,000"
+  ],
+  "value_in_evidence": true,
+  "value_in_top20": true,
+  "n_evidence": 5,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "공시에서 확인한 값:\n- 계약금액: 2,396,990,000,000\n함께 확인되는 원문 근거:\n- [answer] 5. 계약기간 | 시작일 | 2025-06-26\n- [answer] - 체결계약명 | KF-21 최초양산(잔여) 항공기 계약\n- [answer] 7. 계약(수주)일자 | 2",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_087a90f5918d4e0b3e00959c",
+  "type": "COMPARISON_CALC",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "HARD",
+  "doc_groups": [
+   "periodic"
+  ],
+  "question": "두산로보틱스의 연결기준 매출액은(는) 2023년와(과) 2025년 사이(같은 연간(사업보고서) 기준)에 얼마나 변동했는가?",
+  "corps_detected": [
+   "두산로보틱스"
+  ],
+  "years_detected": [
+   2023,
+   2025
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "periodic_20240320001860",
+   "periodic_20260318001562"
+  ],
+  "top5_docs": [
+   "periodic_20260318001562",
+   "periodic_20260318001562",
+   "periodic_20260318001562",
+   "periodic_20240320001860",
+   "periodic_20240320001860"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 2,
+  "slots_top20": 2,
+  "slots_cited": 1,
+  "value_forms": [
+   "-20,060",
+   "-20060"
+  ],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 2,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 65,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "공시에서 확인한 값:\n- 2023년 매출액: 53,038\n- 2025년 매출액: 32,978",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_0be4ca52605cfe6d48181d97",
+  "type": "COMPARISON_CALC",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "HARD",
+  "doc_groups": [
+   "periodic"
+  ],
+  "question": "에코프로비엠의 연결기준 매출액은(는) 2023년 1분기와(과) 2025년 1분기 사이(같은 1분기(3개월) 기준)에 얼마나 변동했는가?",
+  "corps_detected": [
+   "에코프로비엠"
+  ],
+  "years_detected": [
+   2023,
+   2025
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "periodic_20230515001464",
+   "periodic_20250514000385"
+  ],
+  "top5_docs": [
+   "periodic_20230515001464",
+   "periodic_20250514000385",
+   "periodic_20230515001464",
+   "periodic_20250514000385",
+   "periodic_20250514000385"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 2,
+  "slots_top20": 2,
+  "slots_cited": 0,
+  "value_forms": [
+   "-1381201196139",
+   "-1,381,201,196,139"
+  ],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 2,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 65,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "공시에서 확인한 값:\n- 2023년 매출액: 2,010,989,897,316\n- 2025년 매출액: 629,788,701,177",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_0dd866177ad6b48052e16a33",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "exchange"
+  ],
+  "question": "대우건설이 2025년 6월 30일 수주한 '과천주공5단지 주택재건축정비사업'의 계약금액(원)은 얼마인가?",
+  "corps_detected": [
+   "대우건설"
+  ],
+  "years_detected": [
+   2025
+  ],
+  "n_retrieved": 4,
+  "gold_docs": [
+   "exchange_20250701800193"
+  ],
+  "top5_docs": [
+   "exchange_20250701800193",
+   "exchange_20250701800193",
+   "exchange_20251112800360",
+   "exchange_20251112800360"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 1,
+  "slots_top20": 1,
+  "slots_cited": 1,
+  "value_forms": [
+   "638239000000",
+   "638,239,000,000"
+  ],
+  "value_in_evidence": true,
+  "value_in_top20": true,
+  "n_evidence": 5,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "공시에서 확인한 값:\n- 계약금액: 638,239,000,000\n함께 확인되는 원문 근거:\n- [answer] - 체결계약명 | 과천주공5단지 주택재건축정비사업\n- [answer] 3. 계약상대 | 과천주공5단지재건축정비사업조합\n- [answer] 7. 계약(수주)일자 | 2025-06",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_14dfddbe1d41275533ae3945",
+  "type": "COMPARISON_CALC",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "HARD",
+  "doc_groups": [
+   "periodic"
+  ],
+  "question": "레인보우로보틱스의 연결기준 매출액은(는) 2023년 1월~12월와(과) 2025년 1월~12월 사이(같은 연간(사업보고서) 기준)에 얼마나 변동했는가?",
+  "corps_detected": [
+   "레인보우로보틱스"
+  ],
+  "years_detected": [
+   2023,
+   2025
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "periodic_20240321001029",
+   "periodic_20260320000803"
+  ],
+  "top5_docs": [
+   "periodic_20260320000803",
+   "periodic_20250814003089",
+   "periodic_20260320000803",
+   "periodic_20240321001029",
+   "periodic_20250814003089"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 2,
+  "slots_top20": 2,
+  "slots_cited": 1,
+  "value_forms": [
+   "18,864,975",
+   "18864975"
+  ],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 2,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 65,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "공시에서 확인한 값:\n- 2023년 매출액: 15,258,135\n- 2025년 매출액: 34,123,110",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_17e55323e3a89766f08ec8fc",
+  "type": "COMPARISON_CALC",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "HARD",
+  "doc_groups": [
+   "periodic"
+  ],
+  "question": "레인보우로보틱스의 연결기준 매출액은(는) 2023년 1월~6월와(과) 2025년 1월~6월 사이(같은 반기(6개월누적) 기준)에 얼마나 변동했는가?",
+  "corps_detected": [
+   "레인보우로보틱스"
+  ],
+  "years_detected": [
+   2023,
+   2025
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "periodic_20230814002019",
+   "periodic_20250814003089"
+  ],
+  "top5_docs": [
+   "periodic_20250814003089",
+   "periodic_20260320000803",
+   "periodic_20250814003089",
+   "periodic_20240321001029",
+   "periodic_20230814002019"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 2,
+  "slots_top20": 2,
+  "slots_cited": 1,
+  "value_forms": [
+   "3,500,166",
+   "3500166"
+  ],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 2,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 65,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "공시에서 확인한 값:\n- 2023년 매출액: 15,258,135\n- 2025년 매출액: 10,408,248",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_1bf4c4ba5b261b12bcc01cde",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "holding"
+  ],
+  "question": "(주)한화이(가) 한화에어로스페이스(주)에 대해 제출한 주식등의 대량보유상황보고서(보고서작성기준일 2025년 07월 10일)에 따르면, 직전 보고서 대비 이번 보고서의 보유주식등의 수와 보유비율은 각각 어떻게 변동되었는가?",
+  "corps_detected": [
+   "한화에어로스페이스"
+  ],
+  "years_detected": [
+   2025
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "holding_20250710000510"
+  ],
+  "top5_docs": [
+   "holding_20250710000510",
+   "holding_20250710000510",
+   "holding_20250710000510",
+   "holding_20250710000510",
+   "holding_20250710000510"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 2,
+  "slots_top20": 2,
+  "slots_cited": 1,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 2,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 100,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 18,568,652 → 18,460,818 (-107,834 변동)\n- 직전 대비 비율(%): 38.25 → 35.80 (-2.45%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_2b919170b3f420b30f592dbf",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "exchange"
+  ],
+  "question": "한국항공우주가 Boeing과 체결한 'B787 및 B777X 부품 공급 계약'의 원화 기준 계약금액(2.계약내역 표의 계약금액(원))은 얼마인가?",
+  "corps_detected": [
+   "한국항공우주"
+  ],
+  "years_detected": [],
+  "n_retrieved": 4,
+  "gold_docs": [
+   "exchange_20230914800073"
+  ],
+  "top5_docs": [
+   "exchange_20230914800073",
+   "exchange_20230914800073",
+   "exchange_20250626800313",
+   "exchange_20250626800313"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 1,
+  "slots_top20": 1,
+  "slots_cited": 1,
+  "value_forms": [
+   "87,337,073,306",
+   "87337073306"
+  ],
+  "value_in_evidence": true,
+  "value_in_top20": true,
+  "n_evidence": 5,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "공시에서 확인한 값:\n- 계약금액: 87,337,073,306\n함께 확인되는 원문 근거:\n- [answer] - 체결계약명 | B787 및 B777X 부품 공급 계약 체결\n- [answer] 6. 주요 계약조건 | 가. 주 내용 : B787 및 B777X 부품 납품나. 계약금액 : $6",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_33e6a824ee8b5027f2ab7806",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "holding"
+  ],
+  "question": "미래에셋자산운용㈜이(가) 한미반도체(주)에 대해 제출한 주식등의 대량보유상황보고서(보고서작성기준일 2026년 02월 05일)에 따르면, 신규 보고 기준 보유주식등의 수와 보유비율은 각각 얼마인가?",
+  "corps_detected": [
+   "한미반도체"
+  ],
+  "years_detected": [
+   2026
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "holding_20260211000912"
+  ],
+  "top5_docs": [
+   "holding_20260211000912",
+   "holding_20260211000912",
+   "holding_20260211000912",
+   "holding_20260211000912",
+   "holding_20260211000912"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 2,
+  "slots_top20": 2,
+  "slots_cited": 1,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 이번보고서 | 2026년 02월 05일 | 미래에셋자산운용 | 0 | 4,888,555 | 5.13 | 4,888,555 | 5.13 | 95,312,200\n- [answer] 직전보고서 | 2026년 02월 04일 | ",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_39b7a1a229844d5607de32fb",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "exchange"
+  ],
+  "question": "현대건설이 National Grid SA와 체결한 사우디 리야드-쿠드미 500kV HVDC 송전공사(제1구간) 계약의 계약금액(원)은 얼마인가?",
+  "corps_detected": [
+   "현대건설"
+  ],
+  "years_detected": [],
+  "n_retrieved": 2,
+  "gold_docs": [
+   "exchange_20241112800101"
+  ],
+  "top5_docs": [
+   "exchange_20241112800101",
+   "exchange_20241112800101"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 1,
+  "slots_top20": 1,
+  "slots_cited": 1,
+  "value_forms": [
+   "1002399908114",
+   "1,002,399,908,114"
+  ],
+  "value_in_evidence": true,
+  "value_in_top20": true,
+  "n_evidence": 5,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [계약금액] - 사업개요: 사우디 쿠드미 변환소에서 리야드 PP14 발전소까지 연결하는 총 연장 1,089km (1구간: 369km, 2구간: 327km, 3구간: 393km)의 500kV HVDC 송전공사 사업. 그 중, 제 1구간 공",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_3f205e961b4c70adc216d67e",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "holding"
+  ],
+  "question": "오준호이(가) 주식회사 레인보우로보틱스에 대해 제출한 주식등의 대량보유상황보고서(보고서작성기준일 2025년 03월 12일)에 따르면, 직전 보고서 대비 이번 보고서의 보유주식등의 수와 보유비율은 각각 어떻게 변동되었는가?",
+  "corps_detected": [
+   "레인보우로보틱스"
+  ],
+  "years_detected": [
+   2025
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "holding_20250319000761"
+  ],
+  "top5_docs": [
+   "holding_20250319000761",
+   "holding_20250319000761",
+   "holding_20250319000761",
+   "holding_20250319000761",
+   "holding_20250319000761"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 2,
+  "slots_top20": 2,
+  "slots_cited": 1,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 2,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 100,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 11,371,815 → 11,371,815 (+0 변동)\n- 직전 대비 비율(%): 58.62 → 58.62 (+0.00%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 이번 보고서 | 1",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_40f76302294d317d0c588b5d",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "holding"
+  ],
+  "question": "BlackRock Fund Advisors이(가) 한화솔루션(주)에 대해 제출한 주식등의 대량보유상황보고서(보고서작성기준일 2023년 11월 30일)에 따르면, 직전 보고서 대비 이번 보고서의 보유주식등의 수와 보유비율은 각각 어떻게 변동되었는가?",
+  "corps_detected": [
+   "한화솔루션"
+  ],
+  "years_detected": [
+   2023
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "holding_20231206000186"
+  ],
+  "top5_docs": [
+   "holding_20231206000186",
+   "holding_20231206000186",
+   "holding_20231206000186",
+   "holding_20231206000186",
+   "holding_20231206000186"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 2,
+  "slots_top20": 2,
+  "slots_cited": 1,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 2,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 100,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 8,932,920 → 10,825,137 (+1,892,217 변동)\n- 직전 대비 비율(%): 5.12 → 6.20 (+1.08%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_41f346723847e84a051e614a",
+  "type": "ANSWERABILITY",
+  "mode": "CLOSED",
+  "answerability": "NOT_FOUND",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "major"
+  ],
+  "question": "삼성전기가 자기주식 취득·처분 등과 관련하여 금융위원회에 제출한 주요사항보고서(major 유형 공시)가 현재 코퍼스에 포함되어 있는가?",
+  "corps_detected": [
+   "삼성전기"
+  ],
+  "years_detected": [],
+  "n_retrieved": 0,
+  "gold_docs": [],
+  "top5_docs": [],
+  "doc_in_top20": null,
+  "doc_in_top5": null,
+  "n_slots": 1,
+  "slots_top20": 0,
+  "slots_cited": 0,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 0,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 15,
+  "uncertainty": "문서 인덱스(기업·공시유형·연도 조건)를 직접 센 결과다. 검색 근거는 없다.",
+  "answer_head": "삼성전기의 major 공시는 현재 코퍼스에 포함되어 있지 않다.",
+  "rule": "NOT_FOUND",
+  "trap": true,
+  "trap_ok": true
+ },
+ {
+  "qid": "author_4b8df2cacd43755b56e3c71e",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "holding"
+  ],
+  "question": "주식회사 셀트리온홀딩스이(가) 주식회사 셀트리온에 대해 제출한 주식등의 대량보유상황보고서(보고서작성기준일 2024년 03월 08일)에 따르면, 직전 보고서 대비 이번 보고서의 보유주식등의 수와 보유비율은 각각 어떻게 변동되었는가?",
+  "corps_detected": [
+   "셀트리온"
+  ],
+  "years_detected": [
+   2024
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "holding_20240308000746"
+  ],
+  "top5_docs": [
+   "holding_20240308000746",
+   "holding_20240308000746",
+   "holding_20240308000746",
+   "holding_20240308000746",
+   "holding_20240308000746"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 2,
+  "slots_top20": 2,
+  "slots_cited": 1,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 2,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 100,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 62,286,559 → 62,285,639 (-920 변동)\n- 직전 대비 비율(%): 28.45 → 28.45 (+0.00%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서 |",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_4dae7a49dd14e226926c4edf",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "holding"
+  ],
+  "question": "국민연금공단이(가) 에이치엠엠에 대해 제출한 주식등의 대량보유상황보고서(보고서작성기준일 2026년 02월 05일)에 따르면, 직전 보고서 대비 이번 보고서의 보유주식등의 수와 보유비율은 각각 어떻게 변동되었는가?",
+  "corps_detected": [],
+  "years_detected": [
+   2026
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "holding_20260303002502"
+  ],
+  "top5_docs": [
+   "holding_20260303002502",
+   "holding_20260303002502",
+   "holding_20260211000912",
+   "holding_20260211000912",
+   "holding_20260303002502"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 2,
+  "slots_top20": 2,
+  "slots_cited": 1,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 2,
+  "warnings": [
+   "corp_unspecified"
+  ],
+  "validation": "SUPPORTED",
+  "confidence": 80,
+  "uncertainty": "질문에서 기업을 특정하지 못했다 — 아래 근거는 HMM 공시다. 의도한 기업이 아니면 회사명을 정확히 넣어 다시 물어라. 값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 61,421,018 → 46,935,853 (-14,485,165 변동)\n- 직전 대비 비율(%): 5.99 → 4.98 (-1.01%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 이번보",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_50eba48b6e3d77f488421b89",
+  "type": "NARRATIVE_MULTI_DOC",
+  "mode": "OPEN",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "major"
+  ],
+  "question": "메리츠금융지주가 2026년 2월 9일 체결한 자기주식취득 신탁계약의 계약금액과 계약목적은 무엇인가?",
+  "corps_detected": [
+   "메리츠금융지주"
+  ],
+  "years_detected": [
+   2026
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "major_20260209000461"
+  ],
+  "top5_docs": [
+   "major_20260209000461",
+   "major_20260209000461",
+   "major_20260209000461",
+   "major_20260209000461",
+   "major_20260209000461"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 1,
+  "slots_top20": 1,
+  "slots_cited": 1,
+  "value_forms": [
+   "200,000,000,000",
+   "2,000"
+  ],
+  "value_in_evidence": true,
+  "value_in_top20": true,
+  "n_evidence": 5,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "공시에서 확인한 값:\n- 계약금액: 200,000,000,000\n함께 확인되는 원문 근거:\n- [answer] 2025-08-20 | 자기주식취득신탁계약체결 | 7,000억원 | 26년 2월 9일(주2) 총 7,034억 자사주 취득 완료\n- [answer] 2025-03-26 | 자기주",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_52e6c0ca8915c4a28c802e4c",
+  "type": "COMPARISON_CALC",
+  "mode": "OPEN",
+  "answerability": "SUPPORTED",
+  "difficulty": "HARD",
+  "doc_groups": [
+   "periodic"
+  ],
+  "question": "2025 회계연도(2025년 12월 결산) 사업보고서 기준으로, 두산로보틱스와 레인보우로보틱스의 연결 매출액을 같은 단위(백만원)로 환산하여 비교하면 어느 쪽이 더 크며, 그 차이는 얼마인가?",
+  "corps_detected": [
+   "두산로보틱스",
+   "레인보우로보틱스"
+  ],
+  "years_detected": [
+   2025
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "periodic_20260318001562",
+   "periodic_20260320000803"
+  ],
+  "top5_docs": [
+   "periodic_20260320000803",
+   "periodic_20250814003089",
+   "periodic_20260320000803",
+   "periodic_20250814003089",
+   "periodic_20260320000803"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 2,
+  "slots_top20": 2,
+  "slots_cited": 1,
+  "value_forms": [
+   "2025",
+   "11",
+   "32,978",
+   "2025"
+  ],
+  "value_in_evidence": true,
+  "value_in_top20": true,
+  "n_evidence": 1,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 60,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "공시에서 확인한 값:\n- 2025년 매출액: 34,123,110",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_53d266ad714c7b2c4db364b5",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "exchange"
+  ],
+  "question": "우리기술이 두산에너빌리티(주)와 체결한 '비안전계통 DCS 예비품 구매_1차 납품분' 계약의 계약금액 총액(원)은 얼마인가?",
+  "corps_detected": [
+   "두산에너빌리티",
+   "우리기술"
+  ],
+  "years_detected": [],
+  "n_retrieved": 5,
+  "gold_docs": [
+   "exchange_20251209900091"
+  ],
+  "top5_docs": [
+   "exchange_20251209900091",
+   "exchange_20250313800043",
+   "exchange_20251209900091",
+   "exchange_20250313800043",
+   "exchange_20251209900091"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 1,
+  "slots_top20": 1,
+  "slots_cited": 1,
+  "value_forms": [
+   "3622500000",
+   "3,622,500,000"
+  ],
+  "value_in_evidence": true,
+  "value_in_top20": true,
+  "n_evidence": 5,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "공시에서 확인한 값:\n- 두산에너빌리티 계약금액: 1,128,260,775,513\n- 우리기술 계약금액: 3,622,500,000\n함께 확인되는 원문 근거:\n- [answer] 1. 판매ㆍ공급계약 내용 | 비안전계통 DCS 예비품 구매_1차 납품분\n- [answer] 계약금액 총액(원)",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_558c9267989c17f3e0aa14ad",
+  "type": "EVENT_TRACE",
+  "mode": "OPEN",
+  "answerability": "SUPPORTED",
+  "difficulty": "HARD",
+  "doc_groups": [
+   "exchange"
+  ],
+  "question": "한국항공우주가 2023년 9월 26일 공시한 '차세대 중형 민항기 주익 개발 및 공급 계약' 해지 공시에 따르면, 해지 사유와 해지일자는 각각 무엇인가?",
+  "corps_detected": [
+   "한국항공우주"
+  ],
+  "years_detected": [
+   2023
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "exchange_20230926800443"
+  ],
+  "top5_docs": [
+   "exchange_20230926800443",
+   "exchange_20230926800443",
+   "exchange_20230914800073",
+   "holding_20231110000478",
+   "holding_20231110000478"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 1,
+  "slots_top20": 1,
+  "slots_cited": 1,
+  "value_forms": [
+   "2023",
+   "09",
+   "26"
+  ],
+  "value_in_evidence": true,
+  "value_in_top20": true,
+  "n_evidence": 5,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "공시에서 확인한 값:\n- 해지일자: 2023-09-26\n함께 확인되는 원문 근거:\n- [해지 주요사유] 5. 해지 주요사유 | 계약상대방의 계약이행 불가에 따른 계약해지\n- [answer] 8. 기타 투자판단과 관련한 중요사항 | 가. 상기 해지 건은 2022년 12월 20일 공시한 '",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_642b260aa50968143920281b",
+  "type": "ANSWERABILITY",
+  "mode": "CLOSED",
+  "answerability": "NOT_FOUND",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "major"
+  ],
+  "question": "LG에너지솔루션이 조건부자본증권 발행결정 등과 관련하여 금융위원회에 제출한 주요사항보고서(major 유형 공시)가 현재 코퍼스에 포함되어 있는가?",
+  "corps_detected": [
+   "LG에너지솔루션"
+  ],
+  "years_detected": [],
+  "n_retrieved": 0,
+  "gold_docs": [],
+  "top5_docs": [],
+  "doc_in_top20": null,
+  "doc_in_top5": null,
+  "n_slots": 1,
+  "slots_top20": 0,
+  "slots_cited": 0,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 0,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 15,
+  "uncertainty": "문서 인덱스(기업·공시유형·연도 조건)를 직접 센 결과다. 검색 근거는 없다.",
+  "answer_head": "LG에너지솔루션의 major 공시는 현재 코퍼스에 포함되어 있지 않다.",
+  "rule": "NOT_FOUND",
+  "trap": true,
+  "trap_ok": true
+ },
+ {
+  "qid": "author_66ddb05e5a3de362ff1c536f",
+  "type": "NARRATIVE_MULTI_DOC",
+  "mode": "OPEN",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "exchange"
+  ],
+  "question": "셀트리온이 2024년 2월 27일 공시한 CT-P13 SC(램시마 피하주사 제형) 유럽 임상 3상 시험계획 신청(Part 1, 궤양성 대장염 소아 환자) 공시 시점에서, 해당 임상시험은 즉시 개시 가능한 상태인가?",
+  "corps_detected": [
+   "셀트리온"
+  ],
+  "years_detected": [
+   2024
+  ],
+  "n_retrieved": 1,
+  "gold_docs": [
+   "exchange_20240227800274"
+  ],
+  "top5_docs": [
+   "exchange_20240227800274"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 1,
+  "slots_top20": 1,
+  "slots_cited": 1,
+  "value_forms": [
+   "아니다.이공시는Part1(임상디자인및연구방법"
+  ],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 3,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 2. 주요내용 | ※ 투자유의사항임상시험 약물이 의약품으로 최종 허가받을 확률은 통계적으로 약 10% 수준으로 알려져 있습니다.품목허가 과정에서 기대에 상응하지 못하는 결과가 나올 수 있으며, 이에 따라 당사가 상업화 계",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_75966f98e4996bc694606bb2",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "exchange"
+  ],
+  "question": "대우건설이 (주)한강시네폴리스개발과 체결한 '김포한강시네폴리스 주상복합 신축사업' 공사계약의 계약금액(원)은 얼마인가?",
+  "corps_detected": [
+   "대우건설"
+  ],
+  "years_detected": [],
+  "n_retrieved": 2,
+  "gold_docs": [
+   "exchange_20251112800360"
+  ],
+  "top5_docs": [
+   "exchange_20251112800360",
+   "exchange_20251112800360"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 1,
+  "slots_top20": 1,
+  "slots_cited": 1,
+  "value_forms": [
+   "940874573200",
+   "940,874,573,200"
+  ],
+  "value_in_evidence": true,
+  "value_in_top20": true,
+  "n_evidence": 5,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "공시에서 확인한 값:\n- 계약금액: 940,874,573,200\n함께 확인되는 원문 근거:\n- [answer] - 체결계약명 | 김포한강시네폴리스 주상복합 신축사업\n- [answer] 3. 계약상대 | (주)한강시네폴리스개발\n- [answer] 7. 계약(수주)일자 | 2025-11-1",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_833ea1a29f055ec369947a98",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "holding"
+  ],
+  "question": "Fidelity Management & Research Company LLC이(가) 한국항공우주산업(주)에 대해 제출한 주식등의 대량보유상황보고서(보고서작성기준일 2023년 10월 11일)에 따르면, 직전 보고서 대비 이번 보고서의 보유주식등의 수와 보유비율은 각각 어떻게 변동되었는가?",
+  "corps_detected": [
+   "한국항공우주"
+  ],
+  "years_detected": [
+   2023
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "holding_20231110000478"
+  ],
+  "top5_docs": [
+   "holding_20231110000478",
+   "holding_20231110000478",
+   "holding_20231110000478",
+   "holding_20231110000478",
+   "holding_20231110000478"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 2,
+  "slots_top20": 2,
+  "slots_cited": 1,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 2,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 100,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 6,009,827 → 7,046,789 (+1,036,962 변동)\n- 직전 대비 비율(%): 6.17 → 7.23 (+1.06%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_8db33a880c09102d4903e280",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "holding"
+  ],
+  "question": "삼성물산주식회사이(가) 삼성전자주식회사에 대해 제출한 주식등의 대량보유상황보고서(보고서작성기준일 2024년 07월 17일)에 따르면, 직전 보고서 대비 이번 보고서의 보유주식등의 수와 보유비율은 각각 어떻게 변동되었는가?",
+  "corps_detected": [
+   "삼성전자"
+  ],
+  "years_detected": [
+   2024
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "holding_20240719000464"
+  ],
+  "top5_docs": [
+   "holding_20240719000464",
+   "holding_20240719000464",
+   "holding_20240719000464",
+   "holding_20240719000464",
+   "holding_20240719000464"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 2,
+  "slots_top20": 2,
+  "slots_cited": 1,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 2,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 100,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 1,199,285,813 → 1,198,938,025 (-347,788 변동)\n- 직전 대비 비율(%): 20.09 → 20.08 (-0.01%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_95a89db78ffe266ced4d7ea6",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "holding"
+  ],
+  "question": "삼성물산주식회사이(가) 삼성전자주식회사에 대해 제출한 주식등의 대량보유상황보고서(보고서작성기준일 2026년 01월 09일)에 따르면, 직전 보고서 대비 이번 보고서의 보유주식등의 수와 보유비율은 각각 어떻게 변동되었는가?",
+  "corps_detected": [
+   "삼성전자"
+  ],
+  "years_detected": [
+   2026
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "holding_20260116000451"
+  ],
+  "top5_docs": [
+   "holding_20260116000451",
+   "holding_20260116000451",
+   "holding_20260116000451",
+   "holding_20260116000451",
+   "holding_20260116000451"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 2,
+  "slots_top20": 2,
+  "slots_cited": 1,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 2,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 100,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 1,174,119,441 → 1,174,107,507 (-11,934 변동)\n- 직전 대비 비율(%): 19.83 → 19.83 (+0.00%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer]",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_a09660efd75391b28724e656",
+  "type": "NARRATIVE_MULTI_DOC",
+  "mode": "OPEN",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "major"
+  ],
+  "question": "카카오의 2023년 5월 11일 해외 증권시장 주권등 상장폐지 결정 공시에서, 상장폐지 대상 거래소와 폐지사유는 각각 무엇인가?",
+  "corps_detected": [
+   "카카오"
+  ],
+  "years_detected": [
+   2023
+  ],
+  "n_retrieved": 10,
+  "gold_docs": [
+   "major_20230511000691"
+  ],
+  "top5_docs": [
+   "major_20230511000691",
+   "major_20230511000691",
+   "major_20230511000691",
+   "major_20230511000691",
+   "major_20230511000691"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 1,
+  "slots_top20": 1,
+  "slots_cited": 1,
+  "value_forms": [
+   "2023",
+   "25"
+  ],
+  "value_in_evidence": true,
+  "value_in_top20": true,
+  "n_evidence": 5,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 3. 폐지신청예정일자 | 2023년 05월 11일\n- [answer] 6. 이사회결의일(확인일) | 2023년 05월 11일\n- [answer] 4. 폐지(예정)일자 | 2023년 05월 25일\n- [answer] - 상",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_a24879dc628ff582fdeba8b5",
+  "type": "ANSWERABILITY",
+  "mode": "CLOSED",
+  "answerability": "NOT_FOUND",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "exchange"
+  ],
+  "question": "KB금융지주가 체결한 단일판매ㆍ공급계약 등과 관련하여 제출한 exchange 유형(수시공시) 공시가 현재 코퍼스에 포함되어 있는가?",
+  "corps_detected": [
+   "KB금융"
+  ],
+  "years_detected": [],
+  "n_retrieved": 0,
+  "gold_docs": [],
+  "top5_docs": [],
+  "doc_in_top20": null,
+  "doc_in_top5": null,
+  "n_slots": 1,
+  "slots_top20": 0,
+  "slots_cited": 0,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 0,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 15,
+  "uncertainty": "문서 인덱스(기업·공시유형·연도 조건)를 직접 센 결과다. 검색 근거는 없다.",
+  "answer_head": "KB금융의 exchange 공시는 현재 코퍼스에 포함되어 있지 않다.",
+  "rule": "NOT_FOUND",
+  "trap": true,
+  "trap_ok": true
+ },
+ {
+  "qid": "author_a3a6ade04e8f72004e2df4f1",
+  "type": "COMPARISON_CALC",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "HARD",
+  "doc_groups": [
+   "periodic"
+  ],
+  "question": "신한지주의 연결기준 당기순이익은(는) 2023.09.30 누적와(과) 2025.09.30 누적 사이(같은 3분기 누적(9개월) 기준)에 얼마나 변동했는가?",
+  "corps_detected": [
+   "신한지주"
+  ],
+  "years_detected": [
+   2023,
+   2025
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "periodic_20231114001992",
+   "periodic_20251114002208"
+  ],
+  "top5_docs": [
+   "periodic_20251114002208",
+   "periodic_20251114002208",
+   "periodic_20251114002208",
+   "periodic_20251114002208",
+   "periodic_20251114002208"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 2,
+  "slots_top20": 2,
+  "slots_cited": 0,
+  "value_forms": [
+   "644,522",
+   "644522"
+  ],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 2,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 65,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [당기순이익_2023] 당기순이익(손실) | 1,297,068 | 4,044,079\n- [당기순이익_2025] 당기순이익(손실) | 1,423,544 | 4,460,943",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_a538b0e2240fe01d1a71ebb7",
+  "type": "COMPARISON_CALC",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "HARD",
+  "doc_groups": [
+   "periodic"
+  ],
+  "question": "LG생활건강의 연결기준 매출액은(는) 2023.01.01~2023.03.31와(과) 2025.01.01~2025.03.31 사이(같은 1분기(3개월) 기준)에 얼마나 변동했는가?",
+  "corps_detected": [
+   "LG생활건강"
+  ],
+  "years_detected": [
+   2023,
+   2025
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "periodic_20230515001584",
+   "periodic_20250515001309"
+  ],
+  "top5_docs": [
+   "periodic_20250515001309",
+   "periodic_20230515001584",
+   "periodic_20250515001309",
+   "periodic_20230515001584",
+   "periodic_20250515001309"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 2,
+  "slots_top20": 2,
+  "slots_cited": 0,
+  "value_forms": [
+   "14154",
+   "14,154"
+  ],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 2,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 65,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "공시에서 확인한 값:\n- 2023년 매출액: 1,683,723,394,359\n- 2025년 매출액: 1,697,877,264,205",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_a7d2486c24a01dace51cdbe0",
+  "type": "NARRATIVE_MULTI_DOC",
+  "mode": "OPEN",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "exchange"
+  ],
+  "question": "현대로템의 2024년 4월 24일 이집트 알렉산드리아 트램 사업 관련 공시는 최종 계약 체결을 의미하는가, 낙찰통지서(Notice of Award) 접수를 의미하는가?",
+  "corps_detected": [
+   "현대로템"
+  ],
+  "years_detected": [
+   2024
+  ],
+  "n_retrieved": 1,
+  "gold_docs": [
+   "exchange_20240425800002"
+  ],
+  "top5_docs": [
+   "exchange_20240425800002"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 1,
+  "slots_top20": 1,
+  "slots_cited": 1,
+  "value_forms": [
+   "최종계약체결이아니라낙찰통지서(Noticeof"
+  ],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 3,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 2. 주요내용 | - 당사는 이집트터널청(National Authority for Tunnels)으로부터 이집트 알렉산드리아 트램 공급 사업 낙찰통지서를 2024년 04월 24일 수령하였습니다.- 상기사업의 규모는 EUR",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_a9f44253b3de69062e704c83",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "holding"
+  ],
+  "question": "조 정 호이(가) (주)메리츠금융지주에 대해 제출한 주식등의 대량보유상황보고서(보고서작성기준일 2025년 11월 20일)에 따르면, 직전 보고서 대비 이번 보고서의 보유주식등의 수와 보유비율은 각각 어떻게 변동되었는가?",
+  "corps_detected": [
+   "메리츠금융지주"
+  ],
+  "years_detected": [
+   2025
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "holding_20251120000434"
+  ],
+  "top5_docs": [
+   "holding_20251120000434",
+   "holding_20251120000434",
+   "holding_20251120000434",
+   "holding_20251120000434",
+   "holding_20251120000434"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 2,
+  "slots_top20": 2,
+  "slots_cited": 2,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 2,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 100,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 98,357,361 → 98,361,974 (+4,613 변동)\n- 직전 대비 비율(%): 54.64 → 56.14 (+1.50%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_acd4f9e29a7188d84c0f1aaa",
+  "type": "NARRATIVE_MULTI_DOC",
+  "mode": "OPEN",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "exchange"
+  ],
+  "question": "삼성SDI의 StarPlus Energy 2공장 투자 공시(2023-09-27)에서 투자금액 2조 6,556억원은 확정된 금액인가, 예정 금액인가?",
+  "corps_detected": [
+   "삼성SDI"
+  ],
+  "years_detected": [
+   2023
+  ],
+  "n_retrieved": 1,
+  "gold_docs": [
+   "exchange_20230927800181"
+  ],
+  "top5_docs": [
+   "exchange_20230927800181"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 1,
+  "slots_top20": 1,
+  "slots_cited": 1,
+  "value_forms": [
+   "6,556"
+  ],
+  "value_in_evidence": true,
+  "value_in_top20": true,
+  "n_evidence": 3,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 60,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 3. 이사회결의일(결정일) 또는 사실확인일 | 2023-09-27\n- [answer] 1) 본 건은 당사와 스텔란티스社와의 합작법인인 StarPlus Energy의 2공장 투자에 대한이사회 결정 사항임2) 본 건 공시내용",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_ad711c9d1d96ebc8950814f0",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "holding"
+  ],
+  "question": "The Capital Group Companies, Inc.이(가) (주)KB금융지주에 대해 제출한 주식등의 대량보유상황보고서(보고서작성기준일 2024년 10월 31일)에 따르면, 직전 보고서 대비 이번 보고서의 보유주식등의 수와 보유비율은 각각 어떻게 변동되었는가?",
+  "corps_detected": [
+   "KB금융"
+  ],
+  "years_detected": [
+   2024
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "holding_20241107000066"
+  ],
+  "top5_docs": [
+   "holding_20241107000066",
+   "holding_20241107000066",
+   "holding_20241107000066",
+   "holding_20241107000066",
+   "holding_20241107000066"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 2,
+  "slots_top20": 2,
+  "slots_cited": 1,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 2,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 100,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 19,865,964 → 20,872,564 (+1,006,600 변동)\n- 직전 대비 비율(%): 5.05 → 5.30 (+0.25%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_b81eacbe0cad034dfb7b9dd4",
+  "type": "NARRATIVE_MULTI_DOC",
+  "mode": "OPEN",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "exchange"
+  ],
+  "question": "알테오젠의 테르가제주(ALT-BB4) 관련 2024년 7월 5일 공시는 품목허가 신청 사실을 알리는 것인가, 품목허가 승인 사실을 알리는 것인가?",
+  "corps_detected": [
+   "알테오젠"
+  ],
+  "years_detected": [
+   2024
+  ],
+  "n_retrieved": 1,
+  "gold_docs": [
+   "exchange_20240705900656"
+  ],
+  "top5_docs": [
+   "exchange_20240705900656"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 1,
+  "slots_top20": 1,
+  "slots_cited": 1,
+  "value_forms": [
+   "2024",
+   "2023"
+  ],
+  "value_in_evidence": true,
+  "value_in_top20": true,
+  "n_evidence": 3,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 2. 주요내용 | 1) 품목명: 테르가제주(베라히알루로니다제알파(히알루로니다제,유전자재조합))2) 대상질환명 (적응증): 피하주사나 근육주사, 국소마취제 및 피하주입 시 침투력 증가.3) 품목허가 신청(허가)일 및 허가기",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_be87975b478c1685b1170e80",
+  "type": "COMPARISON_CALC",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "HARD",
+  "doc_groups": [
+   "periodic"
+  ],
+  "question": "SK텔레콤의 연결기준 영업수익은(는) 2023.1.1~2023.3.31와(과) 2025.1.1~2025.03.31 사이(같은 1분기(3개월) 기준)에 얼마나 변동했는가?",
+  "corps_detected": [
+   "SK텔레콤"
+  ],
+  "years_detected": [
+   2023,
+   2025
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "periodic_20230512000710",
+   "periodic_20250515001087"
+  ],
+  "top5_docs": [
+   "periodic_20250515001087",
+   "periodic_20250515001087",
+   "periodic_20250515001087",
+   "periodic_20250515001087",
+   "periodic_20230512000710"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 2,
+  "slots_top20": 2,
+  "slots_cited": 1,
+  "value_forms": [
+   "81,490",
+   "81490"
+  ],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 2,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 65,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "공시에서 확인한 값:\n- 2023년 매출액: 17,608,511\n- 2025년 매출액: 4,453,717",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_bfc0f3bb801bc9eab3faaa3c",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "holding"
+  ],
+  "question": "국민연금공단이(가) 삼성엔지니어링(주)에 대해 제출한 주식등의 대량보유상황보고서(보고서작성기준일 2023년 08월 25일)에 따르면, 직전 보고서 대비 이번 보고서의 보유주식등의 수와 보유비율은 각각 어떻게 변동되었는가?",
+  "corps_detected": [],
+  "years_detected": [
+   2023
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "holding_20230901000172"
+  ],
+  "top5_docs": [
+   "holding_20230901000172",
+   "holding_20230901000172",
+   "holding_20230901000172",
+   "holding_20230901000172",
+   "holding_20230901000172"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 2,
+  "slots_top20": 2,
+  "slots_cited": 1,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 2,
+  "warnings": [
+   "corp_unspecified"
+  ],
+  "validation": "SUPPORTED",
+  "confidence": 80,
+  "uncertainty": "질문에서 기업을 특정하지 못했다 — 아래 근거는 삼성E&A 공시다. 의도한 기업이 아니면 회사명을 정확히 넣어 다시 물어라. 값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 17,730,137 → 15,748,903 (-1,981,234 변동)\n- 직전 대비 비율(%): 9.05 → 8.04 (-1.01%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 이번보고",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_c4d4ef2ce48a57ef54ded4db",
+  "type": "NARRATIVE_MULTI_DOC",
+  "mode": "OPEN",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "major"
+  ],
+  "question": "SK텔레콤이 2023년 2월 23일 결의한 자기주식 처분 결정의 목적과 처분예정주식수, 처분예정금액은 각각 무엇인가?",
+  "corps_detected": [
+   "SK텔레콤"
+  ],
+  "years_detected": [
+   2023
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "major_20230224000002"
+  ],
+  "top5_docs": [
+   "major_20230224000002",
+   "major_20230224000002",
+   "major_20230224000002",
+   "major_20230224000002",
+   "major_20230224000002"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 1,
+  "slots_top20": 1,
+  "slots_cited": 1,
+  "value_forms": [
+   "109,508",
+   "4,938,810,800"
+  ],
+  "value_in_evidence": true,
+  "value_in_top20": true,
+  "n_evidence": 5,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] - 상기 1. 처분예정주식 수 2. 처분 대상 주식가격 및 상기 3. 처분예정금액은 이사회 결의일 전일(2023년 2월 22일) 종가 기준입니다.- 실제 처분되는 주식 수와 주식가격 및 처분금액은 처분일 기준으로 변동될 ",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_c8225552d5982882a3157819",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "holding"
+  ],
+  "question": "Fidelity Management &Research Company LLC이(가) 한국항공우주산업(주)에 대해 제출한 주식등의 대량보유상황보고서(보고서작성기준일 2024년 06월 03일)에 따르면, 직전 보고서 대비 이번 보고서의 보유주식등의 수와 보유비율은 각각 어떻게 변동되었는가?",
+  "corps_detected": [
+   "한국항공우주"
+  ],
+  "years_detected": [
+   2024
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "holding_20240607000069"
+  ],
+  "top5_docs": [
+   "holding_20240607000069",
+   "holding_20240607000069",
+   "holding_20240607000069",
+   "holding_20240607000069",
+   "holding_20240607000069"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 2,
+  "slots_top20": 2,
+  "slots_cited": 1,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 2,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 100,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 8,513,745 → 9,737,763 (+1,224,018 변동)\n- 직전 대비 비율(%): 8.73 → 9.99 (+1.26%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_ca4ec294ad36b44faa071043",
+  "type": "NARRATIVE_MULTI_DOC",
+  "mode": "OPEN",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "major"
+  ],
+  "question": "크래프톤이 2023년 3월 28일 결의한 자기주식 처분 결정의 목적과 처분예정주식수, 처분예정금액은 각각 무엇인가?",
+  "corps_detected": [
+   "크래프톤"
+  ],
+  "years_detected": [
+   2023
+  ],
+  "n_retrieved": 9,
+  "gold_docs": [
+   "major_20230328000605"
+  ],
+  "top5_docs": [
+   "major_20230328000605",
+   "major_20230328000605",
+   "major_20230328000605",
+   "major_20230328000605",
+   "major_20230328000605"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 2,
+  "slots_top20": 2,
+  "slots_cited": 2,
+  "value_forms": [
+   "700",
+   "122,430,000"
+  ],
+  "value_in_evidence": true,
+  "value_in_top20": true,
+  "n_evidence": 5,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 11. 기타 투자판단에 참고할 사항1) 본 건은 당사가 2022.03.10에 공시한 '기타경영사항(자율공시)'에 따른 자기주식 처분 건으로, 당사가 운영중인 주식기준성과보상제도(RSU)에 따라 직원에게 자기주식을 교부하는",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_cc803e40119274b80d14a65a",
+  "type": "NARRATIVE_MULTI_DOC",
+  "mode": "OPEN",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "major"
+  ],
+  "question": "아모레퍼시픽이 2025년 4월 29일 결의한 자기주식 처분 결정의 목적과 처분예정주식수, 지급 대상 인원수는 각각 무엇인가?",
+  "corps_detected": [
+   "아모레퍼시픽"
+  ],
+  "years_detected": [
+   2025
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "major_20250430000006"
+  ],
+  "top5_docs": [
+   "major_20250430000006",
+   "major_20250430000006",
+   "major_20250430000006",
+   "major_20250430000006",
+   "major_20250430000006"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 2,
+  "slots_top20": 2,
+  "slots_cited": 1,
+  "value_forms": [
+   "6,766",
+   "653"
+  ],
+  "value_in_evidence": true,
+  "value_in_top20": true,
+  "n_evidence": 5,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 1. 처분예정주식(주) | 보통주식 | 6,766\n- [answer] 2. 처분 대상 주식가격(원) | 보통주식 | 120,200\n- [answer] 3. 처분예정금액(원) | 보통주식 | 813,273,200\n- [an",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_d640cbedd7330f4b9bcfeeb7",
+  "type": "NARRATIVE_MULTI_DOC",
+  "mode": "OPEN",
+  "answerability": "WITHHELD",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "exchange"
+  ],
+  "question": "알테오젠의 ALT-B4 라이선스 계약 공시(2025-03-17, 계약상대방 MedImmune Limited)에서, 계약을 통해 개발하려는 구체적인 의약품(개발 품목)이 공시상 확인 가능한가?",
+  "corps_detected": [
+   "알테오젠"
+  ],
+  "years_detected": [
+   2025
+  ],
+  "n_retrieved": 3,
+  "gold_docs": [
+   "exchange_20250317900379"
+  ],
+  "top5_docs": [
+   "exchange_20250317900379",
+   "exchange_20250317900379",
+   "exchange_20250317900379"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 2,
+  "slots_top20": 2,
+  "slots_cited": 2,
+  "value_forms": [
+   "확인할수없다(WITHHELD).공시유보사항에'"
+  ],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "공시유보 사항이다 — 해당 값은 공시에서 확인할 수 없다.\n- 유보사항: 계약금액 세부 내역 및 개발 품목\n- 유보사유: 계약상 비밀유지\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [계약상대] 2. 주요내용 | ※ 투자유의사항본 계약은 의약품규제기관의 허가가 완료되어야 이행되는",
+  "rule": "WITHHELD",
+  "trap": true,
+  "trap_ok": true
+ },
+ {
+  "qid": "author_e0416a675c6970a7f064bf74",
+  "type": "NARRATIVE_MULTI_DOC",
+  "mode": "OPEN",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "exchange"
+  ],
+  "question": "셀트리온의 유플라이마(CT-P17) 미국 변경허가 승인 공시(사실확인일 2025-04-12)에서, 이번 허가의 허가기관과 승인 내용은 무엇인가?",
+  "corps_detected": [
+   "셀트리온"
+  ],
+  "years_detected": [
+   2025
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "exchange_20250414800004"
+  ],
+  "top5_docs": [
+   "exchange_20250414800004",
+   "periodic_20250515002745",
+   "periodic_20250515002745",
+   "periodic_20250515002745",
+   "periodic_20250515002745"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 1,
+  "slots_top20": 1,
+  "slots_cited": 1,
+  "value_forms": [
+   "2025",
+   "04",
+   "12"
+  ],
+  "value_in_evidence": true,
+  "value_in_top20": true,
+  "n_evidence": 5,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 2. 주요내용 | 1) 품목명- 유플라이마(CT-P17, 휴미라 바이오시밀러, 성분명: Adalimumab)2) 대상질환명(적응증)- Rheumatoid Arthritis (RA) [류마티스관절염]- Juvenile Id",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_ed4a7d77528a8c5751e9a348",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "holding"
+  ],
+  "question": "Tencent Music Entertainment Hong Kong Limited이(가) (주)에스엠엔터테인먼트에 대해 제출한 주식등의 대량보유상황보고서(보고서작성기준일 2025년 06월 05일)에 따르면, 신규 보고 기준 보유주식등의 수와 보유비율은 각각 얼마인가?",
+  "corps_detected": [
+   "에스엠"
+  ],
+  "years_detected": [
+   2025
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "holding_20250605000220"
+  ],
+  "top5_docs": [
+   "holding_20250605000220",
+   "holding_20250605000220",
+   "holding_20250605000220",
+   "holding_20250605000220",
+   "holding_20250605000220"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 2,
+  "slots_top20": 2,
+  "slots_cited": 1,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 이번보고서 | 2025년 06월 05일 | Tencent Music Entertainment Hong Kong Limited | - | 2,212,237 | 9.66 | 2,212,237 | 9.66 | 22,894,69",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_ef82c30f267ca92d099c7a62",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "exchange"
+  ],
+  "question": "현대로템이 타이중시 정부 도시철도공정국과 체결한 '대만 타이중 블루라인 E&M 공급사업' 계약의 계약금액(원)은 얼마인가?",
+  "corps_detected": [
+   "현대로템"
+  ],
+  "years_detected": [],
+  "n_retrieved": 2,
+  "gold_docs": [
+   "exchange_20250507800534"
+  ],
+  "top5_docs": [
+   "exchange_20250507800534",
+   "exchange_20250507800534"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 1,
+  "slots_top20": 1,
+  "slots_cited": 1,
+  "value_forms": [
+   "424899510000",
+   "424,899,510,000"
+  ],
+  "value_in_evidence": true,
+  "value_in_top20": true,
+  "n_evidence": 5,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "공시에서 확인한 값:\n- 계약금액: 424,899,510,000\n함께 확인되는 원문 근거:\n- [answer] - 체결계약명 | 대만 타이중 블루라인 E&M 공급사업\n- [answer] 3. 계약상대 | 타이중시 정부 도시철도공정국(Rapid Transit System Bureau of",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_f115e4cb0e6b913c663df555",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "exchange"
+  ],
+  "question": "현대건설이 지티엑스씨 주식회사와 체결한 수도권광역급행철도 C노선(GTX-C) 민간투자시설사업 계약에서, 현대건설 지분(32%)에 해당하는 계약금액(원)은 얼마인가?",
+  "corps_detected": [
+   "현대건설"
+  ],
+  "years_detected": [],
+  "n_retrieved": 2,
+  "gold_docs": [
+   "exchange_20230918800156"
+  ],
+  "top5_docs": [
+   "exchange_20230918800156",
+   "exchange_20230918800156"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 1,
+  "slots_top20": 1,
+  "slots_cited": 1,
+  "value_forms": [
+   "1226320960000",
+   "1,226,320,960,000"
+  ],
+  "value_in_evidence": true,
+  "value_in_top20": true,
+  "n_evidence": 5,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "공시에서 확인한 값:\n- 계약금액: 1,226,320,960,000\n함께 확인되는 원문 근거:\n- [answer] - 체결계약명 | 수도권광역급행철도 C노선(GTX-C) 민간투자시설사업\n- [answer] 3. 계약상대 | 지티엑스씨 주식회사\n- [answer] - 사업개요 : 86.4",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_f119c5d79a4e52a359a84caa",
+  "type": "ANSWERABILITY",
+  "mode": "CLOSED",
+  "answerability": "NOT_FOUND",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "periodic"
+  ],
+  "question": "삼성전자의 2022 회계연도(2022년 12월 결산) 사업보고서가 현재 코퍼스에 포함되어 있는가?",
+  "corps_detected": [
+   "삼성전자"
+  ],
+  "years_detected": [
+   2022
+  ],
+  "n_retrieved": 0,
+  "gold_docs": [],
+  "top5_docs": [],
+  "doc_in_top20": null,
+  "doc_in_top5": null,
+  "n_slots": 1,
+  "slots_top20": 0,
+  "slots_cited": 0,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 0,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "PARTIALLY_SUPPORTED",
+  "confidence": 0,
+  "uncertainty": "문서 인덱스(기업·공시유형·연도 조건)를 직접 센 결과다. 검색 근거는 없다.",
+  "answer_head": "삼성전자의 2022년 periodic 공시는 현재 코퍼스에 포함되어 있지 않다.",
+  "rule": "NOT_FOUND",
+  "trap": true,
+  "trap_ok": true
+ },
+ {
+  "qid": "author_f1f0a9f6462da34342fd2cc4",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "holding"
+  ],
+  "question": "Capital Research and Management Company이(가) 에스케이하이닉스(주)에 대해 제출한 주식등의 대량보유상황보고서(보고서작성기준일 2026년 01월 30일)에 따르면, 직전 보고서 대비 이번 보고서의 보유주식등의 수와 보유비율은 각각 어떻게 변동되었는가?",
+  "corps_detected": [],
+  "years_detected": [
+   2026
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "holding_20260209000019"
+  ],
+  "top5_docs": [
+   "holding_20260209000019",
+   "holding_20260209000019",
+   "holding_20260211000912",
+   "holding_20260211000912",
+   "holding_20260209000019"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 2,
+  "slots_top20": 2,
+  "slots_cited": 1,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 2,
+  "warnings": [
+   "corp_unspecified"
+  ],
+  "validation": "SUPPORTED",
+  "confidence": 80,
+  "uncertainty": "질문에서 기업을 특정하지 못했다 — 아래 근거는 SK하이닉스 공시다. 의도한 기업이 아니면 회사명을 정확히 넣어 다시 물어라. 값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 49,781,704 → 36,730,947 (-13,050,757 변동)\n- 직전 대비 비율(%): 6.84 → 5.05 (-1.79%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 발행회",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_f55322f4532a9fec91015c34",
+  "type": "NARRATIVE_MULTI_DOC",
+  "mode": "OPEN",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "major"
+  ],
+  "question": "신한지주가 2024년 4월 26일 결의한 자기주식 처분 결정의 목적과 처분예정주식수, 처분방법은 각각 무엇인가?",
+  "corps_detected": [
+   "신한지주"
+  ],
+  "years_detected": [
+   2024
+  ],
+  "n_retrieved": 18,
+  "gold_docs": [
+   "major_20240426000320"
+  ],
+  "top5_docs": [
+   "major_20240426000320",
+   "major_20240426000320",
+   "major_20240426000320",
+   "major_20240426000320",
+   "major_20240426000320"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 2,
+  "slots_top20": 2,
+  "slots_cited": 2,
+  "value_forms": [
+   "6,353"
+  ],
+  "value_in_evidence": true,
+  "value_in_top20": true,
+  "n_evidence": 5,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] - 상기 '1. 처분예정주식수'는 2024년 4월 25일 현재 당사가 보유하고 있는 자기주식 총수로  2020년 1월 28일 (구)오렌지라이프생명의 완전자회사화를 위한 주식교환, 2020년 12월 30일 (구)네오플럭스의",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_f61f83f3af47bd86817b5358",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "holding"
+  ],
+  "question": "한국전력공사이(가) 한국전력기술(주)에 대해 제출한 주식등의 대량보유상황보고서(보고서작성기준일 2024.01.04)에 따르면, 직전 보고서 대비 이번 보고서의 보유주식등의 수와 보유비율은 각각 어떻게 변동되었는가?",
+  "corps_detected": [],
+  "years_detected": [
+   2024
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "holding_20240104000378"
+  ],
+  "top5_docs": [
+   "holding_20240104000378",
+   "holding_20240104000378",
+   "holding_20240104000378",
+   "holding_20240104000378",
+   "holding_20240104000378"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 2,
+  "slots_top20": 2,
+  "slots_cited": 1,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 2,
+  "warnings": [
+   "corp_unspecified"
+  ],
+  "validation": "SUPPORTED",
+  "confidence": 80,
+  "uncertainty": "질문에서 기업을 특정하지 못했다 — 아래 근거는 한전기술 공시다. 의도한 기업이 아니면 회사명을 정확히 넣어 다시 물어라. 값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 25,138,694 → 19,493,600 (-5,645,094 변동)\n- 직전 대비 비율(%): 65.77 → 51.00 (-14.77%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_f87d43f1663f388ab5a57a3b",
+  "type": "NARRATIVE_MULTI_DOC",
+  "mode": "OPEN",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "major"
+  ],
+  "question": "한미반도체가 2024년 7월 22일 결의한 자기주식취득 신탁계약 체결 결정의 계약금액과 계약목적은 무엇인가?",
+  "corps_detected": [
+   "한미반도체"
+  ],
+  "years_detected": [
+   2024
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "major_20240722000046"
+  ],
+  "top5_docs": [
+   "major_20240722000046",
+   "major_20240722000046",
+   "major_20240722000046",
+   "major_20240722000046",
+   "major_20240722000046"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 1,
+  "slots_top20": 1,
+  "slots_cited": 1,
+  "value_forms": [
+   "50,000,000,000",
+   "500"
+  ],
+  "value_in_evidence": true,
+  "value_in_top20": true,
+  "n_evidence": 5,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "공시에서 확인한 값:\n- 계약금액: 50,000,000,000\n함께 확인되는 원문 근거:\n- [answer] 7. 이사회결의일(결정일) | 2024년 07월 22일\n- [answer] 6. 계약 전  자기주식  보유현황 | 배당가능범위 내취득(주) | 보통주식 | 847,732 | 비율",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "author_ffcc4093fb37a87f1a40322d",
+  "type": "NARRATIVE_MULTI_DOC",
+  "mode": "OPEN",
+  "answerability": "WITHHELD",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "exchange"
+  ],
+  "question": "알테오젠의 ALT-B4 마일스톤 기술료 수령 공시(2023-04-04)에서, 기술을 이전받은 계약상대방 회사명은 공시상 확인 가능한가?",
+  "corps_detected": [
+   "알테오젠"
+  ],
+  "years_detected": [
+   2023
+  ],
+  "n_retrieved": 1,
+  "gold_docs": [
+   "exchange_20230404900142"
+  ],
+  "top5_docs": [
+   "exchange_20230404900142"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 1,
+  "slots_top20": 1,
+  "slots_cited": 1,
+  "value_forms": [
+   "2019",
+   "10"
+  ],
+  "value_in_evidence": true,
+  "value_in_top20": true,
+  "n_evidence": 3,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "공시유보 사항이다 — 해당 값은 공시에서 확인할 수 없다.\n- 공시 본문: 계약상대방회사의 이름과 신약 개발품목 등의 정보는 계약상 영업비밀유지 사항에 속하며 해당 내역은 공시유보사항에 해당합니다\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [계약상대] 1. 상기 마일스톤 대금은",
+  "rule": "WITHHELD",
+  "trap": true,
+  "trap_ok": true
+ },
+ {
+  "qid": "gold_b_034334dce8cb5eaaa6589096",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "holding"
+  ],
+  "question": "크래프톤에 대해 2024-06-19 보고서작성기준일로 제출된 주식등의대량보유상황보고서(일반)에서 보고자, 직전/이번 보고서의 보유주식등의 수ㆍ보유비율과 보유목적은 각각 무엇인가?",
+  "corps_detected": [
+   "크래프톤"
+  ],
+  "years_detected": [
+   2024
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "holding_20240620000340"
+  ],
+  "top5_docs": [
+   "holding_20240620000340",
+   "holding_20240620000340",
+   "holding_20240620000340",
+   "holding_20240620000340",
+   "holding_20240620000340"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 4,
+  "slots_top20": 3,
+  "slots_cited": 3,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서 | 17,876,001 | 36.53\n- [answer] 이번 보고서 | 17,875,501 | 36.53\n- [answer] 직전 보고서 | 13,781,099 | 28.16\n- [answer] 직전보고서 ",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_04129a579f785f869644167a",
+  "type": "NARRATIVE_MULTI_DOC",
+  "mode": "OPEN",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "exchange"
+  ],
+  "question": "현대건설의 2025-05-26 투자판단 관련 주요경영사항(개포주공6·7단지아파트 재건축정비사업 시공사 선정)에서 사건의 핵심 내용, 현재 상태와 정보 한계를 설명해줘.",
+  "corps_detected": [
+   "현대건설"
+  ],
+  "years_detected": [
+   2025
+  ],
+  "n_retrieved": 2,
+  "gold_docs": [
+   "exchange_20250526800002"
+  ],
+  "top5_docs": [
+   "exchange_20250526800002",
+   "exchange_20250623800001"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 3,
+  "slots_top20": 3,
+  "slots_cited": 3,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 2. 주요내용 | - 현대건설은 아래와 같이 2025년 5월 26일, 개포주공6·7단지아파트 재건축정비사업조합이 발주한 개포주공6·7단지아파트 재건축정비사업의 시공사로 선정되었음을 통보받음.- 아  래 -1. 발주처 : ",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_0700d8fa5f0028cb712a533d",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "exchange"
+  ],
+  "question": "삼성중공업의 2025-03-17 에탄운반선 2척 공급계약 공시에서 계약상대방, 계약금액, 계약기간과 최근 매출액 대비 비율을 알려줘.",
+  "corps_detected": [
+   "삼성중공업"
+  ],
+  "years_detected": [
+   2025
+  ],
+  "n_retrieved": 2,
+  "gold_docs": [
+   "exchange_20250318800145"
+  ],
+  "top5_docs": [
+   "exchange_20250318800145",
+   "exchange_20250318800145"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 5,
+  "slots_top20": 5,
+  "slots_cited": 5,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 1,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 60,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "공시에서 확인한 값:\n- 2025년 매출액: 8,009,400,000,000",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_0aa8d3979510d78ea122edda",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "exchange"
+  ],
+  "question": "현대글로비스가 2024년 12월 31일 공시한 단일판매ㆍ공급계약체결(완성차 해상운송계약)에서 계약상대방, 계약금액, 계약기간(시작일ㆍ종료일), 최근매출액 대비 비율은 각각 얼마인가?",
+  "corps_detected": [
+   "현대글로비스"
+  ],
+  "years_detected": [
+   2024
+  ],
+  "n_retrieved": 2,
+  "gold_docs": [
+   "exchange_20241231800103"
+  ],
+  "top5_docs": [
+   "exchange_20241231800103",
+   "exchange_20241231800103"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 5,
+  "slots_top20": 5,
+  "slots_cited": 5,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 1,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 60,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "공시에서 확인한 값:\n- 2024년 매출액: 25,683,197,164,064",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_0e97c60a0d12c067d46a6f84",
+  "type": "COMPARISON_CALC",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "HARD",
+  "doc_groups": [
+   "periodic"
+  ],
+  "question": "LIG넥스원의 2023년 1분기보고서(2023.03)와 2025년 1분기보고서(2025.03) 요약연결재무정보에서 매출액과 영업이익을 비교하면 각각 얼마나 증감했는가?",
+  "corps_detected": [
+   "LIG디펜스앤에어로스페이스"
+  ],
+  "years_detected": [
+   2023,
+   2025
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "periodic_20230515000336",
+   "periodic_20250515000678"
+  ],
+  "top5_docs": [
+   "periodic_20230515000336",
+   "periodic_20250515000678",
+   "periodic_20250515000678",
+   "periodic_20250515000678",
+   "periodic_20230515000336"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 4,
+  "slots_top20": 4,
+  "slots_cited": 1,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 4,
+  "n_derived": 4,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 100,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "계산 결과(원문 값에서 코드가 계산):\n- 매출액 증감액: 360,823,616,193\n- 매출액: 546,799,032,026 → 907,622,648,219 (65.99% 변동)\n- 영업이익 증감액: 45,412,251,030\n- 영업이익: 68,184,674,906 → 113,59",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_137f1bfd5c69987d009ae50c",
+  "type": "EVENT_TRACE",
+  "mode": "OPEN",
+  "answerability": "SUPPORTED",
+  "difficulty": "HARD",
+  "doc_groups": [
+   "major"
+  ],
+  "question": "엔씨소프트의 [기재정정]주요사항보고서(회사분할결정, 2024-11-28)에서 정정된 핵심 내용(분할신설회사 상호)과 분할기일, 정정 후 현재 유효한 상호를 공시 근거로 설명해줘.",
+  "corps_detected": [
+   "NC"
+  ],
+  "years_detected": [
+   2024
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "major_20241128001098"
+  ],
+  "top5_docs": [
+   "major_20241128001098",
+   "major_20241128001098",
+   "major_20241128001098",
+   "major_20241128001098",
+   "major_20241021000037"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 4,
+  "slots_top20": 4,
+  "slots_cited": 3,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 주요사항보고서(회사분할결정)\n- [answer] 1. 정정대상 공시서류 :\n- [answer] 16. 기타 투자판단과 관련한 중요사항 (1)번 - 분할신설회사3 회사명 | 주식회사 엔씨에이아이(NC AI Corporati",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_192fa6ea90c0cdefc2616fc0",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "exchange"
+  ],
+  "question": "HD현대일렉트릭의 2025-12-19 안좌 BESS 발전소 건설공사 공급계약 공시에서 계약상대방, 계약금액, 계약기간과 최근 매출액 대비 비율을 알려줘.",
+  "corps_detected": [
+   "HD현대일렉트릭"
+  ],
+  "years_detected": [
+   2025
+  ],
+  "n_retrieved": 2,
+  "gold_docs": [
+   "exchange_20251222800814"
+  ],
+  "top5_docs": [
+   "exchange_20251222800814",
+   "exchange_20251222800814"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 5,
+  "slots_top20": 5,
+  "slots_cited": 5,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 1,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 60,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "공시에서 확인한 값:\n- 2025년 매출액: 3,322,300,000,000",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_23f454a11d52f107c1c7e8a2",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "exchange"
+  ],
+  "question": "한미반도체가 2025-11-17에 공시한 단일판매ㆍ공급계약체결(자율공시)에서 계약상대방, 계약금액, 계약기간(시작일ㆍ종료일)과 최근매출액 대비 비율은 각각 얼마인가?",
+  "corps_detected": [
+   "한미반도체"
+  ],
+  "years_detected": [
+   2025
+  ],
+  "n_retrieved": 2,
+  "gold_docs": [
+   "exchange_20251117800179"
+  ],
+  "top5_docs": [
+   "exchange_20251117800179",
+   "exchange_20251117800179"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 5,
+  "slots_top20": 5,
+  "slots_cited": 5,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 1,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 60,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "공시에서 확인한 값:\n- 2025년 매출액: 558,917,191,547",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_277f68d0497188039d68f632",
+  "type": "EVENT_TRACE",
+  "mode": "OPEN",
+  "answerability": "SUPPORTED",
+  "difficulty": "HARD",
+  "doc_groups": [
+   "exchange"
+  ],
+  "question": "효성중공업이 2025-04-28 제출한 판매·공급계약 해지 공시(20250429800893)는 어떤 원계약을 해지했으며, 해지 사유와 해지 후 상태는 무엇인가?",
+  "corps_detected": [
+   "효성중공업"
+  ],
+  "years_detected": [
+   2025
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "exchange_20250429800893"
+  ],
+  "top5_docs": [
+   "exchange_20250429800893",
+   "exchange_20250429800893",
+   "exchange_20250110800527",
+   "holding_20250416000487",
+   "exchange_20250110800527"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 5,
+  "slots_top20": 5,
+  "slots_cited": 5,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [해지 주요사유] 5. 해지 주요사유 | 계약 효력 소멸에 따른 해지\n- [answer] 6. 해지일자 | 2025-04-28\n- [answer] 1. 판매ㆍ공급계약 해지 구분 | 공사수주\n- [answer] 8. 기타 투자판단과 관련한",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_27ca59a117b25eafd17a5eaa",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "exchange"
+  ],
+  "question": "두산에너빌리티가 2025년 12월 17일 공시한 신규시설투자등 공시에서 투자금액, 자기자본 대비 비율, 투자목적과 확정/예정 여부는 무엇인가?",
+  "corps_detected": [
+   "두산에너빌리티"
+  ],
+  "years_detected": [
+   2025
+  ],
+  "n_retrieved": 4,
+  "gold_docs": [
+   "exchange_20251217800832"
+  ],
+  "top5_docs": [
+   "exchange_20251217800832",
+   "exchange_20251217800832",
+   "exchange_20250313800043",
+   "exchange_20250313800043"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 4,
+  "slots_top20": 4,
+  "slots_cited": 4,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "공시에서 확인한 값:\n- 투자금액: 806,800,000,000\n- 자기자본대비: 6.92\n함께 확인되는 원문 근거:\n- [투자목적] 3. 투자목적 | SMR 사업확대에 따른 제작 Capacity 확보\n- [answer] 5. 이사회결의일(결정일) | 2025-12-17\n- [answe",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_2cd479eccfda82d5d6e549bb",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "WITHHELD",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "exchange"
+  ],
+  "question": "LG에너지솔루션의 2025-07-30 LFP 배터리 공급계약 공시에서 계약상대방, 계약금액, 계약기간과 최근 매출액 대비 비율을 알려줘.",
+  "corps_detected": [
+   "LG에너지솔루션"
+  ],
+  "years_detected": [
+   2025
+  ],
+  "n_retrieved": 2,
+  "gold_docs": [
+   "exchange_20250730800046"
+  ],
+  "top5_docs": [
+   "exchange_20250730800046",
+   "exchange_20250730800046"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 5,
+  "slots_top20": 5,
+  "slots_cited": 5,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 1,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 60,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "공시유보 사항이다 — 해당 값은 공시에서 확인할 수 없다.\n- 유보사유: 경영상 비밀유지\n- 유보기한: 2030-07-31\n\n공시에서 확인한 값:\n- 2025년 매출액: 25,619,585,140,102",
+  "rule": "WITHHELD",
+  "trap": true,
+  "trap_ok": true
+ },
+ {
+  "qid": "gold_b_2ef301d8b4157cd002c79279",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "exchange"
+  ],
+  "question": "HD현대중공업이 2023-01-20에 공시한 단일판매ㆍ공급계약체결(VLGC 2척, 공사수주)에서 계약상대방, 계약금액, 계약기간(시작일ㆍ종료일)과 최근매출액 대비 비율은 각각 얼마인가?",
+  "corps_detected": [
+   "HD현대중공업"
+  ],
+  "years_detected": [
+   2023
+  ],
+  "n_retrieved": 2,
+  "gold_docs": [
+   "exchange_20230120800061"
+  ],
+  "top5_docs": [
+   "exchange_20230120800061",
+   "exchange_20230120800061"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 5,
+  "slots_top20": 5,
+  "slots_cited": 5,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 1,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 60,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "공시에서 확인한 값:\n- 2023년 매출액: 8,311,300,000,000",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_30089ee2275a48721e228ae2",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "holding"
+  ],
+  "question": "HD현대일렉트릭에 대한 HD현대㈜의 2024-06-19 대량보유상황보고서(일반)에서 직전보고서 대비 이번보고서의 보유주식수·비율 변화와 보유목적은 무엇인가?",
+  "corps_detected": [
+   "HD현대일렉트릭"
+  ],
+  "years_detected": [
+   2024
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "holding_20240620000036"
+  ],
+  "top5_docs": [
+   "holding_20240620000036",
+   "holding_20240620000036",
+   "holding_20240620000036",
+   "holding_20240620000036",
+   "holding_20240620000036"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 4,
+  "slots_top20": 3,
+  "slots_cited": 3,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서 | 14,456,491 | 40.10\n- [answer] 이번 보고서 | 14,023,639 | 38.90\n- [answer] 보유주식등의 수 및 보유비율 |  | 보유주식등의 수 | 보유비율\n- [answe",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_3054ffad4d0cb92473806459",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "holding"
+  ],
+  "question": "고려아연(주)에 대한 2024-12-19 대량보유상황보고서(보고자: (주)영풍)에서 보고자, 보유주식등의 수·보유비율의 직전/이번 보고서 변화와 보유목적을 알려줘.",
+  "corps_detected": [
+   "고려아연"
+  ],
+  "years_detected": [
+   2024
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "holding_20241219000057"
+  ],
+  "top5_docs": [
+   "holding_20241219000061",
+   "holding_20241219000057",
+   "holding_20241219000061",
+   "holding_20241219000057",
+   "holding_20240904000440"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 6,
+  "slots_top20": 5,
+  "slots_cited": 4,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서 | 7,368,124 | 35.59\n- [answer] 이번 보고서 | 7,602,575 | 36.72\n- [answer] 직전 보고서 | 8,246,783 | 39.83\n- [answer] 이번 보고서 | ",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_34e53426cab01c72ec76bfca",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "exchange"
+  ],
+  "question": "삼성E&A의 2024-04-17 단일판매ㆍ공급계약체결 공시에서 계약상대방, 계약금액, 계약기간과 최근 매출액 대비 비율을 알려줘.",
+  "corps_detected": [
+   "삼성E&A"
+  ],
+  "years_detected": [
+   2024
+  ],
+  "n_retrieved": 2,
+  "gold_docs": [
+   "exchange_20240417800519"
+  ],
+  "top5_docs": [
+   "exchange_20240417800519",
+   "exchange_20240417800519"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 4,
+  "slots_top20": 4,
+  "slots_cited": 4,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 1,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 60,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "공시에서 확인한 값:\n- 2024년 매출액: 10,624,917,993,595",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_446afacf23798f1091ca19df",
+  "type": "EVENT_TRACE",
+  "mode": "OPEN",
+  "answerability": "SUPPORTED",
+  "difficulty": "HARD",
+  "doc_groups": [
+   "major"
+  ],
+  "question": "신한지주가 2025-02-03 제출한 [기재정정]주요사항보고서(상각형조건부자본증권발행결정)에서, 최초 공시서류 제출일과 원금상환방법·옵션 조항의 정정 전·후 핵심 변경 내용은 무엇인가?",
+  "corps_detected": [
+   "신한지주"
+  ],
+  "years_detected": [
+   2025
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "major_20250203000097"
+  ],
+  "top5_docs": [
+   "major_20250203000097",
+   "major_20250207000299",
+   "periodic_20251114002208",
+   "periodic_20251114002208",
+   "periodic_20251114002208"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 5,
+  "slots_top20": 0,
+  "slots_cited": 0,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 3,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 1. 정정대상 공시서류 : 주요사항보고서 (상각형 조건부 자본증권 발행결정)\n- [answer] 17회 상각형 조건부자본증권 | 2025-02-13 | - | 400,000 | 2025-02-03 | 한국증권금융\n- [a",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_4dbdfc5d0b451f1d7a207e74",
+  "type": "COMPARISON_CALC",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "HARD",
+  "doc_groups": [
+   "periodic"
+  ],
+  "question": "삼성전자의 2023년 3분기보고서와 2025년 3분기보고서 연결 손익계산서에서 매출액과 영업이익을 같은 기준(연결·누적 9개월)으로 비교하고 증감률을 계산해줘.",
+  "corps_detected": [
+   "삼성전자"
+  ],
+  "years_detected": [
+   2023,
+   2025
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "periodic_20231114002109",
+   "periodic_20251114002447"
+  ],
+  "top5_docs": [
+   "periodic_20231114002109",
+   "periodic_20251114002447",
+   "periodic_20231114002109",
+   "periodic_20251114002447",
+   "periodic_20251114002447"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 4,
+  "slots_top20": 4,
+  "slots_cited": 4,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 4,
+  "n_derived": 4,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 100,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "계산 결과(원문 값에서 코드가 계산):\n- 매출액 증감액: 18,657,095\n- 매출액: 67,404,652 → 86,061,747 (27.68% 변동)\n- 영업이익 증감액: 9,732,528\n- 영업이익: 2,433,534 → 12,166,062 (399.93% 변동)\n\n공시에서 확",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_4e766ea7213345a7d5bbb527",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "holding"
+  ],
+  "question": "크래프톤의 2025년 8월 5일 주식등의대량보유상황보고서(일반)에서 보고자 본인 성명, 직전보고서(2025.07.15) 대비 이번보고서(2025.08.04)의 주식등의 수ㆍ비율 및 주권 수ㆍ비율 변화, 보유목적은 무엇인가?",
+  "corps_detected": [
+   "크래프톤"
+  ],
+  "years_detected": [
+   2025
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "holding_20250805000192"
+  ],
+  "top5_docs": [
+   "holding_20250805000192",
+   "holding_20250805000192",
+   "holding_20250805000192",
+   "holding_20250805000192",
+   "holding_20250805000192"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 4,
+  "slots_top20": 3,
+  "slots_cited": 3,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서 | 18,844,031 | 38.96\n- [answer] 이번 보고서 | 18,844,031 | 38.96\n- [answer] 직전 보고서 | 13,775,291 | 28.48\n- [answer] 직전보고서 ",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_5271576ebada8221bcc3056a",
+  "type": "COMPARISON_CALC",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "HARD",
+  "doc_groups": [
+   "periodic"
+  ],
+  "question": "현대제철의 2023년 반기보고서(2023.06)와 2025년 반기보고서(2025.06) 요약연결재무정보에서 매출액과 영업이익을 비교하면 각각 얼마나 증감했는가?",
+  "corps_detected": [
+   "현대제철"
+  ],
+  "years_detected": [
+   2023,
+   2025
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "periodic_20230814001112",
+   "periodic_20250814002944"
+  ],
+  "top5_docs": [
+   "periodic_20250814002944",
+   "periodic_20230814001112",
+   "periodic_20250814002944",
+   "periodic_20250814002944",
+   "periodic_20230814001112"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 4,
+  "slots_top20": 4,
+  "slots_cited": 3,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 4,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "공시에서 확인한 값:\n- 2025년 매출액: 11,509,020\n- 2023년 영업이익: 465,075,677,896\n함께 확인되는 원문 근거:\n- [매출액_2023] 매출액 | 7,647,150,855 | 2,991,167,267 | 10,638,318,122 | 905,462,199",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_5335116f30b3102f5ce22cbb",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "exchange"
+  ],
+  "question": "삼성바이오로직스가 2024년 6월 25일 공시한 단일판매ㆍ공급계약체결(의약품 위탁생산계약)에서 계약상대방, 계약금액, 계약기간(시작일ㆍ종료일), 최근매출액 대비 비율은 각각 얼마인가?",
+  "corps_detected": [
+   "삼성바이오로직스"
+  ],
+  "years_detected": [
+   2024
+  ],
+  "n_retrieved": 2,
+  "gold_docs": [
+   "exchange_20240625800286"
+  ],
+  "top5_docs": [
+   "exchange_20240625800286",
+   "exchange_20240625800286"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 5,
+  "slots_top20": 5,
+  "slots_cited": 5,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 1,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 60,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "공시에서 확인한 값:\n- 2024년 매출액: 3,694,588,767,068",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_60268d8a3d15da2a26a59fd6",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "exchange"
+  ],
+  "question": "한화에어로스페이스의 2023-12-04 단일판매ㆍ공급계약체결 공시에서 계약상대방, 계약금액, 계약기간과 최근 매출액 대비 비율을 알려줘.",
+  "corps_detected": [
+   "한화에어로스페이스"
+  ],
+  "years_detected": [
+   2023
+  ],
+  "n_retrieved": 2,
+  "gold_docs": [
+   "exchange_20231204800003"
+  ],
+  "top5_docs": [
+   "exchange_20231204800003",
+   "exchange_20231204800003"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 4,
+  "slots_top20": 4,
+  "slots_cited": 1,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 1,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 60,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [매출액_2023] - 상기 2항의 최근사업연도 매출액은 한화에어로스페이스의 2022년 연결기준 매출액임.- 상기 2항의 계약금액은 2023년 12월 1일 서울외국환중개 매매기준율(1,290.40원/USD)로 원화환산한 금액임.- 계약기",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_6064d1699deee9470756d9d2",
+  "type": "NARRATIVE_MULTI_DOC",
+  "mode": "OPEN",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "exchange"
+  ],
+  "question": "셀트리온의 2026-03-12 투자판단 관련 주요경영사항(CT-P55 미국 임상 3상 시험계획 변경신청)에서 사건의 핵심 내용, 기준일, 현재 상태와 정보 한계를 설명해줘.",
+  "corps_detected": [
+   "셀트리온"
+  ],
+  "years_detected": [
+   2026
+  ],
+  "n_retrieved": 1,
+  "gold_docs": [
+   "exchange_20260312800806"
+  ],
+  "top5_docs": [
+   "exchange_20260312800806"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 4,
+  "slots_top20": 4,
+  "slots_cited": 4,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 3,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] ※ 관련공시 | 2024-08-14 투자판단 관련 주요경영사항(CTP55(코센틱스 바이오시밀러) 미국 임상 3상 시험계획 승인)2024-07-01 투자판단 관련 주요경영사항(CT-P55코센틱스 바이오시밀러 미국 임상 3상",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_649e0385533d6ed2ad3bd978",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "holding"
+  ],
+  "question": "시프트업의 2025-12-05 대량보유상황보고서(변동)에서 보고자, 보유주식등의 수ㆍ보유비율의 직전ㆍ이번 보고서 변화와 보유목적을 알려줘.",
+  "corps_detected": [
+   "시프트업"
+  ],
+  "years_detected": [
+   2025
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "holding_20251205000450"
+  ],
+  "top5_docs": [
+   "holding_20251205000450",
+   "holding_20251205000450",
+   "holding_20251205000450",
+   "holding_20251205000450",
+   "holding_20251205000450"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 4,
+  "slots_top20": 3,
+  "slots_cited": 2,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 2,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 100,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 24,083,650 → 24,083,650 (+0 변동)\n- 직전 대비 비율(%): 41.11 → 40.85 (-0.26%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서 | 2",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_6af756dd84b32fc13513f0bd",
+  "type": "NARRATIVE_MULTI_DOC",
+  "mode": "OPEN",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "exchange"
+  ],
+  "question": "현대건설이 2025-06-23 제출한 투자판단관련주요경영사항(수택동 재개발 정비사업 시공사 선정)의 핵심 내용과 현재 확정 여부는 무엇인가?",
+  "corps_detected": [
+   "현대건설"
+  ],
+  "years_detected": [
+   2025
+  ],
+  "n_retrieved": 2,
+  "gold_docs": [
+   "exchange_20250623800001"
+  ],
+  "top5_docs": [
+   "exchange_20250623800001",
+   "exchange_20250526800002"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 4,
+  "slots_top20": 4,
+  "slots_cited": 4,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 2. 주요내용 | - 현대건설은 아래와 같이 2025년 6월 21일, 수택동 재개발 정비사업조합이 발주한 수택동 재개발 정비사업의 시공사로 선정되었음을 통보받음.- 아  래 -1. 발주처 : 수택동 재개발 정비사업조합2.",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_75e2226d84ae9c1e8bfad1bd",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "exchange"
+  ],
+  "question": "효성중공업이 2025-01-10에 공시한 단일판매ㆍ공급계약체결에서 계약상대방, 계약금액, 계약기간과 최근매출액 대비 비율은 각각 얼마인가?",
+  "corps_detected": [
+   "효성중공업"
+  ],
+  "years_detected": [
+   2025
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "exchange_20250110800527"
+  ],
+  "top5_docs": [
+   "exchange_20250110800527",
+   "exchange_20250110800527",
+   "exchange_20250429800893",
+   "exchange_20250429800893",
+   "holding_20250416000487"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 4,
+  "slots_top20": 4,
+  "slots_cited": 4,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 1,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 60,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "공시에서 확인한 값:\n- 2025년 매출액: 4,300,571,503,251",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_7c610de1801a78e791b92f60",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "exchange"
+  ],
+  "question": "두산에너빌리티가 2025년 3월 13일 공시한 판매ㆍ공급계약체결(Rumah #1 IPP 공사수주)에서 계약상대방, 계약금액, 계약기간(시작일ㆍ종료일), 최근매출액 대비 비율은 각각 얼마인가?",
+  "corps_detected": [
+   "두산에너빌리티"
+  ],
+  "years_detected": [
+   2025
+  ],
+  "n_retrieved": 4,
+  "gold_docs": [
+   "exchange_20250313800043"
+  ],
+  "top5_docs": [
+   "exchange_20250313800043",
+   "exchange_20250313800043",
+   "exchange_20251217800832",
+   "exchange_20251217800832"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 5,
+  "slots_top20": 5,
+  "slots_cited": 5,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 1,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 60,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "공시에서 확인한 값:\n- 2025년 매출액: 17,589,887,709,510",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_7d494870b3a53946dd2232c8",
+  "type": "NARRATIVE_MULTI_DOC",
+  "mode": "OPEN",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "major"
+  ],
+  "question": "우리기술의 주요사항보고서(제3자의 전환사채매수선택권 행사)에서 핵심 결정내용(회차·행사금액·행사비율·전환조건)과 기준일(전환사채 매수선택권 행사일)을 공시 근거로 설명해줘.",
+  "corps_detected": [
+   "우리기술"
+  ],
+  "years_detected": [],
+  "n_retrieved": 17,
+  "gold_docs": [
+   "major_20250818000219"
+  ],
+  "top5_docs": [
+   "major_20250818000219",
+   "major_20250818000219",
+   "major_20250818000219",
+   "major_20250818000219",
+   "major_20250818000219"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 4,
+  "slots_top20": 3,
+  "slots_cited": 3,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 6. 전환사채 매수선택권 행사일 | 2025년 08월 18일\n- [answer] 5. 전환사채   매수선택권   행사 내역 | 매수선택권이 행사된 전환사채의권면(전자등록) 금액(원) (A) | 1,000,000,000\n-",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_8440e15f1cb9f79c66a6b787",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "exchange"
+  ],
+  "question": "삼성E&A가 2025-01-10 공시한 단일판매ㆍ공급계약체결(말레이시아 New Biorefinery Project)에서 계약상대방, 계약금액, 계약기간(시작일ㆍ종료일), 최근매출액 대비 비율과 공시유보 여부를 알려줘.",
+  "corps_detected": [
+   "삼성E&A"
+  ],
+  "years_detected": [
+   2025
+  ],
+  "n_retrieved": 2,
+  "gold_docs": [
+   "exchange_20250110800218"
+  ],
+  "top5_docs": [
+   "exchange_20250110800218",
+   "exchange_20250110800218"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 6,
+  "slots_top20": 6,
+  "slots_cited": 6,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 1,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 60,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "공시에서 확인한 값:\n- 2025년 매출액: 10,624,917,993,595",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_8e8c9c7e2994614110d072bf",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "exchange"
+  ],
+  "question": "한미반도체가 2023년 6월 12일 공시한 단일판매ㆍ공급계약체결(반도체 제조용 장비 수주)에서 계약상대방, 계약금액, 계약기간(시작일ㆍ종료일), 최근매출액 대비 비율은 각각 얼마인가?",
+  "corps_detected": [
+   "한미반도체"
+  ],
+  "years_detected": [
+   2023
+  ],
+  "n_retrieved": 2,
+  "gold_docs": [
+   "exchange_20230612800469"
+  ],
+  "top5_docs": [
+   "exchange_20230612800469",
+   "exchange_20230612800469"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 5,
+  "slots_top20": 5,
+  "slots_cited": 5,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 1,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 60,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "공시에서 확인한 값:\n- 2023년 매출액: 327,592,058,714",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_926d98d28ea51ea8bb8e6ea1",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "holding"
+  ],
+  "question": "한미반도체의 2024년 3월 6일 주식등의대량보유상황보고서(일반)에서 보고자 본인 성명, 직전보고서 대비 이번보고서의 보유주식등의 수ㆍ비율 변화, 보유목적은 무엇인가?",
+  "corps_detected": [
+   "한미반도체"
+  ],
+  "years_detected": [
+   2024
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "holding_20240306000024"
+  ],
+  "top5_docs": [
+   "holding_20240306000024",
+   "holding_20240306000024",
+   "holding_20240306000024",
+   "holding_20240306000024",
+   "holding_20240306000024"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 4,
+  "slots_top20": 3,
+  "slots_cited": 3,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서 | 53,541,672 | 55.01\n- [answer] 이번 보고서 | 53,569,672 | 55.03\n- [answer] 직전 보고서 | 9,964,535 | 10.24\n- [answer] 이번보고서 |",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_9498154347fd9a2ceef8aa63",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "holding"
+  ],
+  "question": "LG씨엔에스의 2025-11-05 대량보유상황보고서(변동)에서 보고자, 보유주식등의 수·비율의 직전·이번 보고서 변화, 보고사유와 보유목적을 알려줘.",
+  "corps_detected": [
+   "LG씨엔에스"
+  ],
+  "years_detected": [
+   2025
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "holding_20251105000317"
+  ],
+  "top5_docs": [
+   "holding_20251105000317",
+   "holding_20251105000317",
+   "holding_20251105000317",
+   "holding_20251105000317",
+   "holding_20251105000317"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 5,
+  "slots_top20": 4,
+  "slots_cited": 4,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 2,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 100,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 15,430,479 → 8,026,799 (-7,403,680 변동)\n- 직전 대비 비율(%): 15.93 → 8.28 (-7.65%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_94c41243826898e3879b933e",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "holding"
+  ],
+  "question": "고려아연의 2024-09-04 대량보유상황보고서(변동)에서 보고자, 보유주식등의 수ㆍ보유비율의 직전ㆍ이번 보고서 변화와 보유목적을 알려줘.",
+  "corps_detected": [
+   "고려아연"
+  ],
+  "years_detected": [
+   2024
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "holding_20240904000440"
+  ],
+  "top5_docs": [
+   "holding_20240904000440",
+   "holding_20240904000440",
+   "holding_20241219000061",
+   "holding_20241219000057",
+   "holding_20241219000061"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 4,
+  "slots_top20": 3,
+  "slots_cited": 2,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 2,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 100,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 10,071,580 → 10,098,385 (+26,805 변동)\n- 직전 대비 비율(%): 48.65 → 48.78 (+0.13%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_9d2e358034ea16bcee7d8edf",
+  "type": "COMPARISON_CALC",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "HARD",
+  "doc_groups": [
+   "periodic"
+  ],
+  "question": "셀트리온의 2023년 1분기보고서(2023.01.01~2023.03.31 연결 누적)와 2025년 1분기보고서(2025.01.01~2025.03.31 연결 누적)에 공시된 매출액과 영업이익을 같은 기준(연결, 분기 누적)으로 비교하고 각각의 증감률을 계산하면 얼마인가?",
+  "corps_detected": [
+   "셀트리온"
+  ],
+  "years_detected": [
+   2023,
+   2025
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "periodic_20230512001099",
+   "periodic_20250515002745"
+  ],
+  "top5_docs": [
+   "periodic_20230512001099",
+   "periodic_20250515002745",
+   "periodic_20230512001099",
+   "periodic_20250515002745",
+   "periodic_20250515002745"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 4,
+  "slots_top20": 4,
+  "slots_cited": 4,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 4,
+  "n_derived": 4,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 100,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "계산 결과(원문 값에서 코드가 계산):\n- 매출액 증감액: 244,347,656,625\n- 매출액: 597,564,003,593 → 841,911,660,218 (40.89% 변동)\n- 영업이익 증감액: -33,014,129,828\n- 영업이익: 182,434,934,168 → 149,",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_a534bc30d3414f2d094e7461",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "holding"
+  ],
+  "question": "(주)엘지유플러스에 대한 2024-01-11 대량보유상황보고서(신규, 보고자: Kopernik GlobalInvestors, LLC)에서 보고자, 보유주식등의 수·보유비율의 직전/이번 보고서 변화와 보유목적을 알려줘.",
+  "corps_detected": [],
+  "years_detected": [
+   2024
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "holding_20240111000046"
+  ],
+  "top5_docs": [
+   "holding_20240111000046",
+   "holding_20240607000069",
+   "holding_20240111000046",
+   "holding_20240111000046",
+   "holding_20240111000046"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 6,
+  "slots_top20": 6,
+  "slots_cited": 5,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 0,
+  "warnings": [
+   "corp_unspecified"
+  ],
+  "validation": "SUPPORTED",
+  "confidence": 45,
+  "uncertainty": "질문에서 기업을 특정하지 못했다 — 아래 근거는 LG유플러스, 한국항공우주 공시다. 의도한 기업이 아니면 회사명을 정확히 넣어 다시 물어라. 값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서 | 0 | 0\n- [answer] 이번 보고서 | 22,272,289 | 5.10\n- [answer] 직전 보고서 | 8,513,745 | 8.73\n- [answer] 이번 보고서 | 9,737,763 | 9",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_ab2d46f2496fe203c8405cad",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "holding"
+  ],
+  "question": "삼성전기에 대해 2026-02-12 보고서작성기준일로 제출된 주식등의대량보유상황보고서(약식)에서 보고자, 직전/이번 보고서의 보유주식등의 수ㆍ보유비율과 보유목적은 각각 무엇인가?",
+  "corps_detected": [
+   "삼성전기"
+  ],
+  "years_detected": [
+   2026
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "holding_20260220000569"
+  ],
+  "top5_docs": [
+   "holding_20260220000569",
+   "holding_20260220000569",
+   "holding_20260220000569",
+   "holding_20260220000569",
+   "holding_20260220000569"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 4,
+  "slots_top20": 4,
+  "slots_cited": 3,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 이번 보고서 | 3,739,817 | 5.01\n- [answer] 보유주식등의 수 및 보유비율 |  | 보유주식등의 수 | 보유비율\n- [answer] 보고사유 | - 단순투자목적으로 장내에서 발행회사의 주식 매수\n- [",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_ad6f430084e4c5312283ab1a",
+  "type": "NARRATIVE_MULTI_DOC",
+  "mode": "OPEN",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "major"
+  ],
+  "question": "고려아연의 주요사항보고서(자기주식처분결정, 2025-02-05)에서 처분예정주식ㆍ금액, 처분목적, 처분결정일과 근거를 설명해줘.",
+  "corps_detected": [
+   "고려아연"
+  ],
+  "years_detected": [
+   2025
+  ],
+  "n_retrieved": 12,
+  "gold_docs": [
+   "major_20250205000509"
+  ],
+  "top5_docs": [
+   "major_20250205000509",
+   "major_20250205000509",
+   "major_20250205000509",
+   "major_20250205000509",
+   "major_20250205000509"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 3,
+  "slots_top20": 3,
+  "slots_cited": 3,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 4. 처분예정기간 | 시작일 | 2025년 02월 06일\n- [answer] 1. 처분예정주식(주) | 보통주식 | 6,324\n- [answer] 3. 처분예정금액(원) | 보통주식 | 5,052,876,000\n- [an",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_b6f4714fd3c652594f5d82c1",
+  "type": "NARRATIVE_MULTI_DOC",
+  "mode": "OPEN",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "major"
+  ],
+  "question": "신한지주가 2024-12-05에 공시한 주요사항보고서(상각형조건부자본증권발행결정)의 핵심 결정내용(회차ㆍ종류ㆍ사채총액)과 이사회결의일(기준일)은 공시 근거로 각각 무엇인가?",
+  "corps_detected": [
+   "신한지주"
+  ],
+  "years_detected": [
+   2024
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "major_20241205000527"
+  ],
+  "top5_docs": [
+   "major_20241205000527",
+   "major_20241205000527",
+   "major_20241205000527",
+   "major_20241205000527",
+   "major_20241205000527"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 3,
+  "slots_top20": 3,
+  "slots_cited": 3,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [이사회결의일] 14. 이사회결의일(결정일) | 2024년 12월 05일\n- [answer] 1. 사채의 종류 | 회차 | 17 | 종류 | 국내 무기명식 무보증 무담보 상각형 조건부자본증권(신종자본증권)\n- [answer] 2. 사채의",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_bbde1cf7dec999a7915f4b4a",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "holding"
+  ],
+  "question": "와이지엔터테인먼트에 대해 2023-04-25 보고서작성기준일로 제출된 주식등의대량보유상황보고서(일반)에서 보고자, 직전/이번 보고서의 보유주식등의 수ㆍ보유비율과 보유목적은 각각 무엇인가?",
+  "corps_detected": [
+   "와이지엔터테인먼트"
+  ],
+  "years_detected": [
+   2023
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "holding_20230425000545"
+  ],
+  "top5_docs": [
+   "holding_20230425000545",
+   "holding_20230425000545",
+   "holding_20230425000545",
+   "holding_20230425000545",
+   "holding_20230425000545"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 4,
+  "slots_top20": 3,
+  "slots_cited": 3,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서 | 4,650,276 | 24.92\n- [answer] 이번 보고서 | 4,646,276 | 24.89\n- [answer] 직전 보고서 | 4,602,756 | 24.66\n- [answer] 이번보고서 | 2",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_c6076b4bb1e65e4bf8f3efeb",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "WITHHELD",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "exchange"
+  ],
+  "question": "LG씨엔에스가 2025-12-29 공시한 단일판매ㆍ공급계약체결(「프로젝트 NEO」계정계 차세대 구축, 계약상대방 NH농협은행)에서 계약금액은 얼마이며, 공시되지 않았다면 그 유보사유와 유보기한은?",
+  "corps_detected": [
+   "LG씨엔에스"
+  ],
+  "years_detected": [
+   2025
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "exchange_20251229800114"
+  ],
+  "top5_docs": [
+   "exchange_20251229800114",
+   "exchange_20251229800114",
+   "holding_20251105000317",
+   "holding_20251105000317",
+   "holding_20251105000317"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 4,
+  "slots_top20": 4,
+  "slots_cited": 4,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "공시유보 사항이다 — 해당 값은 공시에서 확인할 수 없다.\n- 유보사유: 경영상 비밀유지\n- 유보기한: 2029-04-04\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [계약금액] 2. 계약내역 | 계약금액(원) | -\n- [계약상대] 3. 계약상대 | NH농협은행\n- [answ",
+  "rule": "WITHHELD",
+  "trap": true,
+  "trap_ok": true
+ },
+ {
+  "qid": "gold_b_da1f1a3f66383d37ae6bd524",
+  "type": "EVENT_TRACE",
+  "mode": "OPEN",
+  "answerability": "SUPPORTED",
+  "difficulty": "HARD",
+  "doc_groups": [
+   "major"
+  ],
+  "question": "신한지주의 [기재정정]주요사항보고서(상각형조건부자본증권발행결정, 2025-02-07)에서 정정된 핵심 내용(권면총액·이율)과 기준일, 정정 후 현재 유효한 값을 공시 근거로 설명해줘.",
+  "corps_detected": [
+   "신한지주"
+  ],
+  "years_detected": [
+   2025
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "major_20250207000299"
+  ],
+  "top5_docs": [
+   "major_20250207000299",
+   "major_20250203000097",
+   "periodic_20251114002208",
+   "periodic_20251114002208",
+   "periodic_20251114002208"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 2,
+  "slots_top20": 0,
+  "slots_cited": 0,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 4,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 1. 정정대상 공시서류 : 주요사항보고서 (상각형 조건부 자본증권 발행결정)\n- [answer] 구 분 | 회차 | 납입일 | 주요사항보고서의 자금사용 계획 | 실제 자금사용 내역 | 차이발생 사유 등\n- [answer]",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_e2808b0ce73a5ddd72f7508b",
+  "type": "NARRATIVE_MULTI_DOC",
+  "mode": "OPEN",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "major"
+  ],
+  "question": "엔씨소프트가 2024-10-21 제출한 주요사항보고서(회사분할결정)의 핵심 결정 내용과 이사회결의일, 분할기일 등 주요 일정은 무엇인가?",
+  "corps_detected": [
+   "NC"
+  ],
+  "years_detected": [
+   2024
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "major_20241021000037"
+  ],
+  "top5_docs": [
+   "major_20241128001098",
+   "major_20241021000037",
+   "major_20241021000037",
+   "major_20241021000037",
+   "major_20241128001098"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 3,
+  "slots_top20": 3,
+  "slots_cited": 1,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 70,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "검색된 공시에서 확인되는 근거는 다음과 같다.\n- [이사회결의일] 9. 분할일정 | 이사회결의일 | 2024년 10월 21일\n- [answer] 주요사항보고서(회사분할결정)\n- [answer] 주요사업 | 게임소프트웨어 제작업, 기타(주식회사 엔씨소프트 정관 참조)\n- [answer] ",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_e5cc91d1b8a8bef8695cb6cd",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "holding"
+  ],
+  "question": "KB금융의 2026-03-11 대량보유상황보고서(약식, 변동)에서 보고자, 보유주식등의 수ㆍ보유비율의 직전ㆍ이번 보고서 변화와 보유목적을 알려줘.",
+  "corps_detected": [
+   "KB금융"
+  ],
+  "years_detected": [
+   2026
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "holding_20260311004186"
+  ],
+  "top5_docs": [
+   "holding_20260311004186",
+   "holding_20260311004186",
+   "holding_20260311004186",
+   "holding_20260311004186",
+   "holding_20260311004186"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 4,
+  "slots_top20": 4,
+  "slots_cited": 3,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 2,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 100,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 25,050,939 → 26,288,623 (+1,237,684 변동)\n- 직전 대비 비율(%): 6.02 → 7.05 (+1.03%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_e95de359f794df64ffab5044",
+  "type": "ANSWERABILITY",
+  "mode": "CLOSED",
+  "answerability": "NOT_FOUND",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "major"
+  ],
+  "question": "제공된 코퍼스 스냅샷 내에 현대제철(corp_code 00145880)의 major 유형(주요사항보고서) 공시가 존재하는가?",
+  "corps_detected": [
+   "현대제철"
+  ],
+  "years_detected": [],
+  "n_retrieved": 0,
+  "gold_docs": [],
+  "top5_docs": [],
+  "doc_in_top20": null,
+  "doc_in_top5": null,
+  "n_slots": 0,
+  "slots_top20": 0,
+  "slots_cited": 0,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 0,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 15,
+  "uncertainty": "문서 인덱스(기업·공시유형·연도 조건)를 직접 센 결과다. 검색 근거는 없다.",
+  "answer_head": "현대제철의 major 공시는 현재 코퍼스에 포함되어 있지 않다.",
+  "rule": "NOT_FOUND",
+  "trap": true,
+  "trap_ok": true
+ },
+ {
+  "qid": "gold_b_ebc8414ef6c306d4ead0cbe0",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "exchange"
+  ],
+  "question": "LIG넥스원이 2023년 12월 22일 공시한 단일판매ㆍ공급계약체결('23년 무전기세트 외 3항목)에서 계약상대방, 계약금액, 계약기간(시작일ㆍ종료일), 최근매출액 대비 비율은 각각 얼마인가?",
+  "corps_detected": [
+   "LIG디펜스앤에어로스페이스"
+  ],
+  "years_detected": [
+   2023
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "exchange_20231222800008"
+  ],
+  "top5_docs": [
+   "periodic_20230515000336",
+   "periodic_20230515000336",
+   "periodic_20230515000336",
+   "periodic_20230515000336",
+   "periodic_20230515000336"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": false,
+  "n_slots": 5,
+  "slots_top20": 5,
+  "slots_cited": 0,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 1,
+  "n_derived": 0,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 60,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "공시에서 확인한 값:\n- 2023년 매출액: 546,799",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_ec84639c43268bb42cc60c83",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "holding"
+  ],
+  "question": "파마리서치의 2025-01-06 대량보유상황보고서(약식, 변동)에서 보고자, 보유주식등의 수ㆍ보유비율의 직전ㆍ이번 보고서 변화와 보유목적을 알려줘.",
+  "corps_detected": [
+   "파마리서치"
+  ],
+  "years_detected": [
+   2025
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "holding_20250106000284"
+  ],
+  "top5_docs": [
+   "holding_20250106000284",
+   "holding_20250106000284",
+   "holding_20250106000284",
+   "holding_20250106000284",
+   "holding_20250106000284"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 4,
+  "slots_top20": 4,
+  "slots_cited": 4,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 2,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 100,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 603,804 → 550,225 (-53,579 변동)\n- 직전 대비 비율(%): 5.80 → 4.71 (-1.09%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서 | 603,",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_f23bcdcee714d7436867d683",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "holding"
+  ],
+  "question": "효성중공업의 2025-04-16 대량보유상황보고서(변동)에서 보고자, 보유주식등의 수·비율의 직전·이번 보고서 변화, 보고사유와 보유목적을 알려줘.",
+  "corps_detected": [
+   "효성중공업"
+  ],
+  "years_detected": [
+   2025
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "holding_20250416000487"
+  ],
+  "top5_docs": [
+   "holding_20250416000487",
+   "holding_20250416000487",
+   "holding_20250416000487",
+   "holding_20250416000487",
+   "holding_20250416000487"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 5,
+  "slots_top20": 4,
+  "slots_cited": 3,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 2,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 100,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 4,549,887 → 4,555,604 (+5,717 변동)\n- 직전 대비 비율(%): 48.79 → 48.86 (+0.07%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서 |",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_f9b84c1e14bca2d1befcce62",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "holding"
+  ],
+  "question": "하나금융지주의 2023-06-08 대량보유상황보고서(약식, 변동)에서 보고자, 보유주식등의 수·비율의 직전·이번 보고서 변화와 보유목적을 알려줘.",
+  "corps_detected": [
+   "하나금융지주"
+  ],
+  "years_detected": [
+   2023
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "holding_20230608000219"
+  ],
+  "top5_docs": [
+   "holding_20230608000219",
+   "holding_20230608000219",
+   "holding_20230608000219",
+   "holding_20230608000219",
+   "holding_20230608000219"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 4,
+  "slots_top20": 4,
+  "slots_cited": 3,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 2,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 100,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 16,421,618 → 16,421,779 (+161 변동)\n- 직전 대비 비율(%): 5.55 → 5.55 (+0.00%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서 | 1",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ },
+ {
+  "qid": "gold_b_faeb66b34981643d354f6655",
+  "type": "NUMERIC_LOOKUP",
+  "mode": "CLOSED",
+  "answerability": "SUPPORTED",
+  "difficulty": "MEDIUM",
+  "doc_groups": [
+   "holding"
+  ],
+  "question": "고려아연의 2024-12-19 대량보유상황보고서(변동)에서 보고자, 보유주식등의 수·비율의 직전·이번 보고서 변화, 보고사유와 보유목적을 알려줘.",
+  "corps_detected": [
+   "고려아연"
+  ],
+  "years_detected": [
+   2024
+  ],
+  "n_retrieved": 20,
+  "gold_docs": [
+   "holding_20241219000061"
+  ],
+  "top5_docs": [
+   "holding_20241219000061",
+   "holding_20241219000057",
+   "holding_20241219000061",
+   "holding_20241219000057",
+   "holding_20240904000440"
+  ],
+  "doc_in_top20": true,
+  "doc_in_top5": true,
+  "n_slots": 5,
+  "slots_top20": 4,
+  "slots_cited": 3,
+  "value_forms": [],
+  "value_in_evidence": false,
+  "value_in_top20": false,
+  "n_evidence": 5,
+  "n_derived": 2,
+  "warnings": [],
+  "validation": "SUPPORTED",
+  "confidence": 100,
+  "uncertainty": "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.",
+  "answer_head": "계산 결과(원문 값에서 코드가 계산):\n- 직전 대비 주식등의 수: 7,368,124 → 7,602,575 (+234,451 변동)\n- 직전 대비 비율(%): 35.59 → 36.72 (+1.13%p 변동)\n\n검색된 공시에서 확인되는 근거는 다음과 같다.\n- [answer] 직전 보고서",
+  "rule": "",
+  "trap": false,
+  "trap_ok": null
+ }
+]

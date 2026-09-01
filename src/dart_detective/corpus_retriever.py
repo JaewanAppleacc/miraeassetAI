@@ -14,6 +14,8 @@ search_index.jsonl에 simulation_date 필터를 거는 Retriever고, 이쪽은 �
 """
 from __future__ import annotations
 
+import dataclasses
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping, Sequence
@@ -65,6 +67,19 @@ DEFAULT_STAGE1_K = 50          # gold 25문항 11차 채택값
 DEFAULT_CHUNK_K = 20
 # 항목 질문에서 원문 공시 조각에 주는 가산(절단 전). 스윕 실측으로 채택.
 ITEM_DOC_BONUS = 0.15
+# 질문이 못 박은 접수일과 같은 날 접수된 문서의 청크 가산. 날짜가 없는 질문엔 0 효과.
+DATE_DOC_BONUS = 0.3
+_ISO_DATE_RE = re.compile(r"((?:19|20)\d{2})\s*[-./]\s*(\d{1,2})\s*[-./]\s*(\d{1,2})(?!\d)")
+
+
+def question_dates(question: str) -> list[tuple[int, int, int]]:
+    """질문 속 '2024-04-17' / '2024.04.17' 꼴 날짜. 월·일 범위 밖이면 버린다."""
+    out = []
+    for y, m, d in _ISO_DATE_RE.findall(question or ""):
+        y, m, d = int(y), int(m), int(d)
+        if 1 <= m <= 12 and 1 <= d <= 31:
+            out.append((y, m, d))
+    return out
 PRIMARY_DOC_GROUPS = ("exchange", "major")
 
 
@@ -161,8 +176,19 @@ class CorpusRetriever:
         return scopes
 
     def conditions(self, question: str) -> QueryConditions:
-        """조건 추출은 Retrieval 쪽 parser를 그대로 쓴다 — Agent가 따로 만들지 않는다."""
-        return extract_conditions(question, self.corp_dict)
+        """조건 추출은 Retrieval 쪽 parser를 그대로 쓴다 — Agent가 따로 만들지 않는다.
+
+        예외 하나: "2024-04-17"처럼 하이픈/점으로 쓴 날짜는 Retrieval parser가 연도로
+        읽지 않는다(Phase1 실측: 삼성E&A·신한지주 2건이 날짜 필터 없이 같은 회사의
+        다른 해 공시에 밀려 상위 50 밖). 여기서 연도만 보태 준다 — 검색 코어는 그대로다.
+        """
+        cond = extract_conditions(question, self.corp_dict)
+        dates = question_dates(question)
+        if dates:
+            years = frozenset(cond.years) | {y for y, _, _ in dates}
+            if years != cond.years:
+                cond = dataclasses.replace(cond, years=years)
+        return cond
 
     def _metadata_of(self, doc_id: str) -> Mapping[str, Any]:
         hit = self._doc_meta.get(doc_id)
@@ -184,13 +210,30 @@ class CorpusRetriever:
     def retrieve(self, question: str, conditions: QueryConditions | None = None,
                  *, k: int | None = None) -> list[RetrievedChunk]:
         cond = conditions or self.conditions(question)
+        dates = {f"{y:04d}{m:02d}{d:02d}" for y, m, d in question_dates(question)}
+        # 질문이 접수일을 날짜로 못 박았으면(2024-04-17) 그 날 접수된 공시를 Stage 1
+        # 절단 앞으로 당긴다. 같은 회사가 한 해에 같은 유형 공시를 수십 건 내는 경우
+        # BM25만으로는 특정 날짜 문서가 50위 안에 못 든다(Phase1 실측 2건).
+        stage1_k = self.stage1_k * (4 if dates else 1)
         top_docs = [h.doc_id for h in self.document_index.search(
-            question, k=self.stage1_k, conditions=cond)]
+            question, k=stage1_k, conditions=cond)]
+        if dates:
+            top_docs = ([d for d in top_docs if self._rcept_dt(d) in dates]
+                        + [d for d in top_docs if self._rcept_dt(d) not in dates])[:self.stage1_k]
         usable = [self.docs_by_id[d] for d in top_docs if d in self.docs_by_id]
         if not usable:
             return []
         chunk_index = ChunkIndex.from_documents(usable, strategy=self.strategy)
         want = k or self.chunk_k
+        if dates:
+            # 청크 단계에서도 접수일 일치 문서를 절단 전에 가산한다(ITEM_DOC_BONUS와 같은 틀).
+            date_docs = {d for d in top_docs if self._rcept_dt(d) in dates}
+            hits = chunk_index.search(question, k=len(chunk_index.chunks),
+                                      section_alpha=self.section_alpha)
+            hits = sorted(((score * (1.0 + DATE_DOC_BONUS)
+                            if chunk.doc_id in date_docs else score, chunk)
+                           for score, chunk in hits), key=lambda x: -x[0])[:want]
+            return [self._to_chunk(score, chunk) for score, chunk in hits]
         # 계약금액·투자금액 같은 항목 질문의 답은 원문 공시(exchange/major) 서식에 있다.
         # 사업보고서의 요약 한 줄이 짧아서(BM25 길이 정규화) 원문을 이기는 실측(N05)이
         # 있어, 항목이 잡힌 질문에서만 원문 공시 조각을 절단 전에 가산한다.
@@ -206,6 +249,9 @@ class CorpusRetriever:
             hits = chunk_index.search(question, k=want,
                                       section_alpha=self.section_alpha)
         return [self._to_chunk(score, chunk) for score, chunk in hits]
+
+    def _rcept_dt(self, doc_id: str) -> str:
+        return str(self._metadata_of(doc_id).get("rcept_dt") or "")
 
     def _to_chunk(self, score: float, chunk: Chunk) -> RetrievedChunk:
         return RetrievedChunk(

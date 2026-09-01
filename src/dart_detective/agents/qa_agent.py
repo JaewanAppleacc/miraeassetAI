@@ -155,6 +155,11 @@ class AgentState:
     derived: list[calculator.Derived] = field(default_factory=list)
     answer: str = ""
     uncertainty: str = ""
+    # 규칙이 확정한 답변가능성. 비어 있으면 wire가 evidence/validation으로 추정한다.
+    # 값은 팀 Gold 어휘: NOT_FOUND(코퍼스에 문서 없음) / WITHHELD(공시유보).
+    answerability: str = ""
+    # 공시유보 판정 근거(유보사유·유보기한·유보사항). 없으면 빈 dict.
+    withheld: dict[str, str] = field(default_factory=dict)
     validation: dict[str, Any] = field(default_factory=dict)
     # 답변을 얼마나 믿을 수 있는지 — 모델 확률이 아니라 규칙 점수다.
     confidence: dict[str, Any] = field(default_factory=dict)
@@ -164,6 +169,8 @@ class AgentState:
 
     def to_dict(self) -> dict[str, Any]:
         return {
+            "answerability": self.answerability,
+            "withheld": dict(self.withheld),
             "answer": self.answer,
             "evidence": [
                 {"chunk_id": m.chunk_id, "text": m.evidence_text,
@@ -763,6 +770,121 @@ def _llm_answer(llm: Any, user: str) -> tuple[dict[str, Any], dict[str, Any]]:
 
 # ---------- pipeline ----------
 
+# ---------- 코퍼스 존재 질문 ----------
+# "X의 주요사항보고서가 현재 코퍼스에 포함되어 있는가?" — 값을 찾는 질문이 아니라
+# 문서 유무를 묻는다. Phase1 DEV_TUNE 실측: 이 유형 5문항 중 4문항에서 같은 회사의
+# 다른 공시 발췌를 나열해 버렸다. 문서 인덱스만 세면 결정론으로 답이 난다.
+_EXISTENCE_RE = re.compile(
+    r"(?:코퍼스|스냅샷|corpus)[^?？]{0,80}?(?:포함|존재|들어)"
+    r"|(?:포함|존재)(?:되어|하고|해)\s*있(?:는가|나|습니까|나요|는지)")
+_GROUP_WORDS = {
+    "major": ("주요사항보고서", "major"),
+    "periodic": ("사업보고서", "분기보고서", "반기보고서", "정기보고서", "periodic"),
+    "exchange": ("exchange", "수시공시", "거래소", "자율공시"),
+    "holding": ("대량보유", "holding"),
+}
+
+
+def asked_doc_groups(question: str) -> frozenset[str]:
+    return frozenset(g for g, words in _GROUP_WORDS.items()
+                     if any(w in question for w in words))
+
+
+def corpus_existence(question: str, conditions: QueryConditions,
+                     retriever: CorpusRetriever) -> tuple[str, str] | None:
+    """존재 질문이고 조건에 맞는 문서가 0건이면 (답변, 불확실성)을 돌려준다.
+
+    1건 이상이면 None — 평소 경로(검색·발췌)가 그 문서들을 보여 준다.
+    기업을 못 잡은 질문도 None — 인덱스 전체를 세는 건 답이 아니다.
+    """
+    if not _EXISTENCE_RE.search(question) or not conditions.corps:
+        return None
+    documents = getattr(getattr(retriever, "document_index", None), "documents", None)
+    if documents is None:
+        return None
+    groups = asked_doc_groups(question)
+    years = set(conditions.years)
+    n = 0
+    for doc in documents:
+        if doc.corp_name not in conditions.corps and doc.filer_name not in conditions.corps:
+            continue
+        if groups and doc.doc_group not in groups:
+            continue
+        if years and getattr(doc, "period_year", None) not in years:
+            continue
+        n += 1
+    if n:
+        return None
+    corp = "·".join(sorted(conditions.corps))
+    what = "·".join(sorted(groups)) if groups else "해당 유형"
+    when = ("%s년 " % "·".join(str(y) for y in sorted(years))) if years else ""
+    return (f"{corp}의 {when}{what} 공시는 현재 코퍼스에 포함되어 있지 않다.",
+            "문서 인덱스(기업·공시유형·연도 조건)를 직접 센 결과다. 검색 근거는 없다.")
+
+
+# ---------- 공시유보 ----------
+# 공시가 스스로 "이 값은 유보한다"고 적은 경우. 값 칸은 "-"이고 유보사유·유보기한 칸이
+# 채워져 있다(거래소 서식 "8. 공시유보 관련내용"), 또는 본문에 "공시유보사항에 해당"이라고
+# 쓴다. 이때 값을 못 찾은 것이 아니라 "유보됨"이 답이다. Phase1 실측 4문항 전부 이 꼴.
+_WITHHELD_CELL_RE = re.compile(r"(유보사항|유보사유|유보기한)\s*\|\s*([^|]*)")
+_WITHHELD_PROSE_RE = re.compile(r"[^.。\n]*(?:공시유보|유보사항에 해당|공시를 유보)[^.。\n]*")
+_DASH = {"", "-", "－", "―", "—"}
+_WITHHELD_ASK_RE = re.compile(r"확인 가능|공시되지 않|유보|비공개|알 수 있는가")
+_FIELD_WORDS = ("계약상대", "계약금액", "품목", "회사명", "기술료", "계약기간", "판매", "공급")
+
+
+def detect_withheld(question: str, chunks: Sequence[RetrievedChunk],
+                    matches: Sequence[EvidenceMatch],
+                    doc_lines: Mapping[str, Sequence[str]] | None = None) -> dict[str, str]:
+    """유보 표식을 찾고, 질문이 그 유보된 값을 묻고 있을 때만 dict를 돌려준다.
+
+    doc_lines: 근거 문서의 전체 행(doc_id -> 줄). 유보 칸("8. 공시유보 관련내용")은
+    표 맨 아래라 상위 청크에 안 들어오는 경우가 있다(Phase1 실측 LG에너지솔루션).
+    """
+    doc_ids = {m.doc_id for m in matches} or {c.doc_id for c in chunks[:5]}
+    lines: list[str] = [ln for c in chunks if c.doc_id in doc_ids for ln in chunk_lines(c)]
+    for doc_id in doc_ids:
+        lines.extend((doc_lines or {}).get(doc_id) or ())
+    found: dict[str, str] = {}
+    asked_fields = [w for w in _FIELD_WORDS if w in question]
+    dash_field = False
+    for line in lines:
+        for key, value in _WITHHELD_CELL_RE.findall(line):
+            value = value.strip()
+            if value not in _DASH and key not in found:
+                found[key] = value
+        if "유보사유" not in found and "|" not in line:
+            # 표 행(유보사유 | -)은 위 셀 규칙이 담당한다. 본문 문장만 본다.
+            m = _WITHHELD_PROSE_RE.search(line)
+            if m:
+                found.setdefault("유보문장", m.group(0).strip()[:200])
+        if "|" in line and asked_fields and any(w in line for w in asked_fields):
+            cells = [c.strip() for c in line.split("|")]
+            if cells[-1] in _DASH:
+                # 질문이 묻는 항목의 값 칸이 "-"다.
+                dash_field = True
+    if "유보사유" not in found and "유보문장" not in found:
+        return {}
+    dash_value = any((m.picked_value or "").strip() in _DASH and m.picked_value is not None
+                     for m in matches)
+    asked = bool(_WITHHELD_ASK_RE.search(question))
+    scope_text = found.get("유보사항", "") + found.get("유보문장", "")
+    overlap = any(w in question and w in scope_text for w in _FIELD_WORDS)
+    if not (dash_value or dash_field or asked or overlap):
+        return {}
+    return found
+
+
+def withheld_text(found: Mapping[str, str]) -> str:
+    parts = ["공시유보 사항이다 — 해당 값은 공시에서 확인할 수 없다."]
+    for key in ("유보사항", "유보사유", "유보기한"):
+        if found.get(key):
+            parts.append(f"- {key}: {found[key]}")
+    if found.get("유보문장") and "유보사유" not in found:
+        parts.append(f"- 공시 본문: {found['유보문장']}")
+    return "\n".join(parts)
+
+
 def answer_question(question: str, retriever: CorpusRetriever, *,
                     llm: Any | None = None, k: int | None = None,
                     max_evidence: int = MAX_EVIDENCE,
@@ -772,6 +894,17 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
     state = AgentState(question=question)
     state.conditions = retriever.conditions(question)
     state.slots = plan_slots(question, state.conditions)
+    existence = corpus_existence(question, state.conditions, retriever)
+    if existence is not None:
+        state.answer, state.uncertainty = existence
+        state.answerability = "NOT_FOUND"
+        state.llm = {"used": False, "skipped": "corpus_existence_rule"}
+        state.validation = validator.validate(state.answer, [], [])
+        state.confidence = confidence.assess(
+            validation=state.validation, n_evidence=0, n_derived=0,
+            warnings=state.warnings, llm=state.llm, slots=state.slots, filled_slots=[])
+        state.timings["total_ms"] = int((time.perf_counter() - t_start) * 1000)
+        return state
     t_retrieval = time.perf_counter()
     state.retrieval_results = retriever.retrieve(question, state.conditions, k=k)
     state.timings["retrieval_ms"] = int((time.perf_counter() - t_retrieval) * 1000)
@@ -810,6 +943,21 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
         answer = calculator.describe(state.derived) + "\n\n" + answer
     citations = [{"document_id": m.doc_id, "quote_or_fact": m.evidence_text}
                  for m in state.evidence_matches]
+
+    docs_by_id = getattr(retriever, "docs_by_id", None) or {}
+    doc_lines = {doc_id: [ln for node in (docs_by_id.get(doc_id) or {}).get("nodes") or []
+                          for ln in (node.get("text") or "").split("\n")]
+                 for doc_id in {m.doc_id for m in state.evidence_matches}}
+    state.withheld = detect_withheld(question, state.retrieval_results,
+                                     state.evidence_matches, doc_lines)
+    if state.withheld:
+        # 값이 유보된 질문이다. 찾은 값(계약상대·기간 등)은 그대로 두고 앞에 유보 사실을
+        # 못 박는다. LLM은 부르지 않는다 — "-"를 보고 값을 지어낼 위험만 남는다.
+        answer = withheld_text(state.withheld) + "\n\n" + answer
+        state.answerability = "WITHHELD"
+        if llm is not None:
+            state.llm = {"used": False, "skipped": "withheld_disclosure"}
+            llm = None
 
     # 계산 결과가 있으면 LLM을 부르지 않는다: 답에 필요한 값이 이미 확정돼 있고,
     # LLM이 다시 계산하면 틀린 숫자로 덮어쓸 위험만 남는다(호출 비용도 든다).

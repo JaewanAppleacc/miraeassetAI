@@ -33,6 +33,9 @@ def answerability_of(state: Mapping[str, Any]) -> str:
     우리에게 없는 상태(UNKNOWN_COMPANY 등)를 지어내지 않는다 — 우리가 실제로 아는
     것은 "근거를 찾았나"와 "기업을 특정했나" 둘뿐이다.
     """
+    if state.get("answerability"):
+        # Agent 규칙이 확정한 상태(NOT_FOUND·WITHHELD)는 추정보다 우선한다.
+        return str(state["answerability"])
     if not state.get("evidence"):
         return "EVIDENCE_NOT_FOUND"
     if "corp_unspecified" in (state.get("warnings") or []):
