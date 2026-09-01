@@ -1,0 +1,110 @@
+{
+  "schema_version": "0.1.0",
+  "run_id": "hcx_real_smoke_8ee6249914884e16baa0b11b0918c93b",
+  "created_at": "2026-09-01T22:03:57.887Z",
+  "requests_attempted": 4,
+  "requests_succeeded": 2,
+  "requests_failed": 2,
+  "retries_performed": 0,
+  "scenarios": [
+    {
+      "scenario_type": "SHORT_KOREAN_FACT_SUMMARY",
+      "outcome": "SUCCESS",
+      "attempt_count": 1,
+      "last_error_code": null
+    },
+    {
+      "scenario_type": "STRUCTURED_JSON_RESPONSE",
+      "outcome": "SUCCESS",
+      "attempt_count": 1,
+      "last_error_code": null
+    },
+    {
+      "scenario_type": "INFORMATION_LIMIT_RESPONSE",
+      "outcome": "FAILURE",
+      "attempt_count": 1,
+      "last_error_code": "MODEL_CALL_MALFORMED_RESPONSE"
+    },
+    {
+      "scenario_type": "NUMBER_DATE_FORMAT_RESPONSE",
+      "outcome": "FAILURE",
+      "attempt_count": 1,
+      "last_error_code": "MODEL_CALL_MALFORMED_RESPONSE"
+    }
+  ],
+  "latency_ms": {
+    "p50_ms": 1208,
+    "p95_ms": 1603,
+    "max_ms": 1603,
+    "count": 4
+  },
+  "token_usage_aggregate": {
+    "input_tokens_total": 162,
+    "output_tokens_total": 65
+  },
+  "estimated_cost_total": null,
+  "duration_ms": 5110,
+  "stopped_early_reason": "REPEATED_ERRORS",
+  "validation_checklist": [
+    {
+      "item": "endpoint_https_confirmed",
+      "status": "PASS",
+      "detail": "endpoint_https=true"
+    },
+    {
+      "item": "provider_model_identity_confirmed",
+      "status": "PASS",
+      "detail": "provider=hcx, model set=true"
+    },
+    {
+      "item": "request_schema_version_confirmed",
+      "status": "PASS",
+      "detail": "request_schema_version=hcx-chat-completions-v3"
+    },
+    {
+      "item": "response_schema_version_confirmed",
+      "status": "PASS",
+      "detail": "response_schema_version=hcx-chat-completions-v3"
+    },
+    {
+      "item": "structured_answer_parser_passed",
+      "status": "PASS",
+      "detail": "2 successful parse(s)"
+    },
+    {
+      "item": "timeout_within_configured_bound",
+      "status": "PASS",
+      "detail": "max observed latency vs request_timeout_ms=15000ms"
+    },
+    {
+      "item": "bounded_retry_on_429_5xx",
+      "status": "NOT_OBSERVED",
+      "detail": "no 429/5xx response encountered this run"
+    },
+    {
+      "item": "retry_count_cap_respected",
+      "status": "PASS",
+      "detail": "max attempts observed for a single scenario=1 (cap=2)"
+    },
+    {
+      "item": "malformed_response_fail_closed",
+      "status": "PASS",
+      "detail": "2 malformed response(s), all rejected fail-closed"
+    },
+    {
+      "item": "empty_response_fail_closed",
+      "status": "NOT_OBSERVED",
+      "detail": "no empty response encountered"
+    },
+    {
+      "item": "missing_api_key_zero_calls",
+      "status": "NOT_OBSERVED",
+      "detail": "HCX_API_KEY was present"
+    },
+    {
+      "item": "unauthorized_endpoint_zero_calls",
+      "status": "NOT_OBSERVED",
+      "detail": "endpoint was authorized and constructed"
+    }
+  ]
+}

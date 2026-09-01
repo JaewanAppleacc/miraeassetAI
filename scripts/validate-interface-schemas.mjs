@@ -80,6 +80,25 @@ const pairs = [
     "domain/agent-comparison/interfaces/benchmark-run-manifest.schema.json",
     "domain/agent-comparison/interfaces/examples/benchmark-run-manifest.example.json",
   ],
+  // Turn P11-B: real HyperCLOVA X protocol smoke artifacts -- secret-free
+  // by schema construction (additionalProperties:false, no raw prompt/
+  // response/key field exists to validate against).
+  [
+    "domain/agent-comparison/hcx-real-smoke/interfaces/hcx-real-smoke-config.redacted.schema.json",
+    "domain/agent-comparison/hcx-real-smoke/interfaces/examples/hcx-real-smoke-config.redacted.example.json",
+  ],
+  [
+    "domain/agent-comparison/hcx-real-smoke/interfaces/hcx-real-smoke-result.schema.json",
+    "domain/agent-comparison/hcx-real-smoke/interfaces/examples/hcx-real-smoke-result.example.json",
+  ],
+  [
+    "domain/agent-comparison/hcx-real-smoke/interfaces/hcx-real-smoke-security-attestation.schema.json",
+    "domain/agent-comparison/hcx-real-smoke/interfaces/examples/hcx-real-smoke-security-attestation.example.json",
+  ],
+  [
+    "domain/agent-comparison/hcx-real-smoke/interfaces/hcx-real-smoke-gate-status.schema.json",
+    "domain/agent-comparison/hcx-real-smoke/interfaces/examples/hcx-real-smoke-gate-status.example.json",
+  ],
   [
     "domain/agent-comparison/integration/interfaces/comparison-record.schema.json",
     "domain/agent-comparison/integration/interfaces/examples/comparison-record.example.json",

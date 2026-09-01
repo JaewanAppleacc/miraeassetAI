@@ -1,0 +1,13 @@
+{
+  "schema_version": "0.1.0",
+  "run_id": "hcx_real_smoke_8ee6249914884e16baa0b11b0918c93b",
+  "created_at": "2026-09-01T22:03:57.887Z",
+  "gate_status": "HCX_REAL_API_PROTOCOL_VERIFIED",
+  "reason": "2 successful real call(s), no checklist failures",
+  "agent_quality_evaluated": false,
+  "dev_tune_accessed": false,
+  "dev_check_accessed": false,
+  "holdout_accessed": false,
+  "production_wiring_applied": false,
+  "final_generation_model_selected": false
+}

@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://disclosure-analyst.local/schema/agent-comparison/hcx-real-smoke-result.v0.1.json",
+  "title": "HCX Real Smoke Result v0.1",
+  "description": "Turn P11-B: aggregate result of one real HyperCLOVA X protocol smoke run. Contains only counts, latency percentiles, aggregate token usage, and a pass/fail/not-observed checklist -- never a raw prompt, a raw response body, or any secret.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "run_id", "created_at", "requests_attempted", "requests_succeeded",
+    "requests_failed", "retries_performed", "scenarios", "latency_ms", "token_usage_aggregate",
+    "estimated_cost_total", "duration_ms", "stopped_early_reason", "validation_checklist"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.1.0" },
+    "run_id": { "type": "string", "minLength": 1 },
+    "created_at": { "type": "string", "format": "date-time" },
+    "requests_attempted": { "type": "integer", "minimum": 0, "maximum": 10 },
+    "requests_succeeded": { "type": "integer", "minimum": 0 },
+    "requests_failed": { "type": "integer", "minimum": 0 },
+    "retries_performed": { "type": "integer", "minimum": 0 },
+    "scenarios": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["scenario_type", "outcome", "attempt_count"],
+        "properties": {
+          "scenario_type": { "type": "string", "minLength": 1 },
+          "outcome": { "enum": ["SUCCESS", "FAILURE", null] },
+          "attempt_count": { "type": "integer", "minimum": 0 },
+          "last_error_code": {
+            "anyOf": [
+              { "enum": ["MODEL_ADAPTER_UNAVAILABLE", "MODEL_CALL_TIMEOUT", "MODEL_CALL_HTTP_ERROR", "MODEL_CALL_MALFORMED_RESPONSE", "MODEL_CALL_UNKNOWN_ERROR"] },
+              { "type": "null" }
+            ]
+          }
+        }
+      }
+    },
+    "latency_ms": {
+      "anyOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["p50_ms", "p95_ms", "max_ms", "count"],
+          "properties": {
+            "p50_ms": { "type": "number", "minimum": 0 },
+            "p95_ms": { "type": "number", "minimum": 0 },
+            "max_ms": { "type": "number", "minimum": 0 },
+            "count": { "type": "integer", "minimum": 1 }
+          }
+        }
+      ]
+    },
+    "token_usage_aggregate": {
+      "anyOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["input_tokens_total", "output_tokens_total"],
+          "properties": {
+            "input_tokens_total": { "type": "integer", "minimum": 0 },
+            "output_tokens_total": { "type": "integer", "minimum": 0 }
+          }
+        }
+      ],
+      "description": "Aggregate only -- never a per-call breakdown."
+    },
+    "estimated_cost_total": {
+      "anyOf": [{ "type": "number", "minimum": 0 }, { "type": "null" }],
+      "description": "null unless a per-1k-token price was explicitly configured."
+    },
+    "duration_ms": { "type": "number", "minimum": 0 },
+    "stopped_early_reason": {
+      "anyOf": [
+        { "enum": ["MISSING_CREDENTIALS", "ADAPTER_CONSTRUCTION_REFUSED", "MAX_REQUESTS_REACHED", "TIME_BUDGET_EXCEEDED", "REPEATED_ERRORS"] },
+        { "type": "null" }
+      ]
+    },
+    "validation_checklist": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["item", "status", "detail"],
+        "properties": {
+          "item": { "type": "string", "minLength": 1 },
+          "status": { "enum": ["PASS", "FAIL", "NOT_OBSERVED"] },
+          "detail": { "type": "string" }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "schema_version": "0.1.0",
+  "run_id": "hcx_real_smoke_00000000000000000000000000000000",
+  "created_at": "2026-09-02T00:00:00.000Z",
+  "api_key_env_var_name": "HCX_API_KEY",
+  "checks": [
+    { "check_name": "api_key_value_absent_from_artifacts", "passed": true, "detail": "no API key was present this run to check for" },
+    { "check_name": "authorization_header_absent_from_artifacts", "passed": true, "detail": "scanned for an \"authorization\" JSON key or a \"Bearer <token>\" pattern" }
+  ],
+  "overall_status": "PASS"
+}

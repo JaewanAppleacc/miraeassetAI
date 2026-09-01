@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://disclosure-analyst.local/schema/agent-comparison/hcx-real-smoke-gate-status.v0.1.json",
+  "title": "HCX Real Smoke Gate Status v0.1",
+  "description": "Turn P11-B: the single pass/fail gate for this real-connection smoke, plus a fixed set of scope-boundary flags that MUST always be false for this Turn -- this smoke never evaluates model quality, never touches DEV_TUNE/DEV_CHECK/HOLDOUT, never applies production wiring, and never selects a final generation model.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "run_id", "created_at", "gate_status", "reason",
+    "agent_quality_evaluated", "dev_tune_accessed", "dev_check_accessed",
+    "holdout_accessed", "production_wiring_applied", "final_generation_model_selected"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.1.0" },
+    "run_id": { "type": "string", "minLength": 1 },
+    "created_at": { "type": "string", "format": "date-time" },
+    "gate_status": { "enum": ["HCX_REAL_API_PROTOCOL_VERIFIED", "HCX_REAL_API_PROTOCOL_NOT_VERIFIED"] },
+    "reason": { "type": "string", "minLength": 1 },
+    "agent_quality_evaluated": { "const": false },
+    "dev_tune_accessed": { "const": false },
+    "dev_check_accessed": { "const": false },
+    "holdout_accessed": { "const": false },
+    "production_wiring_applied": { "const": false },
+    "final_generation_model_selected": { "const": false }
+  }
+}

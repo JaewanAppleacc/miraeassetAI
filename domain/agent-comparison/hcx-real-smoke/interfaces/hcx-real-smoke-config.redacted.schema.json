@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://disclosure-analyst.local/schema/agent-comparison/hcx-real-smoke-config.redacted.v0.1.json",
+  "title": "HCX Real Smoke Config (Redacted) v0.1",
+  "description": "Turn P11-B: the exact, non-secret configuration used for one real HyperCLOVA X protocol smoke run. NEVER contains an API key value, an Authorization header, a full endpoint URL (only its hostname), a raw prompt, or a raw provider response.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "run_id", "created_at", "provider_id", "model_id",
+    "endpoint_hostname", "endpoint_https", "api_key_env_var_name", "api_key_present",
+    "request_schema_version", "response_schema_version", "max_output_tokens",
+    "temperature", "top_p", "seed_supported", "request_timeout_ms",
+    "retry_max_attempts", "maximum_requests", "concurrency", "overall_time_budget_ms",
+    "cost_configured", "actual_external_call_authorized", "ready", "missing_config"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.1.0" },
+    "run_id": { "type": "string", "minLength": 1 },
+    "created_at": { "type": "string", "format": "date-time" },
+    "provider_id": { "type": "string", "minLength": 1 },
+    "model_id": { "type": ["string", "null"] },
+    "endpoint_hostname": { "type": ["string", "null"], "description": "Hostname only, never the full endpoint URL." },
+    "endpoint_https": { "type": ["boolean", "null"] },
+    "api_key_env_var_name": { "type": "string", "minLength": 1, "description": "The environment variable NAME the key is read from. Never the value." },
+    "api_key_present": { "type": "boolean" },
+    "request_schema_version": { "type": "string", "minLength": 1 },
+    "response_schema_version": { "type": "string", "minLength": 1 },
+    "max_output_tokens": { "type": "integer", "minimum": 1 },
+    "temperature": { "type": "number", "minimum": 0, "maximum": 2 },
+    "top_p": { "type": "number", "minimum": 0, "maximum": 1 },
+    "seed_supported": { "type": "boolean" },
+    "request_timeout_ms": { "type": "integer", "minimum": 1 },
+    "retry_max_attempts": { "type": "integer", "minimum": 1 },
+    "maximum_requests": { "type": "integer", "minimum": 1 },
+    "concurrency": { "type": "integer", "minimum": 1 },
+    "overall_time_budget_ms": { "type": "integer", "minimum": 1 },
+    "cost_configured": { "type": "boolean" },
+    "actual_external_call_authorized": { "type": "boolean" },
+    "ready": { "type": "boolean", "description": "true only when api key + endpoint + model id were all present at load time." },
+    "missing_config": { "type": "array", "items": { "type": "string" }, "description": "Names (never values) of missing required env vars." }
+  }
+}

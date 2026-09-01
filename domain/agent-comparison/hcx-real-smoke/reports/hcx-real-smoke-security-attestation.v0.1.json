@@ -1,0 +1,34 @@
+{
+  "schema_version": "0.1.0",
+  "run_id": "hcx_real_smoke_8ee6249914884e16baa0b11b0918c93b",
+  "created_at": "2026-09-01T22:03:57.887Z",
+  "api_key_env_var_name": "HCX_API_KEY",
+  "checks": [
+    {
+      "check_name": "api_key_value_absent_from_artifacts",
+      "passed": true,
+      "detail": "scanned all artifacts for the literal key value"
+    },
+    {
+      "check_name": "authorization_header_absent_from_artifacts",
+      "passed": true,
+      "detail": "scanned for an \"authorization\" JSON key or a \"Bearer <token>\" pattern"
+    },
+    {
+      "check_name": "raw_prompt_text_absent_from_artifacts",
+      "passed": true,
+      "detail": "scanned for the fixed scenario prompt texts (result artifact records aggregate stats only)"
+    },
+    {
+      "check_name": "full_endpoint_url_absent_from_artifacts",
+      "passed": true,
+      "detail": "artifacts record endpoint_hostname only, never the full endpoint_url"
+    },
+    {
+      "check_name": "raw_provider_response_body_structurally_excluded",
+      "passed": true,
+      "detail": "every artifact is schema-validated with additionalProperties:false against a fixed field list that has no room for a raw provider body -- see interfaces/*.schema.json"
+    }
+  ],
+  "overall_status": "PASS"
+}
