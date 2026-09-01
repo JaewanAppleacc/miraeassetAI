@@ -157,6 +157,31 @@ def test_existence_regex_reaches_over_long_corp_mention():
     assert got is not None
 
 
+# ---------- 항목 라벨 보강 ----------
+
+def _c(cid, doc, text, section=()):
+    return SimpleNamespace(chunk_id=cid, doc_id=doc, text=text, header="",
+                           section_path=tuple(section))
+
+
+def test_supplement_pulls_labelled_chunk_from_top_doc():
+    hits = [(5.0, _c("a", "d1", "직전보고서 | 4,650,276 | 24.92")),
+            (4.0, _c("b", "d1", "보고자 | 양현석")),
+            (3.0, _c("c", "d2", "다른 문서"))]
+    chunks = [h[1] for h in hits] + [_c("p", "d1", "경영권 영향", section=("4. 보유목적",)),
+                                     _c("x", "d9", "경영권 영향", section=("4. 보유목적",))]
+    got = corpus_retriever.supplement_hits("보유목적은 무엇인가?", hits, chunks, want=3)
+    ids = [c.chunk_id for _, c in got]
+    assert "p" in ids and "x" not in ids      # 상위 문서 안에서만
+    assert len(got) == 3                       # 절단 폭은 그대로
+
+
+def test_supplement_is_noop_without_label_in_question():
+    hits = [(5.0, _c("a", "d1", "직전보고서 | 4,650,276"))]
+    chunks = hits[0][1:] and [hits[0][1], _c("p", "d1", "경영권 영향", section=("4. 보유목적",))]
+    assert corpus_retriever.supplement_hits("보유주식 수는?", hits, chunks, want=3) == hits
+
+
 # ---------- wire ----------
 
 @pytest.mark.parametrize("state,expected", [

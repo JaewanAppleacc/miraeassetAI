@@ -72,6 +72,56 @@ DATE_DOC_BONUS = 0.3
 _ISO_DATE_RE = re.compile(r"((?:19|20)\d{2})\s*[-./]\s*(\d{1,2})\s*[-./]\s*(\d{1,2})(?!\d)")
 
 
+# 질문이 이름으로 부르는 항목인데 BM25가 잘 못 잡는 것들. 값 텍스트("경영권 영향")에는
+# 항목 이름이 없고 섹션 제목("4. 보유목적")에만 있어서, 짧은 값 청크가 긴 요약표에 밀린다.
+# Phase1 실측: 대량보유 11문항 전부 보유목적 칸이 상위20 밖, 정정 공시 2문항은
+# 정정 전/후 표가 밖. 질문에 라벨이 있을 때만, 상위 문서 안에서만 보강한다.
+ASKED_LABELS = ("보유목적", "보고사유", "정정 전", "정정 후", "정정전", "정정후",
+                "최초제출일", "최초 제출일")
+SUPPLEMENT_PER_LABEL = 2
+SUPPLEMENT_DOCS = 3
+SUPPLEMENT_INSERT_AT = 5
+
+
+def supplement_hits(question: str, hits: list, chunks, want: int) -> list:
+    """hits: [(score, chunk)] 절단 후 목록. 라벨 청크를 뒤쪽 자리와 바꿔 넣는다.
+
+    라벨은 section_path·header·text 어디에 있어도 된다. 바꿔 넣은 청크 점수는 현재
+    마지막 점수 — 순위를 새로 매기지 않고, 근거 매칭이 라벨로 집을 수 있게만 한다.
+    """
+    labels = [lb for lb in ASKED_LABELS if lb in question]
+    if not labels or not hits:
+        return hits
+    top_docs: list[str] = []
+    for _, c in hits:
+        if c.doc_id not in top_docs:
+            top_docs.append(c.doc_id)
+        if len(top_docs) >= SUPPLEMENT_DOCS:
+            break
+    present = {c.chunk_id for _, c in hits}
+    extras = []
+    for label in labels:
+        n = 0
+        for c in chunks:
+            if c.doc_id not in top_docs or c.chunk_id in present:
+                continue
+            hay = " ".join(c.section_path) + " " + (getattr(c, "header", "") or "") + " " + c.text
+            if label in hay:
+                extras.append(c)
+                present.add(c.chunk_id)
+                n += 1
+                if n >= SUPPLEMENT_PER_LABEL:
+                    break
+    if not extras:
+        return hits
+    floor = hits[-1][0]
+    keep = hits[:max(0, want - len(extras))]
+    # 끝자리가 아니라 상위 5개 바로 뒤에 넣는다 — LLM 문맥은 상위 LLM_CONTEXT_CHUNKS(16)개만
+    # 보므로 20위 근처에 두면 근거 매칭만 보고 LLM은 못 본다.
+    at = min(SUPPLEMENT_INSERT_AT, len(keep))
+    return keep[:at] + [(floor, c) for c in extras] + keep[at:]
+
+
 def question_dates(question: str) -> list[tuple[int, int, int]]:
     """질문 속 '2024-04-17' / '2024.04.17' 꼴 날짜. 월·일 범위 밖이면 버린다."""
     out = []
@@ -233,6 +283,7 @@ class CorpusRetriever:
             hits = sorted(((score * (1.0 + DATE_DOC_BONUS)
                             if chunk.doc_id in date_docs else score, chunk)
                            for score, chunk in hits), key=lambda x: -x[0])[:want]
+            hits = supplement_hits(question, hits, chunk_index.chunks, want)
             return [self._to_chunk(score, chunk) for score, chunk in hits]
         # 계약금액·투자금액 같은 항목 질문의 답은 원문 공시(exchange/major) 서식에 있다.
         # 사업보고서의 요약 한 줄이 짧아서(BM25 길이 정규화) 원문을 이기는 실측(N05)이
@@ -248,6 +299,7 @@ class CorpusRetriever:
         else:
             hits = chunk_index.search(question, k=want,
                                       section_alpha=self.section_alpha)
+        hits = supplement_hits(question, hits, chunk_index.chunks, want)
         return [self._to_chunk(score, chunk) for score, chunk in hits]
 
     def _rcept_dt(self, doc_id: str) -> str:

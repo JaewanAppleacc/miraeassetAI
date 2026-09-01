@@ -228,8 +228,8 @@
   "slots_top20": 2,
   "slots_cited": 0,
   "value_forms": [
-   "-1381201196139",
-   "-1,381,201,196,139"
+   "-1,381,201,196,139",
+   "-1381201196139"
   ],
   "value_in_evidence": false,
   "value_in_top20": false,
@@ -378,8 +378,8 @@
   "slots_top20": 2,
   "slots_cited": 1,
   "value_forms": [
-   "3,500,166",
-   "3500166"
+   "3500166",
+   "3,500,166"
   ],
   "value_in_evidence": false,
   "value_in_top20": false,
@@ -470,8 +470,8 @@
   "slots_top20": 1,
   "slots_cited": 1,
   "value_forms": [
-   "87,337,073,306",
-   "87337073306"
+   "87337073306",
+   "87,337,073,306"
   ],
   "value_in_evidence": true,
   "value_in_top20": true,
@@ -560,8 +560,8 @@
   "slots_top20": 1,
   "slots_cited": 1,
   "value_forms": [
-   "1002399908114",
-   "1,002,399,908,114"
+   "1,002,399,908,114",
+   "1002399908114"
   ],
   "value_in_evidence": true,
   "value_in_top20": true,
@@ -1104,8 +1104,8 @@
   "slots_top20": 1,
   "slots_cited": 1,
   "value_forms": [
-   "940874573200",
-   "940,874,573,200"
+   "940,874,573,200",
+   "940874573200"
   ],
   "value_in_evidence": true,
   "value_in_top20": true,
@@ -1378,8 +1378,8 @@
   "slots_top20": 2,
   "slots_cited": 0,
   "value_forms": [
-   "644,522",
-   "644522"
+   "644522",
+   "644,522"
   ],
   "value_in_evidence": false,
   "value_in_top20": false,
@@ -1429,8 +1429,8 @@
   "slots_top20": 2,
   "slots_cited": 0,
   "value_forms": [
-   "14154",
-   "14,154"
+   "14,154",
+   "14154"
   ],
   "value_in_evidence": false,
   "value_in_top20": false,
@@ -2130,8 +2130,8 @@
   "slots_top20": 1,
   "slots_cited": 1,
   "value_forms": [
-   "424899510000",
-   "424,899,510,000"
+   "424,899,510,000",
+   "424899510000"
   ],
   "value_in_evidence": true,
   "value_in_top20": true,
@@ -2492,7 +2492,7 @@
   "doc_in_top20": true,
   "doc_in_top5": true,
   "n_slots": 4,
-  "slots_top20": 3,
+  "slots_top20": 4,
   "slots_cited": 3,
   "value_forms": [],
   "value_in_evidence": false,
@@ -3024,7 +3024,7 @@
   "doc_in_top20": true,
   "doc_in_top5": true,
   "n_slots": 4,
-  "slots_top20": 3,
+  "slots_top20": 4,
   "slots_cited": 3,
   "value_forms": [],
   "value_in_evidence": false,
@@ -3070,7 +3070,7 @@
   "doc_in_top20": true,
   "doc_in_top5": true,
   "n_slots": 6,
-  "slots_top20": 5,
+  "slots_top20": 6,
   "slots_cited": 4,
   "value_forms": [],
   "value_in_evidence": false,
@@ -3253,7 +3253,7 @@
   "doc_in_top20": true,
   "doc_in_top5": true,
   "n_slots": 4,
-  "slots_top20": 3,
+  "slots_top20": 4,
   "slots_cited": 3,
   "value_forms": [],
   "value_in_evidence": false,
@@ -3475,7 +3475,7 @@
   "doc_in_top20": true,
   "doc_in_top5": true,
   "n_slots": 4,
-  "slots_top20": 3,
+  "slots_top20": 4,
   "slots_cited": 2,
   "value_forms": [],
   "value_in_evidence": false,
@@ -3785,7 +3785,7 @@
   "doc_in_top20": true,
   "doc_in_top5": true,
   "n_slots": 4,
-  "slots_top20": 3,
+  "slots_top20": 4,
   "slots_cited": 3,
   "value_forms": [],
   "value_in_evidence": false,
@@ -3831,7 +3831,7 @@
   "doc_in_top20": true,
   "doc_in_top5": true,
   "n_slots": 5,
-  "slots_top20": 4,
+  "slots_top20": 5,
   "slots_cited": 4,
   "value_forms": [],
   "value_in_evidence": false,
@@ -3877,7 +3877,7 @@
   "doc_in_top20": true,
   "doc_in_top5": true,
   "n_slots": 4,
-  "slots_top20": 3,
+  "slots_top20": 4,
   "slots_cited": 2,
   "value_forms": [],
   "value_in_evidence": false,
@@ -4155,7 +4155,7 @@
   "doc_in_top20": true,
   "doc_in_top5": true,
   "n_slots": 4,
-  "slots_top20": 3,
+  "slots_top20": 4,
   "slots_cited": 3,
   "value_forms": [],
   "value_in_evidence": false,
@@ -4513,7 +4513,7 @@
   "doc_in_top20": true,
   "doc_in_top5": true,
   "n_slots": 5,
-  "slots_top20": 4,
+  "slots_top20": 5,
   "slots_cited": 3,
   "value_forms": [],
   "value_in_evidence": false,
@@ -4605,7 +4605,7 @@
   "doc_in_top20": true,
   "doc_in_top5": true,
   "n_slots": 5,
-  "slots_top20": 4,
+  "slots_top20": 5,
   "slots_cited": 3,
   "value_forms": [],
   "value_in_evidence": false,
