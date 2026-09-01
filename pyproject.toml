@@ -9,10 +9,9 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "jsonschema>=4.20"]
-# 탐정게임 Agent Backend(src/dart_detective). anthropic은 없어도 되며,
+# QA 서버(src/dart_detective). anthropic은 없어도 되며,
 # 자격증명이 없으면 결정론적 fallback 경로로 동작한다.
 agent = [
-    "langgraph>=0.2",
     "fastapi>=0.115",
     "uvicorn>=0.30",
     "pydantic>=2.7",

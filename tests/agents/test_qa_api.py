@@ -1,6 +1,6 @@
 """POST /qa 배선 테스트.
 
-라우터만 올려서 검증한다 — 게임 API 전체(LangGraph·Case Pack)나 111MB 코퍼스
+라우터만 올려서 검증한다 — 앱 전체나 111MB 코퍼스
 인덱스 없이도 "질문 -> Agent -> Retrieval -> evidence -> 답변"이 이어지는지 본다.
 Retriever는 dependency_overrides로 합성본을 주입한다.
 """

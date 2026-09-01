@@ -9,8 +9,6 @@
 이 파일은 Retrieval 성능에 영향을 주지 않는다 — 기본값(stage1_k=50,
 section_alpha=0.5)은 gold 25문항에서 채택된 값 그대로이고, 새 신호를 넣지 않는다.
 
-게임(Case Pack) 쪽 `PointInTimeRetriever`와는 다른 물건이다. 그쪽은 케이스 단위
-search_index.jsonl에 simulation_date 필터를 거는 Retriever고, 이쪽은 전체 코퍼스다.
 """
 from __future__ import annotations
 

@@ -2,9 +2,8 @@
 
     POST /qa  {"question": "..."}  ->  {"answer": ..., "evidence": [...]}
 
-게임 API(api.py)와 분리해 둔 이유는 두 가지다.
-  1. 게임 쪽은 LangGraph·Case Pack이 필요하지만 QA는 코퍼스 인덱스만 있으면 된다.
-  2. 코퍼스 인덱스(doc_index.jsonl 111MB)는 리포에 없다 — import 시점에 읽으면
+독립 라우터로 둔 이유:
+  코퍼스 인덱스(doc_index.jsonl 111MB)는 리포에 없다 — import 시점에 읽으면
      인덱스가 없는 환경에서 앱 자체가 못 뜬다. 그래서 **첫 요청에서 지연 로딩**하고,
      없으면 503으로 이유를 알려준다.
 

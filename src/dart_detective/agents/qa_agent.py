@@ -13,9 +13,6 @@ Agent는 Retrieval을 대체하지 않는다. 부르고, 결과를 해석한다.
   - LLM 답변은 validator로 대조해 UNSUPPORTED면 버리고 발췌 답변으로 되돌린다.
   - 모든 근거는 chunk_id / doc_id / section_path를 달고 다닌다(추적 가능성).
 
-게임 쪽 `agents/evidence_agent.py`와 역할이 겹치지 않는다 — 그쪽은 Case Pack +
-PointInTimeRetriever(시점 차단)용이고, 이쪽은 전체 코퍼스 Retrieval용이다.
-검증기(validator)와 LLM 인터페이스는 공유한다.
 """
 from __future__ import annotations
 

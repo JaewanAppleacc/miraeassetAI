@@ -9,8 +9,6 @@ __pycache__/
 # 대용량 원본/중간 산출물
 data/3.공시/
 data/artifacts/document_ir/
-data/artifacts/case_packs/_source_docs.jsonl
-data/artifacts/case_packs/search_index.jsonl
 data/artifacts/parse_audit.jsonl
 data/artifacts/handoff/
 data/parse_quality/
