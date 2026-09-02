@@ -62,7 +62,9 @@ class LLMClient(Protocol):
     provider: str
 
     def complete_json(self, system: str, user: str,
-                      schema: dict[str, Any]) -> "LLMResult":
+                      schema: dict[str, Any], *,
+                      max_tokens: int | None = None) -> "LLMResult":
+        """max_tokens: 호출별 출력 상한(v4 §7 예산). None이면 클라이언트 기본값."""
         ...
 
 
@@ -84,11 +86,12 @@ class AnthropicLLM:
         self.effort = effort
         self.max_tokens = max_tokens
 
-    def complete_json(self, system: str, user: str, schema: dict[str, Any]) -> LLMResult:
+    def complete_json(self, system: str, user: str, schema: dict[str, Any], *,
+                      max_tokens: int | None = None) -> LLMResult:
         t0 = time.perf_counter()
         response = self.client.messages.create(
             model=self.model,
-            max_tokens=self.max_tokens,
+            max_tokens=max_tokens or self.max_tokens,
             system=system,
             output_config={
                 "effort": self.effort,
@@ -252,7 +255,11 @@ class ClovaLLM:
                 raise LLMUnavailable(f"CLOVA 연결 실패: {exc.reason}") from exc
 
     def complete_json(self, system: str, user: str,
-                      schema: dict[str, Any]) -> LLMResult:
+                      schema: dict[str, Any], *,
+                      max_tokens: int | None = None) -> LLMResult:
+        # 호출별 상한(v4 §7 실행 매트릭스). TPM 한도는 입력 + maxTokens로 계산되므로
+        # 질문 유형에 맞게 낮춰 주면 같은 한도로 더 많이 부를 수 있다.
+        requested = max_tokens or self.max_tokens
         instruction = (
             f"{system}\n\n"
             "출력은 반드시 아래 JSON 스키마를 만족하는 JSON 오브젝트 하나여야 한다. "
@@ -265,7 +272,7 @@ class ClovaLLM:
                 {"role": "system", "content": instruction},
                 {"role": "user", "content": user},
             ],
-            "maxTokens": self.max_tokens,
+            "maxTokens": requested,
             "temperature": self.temperature,
         })
         latency_ms = int((time.perf_counter() - t0) * 1000)
@@ -283,7 +290,7 @@ class ClovaLLM:
         if stop_reason in {"length", "stop_before", "max_tokens"}:
             # 출력이 상한에서 잘렸다 — JSON이 깨져 파싱이 실패할 수 있다.
             usage["truncated"] = True
-        usage.setdefault("max_tokens_requested", self.max_tokens)
+        usage.setdefault("max_tokens_requested", requested)
         return LLMResult(
             data=extract_json(text),
             provider=self.provider,

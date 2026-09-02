@@ -235,8 +235,14 @@ def think_trace_of(state: Mapping[str, Any]) -> dict[str, Any]:
     """숨은 사고과정·시스템 프롬프트·비밀값은 넣지 않는다 — 계약이 금지한다."""
     validation = state.get("validation") or {}
     confidence = state.get("confidence") or {}
+    route = state.get("route") or {}
     operations = [
         {"step": "conditions", "detail": state.get("conditions") or {}},
+        # ③ 전략(v4 §7). 내부 enum·디버그는 싣지 않는다 — 전략명·유형·강등 여부만.
+        *([{"step": "route", "strategy": route.get("strategy"),
+            "answer_type": route.get("answer_type"),
+            "downgraded_from": route.get("downgraded_from"),
+            "notice": route.get("notice") or ""}] if route else []),
         {"step": "retrieval", "n_chunks": len(state.get("retrieval") or [])},
         {"step": "evidence", "slots": state.get("slots") or [],
          "n_selected": len(state.get("evidence_matches") or [])},

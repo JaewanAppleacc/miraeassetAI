@@ -17,6 +17,7 @@ Agent는 Retrieval을 대체하지 않는다. 부르고, 결과를 해석한다.
 from __future__ import annotations
 
 import hashlib
+import inspect
 import re
 import time
 from dataclasses import dataclass, field
@@ -29,6 +30,7 @@ from dart_corpus.retrieval.lexical import tokenize
 from ..corpus_retriever import (CorpusRetriever, RetrievedChunk, chunk_lines,
                                DISCLOSURE_ITEMS, extract_disclosure_items)
 from ..llm import LLMResult, LLMUnavailable
+from .. import routing
 from . import calculator, confidence, validator
 
 MAX_EVIDENCE = 5
@@ -163,9 +165,12 @@ class AgentState:
     llm: dict[str, Any] = field(default_factory=lambda: {"used": False})
     # 단계별 소요 시간(ms). 어디서 느린지 로그만 보고 알 수 있어야 한다.
     timings: dict[str, int] = field(default_factory=dict)
+    # ③ 전략·예산(v4 §7). 검색 전에 정해지고, 발췌 수·maxTokens가 여기서 나온다.
+    route: routing.Route | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
+            "route": self.route.to_dict() if self.route else {},
             "answerability": self.answerability,
             "withheld": dict(self.withheld),
             "answer": self.answer,
@@ -770,11 +775,26 @@ def answer_text(value: Any) -> str:
     return ""
 
 
-def _llm_answer(llm: Any, user: str) -> tuple[dict[str, Any], dict[str, Any]]:
-    result: LLMResult = llm.complete_json(SYSTEM_PROMPT, user, ANSWER_SCHEMA)
+def _accepts_max_tokens(fn: Any) -> bool:
+    """클라이언트가 호출별 max_tokens를 받는가. 테스트용 가짜 LLM은 안 받을 수 있다."""
+    try:
+        params = inspect.signature(fn).parameters
+    except (TypeError, ValueError):
+        return False
+    return "max_tokens" in params or any(
+        p.kind is inspect.Parameter.VAR_KEYWORD for p in params.values())
+
+
+def _llm_answer(llm: Any, user: str,
+                max_tokens: int | None = None) -> tuple[dict[str, Any], dict[str, Any]]:
+    kwargs: dict[str, Any] = {}
+    if max_tokens is not None and _accepts_max_tokens(llm.complete_json):
+        kwargs["max_tokens"] = max_tokens
+    result: LLMResult = llm.complete_json(SYSTEM_PROMPT, user, ANSWER_SCHEMA, **kwargs)
     meta = {"provider": result.provider, "model": result.model,
             "latency_ms": result.latency_ms, "usage": result.usage,
-            "prompt_version": PROMPT_VERSION, "prompt_chars": len(user)}
+            "prompt_version": PROMPT_VERSION, "prompt_chars": len(user),
+            "max_tokens": kwargs.get("max_tokens")}
     return result.data, meta
 
 
@@ -898,13 +918,20 @@ def withheld_text(found: Mapping[str, str]) -> str:
 def answer_question(question: str, retriever: CorpusRetriever, *,
                     llm: Any | None = None, k: int | None = None,
                     max_evidence: int = MAX_EVIDENCE,
-                    llm_context_chunks: int = LLM_CONTEXT_CHUNKS) -> AgentState:
-    """질문 하나를 끝까지 처리한다. 반환은 AgentState — 중간 단계가 전부 남는다."""
+                    llm_context_chunks: int | None = None) -> AgentState:
+    """질문 하나를 끝까지 처리한다. 반환은 AgentState — 중간 단계가 전부 남는다.
+
+    llm_context_chunks: None이면 ③ 라우팅 예산(v4 §7)을 따른다. 값을 주면 그 값으로 고정.
+    """
     t_start = time.perf_counter()
     state = AgentState(question=question)
     state.conditions = retriever.conditions(question)
     state.slots = plan_slots(question, state.conditions)
     existence = corpus_existence(question, state.conditions, retriever)
+    # ③ 전략·예산. 검색 전에 정한다 — 발췌 수와 maxTokens가 여기서 나온다.
+    state.route = routing.route(
+        question, n_slots=len(state.slots), asks_value=asks_for_value(question),
+        existence_hit=existence is not None)
     if existence is not None:
         state.answer, state.uncertainty = existence
         state.answerability = "NOT_FOUND"
@@ -927,7 +954,9 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
         drop=corp_tokens(sorted(state.conditions.corps)), scopes=scopes)
     # LLM 유무와 무관하게 기록한다 — 키가 없어도 "무엇을 얼마나 넘길 것인가"를 알아야
     # 크레딧을 쓰기 전에 비용과 문맥 크기를 가늠할 수 있다.
-    context = llm_context(state.retrieval_results, llm_context_chunks)
+    n_context = (llm_context_chunks if llm_context_chunks is not None
+                 else state.route.budget.context_chunks)
+    context = llm_context(state.retrieval_results, n_context)
     state.llm_context_chunk_ids = tuple(c.chunk_id for c in context)
     user_prompt = build_user_prompt(question, state.evidence_matches, context)
     state.prompt_chars = len(user_prompt)
@@ -978,7 +1007,8 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
     if llm is not None and state.evidence_matches:
         t_llm = time.perf_counter()
         try:
-            payload, meta = _llm_answer(llm, user_prompt)
+            payload, meta = _llm_answer(llm, user_prompt,
+                                        max_tokens=state.route.budget.max_tokens)
             state.llm = {"used": True, **meta}
             llm_citations = normalize_citations(payload.get("evidence"))
             llm_answer = answer_text(payload.get("answer"))
@@ -1001,6 +1031,12 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
             state.llm = {"used": False, "error": f"{type(exc).__name__}: {exc}"}
         state.timings["llm_ms"] = int((time.perf_counter() - t_llm) * 1000)
 
+    if state.route and state.route.notice:
+        # v4 §7 복구 규칙: ledger 없이 ENUMERATION/COUNT를 NARRATIVE로 강등했으면 고지한다.
+        # 공식 5필드 응답에는 uncertainty가 실리지 않는다(answer_wire) — 사용자가 읽는
+        # answer 본문 끝에 한 줄로 명시한다(v4 §13 "확인 불가는 명시").
+        uncertainty = f"{state.route.notice} {uncertainty}".strip()
+        answer = f"{answer}\n\n※ {state.route.notice}" if answer else f"※ {state.route.notice}"
     note = corp_warning_text(state.warnings, state.evidence_corps)
     if note:
         # 답변은 막지 않는다 — 다만 기업이 어긋날 수 있다는 사실을 답과 함께 내보낸다.
