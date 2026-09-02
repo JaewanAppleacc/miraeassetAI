@@ -66,3 +66,5 @@ dist/
 
 # 로컬 자격증명 — 절대 커밋하지 않는다(.env.example만 공유)
 .env
+.DS_Store
+work/

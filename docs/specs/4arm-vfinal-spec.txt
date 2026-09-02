@@ -1,0 +1,202 @@
+────────────────────────────────────────────
+4-arm 검색 코어 실험 — 사전 등록 스펙 vFINAL (동결)
+2026-09-03 · 이후 변경은 21번 절차로만
+────────────────────────────────────────────
+
+[후보] — 메타 필터는 각 스택 as-built 구성으로 4개 arm 모두 포함
+| arm | 청킹            | 검색                                          |
+|-----|-----------------|-----------------------------------------------|
+| A   | Fixed-512       | 메타 필터 + BM25 + 전량 KURE dense + RRF      |
+| B   | line-window 12/8| 메타 필터 + BM25 + LOW-confidence KURE 재정렬 |
+| C   | Fixed-512       | 메타 필터 + BM25-only (= A에서 dense OFF)     |
+| D   | line-window 12/8| 메타 필터 + BM25-only (= B에서 dense OFF)     |
+후속(여력 시): 승자 산출물 위 Node-grounded Late Expansion 실험
+
+[해석 규칙]
+- A vs C, B vs D는 dense ablation이 아닌 system-level 비교로 해석.
+- 쌍 내(A↔C, B↔D)는 dense 플래그 외 모든 조건 동일 보장.
+- C vs D는 두 sparse 스택의 system-level 비교로 보고.
+- 쌍 간 구성 통일은 강제하지 않음(7번 as-built).
+
+1. Segmentation
+- conditions.py 단일 사용 · 실행 전 결과·SHA 고정
+- LOW = 확정 조건 ≤2, HIGH = ≥3 · arm별 재계산 금지
+- 동일 방식이 DEV_CHECK 세그먼트 계산에도 적용된다(17번).
+
+2. Primary
+- LOW all-required-slots-found count (LOW Recall@10 보조)
+- LOW 표본 ≥10일 때만 주 판정 적용
+
+3. LOW underpowered
+- LOW <10이면 LOW_UNDERPOWERED → frozen paraphrase set 별도 실행
+- 실제 LOW와 합산 금지
+
+4. Non-inferiority
+- 전체·HIGH Recall@10이 Hard-safe arm 중 최고치보다 0.01 이상
+  낮으면 탈락(기준 집합·순서는 12번)
+- provenance/locator critical violation 0
+- 동시 통과 arm 없으면 NO_SELECTION
+
+5. Tie — 최고값 기준 FINAL_TIE_SET
+- 두 gate 통과 arm 중 LOW 완전 발견 최고값을 구한다.
+- 최고값과의 차이 0~1문항인 arm만 FINAL_TIE_SET에 포함한다.
+- 최고값보다 2문항 이상 낮은 arm은 탈락한다.
+- FINAL_TIE_SET에 C 또는 D가 있으면 dense-off arm을 우선한다.
+- C와 D가 모두 포함되면 11번을 적용한다.
+- C/D가 없고 A/B만 동률이면 B를 operational simplicity 우선으로
+  선택하되 PERFORMANCE_TIE_BREAK_SELECTION으로 명시한다.
+
+6. Same inputs
+- corpus / Gold / precomputed conditions / metadata interpretation
+  / final top-k / scorer / KURE revision
+
+7. As-built components
+- tokenizer / candidate pool / dense pool / RRF pool / chunk 생성은
+  각 스택 실제 설정 유지·보고
+
+8. LOW_UNDERPOWERED 판정
+- frozen paraphrase set(9번 유효성 상태 전제)을 조건부 주 판정에 사용
+- 완전 발견 count 비교 · 최고 대비 ≤1 동률(5번 집합 방식 준용),
+  ≥2 차이는 높은 arm 우세 · 실제 LOW와 합산 금지
+- 전체/HIGH 비열등성은 원 DEV_TUNE에서 계속 적용
+
+9. Frozen paraphrase set — 생성·유효성
+- 목표 유효 문항 수는 정확히 20개.
+- HIGH 원문 후보를 고정 salt(15번 config에 기록)로 정렬한 뒤
+  순서대로 변형·검수한다.
+- 독립 검수 통과 + conditions.py count ≤2인 최초 20개를 채택한다.
+- 검수 탈락 문항은 수정하지 않고 다음 고정 순번 후보로 대체한다.
+- 유효 문항 <10이면 PARAPHRASE_UNDERPOWERED — 이를 이용한 성능
+  승자를 확정하지 않는다. 10~19개면 실행 가능하되 결과는 보조
+  근거로만 사용하며 B operational fallback 또는 BLOCKED로 처리한다.
+- 작성 규칙: 질문 텍스트만 보고 작성 · 독립 답변 가능 · 필수 조건
+  삭제 금지 · 실행 후 수정 금지.
+- ID 체계: 고유 paraphrase_id 부여, source_question_id로 원문 보존,
+  required-slot IDs·Gold identity는 기계 복사, 동일 question_id
+  저장 금지. 빌드 테스트가 ID 집합 byte-equivalence를 검증한다.
+- 의미 동등성 판정은 13번 독립 검수가 담당한다.
+
+10. NO_SELECTION과 B fallback
+- B가 Hard 또는 Quality gate 탈락 시 fallback으로 복원하지 않는다.
+- B fallback은 B가 두 gate와 최소 배포 가능성(19번)을 모두
+  통과했고, LOW/의역 세트가 동률·판정 불충분으로 성능 승자를
+  확정하지 못한 경우에만 허용한다.
+- fallback은 OPERATIONAL_FALLBACK으로 기록한다(성능 승자 아님).
+- 성능 승자도 fallback 조건도 성립하지 않으면 BLOCKED.
+
+11. C vs D 동률
+- 안전성 → latency(p95) → peak RSS → 배포 의존성 순(18번 측정법).
+- 모두 동률이면 D.
+
+12. Gate 정의와 적용 순서
+- Hard safety gate: provenance 위반 0, locator 치명 위반 0.
+  1건이면 성능 무관 즉시 탈락.
+- 먼저 Hard 탈락 arm 제거 → Quality gate의 최고 Recall@10은
+  Hard-safe arm 중 최고값으로 계산.
+- Quality gate: DEV_TUNE-101(16-A 제외 적용 후 세트) 전체·HIGH
+  Recall@10이 그 최고치보다 0.01 이상 낮으면 탈락.
+- Hard-safe arm이 0개면 즉시 BLOCKED.
+- Hard-failed arm 점수는 참고 보고만, 기준값 사용 금지.
+- 두 gate 통과 arm만 LOW/의역 비교 대상.
+
+13. Frozen paraphrase 독립 검수
+- 작성자 아닌 팀원 1명 · (원질문, 변형질문) 쌍만 열람
+  (원문·Gold·required slots·검색 결과 열람 금지)
+- 채택: ① 대상·기간·지표·비교/계산 요구 동일 ② 상호 답변 가능
+- 불일치·애매 문항은 수정 없이 제외(9번 순번 대체 규칙 적용)
+- 검수 완료 후 목록·판정의 SHA-256 고정, 실행 후 수정·교체 금지
+
+14. Locator 위반 심각도와 검사 범위
+- 검사 범위: required slot 발견으로 주장됐거나 scorer가 slot match로
+  인정한 청크만. top-k의 비관련 청크는 retrieval false positive로
+  처리(치명 위반 아님).
+- 치명: slot-match 청크의 locator가 해석 불가·실재하지 않음·다른
+  document/node/행/열/기간 지시·claim 미지지. 1건이면 Hard 탈락.
+- 경미: 동일 근거, span offset만 상이(공백·정규화·구두점·범위).
+  탈락 사유 아님, 건수·원인 보고.
+- 판정 불가: UNRESOLVED로 기록, 16번 절차.
+
+15. 실행 파라미터 고정
+- 평가 k=10 · 보고 k=5/10/20
+- BM25/dense/rerank 후보 수, RRF 상수, 메타 필터 적용 시점·fallback
+  규칙, paraphrase salt를 arm별 config에 기록.
+- 실행 전 config JSON + 코드 HEAD SHA-256 고정.
+- 실행 후 파라미터 변경·실패 문항만의 재실행 금지.
+- 인프라 오류로 인한 전량 재실행은 허용, 사유 기록.
+
+16. UNRESOLVED 처리
+- Owner 검토는 결과 산출 당일, arm 이름·점수 블라인드로 원인만
+  판정. 러너는 UNRESOLVED 패킷을 arm 라벨 제거 후 export.
+A. COMMON_SOURCE_UNRESOLVED
+- 판정: arm 검색 성공 여부가 아니라 Gold 지정 원본 source/locator를
+  arm-blind로 직접 검사. Gold 원본 자체 손상일 때만 공통 제외.
+- 특정 arm 반환 청크에서만 문제면 ARM_SPECIFIC. 검색 못한 arm은
+  retrieval 실패로 그대로 계산.
+- 처리: 공통 제외 가능 · ID·사유 기록 · 제외 전/후 점수 보고 ·
+  gate·주 판정은 제외 후 세트 기준.
+- 한도: min(5문항, 세트 5%). 초과 시 BLOCKED.
+- 공통 제외 후 유효 LOW 재확인 — 10 미만이면 LOW 주 판정 중단,
+  LOW_UNDERPOWERED 절차 적용.
+B. ARM_SPECIFIC_UNRESOLVED
+- 공통 제외 금지 · 해당 arm 해당 문항은 slots-found 실패로 계산 ·
+  치명 확정 시 Hard 탈락 · 보류 시 PROVISIONAL 유지.
+C. UNKNOWN_UNRESOLVED
+- 당일 내 입증 실패 시 자동 제외 금지 · 관련 arm 선택 보류 ·
+  전 유효 arm 보류면 NO_SELECTION/BLOCKED.
+
+17. 평가 단계의 의미
+- 본 실험 = DEV_TUNE 기반 후보 선택. 결과는 PROVISIONAL_WINNER.
+- 동결 후 DEV_CHECK(47) one-shot 통과 시에만
+  FINAL_RETRIEVAL_CORE_SELECTED 전환.
+- DEV_CHECK 통과 기준(사전 등록): 치명 locator 위반 0 AND
+  전체 Recall@10 ≥ (DEV_TUNE 전체 Recall@10 − 0.10).
+- DEV_CHECK LOW ≥10문항이면 LOW all-required-slots-found rate도
+  보고하고, DEV_TUNE LOW 대비 0.15 초과 하락 시 실패로 판정한다.
+  DEV_CHECK LOW <10이면 LOW 일반화는 NOT_ENOUGH_EVIDENCE로
+  표시하고 전체 Recall gate만 적용한다.
+- 결과 확인 후 재튜닝·arm 교체 금지. 실패 시 PROVISIONAL 유지 +
+  BLOCKED로 Owner/팀 판단(DEV_CHECK를 튜닝 세트화 금지).
+- HOLDOUT(59)은 최종 평가 승인 전까지 봉인.
+
+18. 측정 프로토콜과 동률 기준
+- latency: 동일 warm-up 후 101문항 p50/p95 측정, 비교는 p95.
+  상대 차이 ≤5%면 latency 동률.
+- RSS: arm별 독립 프로세스 peak RSS. 상대 차이 ≤5%면 동률.
+- 실행 순서는 고정 seed 교차 배치.
+- 안전성 비교는 경미 locator 위반 건수만 사용
+  (치명은 양쪽 모두 이미 0이어야 함).
+- 배포 의존성: 필요한 외부 서비스 수가 적은 arm 우선,
+  같으면 D 선택.
+- 동률이면 11번의 다음 tie-break로 넘어간다.
+
+19. 최소 배포 가능성 정의
+- corpus/index/model/config SHA가 frozen pin과 일치
+- mock/fake/fallback 모드 아님 · /ready 통과
+- 고정 synthetic probe에서 /answer 계약 통과
+- secret 비노출 · locator 해석 가능
+
+20. Metadata non-leak
+- 메타 필터 입력은 질문 텍스트에서 conditions.py가 사전 추출한
+  기업·문서군·기간 조건으로만 구성한다.
+- Gold document IDs, expected answer, required-slot IDs, evidence
+  locator, 다른 arm의 검색 결과를 필터 생성에 사용하지 않는다.
+- 필터 결과와 SHA를 검색 실행 전에 고정한다.
+- 조건 누락 시 fallback 규칙은 arm별 config에 사전 기록한다.
+- Gold 유래 정보 사용이 발견되면 실험 전체를 INVALID 처리한다.
+
+21. 동결·변경 관리
+- 본 스펙은 vFINAL로 동결한다.
+- 이후 변경은 다음 두 경우에만 허용한다:
+  ① 실행을 불가능하게 하는 결함 ② 규칙 간 모순의 발견.
+- 새 아이디어·범위 확장·지표 추가는 이번 실험에 반영하지 않고
+  차기 실험 백로그로 보낸다.
+- 변경 시 Owner 승인과 변경 로그(사유·전후 diff)를 남긴다.
+
+[판정 체인]
+20 필터 non-leak → 14 locator(slot-match 범위) → 16 UNRESOLVED
+→ 12 Hard → 12 Quality(hard-safe 기준·제외 후 세트) → 2 LOW 비교
+또는 3·8·9·13 의역 세트 → 5 FINAL_TIE_SET(최고값 기준)
+→ dense-off 우선 → 11+18 C/D 동률 → 10+19 B fallback 조건
+→ 불성립 BLOCKED → 승자 PROVISIONAL_WINNER → 동결
+→ 17 DEV_CHECK one-shot → FINAL_RETRIEVAL_CORE_SELECTED
+────────────────────────────────────────────

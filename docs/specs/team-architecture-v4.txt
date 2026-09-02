@@ -1,0 +1,410 @@
+══════════════════════════════════════════════════════════
+ DISCLOSURE ANALYST — TEAM ARCHITECTURE v4 (최종)
+ 2026-09-03 · 제출 09-06 23:59 · v3는 SUPERSEDED
+══════════════════════════════════════════════════════════
+
+[상태 라벨 — 혼용 금지]
+MEASURED      실제 데이터로 실행해 수치 확인
+IMPLEMENTED   코드·테스트 존재
+READY         실행 자산 완성 + 무결성 검증 통과
+PROPOSED      설계만 존재
+PENDING       작업 미완료 (완료 추측 금지)
+NOT YET RUN   미실행
+BLOCKED       외부 승인·인프라 필요
+LOCKED/SEALED 접근 봉인
+
+──────────────────────────────────────────
+1. 결정 요약
+──────────────────────────────────────────
+입력 데이터   DocumentIR 생성 4,204/4,204 · 문서 단위 생성 실패 0
+             · 구조적 parse limitation은 별도 audit·recovery 대상   [MEASURED]
+청킹·검색코어 4-arm 동일 조건 실험으로 확정 (스펙 vFINAL, §2)
+             DEV_TUNE 결과 = PROVISIONAL_WINNER,
+             DEV_CHECK one-shot 통과 후에만 최종 확정      [PROPOSED/RUN PENDING]
+검색 인프라   loader/retriever 코드 IMPLEMENTED
+             · 실측 shard 750문서/1,144청크 READY·MEASURED
+             · 전체 Fixed 예상 규모 447,895청크(검색가능 442,549
+               ·고유 임베딩 441,879)
+             · 전체 KURE/pgvector 인덱스: load session ID·READY·
+               행 수·model rev·SHA 검증 전까지                [PENDING]
+검색 실측     Fixed 스택: DEV_TUNE-101 bounded retrieval R@10 0.868
+             (근거 회수 성능 — production index 완성·HCX 정답률 아님)
+             · 파일 스택: 문서 100%·슬롯@20 97.0%
+             — k가 달라 직접 비교 불가, 4-arm이 판정          [MEASURED 각자 조건]
+통합 E2E     선정 코어 + HCX FC + 검증·폴백 포함 DEV_TUNE-101   [NOT YET RUN]
+임베딩       KURE-v1 frozen rev 4ed4540…e4f 단일 기록          [MEASURED]
+답변 유형     answer_type: CLOSED | OPEN_ENDED (LIST는 공식 유형 아님)
+             × execution_strategy 7종 (§7)                    [PROPOSED]
+정정 처리     chain 확장 + as-of(known_at/valid_from) 확정
+             (전이 검증 문항 10개 게이트)                      [IMPLEMENTED]
+계산         Decimal · ROUND_HALF_UP · LLM 산술 금지           [IMPLEMENTED]
+HCX 출력     Native v3 Function Calling submit_grounded_answer
+             (prompt-JSON 3/5, response_format 0/15 → 폐기)   [MEASURED 15/15]
+검증·폴백     hard 5 + soft 2 귀속 검증 → 수리(조건부)→템플릿→발췌
+                                          [게이트 IMPLEMENTED / 강화분 PROPOSED]
+응답         GET /answer 5필드 문자열 · 설정 지문 캐시
+             (폴백·degraded 결과 캐시 제외)                   [IMPLEMENTED 계약]
+평가 세트     DEV_CHECK 47 LOCKED·NOT RUN · HOLDOUT 59 SEALED
+배포 전제     PG + 약 2GB 인덱스 가용 여부 — 불가해도 B 자동 선택 없음:
+             vFINAL 10번(두 gate+최소 배포 가능성 통과 시만
+             OPERATIONAL_FALLBACK, 아니면 BLOCKED,
+             PERFORMANCE_WINNER와 구분 기록)                  [BLOCKED 최우선 확인]
+
+수치 비교 금지: line-window R@20 0.743(Gold25)과 Fixed R@10
+0.868(DEV_TUNE101)은 평가셋·k가 달라 직접 비교 불가.
+어느 쪽도 이 수치로 확정하지 않으며 4-arm 판정을 따른다.
+
+──────────────────────────────────────────
+2. 검색 코어 4-arm 실험 (스펙 vFINAL 요약)
+──────────────────────────────────────────
+A FIXED+FULL_DENSE           Fixed-512 · 메타필터+BM25+전량 KURE dense+RRF
+B LINE_WINDOW+LOW_ONLY_DENSE line-window 12/8 · 메타필터+BM25
+                             +LOW-confidence KURE 재정렬
+C FIXED+DENSE_OFF            Fixed-512 · 메타필터+BM25-only (=A에서 dense OFF)
+D LINE_WINDOW+DENSE_OFF      line-window 12/8 · 메타필터+BM25-only
+                             (=B에서 dense OFF)
+
+해석: A↔C, B↔D는 쌍 내 dense 관련 설정 외 조건 동일을 유지하되
+  최종 결과는 완성 스택 간 system-level 비교로 보고한다.
+  C↔D도 서로 다른 청킹·토크나이저·후보 생성을 포함한 두
+  metadata-filtered BM25-only 스택의 system-level 비교이며,
+  청킹 하나의 인과효과로 단정하지 않는다.
+주 판정: LOW(확정 조건 ≤2) all-required-slots-found count
+  · conditions.py 사전 계산+SHA 고정 · LOW<10이면 frozen
+  paraphrase set(정확히 20문항·salt 정렬·독립 검수) 절차
+게이트: Hard safety(provenance·locator 치명 0 — slot-match
+  청크만 검사) → Quality(hard-safe arm 최고 대비 −0.01)
+동률: 최고값 기준 FINAL_TIE_SET → dense-off 우선 →
+  C·D 동률 시 안전성→latency p95→peak RSS→배포 의존성→D
+승자 = PROVISIONAL_WINNER → 동결 → DEV_CHECK(47) one-shot
+  통과 시에만 FINAL_RETRIEVAL_CORE_SELECTED · HOLDOUT 봉인
+메타필터에 Gold 유래 정보 사용 발견 시 실험 전체 INVALID
+Late Expansion은 4-arm 후보가 아님 — PROVISIONAL_WINNER 산출물
+  위 별도 X0/X1 실험, 코어 선택 점수와 혼합 금지,
+  현 후보는 Fixed locator 호환이라 A/C 승리 시 한정
+※ 판정 규칙 전문(1~21번)은 동결된 vFINAL 원문을 따른다 —
+  byte 수정 금지, 변경은 vFINAL 21번 절차로만
+
+──────────────────────────────────────────
+3. 구현 스코프 — 코어와 조건부 게이트
+──────────────────────────────────────────
+[코어 — 무조건]
+· 공개망 배포 + /answer + 캐시·운영(§14)            9/3
+· 검색 코어 확정·통합 — 4-arm PROVISIONAL_WINNER
+  (A/C 계열이면 PG 가용 확인 선행)                  9/3
+· 정책 게이트 · 합성 이식 · 템플릿/발췌 폴백         9/4
+[조건부 — 게이트 통과 시만 · 미검증 기본값은 "없음"]
+· event ledger + ENUMERATION·COUNT·EXISTENCE
+  ← 검증 문항 10~15 집계 정합 100% + dedup          9/4  탈락 시 검색 서술+한계 고지
+· as-of 정정 이식 ← 정정 체인 문항 10 통과           9/4  탈락 시 chain 최신본 우선
+· 수리 호출(기본 OFF) ← 폐기 11건 재실행 구제 ≥5
+  AND 새 위반 0                                     9/4  탈락 시 즉시 템플릿
+· OPEN_ENDED 2-call ← FC 계약 실패율 <5% (표본 30)  9/4  탈락 시 단일 호출
+· 동의어 사전·Late Expansion(X0/X1) ← 의역 실패
+  케이스 존재·별도 실험 통과                        9/5  탈락 시 미포함
+
+──────────────────────────────────────────
+4. 채점 축 → 담당 장치
+──────────────────────────────────────────
+정확성        근거 선택 + as-of + Decimal + period 열 귀속 hard
+근거 완전성   retrieved_context = 실제 사용 근거만
+요구사항 충족 ENUMERATION 전수(조건부) + 합성 커버리지 검사
+근거 기반     hard 게이트: 숫자 slot/claim 귀속
+추론 논리성   think_trace = 번호 매긴 실행 요약
+안전성        정책 게이트(⓪)
+정보한계      답변가능성 조기 판정 + 기간 경계 + 역질문 캘리브레이션
+근거 표시     citation_bound hard (존재+실사용 귀속)
+
+──────────────────────────────────────────
+5. 출처 지도
+──────────────────────────────────────────
+파싱·코퍼스   DocumentIR 4,204건 + parse audit (Workstream A)
+검색·인덱스   4-arm 후보 스택 — A/C 계열(Fixed+KURE+pgvector,
+             retrieval MEASURED) · B/D 계열(line-window 파일 스택).
+             최종 코어는 vFINAL 4-arm 실험이 선정
+에이전트 층   해석·slot·답변가능성·근거선택·계산기·검증·wire
+             (dart_detective — 구 구성 실측 리포트 별도,
+              본 통합 구성 E2E는 NOT YET RUN)
+정정·합성·FC as-of 정정 · 한국어 합성 · HCX Native FC (M-트랙 계열)
+평가         Gold 207 (DEV_TUNE 101/DEV_CHECK 47/HOLDOUT 59) 자체 제작
+
+──────────────────────────────────────────
+6. 파이프라인 (LLM은 ⑧ 한 구간, 승인은 ⑨ 단독)
+──────────────────────────────────────────
+GET /answer → 캐시 히트 시 즉시 반환
+⓪ 정책 게이트: 지시문 무력화 · 투자의견 거절 템플릿
+   · 역질문은 해소 불가일 때만(기본: 유력 해석+대안 한 줄)
+   · 상대 시점은 컷오프 2026-03-31 기준 해석·명시
+① 질문 해석 (conditions·slots)
+② 답변가능성 조기 판정: 카운트 0=NOT_FOUND · 유보=WITHHELD
+   · 기간 밖=OUT_OF_SCOPE → LLM 0회 조기 종료
+③ answer_type + execution_strategy 판정 + 오라우팅 복구(§7)
+④ vFINAL 4-arm에서 선정된 검색 코어 실행 (선확정 없음)
+   · ENUMERATION은 event ledger 전수 병행
+   · PG/인덱스 불가 시에도 B 자동 선택 없음(vFINAL 10번)
+⑤ 근거 선택: 연도열(period_columns)·연결/별도·줄·값 확정
+   — 청크 텍스트가 아니라 locator로 역참조한 Node 원문에서
+⑤' (별도 X0/X1·A/C 한정·PROPOSED) Late Expansion
+⑥ as-of 정정 해소: 시간순+기준일 컷 · 순환/분기/비정정 거부
+   · 부분 정정은 항목 단위, 불확실 시 정정 본문 우선+고지
+⑦ 계산: Decimal, 불확실하면 계산하지 않음
+⑧ HCX-005 Native FC (예산 §12) — 계약 실패는 별도 분류
+⑨ 검증 게이트 hard5+soft2 (§11) → 실패 시 3단 폴백
+⑩ 5-string 직렬화 → 캐시(폴백·degraded 제외) → 로깅
+   · 내부 structured answer와 외부 5필드 계약 분리
+
+──────────────────────────────────────────
+7. 유형·전략
+──────────────────────────────────────────
+answer_type: CLOSED | OPEN_ENDED (외부 노출은 이 둘만)
+strategy 7종: DIRECT_LOOKUP · COMPARISON · CALCULATION ·
+  ENUMERATION · COUNT · EXISTENCE_CHECK · NARRATIVE(기본)
+판정(순서 고정): 집계어+패밀리어 매치 →
+  (몇 건→COUNT / 존재→EXISTENCE / 그 외→ENUMERATION,
+   최상급 "가장·최대"는 ENUMERATION→max로 CLOSED 답)
+  → 서술어(정리·설명·비교·요약·변화)→NARRATIVE
+  → 값 의문+slot≤2→DIRECT_LOOKUP → 기본 NARRATIVE
+복구(전부 trace 기록):
+  DIRECT인데 slot 미확정 → NARRATIVE 재시도 1회(재검색 없음)
+  ledger 0건+문서 존재 / family 밖 / ledger 미채택
+    → NARRATIVE 강등 + "전수 집계 아님" 고지
+실행 매트릭스:
+  DIRECT/COMPARISON/CALC: top8 · 판독1 · max512
+  ENUMERATION: ledger 전수+dedup · 표요약1 · max768
+  COUNT/EXISTENCE: ledger 카운트 · 0~1회(템플릿 우선) · max256
+  NARRATIVE: top20 · 단일1(2-call은 게이트 통과 시) · max1024
+
+──────────────────────────────────────────
+8. 검색·인덱스 (as-built 사실 기록)
+──────────────────────────────────────────
+A/C 계열: Fixed-512/overlap64 · KURE(4ed4540) · BM25 · RRF
+  (원점수 합산 금지) · 기업×문서군×연도 메타필터
+  · resumable loader(committed batch 재개, READY 전
+    duplicate·orphan·count 검증)
+  · 인덱스 상태: §1 "검색 인프라" 그대로 — 전체 인덱스는
+    검증 증빙 전 PENDING, 완료 추측 금지
+B/D 계열: line-window 12/8 · 음절 bigram BM25 · 파일 기반
+  · B만 LOW-confidence 시 KURE 재정렬
+공통 원칙:
+  · 근거 확정은 Node 원문 역참조(청크 머리글 소실 대비)
+  · 문서당 청크 상한 고정 적용 안 함(다중 근거 제거로
+    성능 하락 사례) — 검토 후보로만
+  · 동의어 사전 PROPOSED — 의역 실패 케이스로만 작성
+표 처리 실측: 구조 위반 신호 Fixed 197 · Section 141 ·
+  Adaptive 0(단 비용 1.805배 게이트 실패)
+  · Late Expansion PROPOSED·X0/X1 별도·A/C 한정
+
+──────────────────────────────────────────
+9. 청킹 실험 기록 (비교 조건 구분 — 직접 비교 금지)
+──────────────────────────────────────────
+Fixed/Section/Hierarchical 통제 비교: DEV_TUNE101·R@10
+  → Fixed-512는 A/C 계열 구성 근거 (최종 확정은 4-arm)
+line-window 7종: Gold25·R@20 0.743 — 별도 실험 기록
+  (윈도우 계열 > 표 행 분리 2.4배는 패밀리 수준 참고)
+
+line-window와 Fixed의 최종 재검토는 본 문서의 vFINAL 4-arm
+system-level 비교로 수행한다.
+동일 corpus·Gold·segmentation·metadata interpretation·final top-k·
+scorer·KURE revision을 사용하되, tokenizer·candidate pool·fusion
+방식은 각 스택의 as-built 설정을 유지하고 보고한다.
+
+──────────────────────────────────────────
+10. 평가 수치와 거버넌스
+──────────────────────────────────────────
+DEV_TUNE-101 검색(Fixed 스택): 전부 발견 83 · 일부 6 ·
+  미발견 11 · NOT_FOUND 1 · Evidence R@10 0.868
+  ※ bounded retrieval 결과 — production index 완성 여부·
+    HCX 정답률 아님. 전 평가셋 자체 제작(상대 비교용)
+DEV_TUNE 101 튜닝 자유 · DEV_CHECK 47 동결 후 1회 ·
+  HOLDOUT 59 접근 금지
+
+──────────────────────────────────────────
+11. 검증 게이트 + 3단 폴백
+──────────────────────────────────────────
+hard: quote_grounded(공백만 무시 부분문자열) ·
+  numbers_bound(CLOSED/ENUM=slot의 picked_value∪derived,
+  서술=claim별 doc 귀속) · units_exact(환산 정확 일치,
+  표기 반올림 ±0.5만) · period_bound(값 결합 기간=확정 열,
+  연도+분기/누계) · citation_bound(접수번호∈실사용 근거)
+soft: 서술 연도 존재 · 판단어
+폴백: ①수리 재생성(조건부·기본 OFF — 동일 근거만·새
+  evidence/숫자/날짜 금지·1회) → ②코드 템플릿(합성층 경유)
+  → ③원문 발췌(요구 slot 줄만·문서당 3줄·총 12줄·유보 제외)
+  — 전 단 게이트 재통과 · ②③ 결과는 캐시 금지
+거짓 부정 금지: 생성 결과에 요구 항목 없으면 "검색된 근거
+  내 확인 못 함"으로 톤 다운. 절대 부정은 카운트 0 경로만
+
+──────────────────────────────────────────
+12. HCX 계약
+──────────────────────────────────────────
+HCX-005 · temp 0.1 · seed 고정 · 호출 40초 · 429 백오프 1회
+Native v3 FC submit_grounded_answer 스키마(합의 초안):
+  claims[{text,value?,unit?,period?,period_kind?,doc_id,quote}]
+  · not_found_slots[] · uncertainty — 스키마가 곧 검증 계약
+계약 실패=LLM 문제로 분류(데이터·인프라와 분리)
+2-call은 게이트 통과 시만, 런타임 1차 실패 시 단일로 강등
+프롬프트·스키마 버전+지문 동결
+
+──────────────────────────────────────────
+13. 응답 5필드 규격 (전부 문자열)
+──────────────────────────────────────────
+answer: 사실 문장마다 (공시명, 접수번호, 일자) 인라인 ·
+  큰 숫자 한국어 단위+원 병기 · 확인 불가는 명시
+retrieved_context: 실사용 근거만 · [근거N] 메타|locator+발췌
+  · 근거당 500자·총 8,000자·사용 근거 앞 배치 ·
+  ENUMERATION은 행별 핵심 필드로 축약
+think_trace: 번호 실행 요약 6~10줄 · 내부 enum/디버그 금지
+question_id/question: echo
+
+──────────────────────────────────────────
+14. 운영 계약
+──────────────────────────────────────────
+캐시 key = question_id+sha256(question)+설정 지문
+  (index/model/prompt/code) · 폴백②③·degraded 캐시 제외
+동시성: 세마포어 1 + 클라이언트 단절 시 취소(재시도 좀비
+  겹침 대응) · worker 1 · 기동 preload+워밍업+READY 검증
+데드라인 290초 · 소프트 컷 검색60/LLM40/합성30 ·
+  p95 목표 CLOSED 5초/OPEN 15초
+실패 분류: LLM 계약/데이터 없음/인프라 · 전 요청 로깅
+서비스앱 신청 · 80/443 · 공인 IP · /health·/ready 분리 ·
+  crash 자동 재기동
+
+──────────────────────────────────────────
+15. 통합 코드 지도
+──────────────────────────────────────────
+인덱스·로더(A/C 후보)  코드 IMPLEMENTED · 전체 인덱스 PENDING
+                      · 4-arm 승자일 때만 통합 · PG BLOCKED
+해석·slot·답변가능성   IMPLEMENTED (dart_detective)
+근거 선택             IMPLEMENTED · Node 역참조 어댑터 필요
+strategy 디스패치+복구 PROPOSED (routing.py)
+event ledger          PROPOSED (build+dedup+검증 게이트)
+as-of 정정·합성       IMPLEMENTED · 전이 검증 문항 게이트
+HCX FC 클라이언트      MEASURED · 스키마 합의 필요
+검증 게이트 강화분     기존 IMPLEMENTED / bound 계열 PROPOSED
+정책 게이트·캐시·운영  PROPOSED
+
+──────────────────────────────────────────
+15.5 코드·폴더 구조
+──────────────────────────────────────────
+※ 검색 코어는 4-arm 판정 전이므로 두 계열을 후보로 병기한다.
+  승자 확정 후 탈락 계열은 실험 기록으로만 보존한다.
+
+src/
+├─ dart_corpus/                  # 파싱·검색 코어(B/D 계열 포함) — 수정 금지
+│  ├─ parsing/                   # DocumentIR 생성 (4,204건 완료)
+│  │   canonical_parser.py  document_ir.py  section_builder.py
+│  │   table_serializer.py  sniff.py  encoding.py  audit.py
+│  ├─ chunking/                  # chunk_ir · node_text · tokenizer · ids
+│  ├─ retrieval/                 # B/D 계열 검색 코어
+│  │   conditions.py             # 조건 추출 — vFINAL 세그먼트 계산기(단일 사용)
+│  │   corp_dictionary.py        # 기업 사전 (별칭·종목코드)
+│  │   document_index.py         # 문서 검색 · chain 확장
+│  │   chunk_index.py            # line-window 청킹·청크 검색
+│  │   chains.py                 # 정정 링크 · 원공시 접수일
+│  │   lexical.py                # BM25 + 음절 bigram
+│  ├─ contract/  evaluation/
+│
+└─ dart_detective/               # 에이전트 층 — 여기서만 확장
+   ├─ qa_service.py              # 엔드포인트 · 캐시 · 세마포어 · 데드라인 · 로깅
+   ├─ answer_wire.py             # 5-string 직렬화 (§13 규격)
+   ├─ corpus_retriever.py        # 검색 오케스트레이션 (선정 코어 어댑터 호출)
+   ├─ llm.py                     # HCX Native FC 클라이언트 · 예산 · 계약 실패 분류
+   ├─ policy_gate.py             # 신규 ⓪ 정책 게이트
+   ├─ routing.py                 # 신규 ③ answer_type·strategy 판정 + 복구
+   ├─ retriever_adapter.py       # 신규 ④ 4-arm 승자 코어 바인딩 +
+   │                             #        Node 역참조(locator→원문) 공통 계약
+   ├─ fallback.py                # 신규 ⑨ 3단 폴백 (수리 플래그 기본 OFF)
+   ├─ prompts/                   # closed · enum_summary · narrative
+   │                             #   · narrative_2call(게이트 통과 시) · repair + VERSION
+   └─ agents/
+      ├─ qa_agent.py             # slot · match_evidence · period_columns
+      ├─ answerability.py        # ② 조기 판정 (+ 기간 경계 2023.01~2026.03)
+      ├─ calculator.py  validator.py  confidence.py
+      │                          # validator: bound 계열 강화분은 PROPOSED
+      ├─ corrections.py          # 이식 ⑥ as-of (정정 문항 10개 게이트)
+      ├─ event_trace.py          # 이식 · 여력 시
+      └─ synthesis/              # 이식 ⑩ 한국어 합성
+          natural_label.py  number_format.py  particles.py  composer.py
+
+(별도 저장소·브랜치) A/C 계열 팀 검색 스택
+   Fixed-512 청킹 · KURE(4ed4540) · pgvector 인덱스 · resumable loader
+   — 코드 IMPLEMENTED · 전체 인덱스 PENDING(§1)
+   — 4-arm 승자일 때만 retriever_adapter로 통합
+
+scripts/
+   ├─ build_events.py            # 신규 · events.jsonl 생성 + dedup + 표본 대조
+   ├─ make_list_gold.py          # 신규 · ENUMERATION·정정 검증 문항 보조
+   └─ (4-arm 러너·공용 채점기 — vFINAL 15번 config 동결 대상)
+
+docs/specs/
+   └─ 4arm-vfinal-spec.txt       # 권위 문서 (SHA는 아래 참조)
+
+data/                            # 리포 밖 · 환경변수 주입
+   doc_index.jsonl               # DART_QA_DOC_INDEX
+   evidence_documents.jsonl      # DART_QA_DOCUMENTS
+   universe.csv                  # DART_QA_UNIVERSE
+   events.jsonl                  # DART_QA_EVENTS (조건부)
+   metric_synonyms.json          # DART_QA_SYNONYMS (조건부)
+.model-cache/                    # KURE-v1 (rev pin 검증 후 사용)
+
+──────────────────────────────────────────
+16. 검증 계획
+──────────────────────────────────────────
+★ 4-arm 실험 — vFINAL 그대로 → PROVISIONAL_WINNER
+0 기업 별칭 커버리지 점검(70개, 1~2시간)
+1 별도 후속 의역 실험 (+BM25 후보 내 정답 존재율 지표)
+  — vFINAL LOW_UNDERPOWERED의 frozen paraphrase 절차와 혼합 금지
+2 DEV_TUNE-101 통합 E2E (현재 NOT YET RUN — 회귀 기준선)
+3 ENUMERATION 10~15(최상급 포함) + 정정 체인 10
+4 수리 11건 + FC 계약 실패율 30문항
+5 안전 세트(인젝션·투자의견·다의기업·빈/초장문·기간 밖)
+6 배포 리허설(재시도 겹침·재기동·인덱스 READY)
+실패 태깅: 검색 미스|근거 오귀속|정정 오귀속|합성 실패|
+  LLM 계약|라우팅 오분류
+
+──────────────────────────────────────────
+17. 실행 체크리스트 (비규범적 — vFINAL 변경 없음)
+──────────────────────────────────────────
+1 input/config/code/filter SHA 고정
+2 A↔C, B↔D config-diff 검증
+3 네 arm readiness 확인
+4 A/B/C/D 실행
+5 metadata non-leak 검사
+6 UNRESOLVED 발생 시에만 vFINAL 16번
+7 Hard safety gate
+8 hard-safe 기준 Quality gate
+9 실제 LOW 비교
+10 LOW<10일 때만 frozen paraphrase 절차
+11 FINAL_TIE_SET + 조건부 tie-break
+12 PROVISIONAL_WINNER 동결
+13 DEV_CHECK one-shot
+14 FINAL_RETRIEVAL_CORE_SELECTED 또는 BLOCKED
+
+──────────────────────────────────────────
+18. 변경 로그 (v3 → v4)
+──────────────────────────────────────────
+· 구형 4-arm 블록(LOW 합산·전체 최고치 기준·후보 예산
+  강제·dense 기여 단정) 삭제 — 신·구 공존 제거
+· 해석 문구 vFINAL 정합화 (system-level, 인과 단정 제거)
+· 검색 코어 선확정 제거 (④·출처·검색 스펙·코드 지도)
+· 인덱스 상태 사실화 (전체 PENDING · shard만 READY)
+· retrieval / 통합 E2E 분리 (통합 E2E = NOT YET RUN)
+· PG 불가 시 자동 전환 제거 → vFINAL 10번 준수
+· Late Expansion X0/X1 분리 (A/C 한정)
+· arm ID를 runner ID와 완전 일치 표기
+· §9 재검토 조건에서 "동일 RRF" 삭제 (as-built 정합)
+· 부록을 권위 문서 참조(SHA pin)로 전환
+
+──────────────────────────────────────────
+[권위 문서 참조] 4-arm 사전 등록 스펙 vFINAL
+──────────────────────────────────────────
+- authoritative file: 4arm-vfinal-spec.txt
+  (팀 저장소 확정 위치에 커밋 — 예: docs/specs/)
+- SHA-256:
+  1a856dada61135df7c79f2cfc3c541a5fee8e820927e70786d00368db42da9f5
+- frozen_at: 2026-09-03
+- rules: 1~21 + 판정 체인
+- Team Architecture v4의 요약과 충돌할 경우
+  위 SHA로 고정된 vFINAL 원문이 우선한다.
+- vFINAL 변경은 21번 절차로만 허용한다.
+══════════════════════════════════════════════════════════
