@@ -66,6 +66,11 @@ const pairs = [
     "domain/agent-comparison/interfaces/model-config.schema.json",
     "domain/agent-comparison/interfaces/examples/model-config.hcx.example.json",
   ],
+  // Turn P11-E: additive HCX_NATIVE_V3_FUNCTION_CALLING kind on the same schema.
+  [
+    "domain/agent-comparison/interfaces/model-config.schema.json",
+    "domain/agent-comparison/interfaces/examples/model-config.hcx-native-fc.example.json",
+  ],
   [
     "domain/agent-comparison/interfaces/telemetry-event.schema.json",
     "domain/agent-comparison/interfaces/examples/telemetry-event.example.json",

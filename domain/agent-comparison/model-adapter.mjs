@@ -37,6 +37,17 @@
 // contract (fail-closed schema-version pinning, loopback-only mock
 // authorization, endpoint HTTPS/hostname checks).
 //
+// Turn P11-E: kind:"HCX_NATIVE_V3_FUNCTION_CALLING" is the officially
+// registered adapter for HCX-005's Native v3 Function Calling protocol --
+// the candidate P11-D's bounded real-API comparison selected (15/15, zero
+// violations; response_format=json_schema went 0/15 HTTP 400 on the same
+// run). Its request builder and structural parsers are reused UNCHANGED
+// from hcx-structured-protocol/envelope-native-v3.mjs; see
+// hcx-native-function-calling-adapter.mjs's own header for the full
+// contract (forced single submit_grounded_answer tool call, fixed
+// clovastudio.stream.ntruss.com hostname with no loopback-mock exception,
+// bounded 429/5xx-only retry).
+//
 // RESPONSE CONTRACT (Turn P1.1): generate() resolves to
 // { text, used_fact_ids: string[], used_evidence_ids: string[],
 //   input_tokens, output_tokens, estimated_cost, finish_reason }.
@@ -60,6 +71,7 @@
 import { validateModelConfig } from "./contracts.mjs";
 import { createDeterministicFakeModelAdapter } from "./fake-model-adapter.mjs";
 import { createHcxChatCompletionsModelAdapter } from "./hcx-model-adapter.mjs";
+import { createHcxNativeFunctionCallingModelAdapter } from "./hcx-native-function-calling-adapter.mjs";
 import { ModelAdapterUnavailableError } from "./model-adapter-unavailable-error.mjs";
 import { ModelCallError } from "./model-call-error.mjs";
 import { parseStructuredAnswer } from "./structured-answer-parsing.mjs";
@@ -184,6 +196,9 @@ export function createModelAdapter(config, options = {}) {
   }
   if (config.kind === "HCX_CHAT_COMPLETIONS") {
     return createHcxChatCompletionsModelAdapter(config, options);
+  }
+  if (config.kind === "HCX_NATIVE_V3_FUNCTION_CALLING") {
+    return createHcxNativeFunctionCallingModelAdapter(config, options);
   }
   throw new InvalidModelConfigError([`unsupported kind: ${config.kind}`]);
 }

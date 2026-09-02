@@ -1,0 +1,14 @@
+{
+  "schema_version": "0.1.0",
+  "model_config_id": "model_hcx-native-fc-test-fixture-v1",
+  "kind": "HCX_NATIVE_V3_FUNCTION_CALLING",
+  "provider": "hcx",
+  "model": "HCX-005",
+  "endpoint_url": "https://clovastudio.stream.ntruss.com/v3/chat-completions/HCX-005",
+  "api_key_env_var": "AGENT_COMPARISON_HCX_NATIVE_FC_TEST_API_KEY",
+  "max_output_tokens": 1024,
+  "temperature": 0,
+  "top_p": 0.8,
+  "timeout_ms": 15000,
+  "actual_external_call_authorized": false
+}

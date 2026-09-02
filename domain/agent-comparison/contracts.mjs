@@ -41,7 +41,13 @@ export const AGENT_VARIANT_IDS = Object.freeze([
 // Turn P11-A: HCX_CHAT_COMPLETIONS added -- HyperCLOVA X's own distinct
 // request/response envelope, never routed through the generic
 // HTTP_CHAT_COMPLETIONS branch (see model-adapter.mjs / hcx-model-adapter.mjs).
-export const MODEL_ADAPTER_KINDS = Object.freeze(["FAKE_DETERMINISTIC", "HTTP_CHAT_COMPLETIONS", "HCX_CHAT_COMPLETIONS"]);
+// Turn P11-E: HCX_NATIVE_V3_FUNCTION_CALLING added -- the official,
+// registered adapter for the protocol P11-D's real-API comparison selected
+// (see model-adapter.mjs / hcx-native-function-calling-adapter.mjs). Never
+// routed through HCX_CHAT_COMPLETIONS's own plain-content-JSON branch.
+export const MODEL_ADAPTER_KINDS = Object.freeze([
+  "FAKE_DETERMINISTIC", "HTTP_CHAT_COMPLETIONS", "HCX_CHAT_COMPLETIONS", "HCX_NATIVE_V3_FUNCTION_CALLING",
+]);
 
 // Turn P1.1: the closed set of citation_binding_status values a
 // TelemetryEvent may carry -- PASS (a model-generated answer's citations

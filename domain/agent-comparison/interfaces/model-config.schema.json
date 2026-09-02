@@ -14,8 +14,8 @@
       "description": "Stable identifier for this exact provider+model+parameter combination, used to join telemetry back to a configuration without re-deriving it from free text."
     },
     "kind": {
-      "enum": ["FAKE_DETERMINISTIC", "HTTP_CHAT_COMPLETIONS", "HCX_CHAT_COMPLETIONS"],
-      "description": "Which generic adapter implementation to construct. FAKE_DETERMINISTIC never makes a network call. HTTP_CHAT_COMPLETIONS is a single generic OpenAI-Chat-Completions-shaped HTTP client reused across providers that speak that exact envelope. HCX_CHAT_COMPLETIONS (Turn P11-A) is HyperCLOVA X's own distinct request/response envelope (messages/topP/topK/maxTokens fields, a status+result response shape) -- see hcx-model-adapter.mjs; it is never routed through the generic HTTP_CHAT_COMPLETIONS branch. In every case the provider/model/endpoint are fully config-driven, not branched on by name in code."
+      "enum": ["FAKE_DETERMINISTIC", "HTTP_CHAT_COMPLETIONS", "HCX_CHAT_COMPLETIONS", "HCX_NATIVE_V3_FUNCTION_CALLING"],
+      "description": "Which generic adapter implementation to construct. FAKE_DETERMINISTIC never makes a network call. HTTP_CHAT_COMPLETIONS is a single generic OpenAI-Chat-Completions-shaped HTTP client reused across providers that speak that exact envelope. HCX_CHAT_COMPLETIONS (Turn P11-A) is HyperCLOVA X's own distinct request/response envelope (messages/topP/topK/maxTokens fields, a status+result response shape) -- see hcx-model-adapter.mjs; it is never routed through the generic HTTP_CHAT_COMPLETIONS branch. HCX_NATIVE_V3_FUNCTION_CALLING (Turn P11-E) is HCX-005's Native v3 Function Calling protocol -- a forced single submit_grounded_answer tool call, promoted from P11-D's bounded real-API comparison winner -- see hcx-native-function-calling-adapter.mjs; its endpoint hostname is fixed to clovastudio.stream.ntruss.com with no loopback-mock exception. In every case the provider/model/endpoint are fully config-driven, not branched on by name in code."
     },
     "provider": { "type": "string", "minLength": 1, "description": "Free-text provider label for telemetry/reporting only (e.g. \"anthropic\", \"openai\", \"hcx\"). Never used to select code paths." },
     "model": { "type": "string", "minLength": 1, "description": "Free-text model name for telemetry/reporting only (e.g. \"claude-sonnet-5\"). Never hardcoded inside Agent flow code." },
@@ -69,6 +69,25 @@
           "request_schema_version": { "type": "string", "minLength": 1 },
           "response_schema_version": { "type": "string", "minLength": 1 },
           "actual_external_call_authorized": { "type": "boolean" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "HCX_NATIVE_V3_FUNCTION_CALLING" } }, "required": ["kind"] },
+      "then": {
+        "required": ["endpoint_url", "api_key_env_var", "top_p", "actual_external_call_authorized"],
+        "properties": {
+          "endpoint_url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Must be https://clovastudio.stream.ntruss.com/v3/chat-completions/{model} with {model} exactly equal to this config's own `model` field -- both checked at adapter construction time (hcx-native-function-calling-adapter.mjs's assertEndpointAndAuthorization), zero fetch calls if either check fails."
+          },
+          "api_key_env_var": { "type": "string", "minLength": 1 },
+          "top_p": { "type": "number", "minimum": 0, "maximum": 1 },
+          "actual_external_call_authorized": {
+            "type": "boolean",
+            "description": "Must be true for the adapter to construct at all -- there is no loopback-mock exception for this kind (unlike HCX_CHAT_COMPLETIONS's allowLoopbackMockCalls option); tests inject fetchImpl against the real hostname instead."
+          }
         }
       }
     }

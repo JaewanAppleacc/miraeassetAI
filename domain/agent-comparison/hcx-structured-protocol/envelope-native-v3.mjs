@@ -23,13 +23,23 @@ export function toolParametersSchema(commonSchema) {
   return rest;
 }
 
-export function buildFunctionCallingRequestBody({ prompt, maxOutputTokens, parametersSchema }) {
+// `system`/`topP`/`temperature` (Turn P11-E, optional, additive): the
+// bounded P11-D smoke never passed these (no system message, topP=0.8 and
+// temperature=0 fixed for determinism) -- every existing P11-D call site
+// keeps that exact behavior unchanged via these defaults. The official
+// adapter (hcx-native-function-calling-adapter.mjs) is the only caller that
+// ever passes them explicitly, threading them from ModelConfig/request the
+// same way every other ModelAdapter kind already does.
+export function buildFunctionCallingRequestBody({ prompt, system, maxOutputTokens, parametersSchema, topP = 0.8, temperature = 0 }) {
+  const messages = [];
+  if (typeof system === "string" && system !== "") messages.push({ role: "system", content: system });
+  messages.push({ role: "user", content: prompt });
   return {
-    messages: [{ role: "user", content: prompt }],
-    topP: 0.8,
+    messages,
+    topP,
     topK: 0,
     maxTokens: Math.max(maxOutputTokens, FUNCTION_CALLING_MIN_MAX_TOKENS),
-    temperature: 0,
+    temperature,
     repetitionPenalty: 1.1,
     stop: [],
     includeAiFilters: true,
