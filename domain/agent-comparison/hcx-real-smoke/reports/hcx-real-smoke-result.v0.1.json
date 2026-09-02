@@ -1,9 +1,9 @@
 {
-  "schema_version": "0.1.0",
-  "run_id": "hcx_real_smoke_8ee6249914884e16baa0b11b0918c93b",
-  "created_at": "2026-09-01T22:03:57.887Z",
-  "requests_attempted": 4,
-  "requests_succeeded": 2,
+  "schema_version": "0.2.0",
+  "run_id": "hcx_real_smoke_cffcde8ed8d04ff5aaef9deee3cca3c3",
+  "created_at": "2026-09-01T23:03:55.534Z",
+  "requests_attempted": 5,
+  "requests_succeeded": 3,
   "requests_failed": 2,
   "retries_performed": 0,
   "scenarios": [
@@ -11,40 +11,86 @@
       "scenario_type": "SHORT_KOREAN_FACT_SUMMARY",
       "outcome": "SUCCESS",
       "attempt_count": 1,
-      "last_error_code": null
+      "last_error_code": null,
+      "diagnostics": {
+        "http_status": 200,
+        "content_type_mime": "application/json",
+        "outer_envelope_class": "VALID",
+        "assistant_content_class": "PLAIN_JSON",
+        "assistant_content_length": 94,
+        "finish_reason": null
+      }
     },
     {
       "scenario_type": "STRUCTURED_JSON_RESPONSE",
-      "outcome": "SUCCESS",
+      "outcome": "FAILURE",
       "attempt_count": 1,
-      "last_error_code": null
+      "last_error_code": "MODEL_CALL_MALFORMED_RESPONSE",
+      "diagnostics": {
+        "http_status": 200,
+        "content_type_mime": "application/json",
+        "outer_envelope_class": "VALID",
+        "assistant_content_class": "NOT_JSON_AT_ALL",
+        "assistant_content_length": 57,
+        "finish_reason": null
+      }
     },
     {
       "scenario_type": "INFORMATION_LIMIT_RESPONSE",
-      "outcome": "FAILURE",
+      "outcome": "SUCCESS",
       "attempt_count": 1,
-      "last_error_code": "MODEL_CALL_MALFORMED_RESPONSE"
+      "last_error_code": null,
+      "diagnostics": {
+        "http_status": 200,
+        "content_type_mime": "application/json",
+        "outer_envelope_class": "VALID",
+        "assistant_content_class": "PLAIN_JSON",
+        "assistant_content_length": 106,
+        "finish_reason": null
+      }
     },
     {
       "scenario_type": "NUMBER_DATE_FORMAT_RESPONSE",
       "outcome": "FAILURE",
       "attempt_count": 1,
-      "last_error_code": "MODEL_CALL_MALFORMED_RESPONSE"
+      "last_error_code": "MODEL_CALL_MALFORMED_RESPONSE",
+      "diagnostics": {
+        "http_status": 200,
+        "content_type_mime": "application/json",
+        "outer_envelope_class": "VALID",
+        "assistant_content_class": "NOT_JSON_AT_ALL",
+        "assistant_content_length": 38,
+        "finish_reason": null
+      }
+    },
+    {
+      "scenario_type": "SAFE_EDGE_CASE_INPUT",
+      "outcome": "SUCCESS",
+      "attempt_count": 1,
+      "last_error_code": null,
+      "diagnostics": {
+        "http_status": 200,
+        "content_type_mime": "application/json",
+        "outer_envelope_class": "VALID",
+        "assistant_content_class": "PLAIN_JSON",
+        "assistant_content_length": 116,
+        "finish_reason": null
+      }
     }
   ],
   "latency_ms": {
-    "p50_ms": 1208,
-    "p95_ms": 1603,
-    "max_ms": 1603,
-    "count": 4
+    "p50_ms": 1201,
+    "p95_ms": 1981,
+    "max_ms": 1981,
+    "count": 5
   },
   "token_usage_aggregate": {
-    "input_tokens_total": 162,
-    "output_tokens_total": 65
+    "input_tokens_total": 331,
+    "output_tokens_total": 120
   },
   "estimated_cost_total": null,
-  "duration_ms": 5110,
-  "stopped_early_reason": "REPEATED_ERRORS",
+  "duration_ms": 6480,
+  "stopped_early_reason": null,
   "validation_checklist": [
     {
       "item": "endpoint_https_confirmed",
@@ -69,7 +115,7 @@
     {
       "item": "structured_answer_parser_passed",
       "status": "PASS",
-      "detail": "2 successful parse(s)"
+      "detail": "3 successful parse(s)"
     },
     {
       "item": "timeout_within_configured_bound",

@@ -9,6 +9,14 @@ export function buildConfigArtifact(loaded) {
   return loaded.redacted;
 }
 
+const EMPTY_DIAGNOSTICS = Object.freeze({
+  http_status: null, content_type_mime: null, outer_envelope_class: null,
+  assistant_content_class: null, assistant_content_length: null, finish_reason: null,
+});
+
+// Turn P11-C: diagnostics from the LAST attempt only (mirrors last_error_code's
+// own existing "last attempt is the final fate" convention) -- never a raw
+// prompt/response value, see CLAUDE.md Turn P11-C section B's allowed field list.
 function scenarioSummary(scenarioResult) {
   const lastAttempt = scenarioResult.attempts[scenarioResult.attempts.length - 1];
   return {
@@ -16,12 +24,13 @@ function scenarioSummary(scenarioResult) {
     outcome: scenarioResult.outcome,
     attempt_count: scenarioResult.attempts.length,
     last_error_code: lastAttempt && !lastAttempt.ok ? lastAttempt.error_code : null,
+    diagnostics: lastAttempt?.diagnostics ?? EMPTY_DIAGNOSTICS,
   };
 }
 
 export function buildResultArtifact(loaded, runResult, { runId, createdAt }) {
   return {
-    schema_version: "0.1.0",
+    schema_version: "0.2.0",
     run_id: runId,
     created_at: createdAt,
     requests_attempted: runResult.requestsAttempted,

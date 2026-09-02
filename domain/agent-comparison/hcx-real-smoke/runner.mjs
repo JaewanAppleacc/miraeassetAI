@@ -15,10 +15,31 @@ import { createModelAdapter } from "../model-adapter.mjs";
 import { HARD_LIMITS } from "./hard-limits.mjs";
 import { HCX_REAL_SMOKE_SCENARIOS } from "./scenarios.mjs";
 
+// Turn P11-C: prefers the adapter's own structured error.diagnostics.http_status
+// (set by hcx-model-adapter.mjs) over parsing it back out of the fixed error
+// message -- the message-regex path is kept only as a fallback for an error
+// shape that never carried diagnostics (e.g. a plain Error).
 function extractHttpStatus(error) {
+  if (Number.isFinite(error?.diagnostics?.http_status)) return error.diagnostics.http_status;
   if (typeof error?.message !== "string") return null;
   const match = error.message.match(/\((\d{3})\)/);
   return match ? Number(match[1]) : null;
+}
+
+// Turn P11-C: the fixed, non-sensitive diagnostic bundle for one attempt
+// (see CLAUDE.md Turn P11-C section B's allowed field list). `null` fields
+// mean "not applicable/not reached this attempt", never omitted -- so every
+// attempt entry has the exact same shape whether it succeeded or failed.
+function attemptDiagnostics(source) {
+  const d = source?.diagnostics ?? null;
+  return {
+    http_status: Number.isFinite(d?.http_status) ? d.http_status : null,
+    content_type_mime: typeof d?.content_type_mime === "string" ? d.content_type_mime : null,
+    outer_envelope_class: typeof d?.outer_envelope_class === "string" ? d.outer_envelope_class : null,
+    assistant_content_class: typeof d?.assistant_content_class === "string" ? d.assistant_content_class : null,
+    assistant_content_length: Number.isFinite(d?.assistant_content_length) ? d.assistant_content_length : null,
+    finish_reason: typeof d?.finish_reason === "string" ? d.finish_reason : null,
+  };
 }
 
 function isRetryableHttpError(errorCode, httpStatus) {
@@ -59,8 +80,15 @@ const EMPTY_RUN_RESULT = Object.freeze({
 // `loaded`: the object returned by loadHcxRealSmokeConfig() (config.mjs).
 // `options.fetchImpl`: test-only injected fetch (never used for a real run;
 // omitted entirely when actually connecting to the real endpoint).
+// `options.maxRequestsOverride` (Turn P11-C, optional): allows ONE caller-
+// supplied run to use a request ceiling LOWER than HARD_LIMITS.MAXIMUM_REQUESTS
+// -- never higher, `Math.min` below makes raising it impossible even if a
+// caller passes a larger number.
 export async function runHcxRealSmoke(loaded, options = {}) {
   const startedAt = Date.now();
+  const maxRequests = Number.isFinite(options.maxRequestsOverride)
+    ? Math.max(0, Math.min(options.maxRequestsOverride, HARD_LIMITS.MAXIMUM_REQUESTS))
+    : HARD_LIMITS.MAXIMUM_REQUESTS;
 
   if (!loaded.ready) {
     return { ...EMPTY_RUN_RESULT, stoppedEarlyReason: "MISSING_CREDENTIALS" };
@@ -92,14 +120,14 @@ export async function runHcxRealSmoke(loaded, options = {}) {
   let costProvided = false;
 
   for (const scenario of HCX_REAL_SMOKE_SCENARIOS) {
-    if (requestsAttempted >= HARD_LIMITS.MAXIMUM_REQUESTS) { stoppedEarlyReason = "MAX_REQUESTS_REACHED"; break; }
+    if (requestsAttempted >= maxRequests) { stoppedEarlyReason = "MAX_REQUESTS_REACHED"; break; }
     if (Date.now() - startedAt >= HARD_LIMITS.OVERALL_TIME_BUDGET_MS) { stoppedEarlyReason = "TIME_BUDGET_EXCEEDED"; break; }
     if (consecutiveScenarioFailures >= HARD_LIMITS.CONSECUTIVE_SCENARIO_FAILURES_TO_STOP) { stoppedEarlyReason = "REPEATED_ERRORS"; break; }
 
     const scenarioAttempts = [];
     let outcome = null;
     let attempt = 0;
-    while (attempt < HARD_LIMITS.RETRY_MAX_ATTEMPTS && requestsAttempted < HARD_LIMITS.MAXIMUM_REQUESTS) {
+    while (attempt < HARD_LIMITS.RETRY_MAX_ATTEMPTS && requestsAttempted < maxRequests) {
       attempt += 1;
       requestsAttempted += 1;
       const callStartedAt = Date.now();
@@ -112,7 +140,7 @@ export async function runHcxRealSmoke(loaded, options = {}) {
         if (Number.isFinite(result?.input_tokens)) { inputTokensTotal += result.input_tokens; tokensProvided = true; }
         if (Number.isFinite(result?.output_tokens)) { outputTokensTotal += result.output_tokens; tokensProvided = true; }
         if (Number.isFinite(result?.estimated_cost) && result.estimated_cost > 0) { estimatedCostTotal += result.estimated_cost; costProvided = true; }
-        scenarioAttempts.push({ attempt, ok: true, latency_ms: latencyMs, error_code: null, http_status: null });
+        scenarioAttempts.push({ attempt, ok: true, latency_ms: latencyMs, error_code: null, http_status: attemptDiagnostics(result).http_status, diagnostics: attemptDiagnostics(result) });
         outcome = "SUCCESS";
         break;
       } catch (error) {
@@ -122,7 +150,7 @@ export async function runHcxRealSmoke(loaded, options = {}) {
         const errorCode = typeof error?.code === "string" ? error.code : "MODEL_CALL_UNKNOWN_ERROR";
         const httpStatus = extractHttpStatus(error);
         const looksEmptyResponse = errorCode === "MODEL_CALL_MALFORMED_RESPONSE" && /empty/i.test(error?.message ?? "");
-        scenarioAttempts.push({ attempt, ok: false, latency_ms: latencyMs, error_code: errorCode, http_status: httpStatus, looks_empty_response: looksEmptyResponse });
+        scenarioAttempts.push({ attempt, ok: false, latency_ms: latencyMs, error_code: errorCode, http_status: httpStatus, looks_empty_response: looksEmptyResponse, diagnostics: attemptDiagnostics(error) });
         const retryable = isRetryableHttpError(errorCode, httpStatus);
         if (!retryable || attempt >= HARD_LIMITS.RETRY_MAX_ATTEMPTS) {
           outcome = "FAILURE";

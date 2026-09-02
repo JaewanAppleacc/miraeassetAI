@@ -47,6 +47,22 @@ export const SUPPORTED_HCX_RESPONSE_SCHEMA_VERSIONS = Object.freeze(["hcx-chat-c
 
 const LOOPBACK_HOSTNAMES = new Set(["127.0.0.1", "localhost", "::1", "[::1]"]);
 
+// Turn P11-C: the Content-Type MIME type only (e.g. "application/json"),
+// never the full header value (which could in principle carry a
+// provider-specific charset/boundary detail) -- safe to record in a
+// diagnostic artifact. Returns null when the response has no readable
+// headers (e.g. a minimal test fixture) or no content-type header at all.
+function extractContentTypeMime(response) {
+  try {
+    const raw = typeof response?.headers?.get === "function" ? response.headers.get("content-type") : null;
+    if (typeof raw !== "string") return null;
+    const mime = raw.split(";")[0].trim().toLowerCase();
+    return mime === "" ? null : mime;
+  } catch {
+    return null;
+  }
+}
+
 function costFor(tokens, costPer1k) {
   if (typeof costPer1k !== "number" || !Number.isFinite(costPer1k)) return 0;
   return (tokens / 1000) * costPer1k;
@@ -122,21 +138,106 @@ function buildHcxRequestBody(request, config) {
   return body;
 }
 
+// Turn P11-C: classifies the OUTER HCX envelope structurally, before any
+// assistant-content parsing is attempted. Exported (pure, no I/O) so it is
+// independently unit-testable without a real network call. Never returns
+// or logs any field value from `body` itself -- only which shape class it
+// falls into.
+export function classifyHcxOuterEnvelope(body) {
+  if (typeof body?.status?.code !== "string") return "MISSING_STATUS_CODE";
+  if (body.status.code !== "20000") return "STATUS_NOT_SUCCESS";
+  if (typeof body?.result?.message?.content !== "string") return "MISSING_MESSAGE_CONTENT";
+  return "VALID";
+}
+
+// A single ```json ... ``` fence wrapping the ENTIRE trimmed string, and
+// nothing else outside it. Anchored at both ends -- this is deliberately
+// NOT a search-anywhere-in-the-string pattern (CLAUDE.md Turn P11-C
+// section C: "임의 정규식으로 JSON 일부만 추출하는 방식" stays fail-closed).
+const SINGLE_JSON_FENCE_PATTERN = /^```json\s*\n([\s\S]*?)\n?```$/;
+
+function isSyntacticJson(candidate) {
+  try {
+    JSON.parse(candidate);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Turn P11-C: classifies the assistant `content` string and, for the two
+// allowed shapes only, returns the exact JSON text to hand to
+// parseStructuredAnswer. Every other class returns extractedJsonText:null
+// -- a fail-closed refusal to guess at partial/embedded/multi-block JSON.
+// Exported (pure, no I/O) for direct unit testing.
+export function classifyHcxAssistantContent(rawContent) {
+  const trimmed = rawContent.trim();
+  if (trimmed === "") return { content_class: "EMPTY", extractedJsonText: null };
+
+  // Allowed shape 1: the whole trimmed string is exactly one JSON value.
+  if (isSyntacticJson(trimmed)) return { content_class: "PLAIN_JSON", extractedJsonText: trimmed };
+
+  // Allowed shape 2: the whole trimmed string is exactly one ```json fence
+  // wrapping exactly one JSON value -- nothing before or after the fence.
+  const fenceMatch = SINGLE_JSON_FENCE_PATTERN.exec(trimmed);
+  if (fenceMatch) {
+    const inner = fenceMatch[1].trim();
+    if (isSyntacticJson(inner)) return { content_class: "FENCED_JSON", extractedJsonText: inner };
+    return { content_class: "FENCED_INVALID_JSON", extractedJsonText: null }; // e.g. truncated JSON inside an otherwise-single fence
+  }
+
+  // Anything else with fence markers present -- multiple fences, or a
+  // fence with explanatory text before/after it outside the anchors above
+  // -- is rejected without ever trying to extract a substring from it.
+  const fenceMarkerCount = (trimmed.match(/```/g) ?? []).length;
+  if (fenceMarkerCount > 0) return { content_class: "MULTIPLE_OR_PARTIAL_FENCE_BLOCKS", extractedJsonText: null };
+
+  // No fence markers, not directly parseable JSON: either explanatory text
+  // wrapping/preceding a JSON value, or truncated JSON, or not JSON at all.
+  if (/[{[]/.test(trimmed)) return { content_class: "TEXT_WITH_EMBEDDED_OR_TRUNCATED_JSON", extractedJsonText: null };
+  return { content_class: "NOT_JSON_AT_ALL", extractedJsonText: null };
+}
+
 // Parses the HCX v3-shaped response envelope down to the same
 // {text, used_fact_ids, used_evidence_ids, input_tokens, output_tokens}
 // shape parseStructuredAnswer already produces for the generic adapter,
 // plus this adapter's own two additional structural checks the shared
 // generic parser does not perform (see the two comments below for why each
-// is scoped here rather than in the shared parser).
+// is scoped here rather than in the shared parser), plus (Turn P11-C) a
+// tolerance for a single ```json fence wrapping the whole assistant
+// content, and non-sensitive diagnostics attached to every outcome (see
+// this file's header and CLAUDE.md Turn P11-C section B for the allowed
+// diagnostic field list -- never a raw body/content value).
 function parseHcxResponseBody(body) {
-  if (body?.status?.code !== "20000") {
-    throw new ModelCallError("MODEL_CALL_MALFORMED_RESPONSE", "model response status.code did not indicate success");
+  const finishReason = typeof body?.result?.stopReason === "string" ? body.result.stopReason : null;
+  const outerEnvelopeClass = classifyHcxOuterEnvelope(body);
+  if (outerEnvelopeClass !== "VALID") {
+    const diagnostics = { outer_envelope_class: outerEnvelopeClass, assistant_content_class: null, assistant_content_length: null, finish_reason: finishReason };
+    const message = outerEnvelopeClass === "STATUS_NOT_SUCCESS"
+      ? "model response status.code did not indicate success"
+      : "model response did not contain result.message.content";
+    throw new ModelCallError("MODEL_CALL_MALFORMED_RESPONSE", message, { diagnostics });
   }
-  const rawContent = body?.result?.message?.content;
-  if (typeof rawContent !== "string") {
-    throw new ModelCallError("MODEL_CALL_MALFORMED_RESPONSE", "model response did not contain result.message.content");
+
+  const rawContent = body.result.message.content;
+  const { content_class: assistantContentClass, extractedJsonText } = classifyHcxAssistantContent(rawContent);
+  const diagnostics = {
+    outer_envelope_class: outerEnvelopeClass,
+    assistant_content_class: assistantContentClass,
+    assistant_content_length: rawContent.length,
+    finish_reason: finishReason,
+  };
+  if (extractedJsonText === null) {
+    throw new ModelCallError("MODEL_CALL_MALFORMED_RESPONSE", "model response content was not valid JSON", { diagnostics });
   }
-  const structured = parseStructuredAnswer(rawContent);
+
+  let structured;
+  try {
+    structured = parseStructuredAnswer(extractedJsonText);
+  } catch (error) {
+    if (error instanceof ModelCallError) error.diagnostics = diagnostics;
+    throw error;
+  }
 
   // HCX-specific: an empty answer is structurally a valid JSON string but
   // never a usable generated answer (CLAUDE.md Turn P11-A section D:
@@ -145,7 +246,7 @@ function parseHcxResponseBody(body) {
   // is left exactly as-is to avoid changing that adapter's already-tested
   // behavior for an unrelated Turn's scope.
   if (structured.text.trim() === "") {
-    throw new ModelCallError("MODEL_CALL_MALFORMED_RESPONSE", "model response text was empty");
+    throw new ModelCallError("MODEL_CALL_MALFORMED_RESPONSE", "model response text was empty", { diagnostics });
   }
   // HCX-specific: reject a response that claims the same fact/evidence id
   // more than once -- a purely structural property of the response itself,
@@ -156,7 +257,7 @@ function parseHcxResponseBody(body) {
   // this file's own header comment and CLAUDE.md Turn P11-A section E).
   for (const [label, ids] of [["used_fact_ids", structured.used_fact_ids], ["used_evidence_ids", structured.used_evidence_ids]]) {
     if (new Set(ids).size !== ids.length) {
-      throw new ModelCallError("MODEL_CALL_MALFORMED_RESPONSE", `model response ${label} contained a duplicate id`);
+      throw new ModelCallError("MODEL_CALL_MALFORMED_RESPONSE", `model response ${label} contained a duplicate id`, { diagnostics });
     }
   }
 
@@ -166,7 +267,8 @@ function parseHcxResponseBody(body) {
     ...structured,
     input_tokens: inputTokens,
     output_tokens: outputTokens,
-    finish_reason: typeof body?.result?.stopReason === "string" ? body.result.stopReason : null,
+    finish_reason: finishReason,
+    diagnostics,
   };
 }
 
@@ -231,18 +333,34 @@ export function createHcxChatCompletionsModelAdapter(config, { fetchImpl = fetch
           // the safe, fixed description plus the stable code.
           throw new ModelCallError("MODEL_CALL_UNKNOWN_ERROR", "model call failed before a response was received", { cause: error });
         }
+        const httpStatus = Number.isFinite(response.status) ? response.status : null;
+        const contentTypeMime = extractContentTypeMime(response);
         if (!response.ok) {
-          throw new ModelCallError("MODEL_CALL_HTTP_ERROR", `model endpoint returned a non-OK HTTP status (${response.status})`);
+          throw new ModelCallError("MODEL_CALL_HTTP_ERROR", `model endpoint returned a non-OK HTTP status (${response.status})`, {
+            diagnostics: { http_status: httpStatus, content_type_mime: contentTypeMime, outer_envelope_class: null, assistant_content_class: null, assistant_content_length: null, finish_reason: null },
+          });
         }
         let body;
         try {
           body = await response.json();
         } catch (error) {
-          throw new ModelCallError("MODEL_CALL_MALFORMED_RESPONSE", "model response body was not valid JSON", { cause: error });
+          throw new ModelCallError("MODEL_CALL_MALFORMED_RESPONSE", "model response body was not valid JSON", {
+            cause: error,
+            diagnostics: { http_status: httpStatus, content_type_mime: contentTypeMime, outer_envelope_class: "NOT_JSON", assistant_content_class: null, assistant_content_length: null, finish_reason: null },
+          });
         }
-        const parsed = parseHcxResponseBody(body);
+        let parsed;
+        try {
+          parsed = parseHcxResponseBody(body);
+        } catch (error) {
+          if (error instanceof ModelCallError && error.diagnostics) {
+            error.diagnostics = { http_status: httpStatus, content_type_mime: contentTypeMime, ...error.diagnostics };
+          }
+          throw error;
+        }
         return {
           ...parsed,
+          diagnostics: { http_status: httpStatus, content_type_mime: contentTypeMime, ...parsed.diagnostics },
           estimated_cost: costFor(parsed.input_tokens, config.input_cost_per_1k_tokens) + costFor(parsed.output_tokens, config.output_cost_per_1k_tokens),
           latency_ms: Date.now() - startedAt,
         };

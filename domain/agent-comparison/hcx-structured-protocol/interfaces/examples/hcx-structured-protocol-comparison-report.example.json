@@ -1,0 +1,24 @@
+{
+  "schema_version": "0.1.0",
+  "run_id": "hcx_structured_protocol_example0000000000000000",
+  "created_at": "2026-09-02T00:00:00.000Z",
+  "ready": false,
+  "stopped_early_reason": "MISSING_CREDENTIALS",
+  "total_requests_attempted": 0,
+  "candidates": null,
+  "selection": {
+    "selected_candidate": null,
+    "status": "RED_NO_SELECTION",
+    "reason": "missing required configuration: HCX_API_KEY, HCX_ENDPOINT_URL, HCX_MODEL_ID; 0 real external calls made"
+  },
+  "security_attestation": {
+    "checks": [
+      { "check_name": "api_key_value_absent_from_report", "passed": true, "detail": "no API key present this run" },
+      { "check_name": "authorization_header_absent_from_report", "passed": true, "detail": "scanned for an \"authorization\" JSON key or a \"Bearer <token>\" pattern" },
+      { "check_name": "full_endpoint_url_absent_from_report", "passed": true, "detail": "report records endpoint hostname classification only, never the full URL" },
+      { "check_name": "raw_prompt_text_absent_from_report", "passed": true, "detail": "scanned for the fixed scenario task texts (report records aggregate stats only)" },
+      { "check_name": "raw_response_content_structurally_excluded", "passed": true, "detail": "attempts record content_or_arguments_length only -- there is no field in this artifact shape a raw content/arguments string could be written into" }
+    ],
+    "overall_status": "PASS"
+  }
+}

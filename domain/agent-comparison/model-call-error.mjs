@@ -12,11 +12,20 @@
 // response body, a raw transport exception message, or an API key. A
 // caller that wants more detail for its OWN debugging may pass `cause`
 // (never surfaced in `.message`, and never logged by this module either).
+//
+// `diagnostics` (Turn P11-C, optional, additive): a plain object of
+// non-sensitive, structural classification fields ONLY (e.g.
+// outer_envelope_class, assistant_content_class, assistant_content_length,
+// http_status, content_type_mime, finish_reason) -- never the raw
+// prompt/response body, a header value, or a secret. Callers that don't
+// pass it (every existing call site) see `.diagnostics === null`, exactly
+// as before this field existed.
 export class ModelCallError extends Error {
-  constructor(code, message, { cause } = {}) {
+  constructor(code, message, { cause, diagnostics } = {}) {
     super(message);
     this.name = "ModelCallError";
     this.code = code;
     if (cause !== undefined) this.cause = cause;
+    this.diagnostics = diagnostics ?? null;
   }
 }

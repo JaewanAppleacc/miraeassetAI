@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://disclosure-analyst.local/schema/agent-comparison/hcx-real-smoke-result.v0.1.json",
-  "title": "HCX Real Smoke Result v0.1",
-  "description": "Turn P11-B: aggregate result of one real HyperCLOVA X protocol smoke run. Contains only counts, latency percentiles, aggregate token usage, and a pass/fail/not-observed checklist -- never a raw prompt, a raw response body, or any secret.",
+  "$id": "https://disclosure-analyst.local/schema/agent-comparison/hcx-real-smoke-result.v0.2.json",
+  "title": "HCX Real Smoke Result v0.2",
+  "description": "Turn P11-B, extended Turn P11-C: aggregate result of one real HyperCLOVA X protocol smoke run. Contains only counts, latency percentiles, aggregate token usage, a pass/fail/not-observed checklist, and (v0.2, additive) a per-scenario, non-sensitive response-shape diagnostics bundle -- never a raw prompt, a raw response body, an assistant answer snippet, or any secret.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -11,7 +11,7 @@
     "estimated_cost_total", "duration_ms", "stopped_early_reason", "validation_checklist"
   ],
   "properties": {
-    "schema_version": { "const": "0.1.0" },
+    "schema_version": { "const": "0.2.0" },
     "run_id": { "type": "string", "minLength": 1 },
     "created_at": { "type": "string", "format": "date-time" },
     "requests_attempted": { "type": "integer", "minimum": 0, "maximum": 10 },
@@ -23,7 +23,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["scenario_type", "outcome", "attempt_count"],
+        "required": ["scenario_type", "outcome", "attempt_count", "diagnostics"],
         "properties": {
           "scenario_type": { "type": "string", "minLength": 1 },
           "outcome": { "enum": ["SUCCESS", "FAILURE", null] },
@@ -33,6 +33,30 @@
               { "enum": ["MODEL_ADAPTER_UNAVAILABLE", "MODEL_CALL_TIMEOUT", "MODEL_CALL_HTTP_ERROR", "MODEL_CALL_MALFORMED_RESPONSE", "MODEL_CALL_UNKNOWN_ERROR"] },
               { "type": "null" }
             ]
+          },
+          "diagnostics": {
+            "description": "Turn P11-C: non-sensitive, structural classification of the LAST attempt's HTTP/envelope/content shape only -- never a raw body, header, prompt, or answer value (CLAUDE.md Turn P11-C section B).",
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["http_status", "content_type_mime", "outer_envelope_class", "assistant_content_class", "assistant_content_length", "finish_reason"],
+            "properties": {
+              "http_status": { "anyOf": [{ "type": "integer", "minimum": 100, "maximum": 599 }, { "type": "null" }] },
+              "content_type_mime": { "anyOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }] },
+              "outer_envelope_class": {
+                "anyOf": [
+                  { "enum": ["NOT_JSON", "MISSING_STATUS_CODE", "STATUS_NOT_SUCCESS", "MISSING_MESSAGE_CONTENT", "VALID"] },
+                  { "type": "null" }
+                ]
+              },
+              "assistant_content_class": {
+                "anyOf": [
+                  { "enum": ["EMPTY", "PLAIN_JSON", "FENCED_JSON", "FENCED_INVALID_JSON", "MULTIPLE_OR_PARTIAL_FENCE_BLOCKS", "TEXT_WITH_EMBEDDED_OR_TRUNCATED_JSON", "NOT_JSON_AT_ALL"] },
+                  { "type": "null" }
+                ]
+              },
+              "assistant_content_length": { "anyOf": [{ "type": "integer", "minimum": 0 }, { "type": "null" }] },
+              "finish_reason": { "anyOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }] }
+            }
           }
         }
       }

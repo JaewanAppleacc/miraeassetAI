@@ -17,20 +17,24 @@ import {
 } from "../domain/agent-comparison/hcx-real-smoke/contracts.mjs";
 
 function parseArgs(argv) {
-  const out = { outDir: "domain/agent-comparison/hcx-real-smoke/reports" };
+  const out = { outDir: "domain/agent-comparison/hcx-real-smoke/reports", maxRequestsOverride: undefined };
   for (let i = 0; i < argv.length; i += 1) {
     if (argv[i] === "--out") out.outDir = argv[i + 1];
+    // Turn P11-C: an optional, LOWER-only request ceiling for one run --
+    // runHcxRealSmoke's own Math.min against HARD_LIMITS.MAXIMUM_REQUESTS
+    // makes it impossible for this flag to ever raise the hard limit.
+    if (argv[i] === "--max-requests") out.maxRequestsOverride = Number(argv[i + 1]);
   }
   return out;
 }
 
 async function main() {
-  const { outDir } = parseArgs(process.argv.slice(2));
+  const { outDir, maxRequestsOverride } = parseArgs(process.argv.slice(2));
   const loaded = loadHcxRealSmokeConfig();
 
   console.log(`HCX real smoke: ready=${loaded.ready}${loaded.ready ? "" : ` missing=[${loaded.missing.join(", ")}]`}`);
 
-  const runResult = await runHcxRealSmoke(loaded);
+  const runResult = await runHcxRealSmoke(loaded, Number.isFinite(maxRequestsOverride) ? { maxRequestsOverride } : {});
   const { configArtifact, resultArtifact, gateStatusArtifact, securityAttestation } = buildAllArtifacts(loaded, runResult);
 
   const schemaErrors = [

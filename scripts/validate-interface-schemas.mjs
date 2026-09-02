@@ -103,6 +103,13 @@ const pairs = [
     "domain/agent-comparison/integration/interfaces/comparison-record.schema.json",
     "domain/agent-comparison/integration/interfaces/examples/comparison-record.example.json",
   ],
+  // Turn P11-D: HCX-005 structured-output protocol comparison report --
+  // secret-free by schema construction (additionalProperties:false, no raw
+  // prompt/response/tool-argument/key field exists to validate against).
+  [
+    "domain/agent-comparison/hcx-structured-protocol/interfaces/hcx-structured-protocol-comparison-report.schema.json",
+    "domain/agent-comparison/hcx-structured-protocol/interfaces/examples/hcx-structured-protocol-comparison-report.example.json",
+  ],
   [
     "domain/agent-comparison/retrieval/interfaces/embedding-config.schema.json",
     "domain/agent-comparison/retrieval/interfaces/examples/embedding-config.example.json",

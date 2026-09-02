@@ -14,8 +14,19 @@
 // Evidence records to authorize (hard-claim-grounding.mjs is out of scope
 // for this Turn; see the P11-B instructions -- this only proves the
 // transport/parsing contract, not citation binding).
+//
+// Turn P11-C priority-1 mitigation: 2 of the first 4 real HCX-005 calls
+// (INFORMATION_LIMIT_RESPONSE, NUMBER_DATE_FORMAT_RESPONSE) came back
+// MODEL_CALL_MALFORMED_RESPONSE under the P11-B wording above. The wording
+// below is strengthened to explicitly forbid both a code fence and any
+// leading/trailing explanatory sentence -- a prompt-level fix, tried before
+// any parser-level tolerance (hcx-model-adapter.mjs's single-```json-fence
+// allowance exists only as the documented fallback for whatever this
+// strengthening does not fully eliminate).
 const STRUCTURED_ANSWER_INSTRUCTION =
-  '반드시 다음 JSON 형식으로만 답하세요. 다른 텍스트를 추가하지 마세요: {"answer": "<한국어 답변>", "used_fact_ids": [], "used_evidence_ids": []}';
+  '반드시 아래 JSON 객체 하나만 출력하세요. 코드블록(```)으로 감싸지 마세요. ' +
+  'JSON 앞이나 뒤에 어떠한 설명 문장도 추가하지 마세요. 출력은 반드시 "{" 로 시작해서 "}" 로 끝나야 합니다: ' +
+  '{"answer": "<한국어 답변>", "used_fact_ids": [], "used_evidence_ids": []}';
 
 export const HCX_REAL_SMOKE_SCENARIOS = Object.freeze([
   Object.freeze({
