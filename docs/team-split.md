@@ -57,7 +57,7 @@
 | 3 | CLOVA Studio 서비스앱 신청(429 한도 상향), 크레딧 쿠폰 등록 확인, HCX-005 키는 환경변수(secret 비노출) | 완료 확인 | 9/3 신청 |
 | 4 | PG 호스팅(팀원1 협의) — A/C 승리 대비 | 서버 | 9/4 |
 | 5 | vFINAL 19번 최소 배포 가능성 프로브 스크립트(SHA pin 일치 · mock 아님 · `/ready` · synthetic probe로 `/answer` 계약 · secret 비노출 · locator 해석) + 배포 리허설(재시도 겹침 · 재기동 · 인덱스 READY) | probe 스크립트 + 리허설 기록 | 9/5 ~ 9/6 |
-| 6 | frozen paraphrase **독립 검수**(vFINAL 13번): (원질문, 변형질문) 쌍만 열람. 원문·Gold·required slots·검색 결과 접근 금지. 검수 후 목록·판정 SHA 고정 | 검수 판정 + SHA | LOW<10일 때만, 9/4 |
+| 6 | ~~frozen paraphrase 독립 검수(vFINAL 13번)~~ **불필요해짐** — 조건 사전 계산 결과 LOW 20문항(≥10). 16A 공통 제외로 LOW<10이 되면 되살아남 | — | — |
 | 7 | 기업 별칭 커버리지 점검(70개) + 안전 세트 문항(인젝션 · 투자의견 · 다의 기업 · 빈/초장문 · 기간 밖) 작성 | 문항 파일 | 9/4 |
 | 8 | 제출 패키징: README(엔드포인트 URL 필수 · 실행 명령), `requirements.txt`, 전처리 산출물 스토리지 링크, API 명세, 기술제안서 초안(v4 기반) → 주최측 GitHub Org private repo push | 제출물 3종 | 9/5 초안, **9/6 push** |
 
@@ -69,7 +69,7 @@
 | 2 | 공용 채점기: DEV_TUNE 101 required-slot 발견 · Recall@5/10/20 · LOW count · locator 치명/경미 판정(14번 범위) · metadata non-leak 검사. config + 코드 SHA 동결. 팀원1 리뷰 | scorer + SHA | 9/3 |
 | 3 | B/D 러너: config 2개(LOW-only dense ON/OFF만 다름), 공용 출력 스키마 | runner + config + SHA | 9/4 |
 | 4 | B/D 실행 + p95/RSS 측정 + UNRESOLVED export | 결과 JSON | 9/4 |
-| 5 | frozen paraphrase set 작성(LOW<10일 때만. 9번: salt 정렬 · 정확히 20문항) → 팀원2 검수 | paraphrase 파일 | 9/4 |
+| 5 | ~~frozen paraphrase set 작성~~ **불필요해짐**(LOW 20문항) | — | — |
 | 6 | 판정 체인(Hard → Quality → LOW → FINAL_TIE_SET → …)은 채점기 스크립트가 기계적으로 산출. 나 + 팀원1 공동 확인 후 PROVISIONAL_WINNER 동결 | 판정 기록 | 9/4 저녁 |
 | 7 | 에이전트 층 코어: `policy_gate` ⓪ · `routing` ③(+복구) · `retriever_adapter` 인터페이스 정의 + B/D 바인딩 + Node 역참조 · `fallback` ⑨(수리 OFF) · validator bound 계열 · prompts + VERSION · `answer(question_id, question)` → 5필드 | dart_detective 신규 모듈 | 9/4 |
 | 8 | HCX Native FC 클라이언트 이식 + `submit_grounded_answer` 스키마 확정(FC 코드 주인과) | llm.py | 9/4 |

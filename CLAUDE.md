@@ -16,8 +16,13 @@
 - DEV_TUNE 101 Gold: `data/eval/phase1_devtune_gold.v0.1.jsonl` (gold 브랜치 릴리스 v0.1 그대로, SHA `7941144c…f102b`). DEV_CHECK/HOLDOUT은 없음(접근 금지).
 - 코퍼스 메타데이터 확보: `data/corpus/manifest.jsonl`(4,204행)·`universe.csv`(70기업). SHA가 `corpus_snapshot.json` 기록값과 일치 검증됨. `docs/CONTEXT.md` §0.
 - 원본 XML(5.19GB)은 풀지 않았다. `work/corpus.zip`(432MB)에 압축된 채로 있고 git 제외 대상이다. DocumentIR이 있으므로 평시에는 필요 없다.
-- 아직 없는 것: 문서 인덱스와 노드 위치표. 둘 다 DocumentIR + manifest로 재생성한다(`docs/interfaces.md` §5).
+- 색인 완료: `data/index/`(git 제외, `scripts/build_index.py`로 133초에 재생성). doc_index.jsonl 22.5MB · node_offsets.jsonl 0.5MB · index_manifest.json(DocumentIR 4파일 SHA). 실행은 `.venv/bin/python scripts/build_index.py`.
+- **B arm 구성 완료**: torch 2.x + sentence-transformers(.venv, 약 1GB) · KURE-v1 rev `4ed4540…e4f`(HF 캐시 2.1GB) · `src/dart_detective/dense_rerank.py`(LOW 세그먼트에서 BM25 후보 50개를 cosine 재정렬, MPS fp16, max_seq 512, 점수 3자리 반올림·동률은 BM25 순). `bind("B")`가 자동 구성. 실측: 20청크 재정렬 8.1s(MPS), CPU 대비 순서 동일.
+- **4-arm 실험 자산 완료**: 조건 사전 계산(`data/eval/devtune101_conditions.v1.jsonl`, SHA `6ff1b4fc…`, LOW 20/HIGH 81 → 의역 세트 불필요) · 러너 `scripts/fourarm/run_arm.py` · 채점기+판정 체인 `src/dart_corpus/evaluation/fourarm.py` + `scripts/fourarm/score.py`.
+- **D arm 실측(전체 코퍼스)**: Recall@10 0.605 · @20 0.675 · LOW all_found@10 11/19 · 치명/경미/미해결 0 · p95 4.3s · RSS 1.24GB. **예전 "슬롯 97%"는 정답 문서 106건만 청킹한 풀의 수치였다** — `docs/interfaces.md` §5-8.
+- **B arm 실측**: Recall@10 0.6084 · LOW all_found@10 12/19 · p95 19714ms · RSS 2240.6MB. **B·D 판정: D = PROVISIONAL_WINNER**(dense-off 우선, 동률). A/C 대기. `results/fourarm/summary.md`.
 - 팀 계약 초안: `docs/interfaces.md` (킥오프에서 확정).
+- **구현 2건 완료(2026-09-03)**: ④ node_store(DocumentIR byte-offset 지연 로딩, `src/dart_corpus/retrieval/node_store.py`, 검색 코어 기존 파일 무변경) + segments(vFINAL 1번 LOW/HIGH 단일 정의) + retriever_adapter(B/D 바인딩, `bind(arm)`). 실측: D arm bind 2.8s, 문항당 검색 0.9~3.1s, Gold 8/8 상위20 포함, Gold locator 345개 전부 색인에서 해석.
 - **구현 1건 완료(2026-09-03)**: ③ 라우팅·LLM 예산 — `src/dart_detective/routing.py`(v4 §7 전략 7종 + 실행 매트릭스), `llm.py` 호출별 `max_tokens`, `qa_agent.py` 연결. 테스트 `tests/agents/test_routing.py` 27개. 프롬프트 동결 지문 불변. Codex 검수 대기: `docs/reviews/codex-review-routing-budget.md`.
 - 구현 순서와 분담: `docs/team-split.md`.
 - 입력 데이터: DocumentIR 4,204건 `/Users/ijiyeong/Desktop/document_ir/`(4 파일, 8GB). 그대로 사용, 재파싱 금지. `docs/CONTEXT.md` §0.

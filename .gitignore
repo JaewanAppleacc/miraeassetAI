@@ -68,3 +68,9 @@ dist/
 .env
 .DS_Store
 work/
+
+# 재생성 가능한 색인(scripts/build_index.py) — 커밋하지 않는다
+data/index/
+
+# 4-arm 실행 원본(문항별 청크 텍스트 포함, 수 MB) — run.json·채점 리포트만 커밋
+results/**/*.results.jsonl

@@ -34,7 +34,7 @@ Gold(DEV_TUNE 101)의 `source_locator`는 두 표기가 섞여 있다(실측 345
 | DEV_TUNE 101 Gold | `data/eval/phase1_devtune_gold.v0.1.jsonl` | `7941144c09ce25debeeab6c3fbdfbd4c16761a6be06ab3a844ad159c832f102b` |
 | `data/corpus/universe.csv` | 확보·검증 완료 | `96560165c836b10e315cb253ab96a99b369478c3f71a0415d16b7b6fadbfa1dc` |
 | `data/corpus/manifest.jsonl` | 확보·검증 완료 | `04750795e1a2d5c35f73e4bb7766ebede02ff3512d33c382bd4c3a51daba3364` |
-| conditions 파일 | `data/eval/devtune101_conditions.v1.jsonl` (§1-2) | 생성 후 기록 |
+| conditions 파일 | `data/eval/devtune101_conditions.v1.jsonl` (§1-2) | **`6ff1b4fce45bb46db0179d79439a310bcbb95cb3c1e1b2e2ddb2acd165137cf5`** (2026-09-03 04:24, code 056ed14) |
 | 채점기 코드 + arm별 config | `scripts/fourarm/` (§1) | 실행 직전 HEAD SHA + config SHA 기록 |
 
 ---
@@ -52,9 +52,12 @@ Gold(DEV_TUNE 101)의 `source_locator`는 두 표기가 섞여 있다(실측 345
     "locator": "holding_20240403000410/20240403000410.xml#node=1",
     "chunk_id": "holding_20240403000410:n1:w0",
     "chunk_text_sha256": "…", "score": 17.42,
-    "row": null, "col": null}
+    "text": "…(선택·권장) 청크 본문 — 채점기의 2순위 텍스트 대조와 UNRESOLVED 검토용",
+    "node_indices": [1, 2], "row": null, "col": null}
  ]}
 ```
+- `node_indices`(선택): Fixed-512처럼 청크가 여러 node에 걸치면 걸친 node 전부. 채점기는 `node_index` ∪ `node_indices`로 대조한다.
+- `segment`(문항 레벨, 선택): 사전 계산 파일의 세그먼트를 그대로 echo. `dense_reranked`·`pool`(B만).
 - `arm` ∈ `A | B | C | D` (vFINAL 후보 ID: `A FIXED+FULL_DENSE`, `B LINE_WINDOW+LOW_ONLY_DENSE`, `C FIXED+DENSE_OFF`, `D LINE_WINDOW+DENSE_OFF`).
 - `results`는 **20개까지** 보고(보고 k=5/10/20), 평가는 k=10 (vFINAL 15번). rank는 1부터.
 - `chunk_text_sha256`는 `sha256(NFC 정규화 + 공백 제거한 청크 본문)`. 채점기가 원문 역참조로 대조할 때 쓴다.
@@ -73,6 +76,8 @@ Gold(DEV_TUNE 101)의 `source_locator`는 두 표기가 섞여 있다(실측 345
 - `n_hard_conditions` 계산 규칙(코드에 고정, 파일 헤더에 기록): `len(corps)` + (`years`∪`year_months` 비면 0 아니면 1) + (`doc_groups`∪`periodic_subtypes`∪`exchange_subtypes`∪`major_labels` 비면 0 아니면 1). `segment = LOW if n ≤ 2 else HIGH` (vFINAL 1번).
 - **메타 필터 입력은 이 파일만** 쓴다. Gold의 `gold_document_ids`·`corp_codes`·`doc_groups`·slot 정보는 필터 생성에 사용 금지(vFINAL 20번, 위반 시 실험 INVALID). A/C도 자기 conditions 추출기를 돌리지 않는다.
 - 파일 SHA를 킥오프에서 기록하고, 실행 후 변경 금지.
+- **생성 완료(`scripts/fourarm/precompute_conditions.py`)**: 101문항 = **LOW 20 / HIGH 81** (확정 조건 1개 2문항, 2개 18, 3개 80, 4개 1). 기업 미검출 5문항(답변가능성·함정 문항 계열). 메타 파일 `devtune101_conditions.v1.meta.json`에 gold·universe SHA·코드 HEAD·규칙 문자열 기록.
+- **LOW ≥ 10 이므로 vFINAL 3번 LOW_UNDERPOWERED가 발동하지 않는다** → frozen paraphrase set(9·13번) 작성·독립 검수 절차 **불필요**. 단, 16A 공통 제외 후 LOW가 10 미만으로 떨어지면 되살아난다.
 
 ### 1-3. 실행 메타 `results/{arm}.run.json` — 1개
 ```json
@@ -90,8 +95,15 @@ Gold(DEV_TUNE 101)의 `source_locator`는 두 표기가 섞여 있다(실측 345
  "doc_id": "…", "node_index": 12, "chunk_text": "…", "reason": "locator가 다른 행을 가리키는 듯"}
 ```
 
-### 1-5. 채점기 (소유: 나, 리뷰: 팀원1) — `scripts/fourarm/score.py`
-입력 = Gold + conditions + `results/{arm}.jsonl` → 출력 = arm별 `{recall@5/10/20, all_required_slots_found (LOW/HIGH/전체), locator 치명/경미 건수, non_leak 검사 결과}` + 판정 체인 결과. 코드·config SHA를 실행 전에 고정.
+### 1-5. 채점기 (소유: 나, 리뷰: 팀원1) — `src/dart_corpus/evaluation/fourarm.py` + `scripts/fourarm/score.py`
+입력 = Gold + conditions + `results/fourarm/{arm}.results.jsonl` + `{arm}.run.json` → 출력 = `score.{arm}.json`, `judgement.json`, `summary.md`, `unresolved/u-x-NNN.json`(arm 라벨 제거).
+**채점 정의(고정)**:
+- slot found@k: 1순위 (doc_id, node_index ∪ node_indices) 일치 · 2순위 같은 doc_id에서 Gold evidence_span의 한 줄(공백 제거·6자 이상)이 청크 `text`에 포함.
+- Recall@k = slots_found@k / slots_total (micro) · 전체/HIGH/LOW. all_found@k = 필수 slot 전부 found인 문항 수(LOW 주 판정).
+- 제외: required slot 0개 문항(Recall 분모 제외, 수 보고).
+- locator 검사(14번): slot-match 청크만. 문서 없음·node 범위 밖 = 치명 · 청크 텍스트가 node 원문과 대조 불가 = UNRESOLVED(16번 패킷) · row/col 차이 = 경미.
+- 판정 체인(judge): 20 pins → 16 unresolved 표시 → 12 Hard → 12 Quality(−0.01) → 2 LOW all_found@10 → 5 FINAL_TIE_SET(≤1) → dense-off 우선 → 11+18 C/D tie-break → A/B 동률=B → 3/8 LOW<10 의역 → 10 B fallback → BLOCKED.
+러너: `scripts/fourarm/run_arm.py --arm B|D` (Gold를 열지 않음 — 조건 파일만 읽음, non-leak 구조 보장).
 
 ---
 
@@ -201,10 +213,17 @@ def bind(arm: str) -> RetrieverAdapter: ...    # DART_QA_ARM으로 선택
    남은 재생성 작업(코퍼스 원본 없이 가능, 신규 디스크 약 45MB):
    | 만들 것 | 재료 | 크기 |
    |---|---|---|
-   | `data/index/doc_index.jsonl` | DocumentIR 스트리밍 + `data/corpus/manifest.jsonl` 조인, 문서당 본문 3,000자 | ~40MB |
-   | `data/index/node_offsets.jsonl` | DocumentIR 4파일의 doc_id → (파일, byte offset, length) | ~400KB |
-   예전 `doc_index.jsonl`(111MB)과는 다른 파일이므로 새 SHA를 기록하고, 예전 R@10 0.868과 직접 비교하지 않는다.
+   | `data/index/doc_index.jsonl` | DocumentIR 스트리밍 + `data/corpus/manifest.jsonl` 조인, 문서당 본문 3,000자 | **22.5MB (완료)** |
+   | `data/index/node_offsets.jsonl` | DocumentIR 4파일의 doc_id → (파일, byte offset, length) | **0.5MB (완료)** |
+   완료(2026-09-03 04:11, 133초). `data/index/index_manifest.json`에 DocumentIR 4파일 SHA-256·manifest SHA·텍스트 규칙(`node_texts_joined_v1`, cap 3000)·doc_index SHA `c93c18f7…`가 기록됐다. 예전 `doc_index.jsonl`(111MB)과는 다른 파일이므로 예전 R@10 0.868과 직접 비교하지 않는다.
 2. **Gold Owner** — DEV_CHECK 47 one-shot 실행자·UNRESOLVED arm-blind 판정자.
 3. **A/C readiness 컷오프**(제안 9/4 12:00)와 미실행 arm 처리.
 4. **PG 호스팅** 위치·비용.
 5. A/C 청크의 `node_index` 결정 규칙(0-2) 확인 — Fixed-512 청크가 node 경계를 넘을 때.
+6. ~~B arm의 dense 재정렬 실행 환경~~ → **해결(2026-09-03, 선택지 ①).** torch + sentence-transformers(.venv) · KURE-v1 rev `4ed4540949c70b7da2c74004a915e1f2d5e46e4f`(HF 캐시 2.1GB) · `src/dart_detective/dense_rerank.py`. B as-built 구성: LOW 세그먼트에서만 BM25 후보 **50개**(dense_pool) → KURE cosine 재정렬 → k 절단. MPS fp16 · max_seq_length 512 · 점수 소수 3자리 반올림, 동률은 BM25 순위(CPU fp32와 순서 동일 확인). HIGH는 D와 동일 경로. 실측 재정렬 20청크 8.1s.
+8. **예전 실측 숫자의 범위 — 전체 코퍼스 성능이 아니다(2026-09-03 확인).** `experiments/phase1/run_retrieval_only.py`는 Stage 2 문서 풀로 `candidate_documents.jsonl`(= `target_docs.json`, **정답 문서 106건 딱 그것**)을 썼다. Stage 1은 전체 문서 인덱스였지만 청킹·근거 선택은 정답 문서에서만 이뤄졌으므로 "정답 문서 상위20 100% · 슬롯 97.0%"는 **정답 문서 풀 안에서의 수치**다. 전체 코퍼스(4,204건)에서 같은 코드로 잰 D arm은 **Recall@10 0.605 · Recall@20 0.675 · LOW all_found@10 11/19**(2026-09-03 04:30, config `4b217240…`). 팀원1의 "Fixed R@10 0.868(bounded retrieval)"도 같은 종류의 bounded 수치일 수 있으니 킥오프에서 측정 범위를 확인한다. **4-arm 실험이 전체 코퍼스 위의 첫 정직한 비교다.**
+   - 손실 위치(D, 놓친 슬롯 97/286): 전부 Stage 1 풀(50문서) 안에 있고 청크 순위 경쟁에서 밀림 — 전체 순위 21~50위 33개, 51~200위 49개, 200위 밖 15개. 문서군별 exchange 55·holding 28·major 8·periodic 6. Stage 1 실패 0.
+   - **B arm 실측(2026-09-03 04:50, config `4f2edea2…`)**: Recall@10 0.6084 · @20 0.6818 · HIGH R@10 0.588 · LOW R@10 0.75 · LOW all_found@10 12/19 · 치명 0 · 미해결 0 · p95 19714ms · RSS 2240.6MB. D 대비 LOW all_found +1, 전체 R@10 +0.0035 — dense 재정렬의 효과는 미미하다.
+   - **B·D 2-arm 판정(A/C 대기)**: 둘 다 Hard·Quality 통과 → LOW all_found 12 vs 11 → FINAL_TIE_SET {B, D} → dense-off 우선 → **D = PROVISIONAL_WINNER(PERFORMANCE_WINNER)**. `results/fourarm/judgement.json`. A/C 결과가 오면 4-arm으로 재판정한다.
+   - 이는 as-built 동작이며 버그가 아니다. DEV_TUNE은 튜닝 자유(v4 §10)이므로 **config 동결(체크리스트 1번) 전에는** B/D 조정이 허용된다. 조정하면 config SHA를 새로 기록한다.
+7. Gold locator 대조 실측: 345개 locator 전부 (doc_id, node_index)로 해석됨. 다만 32건은 `evidence_span` 표기가 우리 표 렌더링과 다르다(병합 셀을 Gold는 1회, DocumentIR normalized_rows는 colspan만큼 반복). 노드 번호는 맞다. → 채점기의 slot-match는 **노드 번호 일치를 1순위**, 텍스트 대조는 공백·중복 셀 정규화 후 2순위로 한다(phase1 `slot_hit` 방식 유지).

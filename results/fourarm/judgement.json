@@ -1,0 +1,80 @@
+{
+ "status": "PROVISIONAL_WINNER",
+ "winner": "D",
+ "selection_type": "PERFORMANCE_WINNER",
+ "tie_set": [
+  "B",
+  "D"
+ ],
+ "counts": {
+  "B": 12,
+  "D": 11
+ },
+ "chain": [
+  {
+   "step": "20 pins",
+   "bad": []
+  },
+  {
+   "step": "16 unresolved",
+   "counts": {
+    "B": 0,
+    "D": 0
+   }
+  },
+  {
+   "step": "12 hard gate",
+   "critical": {
+    "B": 0,
+    "D": 0
+   },
+   "hard_safe": [
+    "B",
+    "D"
+   ]
+  },
+  {
+   "step": "12 quality gate",
+   "best_all": 0.6084,
+   "best_high": 0.588,
+   "values": {
+    "B": {
+     "ALL": 0.6084,
+     "HIGH": 0.588
+    },
+    "D": {
+     "ALL": 0.6049,
+     "HIGH": 0.588
+    }
+   },
+   "passed": [
+    "B",
+    "D"
+   ]
+  },
+  {
+   "step": "2/5 LOW all_found@10",
+   "counts": {
+    "B": 12,
+    "D": 11
+   },
+   "best": 12,
+   "final_tie_set": [
+    "B",
+    "D"
+   ]
+  },
+  {
+   "step": "5 dense-off preferred",
+   "dense_off": [
+    "D"
+   ]
+  },
+  {
+   "step": "winner",
+   "winner": "D",
+   "selection_type": "PERFORMANCE_WINNER",
+   "status": "PROVISIONAL_WINNER"
+  }
+ ]
+}
