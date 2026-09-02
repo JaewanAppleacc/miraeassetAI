@@ -1,0 +1,156 @@
+{
+  "schema_version": "0.1.0",
+  "generated_at": "2026-09-01T04:55:09.833Z",
+  "sample_size": 10,
+  "overall_deterministic": true,
+  "chunking_determinism": [
+    {
+      "chunking_config_id": "fixed-token-512-o64.v0.1.0",
+      "first_sha256": "f2ace62f84ec4bc35549648b2386d2fe1c28950683a9b133a186415afac04309",
+      "second_sha256": "f2ace62f84ec4bc35549648b2386d2fe1c28950683a9b133a186415afac04309",
+      "deterministic": true
+    },
+    {
+      "chunking_config_id": "doctype-hier-parent-child-table-dual.v0.2.0",
+      "first_sha256": "ce06a362792e9c0ab8f4974377067b3069e5c27ea6f5da82ae4f028f844b835e",
+      "second_sha256": "ce06a362792e9c0ab8f4974377067b3069e5c27ea6f5da82ae4f028f844b835e",
+      "deterministic": true
+    }
+  ],
+  "ranking_determinism_sample": [
+    {
+      "chunking_config_id": "fixed-token-512-o64.v0.1.0",
+      "question_id": "author_0459b5f8f37b0192316cd77c",
+      "deterministic": true
+    },
+    {
+      "chunking_config_id": "fixed-token-512-o64.v0.1.0",
+      "question_id": "author_050b7f96dd361ac0771755a8",
+      "deterministic": true
+    },
+    {
+      "chunking_config_id": "fixed-token-512-o64.v0.1.0",
+      "question_id": "author_0644c80590c4960192ecdd59",
+      "deterministic": true
+    },
+    {
+      "chunking_config_id": "fixed-token-512-o64.v0.1.0",
+      "question_id": "author_087a90f5918d4e0b3e00959c",
+      "deterministic": true
+    },
+    {
+      "chunking_config_id": "fixed-token-512-o64.v0.1.0",
+      "question_id": "author_0be4ca52605cfe6d48181d97",
+      "deterministic": true
+    },
+    {
+      "chunking_config_id": "fixed-token-512-o64.v0.1.0",
+      "question_id": "author_0dd866177ad6b48052e16a33",
+      "deterministic": true
+    },
+    {
+      "chunking_config_id": "fixed-token-512-o64.v0.1.0",
+      "question_id": "author_14dfddbe1d41275533ae3945",
+      "deterministic": true
+    },
+    {
+      "chunking_config_id": "fixed-token-512-o64.v0.1.0",
+      "question_id": "author_17e55323e3a89766f08ec8fc",
+      "deterministic": true
+    },
+    {
+      "chunking_config_id": "fixed-token-512-o64.v0.1.0",
+      "question_id": "author_1bf4c4ba5b261b12bcc01cde",
+      "deterministic": true
+    },
+    {
+      "chunking_config_id": "fixed-token-512-o64.v0.1.0",
+      "question_id": "author_2b919170b3f420b30f592dbf",
+      "deterministic": true
+    },
+    {
+      "chunking_config_id": "doctype-hier-parent-child-table-dual.v0.2.0",
+      "question_id": "author_0459b5f8f37b0192316cd77c",
+      "deterministic": true
+    },
+    {
+      "chunking_config_id": "doctype-hier-parent-child-table-dual.v0.2.0",
+      "question_id": "author_050b7f96dd361ac0771755a8",
+      "deterministic": true
+    },
+    {
+      "chunking_config_id": "doctype-hier-parent-child-table-dual.v0.2.0",
+      "question_id": "author_0644c80590c4960192ecdd59",
+      "deterministic": true
+    },
+    {
+      "chunking_config_id": "doctype-hier-parent-child-table-dual.v0.2.0",
+      "question_id": "author_087a90f5918d4e0b3e00959c",
+      "deterministic": true
+    },
+    {
+      "chunking_config_id": "doctype-hier-parent-child-table-dual.v0.2.0",
+      "question_id": "author_0be4ca52605cfe6d48181d97",
+      "deterministic": true
+    },
+    {
+      "chunking_config_id": "doctype-hier-parent-child-table-dual.v0.2.0",
+      "question_id": "author_0dd866177ad6b48052e16a33",
+      "deterministic": true
+    },
+    {
+      "chunking_config_id": "doctype-hier-parent-child-table-dual.v0.2.0",
+      "question_id": "author_14dfddbe1d41275533ae3945",
+      "deterministic": true
+    },
+    {
+      "chunking_config_id": "doctype-hier-parent-child-table-dual.v0.2.0",
+      "question_id": "author_17e55323e3a89766f08ec8fc",
+      "deterministic": true
+    },
+    {
+      "chunking_config_id": "doctype-hier-parent-child-table-dual.v0.2.0",
+      "question_id": "author_1bf4c4ba5b261b12bcc01cde",
+      "deterministic": true
+    },
+    {
+      "chunking_config_id": "doctype-hier-parent-child-table-dual.v0.2.0",
+      "question_id": "author_2b919170b3f420b30f592dbf",
+      "deterministic": true
+    }
+  ],
+  "embedding_repeatability_tolerance": 0.999999,
+  "embedding_repeatability_sample": [
+    {
+      "sample_index": 0,
+      "cosine_similarity": 0.9999999999999999,
+      "meets_tolerance": true
+    },
+    {
+      "sample_index": 1,
+      "cosine_similarity": 1,
+      "meets_tolerance": true
+    }
+  ],
+  "bounded_latency_measurement_note": "Measured on the same fixed 10-item prefix sample, real local BGE-M3 -- supplies the latency figures the main diagnostic run (scripts/p10.1.1-hierarchical-diagnostic.mjs) did not separately capture for the Hierarchical-1024 configs.",
+  "latency_by_config": {
+    "A_FIXED": {
+      "bm25_p50_ms": 38,
+      "dense_p50_ms": 24788
+    },
+    "C_HIER1024_RAW_FLAT": {
+      "bm25_p50_ms": 7,
+      "dense_p50_ms": 13847
+    },
+    "D_HIER1024_PARENT_AWARE": {
+      "bm25_p50_ms": 7,
+      "dense_p50_ms": 14080,
+      "collapse_and_cap_p50_ms": 233
+    }
+  },
+  "peak_rss_by_config": {
+    "A_FIXED": 382484480,
+    "C_HIER1024_RAW_FLAT": 1163755520,
+    "D_HIER1024_PARENT_AWARE": 1163788288
+  }
+}

@@ -1,0 +1,2020 @@
+{
+  "schema_version": "0.1.0",
+  "generated_at": "2026-08-31T21:16:41.891Z",
+  "experiment_id": "p10.1-chunking-dev-tune-v01",
+  "dev_tune_item_count": 101,
+  "max_hard_negatives_per_item": 3,
+  "hard_negative_rule": "corp_code(s) x doc_group match, excluding gold_document_ids, sorted by |days(receipt_date, as_of_date)| ascending then document_id ascending, capped at MAX_HARD_NEGATIVES_PER_ITEM total",
+  "total_unique_documents": 372,
+  "raw_source_dir": "../../2026-07-28/ai-ai-festival-agent-1-ai/work/a-document-ir/source",
+  "documents_metadata_path": "../../2026-07-28/ai-ai-festival-agent-1-ai/work/domain-seed/documents.jsonl",
+  "items": [
+    {
+      "question_id": "author_0459b5f8f37b0192316cd77c",
+      "corp_codes": [
+        "00583424"
+      ],
+      "doc_groups": [
+        "holding"
+      ],
+      "as_of_date": "2024-04-03",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "holding_20240403000410"
+      ],
+      "hard_negative_document_ids": [
+        "holding_20240528000012",
+        "holding_20240902000226",
+        "holding_20231004000029"
+      ]
+    },
+    {
+      "question_id": "author_050b7f96dd361ac0771755a8",
+      "corp_codes": [
+        "00164742"
+      ],
+      "doc_groups": [
+        "major"
+      ],
+      "as_of_date": "2023-10-26",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "positive_document_ids": [
+        "major_20231026000201"
+      ],
+      "hard_negative_document_ids": [
+        "major_20240425000482",
+        "major_20230425000630",
+        "major_20230222002468"
+      ]
+    },
+    {
+      "question_id": "author_0644c80590c4960192ecdd59",
+      "corp_codes": [
+        "00309503"
+      ],
+      "doc_groups": [
+        "exchange"
+      ],
+      "as_of_date": "2025-06-26",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "exchange_20250626800313"
+      ],
+      "hard_negative_document_ids": [
+        "exchange_20250625800263",
+        "exchange_20250627800228",
+        "exchange_20250716800365"
+      ]
+    },
+    {
+      "question_id": "author_087a90f5918d4e0b3e00959c",
+      "corp_codes": [
+        "01105153"
+      ],
+      "doc_groups": [
+        "periodic"
+      ],
+      "as_of_date": "2026-03-18",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "COMPARISON_CALC",
+      "positive_document_ids": [
+        "periodic_20240320001860",
+        "periodic_20260318001562"
+      ],
+      "hard_negative_document_ids": [
+        "periodic_20260515001834",
+        "periodic_20251114001619",
+        "periodic_20250814004413"
+      ]
+    },
+    {
+      "question_id": "author_0be4ca52605cfe6d48181d97",
+      "corp_codes": [
+        "01160363"
+      ],
+      "doc_groups": [
+        "periodic"
+      ],
+      "as_of_date": "2025-05-14",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "COMPARISON_CALC",
+      "positive_document_ids": [
+        "periodic_20230515001464",
+        "periodic_20250514000385"
+      ],
+      "hard_negative_document_ids": [
+        "periodic_20250325000761",
+        "periodic_20250317000937",
+        "periodic_20250814001299"
+      ]
+    },
+    {
+      "question_id": "author_0dd866177ad6b48052e16a33",
+      "corp_codes": [
+        "00124540"
+      ],
+      "doc_groups": [
+        "exchange"
+      ],
+      "as_of_date": "2025-07-01",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "exchange_20250701800193"
+      ],
+      "hard_negative_document_ids": [
+        "exchange_20250616800183",
+        "exchange_20250610800054",
+        "exchange_20250723800048"
+      ]
+    },
+    {
+      "question_id": "author_14dfddbe1d41275533ae3945",
+      "corp_codes": [
+        "01261644"
+      ],
+      "doc_groups": [
+        "periodic"
+      ],
+      "as_of_date": "2026-03-20",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "COMPARISON_CALC",
+      "positive_document_ids": [
+        "periodic_20240321001029",
+        "periodic_20260320000803"
+      ],
+      "hard_negative_document_ids": [
+        "periodic_20260515002401",
+        "periodic_20251114002584",
+        "periodic_20250814002961"
+      ]
+    },
+    {
+      "question_id": "author_17e55323e3a89766f08ec8fc",
+      "corp_codes": [
+        "01261644"
+      ],
+      "doc_groups": [
+        "periodic"
+      ],
+      "as_of_date": "2025-08-14",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "COMPARISON_CALC",
+      "positive_document_ids": [
+        "periodic_20230814002019",
+        "periodic_20250814003089"
+      ],
+      "hard_negative_document_ids": [
+        "periodic_20250814002961",
+        "periodic_20250515001834",
+        "periodic_20251114002584"
+      ]
+    },
+    {
+      "question_id": "author_1bf4c4ba5b261b12bcc01cde",
+      "corp_codes": [
+        "00126566"
+      ],
+      "doc_groups": [
+        "holding"
+      ],
+      "as_of_date": "2025-07-10",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "holding_20250710000510"
+      ],
+      "hard_negative_document_ids": [
+        "holding_20250611000545",
+        "holding_20250827000409",
+        "holding_20250429000750"
+      ]
+    },
+    {
+      "question_id": "author_2b919170b3f420b30f592dbf",
+      "corp_codes": [
+        "00309503"
+      ],
+      "doc_groups": [
+        "exchange"
+      ],
+      "as_of_date": "2023-09-14",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "exchange_20230914800073"
+      ],
+      "hard_negative_document_ids": [
+        "exchange_20230926800443",
+        "exchange_20231013800121",
+        "exchange_20231123800382"
+      ]
+    },
+    {
+      "question_id": "author_33e6a824ee8b5027f2ab7806",
+      "corp_codes": [
+        "00161383"
+      ],
+      "doc_groups": [
+        "holding"
+      ],
+      "as_of_date": "2026-02-11",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "holding_20260211000912"
+      ],
+      "hard_negative_document_ids": [
+        "holding_20251210000498",
+        "holding_20250522000095",
+        "holding_20250411003267"
+      ]
+    },
+    {
+      "question_id": "author_39b7a1a229844d5607de32fb",
+      "corp_codes": [
+        "00164478"
+      ],
+      "doc_groups": [
+        "exchange"
+      ],
+      "as_of_date": "2024-11-12",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "exchange_20241112800101"
+      ],
+      "hard_negative_document_ids": [
+        "exchange_20241105800001",
+        "exchange_20241128800562",
+        "exchange_20241202800064"
+      ]
+    },
+    {
+      "question_id": "author_3f205e961b4c70adc216d67e",
+      "corp_codes": [
+        "01261644"
+      ],
+      "doc_groups": [
+        "holding"
+      ],
+      "as_of_date": "2025-03-19",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "holding_20250319000761"
+      ],
+      "hard_negative_document_ids": [
+        "holding_20250319000659",
+        "holding_20250106000402",
+        "holding_20250106000417"
+      ]
+    },
+    {
+      "question_id": "author_40f76302294d317d0c588b5d",
+      "corp_codes": [
+        "00162461"
+      ],
+      "doc_groups": [
+        "holding"
+      ],
+      "as_of_date": "2023-12-06",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "holding_20231206000186"
+      ],
+      "hard_negative_document_ids": [
+        "holding_20240104000410",
+        "holding_20231106000058",
+        "holding_20240108000572"
+      ]
+    },
+    {
+      "question_id": "author_41f346723847e84a051e614a",
+      "corp_codes": [
+        "00126371"
+      ],
+      "doc_groups": [
+        "major"
+      ],
+      "as_of_date": null,
+      "expected_answerability": "NOT_FOUND",
+      "question_type": "ANSWERABILITY",
+      "positive_document_ids": [],
+      "hard_negative_document_ids": []
+    },
+    {
+      "question_id": "author_4b8df2cacd43755b56e3c71e",
+      "corp_codes": [
+        "00413046"
+      ],
+      "doc_groups": [
+        "holding"
+      ],
+      "as_of_date": "2024-03-08",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "holding_20240308000746"
+      ],
+      "hard_negative_document_ids": [
+        "holding_20240314001660",
+        "holding_20240328001700",
+        "holding_20240202000461"
+      ]
+    },
+    {
+      "question_id": "author_4dae7a49dd14e226926c4edf",
+      "corp_codes": [
+        "00164645"
+      ],
+      "doc_groups": [
+        "holding"
+      ],
+      "as_of_date": "2026-03-03",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "holding_20260303002502"
+      ],
+      "hard_negative_document_ids": [
+        "holding_20250919000067",
+        "holding_20250918000280",
+        "holding_20250918000358"
+      ]
+    },
+    {
+      "question_id": "author_50eba48b6e3d77f488421b89",
+      "corp_codes": [
+        "00860332"
+      ],
+      "doc_groups": [
+        "major"
+      ],
+      "as_of_date": "2026-02-09",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "positive_document_ids": [
+        "major_20260209000461"
+      ],
+      "hard_negative_document_ids": [
+        "major_20260209000141",
+        "major_20260326000117",
+        "major_20260326000277"
+      ]
+    },
+    {
+      "question_id": "author_52e6c0ca8915c4a28c802e4c",
+      "corp_codes": [
+        "01105153",
+        "01261644"
+      ],
+      "doc_groups": [
+        "periodic"
+      ],
+      "as_of_date": "2026-03-20",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "COMPARISON_CALC",
+      "positive_document_ids": [
+        "periodic_20260318001562",
+        "periodic_20260320000803"
+      ],
+      "hard_negative_document_ids": [
+        "periodic_20260515001834",
+        "periodic_20260515002401",
+        "periodic_20251114001619"
+      ]
+    },
+    {
+      "question_id": "author_53d266ad714c7b2c4db364b5",
+      "corp_codes": [
+        "00231044"
+      ],
+      "doc_groups": [
+        "exchange"
+      ],
+      "as_of_date": "2025-12-09",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "exchange_20251209900091"
+      ],
+      "hard_negative_document_ids": [
+        "exchange_20251202900336",
+        "exchange_20251224900774",
+        "exchange_20251029900740"
+      ]
+    },
+    {
+      "question_id": "author_558c9267989c17f3e0aa14ad",
+      "corp_codes": [
+        "00309503"
+      ],
+      "doc_groups": [
+        "exchange"
+      ],
+      "as_of_date": "2023-09-26",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "EVENT_TRACE",
+      "positive_document_ids": [
+        "exchange_20230926800443"
+      ],
+      "hard_negative_document_ids": [
+        "exchange_20230914800073",
+        "exchange_20231013800121",
+        "exchange_20231123800382"
+      ]
+    },
+    {
+      "question_id": "author_642b260aa50968143920281b",
+      "corp_codes": [
+        "01515323"
+      ],
+      "doc_groups": [
+        "major"
+      ],
+      "as_of_date": null,
+      "expected_answerability": "NOT_FOUND",
+      "question_type": "ANSWERABILITY",
+      "positive_document_ids": [],
+      "hard_negative_document_ids": []
+    },
+    {
+      "question_id": "author_66ddb05e5a3de362ff1c536f",
+      "corp_codes": [
+        "00413046"
+      ],
+      "doc_groups": [
+        "exchange"
+      ],
+      "as_of_date": "2024-02-27",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "positive_document_ids": [
+        "exchange_20240227800274"
+      ],
+      "hard_negative_document_ids": [
+        "exchange_20240227800275",
+        "exchange_20240228800300",
+        "exchange_20240308800453"
+      ]
+    },
+    {
+      "question_id": "author_75966f98e4996bc694606bb2",
+      "corp_codes": [
+        "00124540"
+      ],
+      "doc_groups": [
+        "exchange"
+      ],
+      "as_of_date": "2025-11-12",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "exchange_20251112800360"
+      ],
+      "hard_negative_document_ids": [
+        "exchange_20251114800141",
+        "exchange_20251105800345",
+        "exchange_20251103800353"
+      ]
+    },
+    {
+      "question_id": "author_833ea1a29f055ec369947a98",
+      "corp_codes": [
+        "00309503"
+      ],
+      "doc_groups": [
+        "holding"
+      ],
+      "as_of_date": "2023-11-10",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "holding_20231110000478"
+      ],
+      "hard_negative_document_ids": [
+        "holding_20231211000373",
+        "holding_20240109000154",
+        "holding_20240208000529"
+      ]
+    },
+    {
+      "question_id": "author_8db33a880c09102d4903e280",
+      "corp_codes": [
+        "00126380"
+      ],
+      "doc_groups": [
+        "holding"
+      ],
+      "as_of_date": "2024-07-19",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "holding_20240719000464"
+      ],
+      "hard_negative_document_ids": [
+        "holding_20240726000565",
+        "holding_20240802000389",
+        "holding_20240816000240"
+      ]
+    },
+    {
+      "question_id": "author_95a89db78ffe266ced4d7ea6",
+      "corp_codes": [
+        "00126380"
+      ],
+      "doc_groups": [
+        "holding"
+      ],
+      "as_of_date": "2026-01-16",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "holding_20260116000451"
+      ],
+      "hard_negative_document_ids": [
+        "holding_20260109000680",
+        "holding_20260123000544",
+        "holding_20260130000730"
+      ]
+    },
+    {
+      "question_id": "author_a09660efd75391b28724e656",
+      "corp_codes": [
+        "00258801"
+      ],
+      "doc_groups": [
+        "major"
+      ],
+      "as_of_date": "2023-05-11",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "positive_document_ids": [
+        "major_20230511000691"
+      ],
+      "hard_negative_document_ids": [
+        "major_20230511000703",
+        "major_20230525000446",
+        "major_20230608000324"
+      ]
+    },
+    {
+      "question_id": "author_a24879dc628ff582fdeba8b5",
+      "corp_codes": [
+        "00688996"
+      ],
+      "doc_groups": [
+        "exchange"
+      ],
+      "as_of_date": null,
+      "expected_answerability": "NOT_FOUND",
+      "question_type": "ANSWERABILITY",
+      "positive_document_ids": [],
+      "hard_negative_document_ids": []
+    },
+    {
+      "question_id": "author_a3a6ade04e8f72004e2df4f1",
+      "corp_codes": [
+        "00382199"
+      ],
+      "doc_groups": [
+        "periodic"
+      ],
+      "as_of_date": "2025-11-14",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "COMPARISON_CALC",
+      "positive_document_ids": [
+        "periodic_20231114001992",
+        "periodic_20251114002208"
+      ],
+      "hard_negative_document_ids": [
+        "periodic_20250814002920",
+        "periodic_20260318000826",
+        "periodic_20260515002273"
+      ]
+    },
+    {
+      "question_id": "author_a538b0e2240fe01d1a71ebb7",
+      "corp_codes": [
+        "00356370"
+      ],
+      "doc_groups": [
+        "periodic"
+      ],
+      "as_of_date": "2025-05-15",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "COMPARISON_CALC",
+      "positive_document_ids": [
+        "periodic_20230515001584",
+        "periodic_20250515001309"
+      ],
+      "hard_negative_document_ids": [
+        "periodic_20250317000790",
+        "periodic_20250814002650",
+        "periodic_20241114001593"
+      ]
+    },
+    {
+      "question_id": "author_a7d2486c24a01dace51cdbe0",
+      "corp_codes": [
+        "00302926"
+      ],
+      "doc_groups": [
+        "exchange"
+      ],
+      "as_of_date": "2024-04-25",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "positive_document_ids": [
+        "exchange_20240425800002"
+      ],
+      "hard_negative_document_ids": [
+        "exchange_20240418800463",
+        "exchange_20240514801290",
+        "exchange_20240514801320"
+      ]
+    },
+    {
+      "question_id": "author_a9f44253b3de69062e704c83",
+      "corp_codes": [
+        "00860332"
+      ],
+      "doc_groups": [
+        "holding"
+      ],
+      "as_of_date": "2025-11-20",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "holding_20251120000434"
+      ],
+      "hard_negative_document_ids": [
+        "holding_20260113000702",
+        "holding_20260330001598",
+        "holding_20250502000422"
+      ]
+    },
+    {
+      "question_id": "author_acd4f9e29a7188d84c0f1aaa",
+      "corp_codes": [
+        "00126362"
+      ],
+      "doc_groups": [
+        "exchange"
+      ],
+      "as_of_date": "2023-09-27",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "positive_document_ids": [
+        "exchange_20230927800181"
+      ],
+      "hard_negative_document_ids": [
+        "exchange_20240828800001",
+        "exchange_20250314800002",
+        "exchange_20260130800516"
+      ]
+    },
+    {
+      "question_id": "author_ad711c9d1d96ebc8950814f0",
+      "corp_codes": [
+        "00688996"
+      ],
+      "doc_groups": [
+        "holding"
+      ],
+      "as_of_date": "2024-11-07",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "holding_20241107000066"
+      ],
+      "hard_negative_document_ids": [
+        "holding_20241031000538",
+        "holding_20241210000280",
+        "holding_20250110000483"
+      ]
+    },
+    {
+      "question_id": "author_b81eacbe0cad034dfb7b9dd4",
+      "corp_codes": [
+        "00989619"
+      ],
+      "doc_groups": [
+        "exchange"
+      ],
+      "as_of_date": "2024-07-05",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "positive_document_ids": [
+        "exchange_20240705900656"
+      ],
+      "hard_negative_document_ids": [
+        "exchange_20240730900136",
+        "exchange_20240730900138",
+        "exchange_20240912900581"
+      ]
+    },
+    {
+      "question_id": "author_be87975b478c1685b1170e80",
+      "corp_codes": [
+        "00159023"
+      ],
+      "doc_groups": [
+        "periodic"
+      ],
+      "as_of_date": "2025-05-15",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "COMPARISON_CALC",
+      "positive_document_ids": [
+        "periodic_20230512000710",
+        "periodic_20250515001087"
+      ],
+      "hard_negative_document_ids": [
+        "periodic_20250317000684",
+        "periodic_20250814001526",
+        "periodic_20241114002758"
+      ]
+    },
+    {
+      "question_id": "author_bfc0f3bb801bc9eab3faaa3c",
+      "corp_codes": [
+        "00126308"
+      ],
+      "doc_groups": [
+        "holding"
+      ],
+      "as_of_date": "2023-09-01",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "holding_20230901000172"
+      ],
+      "hard_negative_document_ids": [
+        "holding_20230911000166",
+        "holding_20230810000191",
+        "holding_20240112000026"
+      ]
+    },
+    {
+      "question_id": "author_c4d4ef2ce48a57ef54ded4db",
+      "corp_codes": [
+        "00159023"
+      ],
+      "doc_groups": [
+        "major"
+      ],
+      "as_of_date": "2023-02-24",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "positive_document_ids": [
+        "major_20230224000002"
+      ],
+      "hard_negative_document_ids": [
+        "major_20230208000001",
+        "major_20230420000185",
+        "major_20230623000001"
+      ]
+    },
+    {
+      "question_id": "author_c8225552d5982882a3157819",
+      "corp_codes": [
+        "00309503"
+      ],
+      "doc_groups": [
+        "holding"
+      ],
+      "as_of_date": "2024-06-07",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "holding_20240607000069"
+      ],
+      "hard_negative_document_ids": [
+        "holding_20240507000470",
+        "holding_20240729000276",
+        "holding_20240305000559"
+      ]
+    },
+    {
+      "question_id": "author_ca4ec294ad36b44faa071043",
+      "corp_codes": [
+        "00760971"
+      ],
+      "doc_groups": [
+        "major"
+      ],
+      "as_of_date": "2023-03-28",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "positive_document_ids": [
+        "major_20230328000605"
+      ],
+      "hard_negative_document_ids": [
+        "major_20230328000635",
+        "major_20230509000302",
+        "major_20240326000777"
+      ]
+    },
+    {
+      "question_id": "author_cc803e40119274b80d14a65a",
+      "corp_codes": [
+        "00583424"
+      ],
+      "doc_groups": [
+        "major"
+      ],
+      "as_of_date": "2025-04-30",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "positive_document_ids": [
+        "major_20250430000006"
+      ],
+      "hard_negative_document_ids": [
+        "major_20250430000008",
+        "major_20250206000620",
+        "major_20250801000278"
+      ]
+    },
+    {
+      "question_id": "author_d640cbedd7330f4b9bcfeeb7",
+      "corp_codes": [
+        "00989619"
+      ],
+      "doc_groups": [
+        "exchange"
+      ],
+      "as_of_date": "2025-03-17",
+      "expected_answerability": "WITHHELD",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "positive_document_ids": [
+        "exchange_20250317900379"
+      ],
+      "hard_negative_document_ids": [
+        "exchange_20250317900376",
+        "exchange_20241108900207",
+        "exchange_20240912900581"
+      ]
+    },
+    {
+      "question_id": "author_e0416a675c6970a7f064bf74",
+      "corp_codes": [
+        "00413046"
+      ],
+      "doc_groups": [
+        "exchange"
+      ],
+      "as_of_date": "2025-04-14",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "positive_document_ids": [
+        "exchange_20250414800004"
+      ],
+      "hard_negative_document_ids": [
+        "exchange_20250401800277",
+        "exchange_20250428800742",
+        "exchange_20250320800327"
+      ]
+    },
+    {
+      "question_id": "author_ed4a7d77528a8c5751e9a348",
+      "corp_codes": [
+        "00260930"
+      ],
+      "doc_groups": [
+        "holding"
+      ],
+      "as_of_date": "2025-06-05",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "holding_20250605000220"
+      ],
+      "hard_negative_document_ids": [
+        "holding_20250605000413",
+        "holding_20251203000066",
+        "holding_20251204000162"
+      ]
+    },
+    {
+      "question_id": "author_ef82c30f267ca92d099c7a62",
+      "corp_codes": [
+        "00302926"
+      ],
+      "doc_groups": [
+        "exchange"
+      ],
+      "as_of_date": "2025-05-07",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "exchange_20250507800534"
+      ],
+      "hard_negative_document_ids": [
+        "exchange_20250425800458",
+        "exchange_20250527800286",
+        "exchange_20250407800743"
+      ]
+    },
+    {
+      "question_id": "author_f115e4cb0e6b913c663df555",
+      "corp_codes": [
+        "00164478"
+      ],
+      "doc_groups": [
+        "exchange"
+      ],
+      "as_of_date": "2023-09-18",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "exchange_20230918800156"
+      ],
+      "hard_negative_document_ids": [
+        "exchange_20230822800327",
+        "exchange_20231108800007",
+        "exchange_20231108800059"
+      ]
+    },
+    {
+      "question_id": "author_f119c5d79a4e52a359a84caa",
+      "corp_codes": [
+        "00126380"
+      ],
+      "doc_groups": [
+        "periodic"
+      ],
+      "as_of_date": null,
+      "expected_answerability": "NOT_FOUND",
+      "question_type": "ANSWERABILITY",
+      "positive_document_ids": [],
+      "hard_negative_document_ids": [
+        "periodic_20230515002335",
+        "periodic_20230814002534",
+        "periodic_20231114002109"
+      ]
+    },
+    {
+      "question_id": "author_f1f0a9f6462da34342fd2cc4",
+      "corp_codes": [
+        "00164779"
+      ],
+      "doc_groups": [
+        "holding"
+      ],
+      "as_of_date": "2026-02-09",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "holding_20260209000019"
+      ],
+      "hard_negative_document_ids": [
+        "holding_20260220000091",
+        "holding_20251014000028",
+        "holding_20251014000142"
+      ]
+    },
+    {
+      "question_id": "author_f55322f4532a9fec91015c34",
+      "corp_codes": [
+        "00382199"
+      ],
+      "doc_groups": [
+        "major"
+      ],
+      "as_of_date": "2024-04-26",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "positive_document_ids": [
+        "major_20240426000320"
+      ],
+      "hard_negative_document_ids": [
+        "major_20240426000306",
+        "major_20240208000535",
+        "major_20240726000171"
+      ]
+    },
+    {
+      "question_id": "author_f61f83f3af47bd86817b5358",
+      "corp_codes": [
+        "00159209"
+      ],
+      "doc_groups": [
+        "holding"
+      ],
+      "as_of_date": "2024-01-04",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "holding_20240104000378"
+      ],
+      "hard_negative_document_ids": [
+        "holding_20240509000041",
+        "holding_20230403004281",
+        "holding_20241007000306"
+      ]
+    },
+    {
+      "question_id": "author_f87d43f1663f388ab5a57a3b",
+      "corp_codes": [
+        "00161383"
+      ],
+      "doc_groups": [
+        "major"
+      ],
+      "as_of_date": "2024-07-22",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "positive_document_ids": [
+        "major_20240722000046"
+      ],
+      "hard_negative_document_ids": [
+        "major_20240716000265",
+        "major_20240924000013",
+        "major_20240423000005"
+      ]
+    },
+    {
+      "question_id": "author_ffcc4093fb37a87f1a40322d",
+      "corp_codes": [
+        "00989619"
+      ],
+      "doc_groups": [
+        "exchange"
+      ],
+      "as_of_date": "2023-04-04",
+      "expected_answerability": "WITHHELD",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "positive_document_ids": [
+        "exchange_20230404900142"
+      ],
+      "hard_negative_document_ids": [
+        "exchange_20230403900177",
+        "exchange_20230208900446",
+        "exchange_20230207900939"
+      ]
+    },
+    {
+      "question_id": "gold_b_034334dce8cb5eaaa6589096",
+      "corp_codes": [
+        "00760971"
+      ],
+      "doc_groups": [
+        "holding"
+      ],
+      "as_of_date": "2024-06-19",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "holding_20240620000340"
+      ],
+      "hard_negative_document_ids": [
+        "holding_20240611000484",
+        "holding_20240603000101",
+        "holding_20240708000304"
+      ]
+    },
+    {
+      "question_id": "gold_b_04129a579f785f869644167a",
+      "corp_codes": [
+        "00164478"
+      ],
+      "doc_groups": [
+        "exchange"
+      ],
+      "as_of_date": "2025-05-26",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "positive_document_ids": [
+        "exchange_20250526800002"
+      ],
+      "hard_negative_document_ids": [
+        "exchange_20250523800568",
+        "exchange_20250605800247",
+        "exchange_20250605800273"
+      ]
+    },
+    {
+      "question_id": "gold_b_0700d8fa5f0028cb712a533d",
+      "corp_codes": [
+        "00126478"
+      ],
+      "doc_groups": [
+        "exchange"
+      ],
+      "as_of_date": "2025-03-17",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "exchange_20250318800145"
+      ],
+      "hard_negative_document_ids": [
+        "exchange_20250317800118",
+        "exchange_20250327801172",
+        "exchange_20250408800489"
+      ]
+    },
+    {
+      "question_id": "gold_b_0aa8d3979510d78ea122edda",
+      "corp_codes": [
+        "00360595"
+      ],
+      "doc_groups": [
+        "exchange"
+      ],
+      "as_of_date": "2024-12-31",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "exchange_20241231800103"
+      ],
+      "hard_negative_document_ids": [
+        "exchange_20241231800107",
+        "exchange_20250117800481",
+        "exchange_20250117800487"
+      ]
+    },
+    {
+      "question_id": "gold_b_0e97c60a0d12c067d46a6f84",
+      "corp_codes": [
+        "00503668"
+      ],
+      "doc_groups": [
+        "periodic"
+      ],
+      "as_of_date": "2025-05-15",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "COMPARISON_CALC",
+      "positive_document_ids": [
+        "periodic_20230515000336",
+        "periodic_20250515000678"
+      ],
+      "hard_negative_document_ids": [
+        "periodic_20250321002001",
+        "periodic_20250814002202",
+        "periodic_20241114001230"
+      ]
+    },
+    {
+      "question_id": "gold_b_137f1bfd5c69987d009ae50c",
+      "corp_codes": [
+        "00261443"
+      ],
+      "doc_groups": [
+        "major"
+      ],
+      "as_of_date": "2024-11-28",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "EVENT_TRACE",
+      "positive_document_ids": [
+        "major_20241128001098"
+      ],
+      "hard_negative_document_ids": [
+        "major_20241021000037",
+        "major_20240913000790",
+        "major_20240624000362"
+      ]
+    },
+    {
+      "question_id": "gold_b_192fa6ea90c0cdefc2616fc0",
+      "corp_codes": [
+        "01205851"
+      ],
+      "doc_groups": [
+        "exchange"
+      ],
+      "as_of_date": "2025-12-19",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "exchange_20251222800814"
+      ],
+      "hard_negative_document_ids": [
+        "exchange_20260106800025",
+        "exchange_20250922800089",
+        "exchange_20250731800031"
+      ]
+    },
+    {
+      "question_id": "gold_b_23f454a11d52f107c1c7e8a2",
+      "corp_codes": [
+        "00161383"
+      ],
+      "doc_groups": [
+        "exchange"
+      ],
+      "as_of_date": "2025-11-14",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "exchange_20251117800179"
+      ],
+      "hard_negative_document_ids": [
+        "exchange_20260114800028",
+        "exchange_20250620800077",
+        "exchange_20250528800084"
+      ]
+    },
+    {
+      "question_id": "gold_b_277f68d0497188039d68f632",
+      "corp_codes": [
+        "01316245"
+      ],
+      "doc_groups": [
+        "exchange"
+      ],
+      "as_of_date": "2025-04-29",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "EVENT_TRACE",
+      "positive_document_ids": [
+        "exchange_20250429800893"
+      ],
+      "hard_negative_document_ids": [
+        "exchange_20250508800712",
+        "exchange_20250618800590",
+        "exchange_20250618800592"
+      ]
+    },
+    {
+      "question_id": "gold_b_27ca59a117b25eafd17a5eaa",
+      "corp_codes": [
+        "00159616"
+      ],
+      "doc_groups": [
+        "exchange"
+      ],
+      "as_of_date": "2025-12-17",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "exchange_20251217800832"
+      ],
+      "hard_negative_document_ids": [
+        "exchange_20251217800425",
+        "exchange_20251216801147",
+        "exchange_20251216801163"
+      ]
+    },
+    {
+      "question_id": "gold_b_2cd479eccfda82d5d6e549bb",
+      "corp_codes": [
+        "01515323"
+      ],
+      "doc_groups": [
+        "exchange"
+      ],
+      "as_of_date": "2025-07-29",
+      "expected_answerability": "WITHHELD",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "exchange_20250730800046"
+      ],
+      "hard_negative_document_ids": [
+        "exchange_20250903800021",
+        "exchange_20250903800022",
+        "exchange_20250616800147"
+      ]
+    },
+    {
+      "question_id": "gold_b_2ef301d8b4157cd002c79279",
+      "corp_codes": [
+        "01390344"
+      ],
+      "doc_groups": [
+        "exchange"
+      ],
+      "as_of_date": "2023-01-19",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "exchange_20230120800061"
+      ],
+      "hard_negative_document_ids": [
+        "exchange_20230117800134",
+        "exchange_20230217800127",
+        "exchange_20230320800254"
+      ]
+    },
+    {
+      "question_id": "gold_b_30089ee2275a48721e228ae2",
+      "corp_codes": [
+        "01205851"
+      ],
+      "doc_groups": [
+        "holding"
+      ],
+      "as_of_date": "2024-06-19",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "holding_20240620000036"
+      ],
+      "hard_negative_document_ids": [
+        "holding_20240702000399",
+        "holding_20240717000432",
+        "holding_20240402001920"
+      ]
+    },
+    {
+      "question_id": "gold_b_3054ffad4d0cb92473806459",
+      "corp_codes": [
+        "00102858"
+      ],
+      "doc_groups": [
+        "holding"
+      ],
+      "as_of_date": "2024-12-19",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "holding_20241219000057"
+      ],
+      "hard_negative_document_ids": [
+        "holding_20241219000061",
+        "holding_20241204000373",
+        "holding_20250106000154"
+      ]
+    },
+    {
+      "question_id": "gold_b_34e53426cab01c72ec76bfca",
+      "corp_codes": [
+        "00126308"
+      ],
+      "doc_groups": [
+        "exchange"
+      ],
+      "as_of_date": "2024-04-17",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "exchange_20240417800519"
+      ],
+      "hard_negative_document_ids": [
+        "exchange_20240417800530",
+        "exchange_20240401800060",
+        "exchange_20240401801465"
+      ]
+    },
+    {
+      "question_id": "gold_b_446afacf23798f1091ca19df",
+      "corp_codes": [
+        "00382199"
+      ],
+      "doc_groups": [
+        "major"
+      ],
+      "as_of_date": "2025-02-03",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "EVENT_TRACE",
+      "positive_document_ids": [
+        "major_20250203000097"
+      ],
+      "hard_negative_document_ids": [
+        "major_20250206000192",
+        "major_20250207000299",
+        "major_20241205000527"
+      ]
+    },
+    {
+      "question_id": "gold_b_4dbdfc5d0b451f1d7a207e74",
+      "corp_codes": [
+        "00126380"
+      ],
+      "doc_groups": [
+        "periodic"
+      ],
+      "as_of_date": "2025-11-14",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "COMPARISON_CALC",
+      "positive_document_ids": [
+        "periodic_20231114002109",
+        "periodic_20251114002447"
+      ],
+      "hard_negative_document_ids": [
+        "periodic_20250814003156",
+        "periodic_20260310002820",
+        "periodic_20260515002181"
+      ]
+    },
+    {
+      "question_id": "gold_b_4e766ea7213345a7d5bbb527",
+      "corp_codes": [
+        "00760971"
+      ],
+      "doc_groups": [
+        "holding"
+      ],
+      "as_of_date": "2025-08-05",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "holding_20250805000192"
+      ],
+      "hard_negative_document_ids": [
+        "holding_20250716000257",
+        "holding_20250703000426",
+        "holding_20250613000397"
+      ]
+    },
+    {
+      "question_id": "gold_b_5271576ebada8221bcc3056a",
+      "corp_codes": [
+        "00145880"
+      ],
+      "doc_groups": [
+        "periodic"
+      ],
+      "as_of_date": "2025-08-14",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "COMPARISON_CALC",
+      "positive_document_ids": [
+        "periodic_20230814001112",
+        "periodic_20250814002944"
+      ],
+      "hard_negative_document_ids": [
+        "periodic_20250515002501",
+        "periodic_20251114002160",
+        "periodic_20250317000668"
+      ]
+    },
+    {
+      "question_id": "gold_b_5335116f30b3102f5ce22cbb",
+      "corp_codes": [
+        "00877059"
+      ],
+      "doc_groups": [
+        "exchange"
+      ],
+      "as_of_date": "2024-06-25",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "exchange_20240625800286"
+      ],
+      "hard_negative_document_ids": [
+        "exchange_20240625800283",
+        "exchange_20240625800312",
+        "exchange_20240626800343"
+      ]
+    },
+    {
+      "question_id": "gold_b_60268d8a3d15da2a26a59fd6",
+      "corp_codes": [
+        "00126566"
+      ],
+      "doc_groups": [
+        "exchange"
+      ],
+      "as_of_date": "2023-12-01",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "exchange_20231204800003"
+      ],
+      "hard_negative_document_ids": [
+        "exchange_20231207800142",
+        "exchange_20231123800270",
+        "exchange_20231113800606"
+      ]
+    },
+    {
+      "question_id": "gold_b_6064d1699deee9470756d9d2",
+      "corp_codes": [
+        "00413046"
+      ],
+      "doc_groups": [
+        "exchange"
+      ],
+      "as_of_date": "2026-03-12",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "positive_document_ids": [
+        "exchange_20260312800806"
+      ],
+      "hard_negative_document_ids": [
+        "exchange_20260317800019",
+        "exchange_20260324800030",
+        "exchange_20260325800594"
+      ]
+    },
+    {
+      "question_id": "gold_b_649e0385533d6ed2ad3bd978",
+      "corp_codes": [
+        "01384787"
+      ],
+      "doc_groups": [
+        "holding"
+      ],
+      "as_of_date": "2025-12-05",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "holding_20251205000450"
+      ],
+      "hard_negative_document_ids": [
+        "holding_20251001000669",
+        "holding_20250702000038",
+        "holding_20250307001165"
+      ]
+    },
+    {
+      "question_id": "gold_b_6af756dd84b32fc13513f0bd",
+      "corp_codes": [
+        "00164478"
+      ],
+      "doc_groups": [
+        "exchange"
+      ],
+      "as_of_date": "2025-06-23",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "positive_document_ids": [
+        "exchange_20250623800001"
+      ],
+      "hard_negative_document_ids": [
+        "exchange_20250617800268",
+        "exchange_20250611800358",
+        "exchange_20250708800221"
+      ]
+    },
+    {
+      "question_id": "gold_b_75e2226d84ae9c1e8bfad1bd",
+      "corp_codes": [
+        "01316245"
+      ],
+      "doc_groups": [
+        "exchange"
+      ],
+      "as_of_date": "2025-01-10",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "exchange_20250110800527"
+      ],
+      "hard_negative_document_ids": [
+        "exchange_20241231800493",
+        "exchange_20241231800557",
+        "exchange_20241227800803"
+      ]
+    },
+    {
+      "question_id": "gold_b_7c610de1801a78e791b92f60",
+      "corp_codes": [
+        "00159616"
+      ],
+      "doc_groups": [
+        "exchange"
+      ],
+      "as_of_date": "2025-03-13",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "exchange_20250313800043"
+      ],
+      "hard_negative_document_ids": [
+        "exchange_20250313800045",
+        "exchange_20250314800048",
+        "exchange_20250113800603"
+      ]
+    },
+    {
+      "question_id": "gold_b_7d494870b3a53946dd2232c8",
+      "corp_codes": [
+        "00231044"
+      ],
+      "doc_groups": [
+        "major"
+      ],
+      "as_of_date": "2025-08-18",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "positive_document_ids": [
+        "major_20250818000219"
+      ],
+      "hard_negative_document_ids": [
+        "major_20250717000413",
+        "major_20251120000565",
+        "major_20250428000705"
+      ]
+    },
+    {
+      "question_id": "gold_b_8440e15f1cb9f79c66a6b787",
+      "corp_codes": [
+        "00126308"
+      ],
+      "doc_groups": [
+        "exchange"
+      ],
+      "as_of_date": "2025-01-10",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "exchange_20250110800218"
+      ],
+      "hard_negative_document_ids": [
+        "exchange_20250117800001",
+        "exchange_20241230800943",
+        "exchange_20241230800946"
+      ]
+    },
+    {
+      "question_id": "gold_b_8e8c9c7e2994614110d072bf",
+      "corp_codes": [
+        "00161383"
+      ],
+      "doc_groups": [
+        "exchange"
+      ],
+      "as_of_date": "2023-06-12",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "exchange_20230612800469"
+      ],
+      "hard_negative_document_ids": [
+        "exchange_20230612800470",
+        "exchange_20230622800158",
+        "exchange_20230530800118"
+      ]
+    },
+    {
+      "question_id": "gold_b_926d98d28ea51ea8bb8e6ea1",
+      "corp_codes": [
+        "00161383"
+      ],
+      "doc_groups": [
+        "holding"
+      ],
+      "as_of_date": "2024-03-06",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "holding_20240306000024"
+      ],
+      "hard_negative_document_ids": [
+        "holding_20231201000073",
+        "holding_20240628000964",
+        "holding_20231110000631"
+      ]
+    },
+    {
+      "question_id": "gold_b_9498154347fd9a2ceef8aa63",
+      "corp_codes": [
+        "00139834"
+      ],
+      "doc_groups": [
+        "holding"
+      ],
+      "as_of_date": "2025-11-05",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "holding_20251105000317"
+      ],
+      "hard_negative_document_ids": [
+        "holding_20260128000310",
+        "holding_20250806000279",
+        "holding_20250702000082"
+      ]
+    },
+    {
+      "question_id": "gold_b_94c41243826898e3879b933e",
+      "corp_codes": [
+        "00102858"
+      ],
+      "doc_groups": [
+        "holding"
+      ],
+      "as_of_date": "2024-09-04",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "holding_20240904000440"
+      ],
+      "hard_negative_document_ids": [
+        "holding_20240919000094",
+        "holding_20240924000330",
+        "holding_20240924000400"
+      ]
+    },
+    {
+      "question_id": "gold_b_9d2e358034ea16bcee7d8edf",
+      "corp_codes": [
+        "00413046"
+      ],
+      "doc_groups": [
+        "periodic"
+      ],
+      "as_of_date": "2025-05-15",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "COMPARISON_CALC",
+      "positive_document_ids": [
+        "periodic_20230512001099",
+        "periodic_20250515002745"
+      ],
+      "hard_negative_document_ids": [
+        "periodic_20250317000929",
+        "periodic_20250814003700",
+        "periodic_20241114002862"
+      ]
+    },
+    {
+      "question_id": "gold_b_a534bc30d3414f2d094e7461",
+      "corp_codes": [
+        "00231363"
+      ],
+      "doc_groups": [
+        "holding"
+      ],
+      "as_of_date": "2024-01-11",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "holding_20240111000046"
+      ],
+      "hard_negative_document_ids": [
+        "holding_20240314001022",
+        "holding_20230704000221",
+        "holding_20230404002185"
+      ]
+    },
+    {
+      "question_id": "gold_b_ab2d46f2496fe203c8405cad",
+      "corp_codes": [
+        "00126371"
+      ],
+      "doc_groups": [
+        "holding"
+      ],
+      "as_of_date": "2026-02-12",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "holding_20260220000569"
+      ],
+      "hard_negative_document_ids": [
+        "holding_20260102000209",
+        "holding_20250106000150",
+        "holding_20241007000205"
+      ]
+    },
+    {
+      "question_id": "gold_b_ad6f430084e4c5312283ab1a",
+      "corp_codes": [
+        "00102858"
+      ],
+      "doc_groups": [
+        "major"
+      ],
+      "as_of_date": "2025-02-05",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "positive_document_ids": [
+        "major_20250205000509"
+      ],
+      "hard_negative_document_ids": [
+        "major_20250313000896",
+        "major_20241114000001",
+        "major_20241113000148"
+      ]
+    },
+    {
+      "question_id": "gold_b_b6f4714fd3c652594f5d82c1",
+      "corp_codes": [
+        "00382199"
+      ],
+      "doc_groups": [
+        "major"
+      ],
+      "as_of_date": "2024-12-05",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "positive_document_ids": [
+        "major_20241205000527"
+      ],
+      "hard_negative_document_ids": [
+        "major_20241028000193",
+        "major_20241025000162",
+        "major_20250203000097"
+      ]
+    },
+    {
+      "question_id": "gold_b_bbde1cf7dec999a7915f4b4a",
+      "corp_codes": [
+        "00613318"
+      ],
+      "doc_groups": [
+        "holding"
+      ],
+      "as_of_date": "2023-04-25",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "holding_20230425000545"
+      ],
+      "hard_negative_document_ids": [
+        "holding_20230404000713",
+        "holding_20230516000293",
+        "holding_20230330001204"
+      ]
+    },
+    {
+      "question_id": "gold_b_c6076b4bb1e65e4bf8f3efeb",
+      "corp_codes": [
+        "00139834"
+      ],
+      "doc_groups": [
+        "exchange"
+      ],
+      "as_of_date": "2025-12-29",
+      "expected_answerability": "WITHHELD",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "exchange_20251229800114"
+      ],
+      "hard_negative_document_ids": [
+        "exchange_20251230800216",
+        "exchange_20251230800219",
+        "exchange_20251127800002"
+      ]
+    },
+    {
+      "question_id": "gold_b_da1f1a3f66383d37ae6bd524",
+      "corp_codes": [
+        "00382199"
+      ],
+      "doc_groups": [
+        "major"
+      ],
+      "as_of_date": "2025-02-07",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "EVENT_TRACE",
+      "positive_document_ids": [
+        "major_20250207000299"
+      ],
+      "hard_negative_document_ids": [
+        "major_20250206000192",
+        "major_20250203000097",
+        "major_20241205000527"
+      ]
+    },
+    {
+      "question_id": "gold_b_e2808b0ce73a5ddd72f7508b",
+      "corp_codes": [
+        "00261443"
+      ],
+      "doc_groups": [
+        "major"
+      ],
+      "as_of_date": "2024-10-21",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NARRATIVE_MULTI_DOC",
+      "positive_document_ids": [
+        "major_20241021000037"
+      ],
+      "hard_negative_document_ids": [
+        "major_20240913000790",
+        "major_20241128001098",
+        "major_20240624000362"
+      ]
+    },
+    {
+      "question_id": "gold_b_e5cc91d1b8a8bef8695cb6cd",
+      "corp_codes": [
+        "00688996"
+      ],
+      "doc_groups": [
+        "holding"
+      ],
+      "as_of_date": "2026-03-11",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "holding_20260311004186"
+      ],
+      "hard_negative_document_ids": [
+        "holding_20260202000968",
+        "holding_20251014000033",
+        "holding_20251014000148"
+      ]
+    },
+    {
+      "question_id": "gold_b_e95de359f794df64ffab5044",
+      "corp_codes": [
+        "00145880"
+      ],
+      "doc_groups": [
+        "major"
+      ],
+      "as_of_date": null,
+      "expected_answerability": "NOT_FOUND",
+      "question_type": "ANSWERABILITY",
+      "positive_document_ids": [],
+      "hard_negative_document_ids": []
+    },
+    {
+      "question_id": "gold_b_ebc8414ef6c306d4ead0cbe0",
+      "corp_codes": [
+        "00503668"
+      ],
+      "doc_groups": [
+        "exchange"
+      ],
+      "as_of_date": "2023-12-22",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "exchange_20231222800008"
+      ],
+      "hard_negative_document_ids": [
+        "exchange_20231222800076",
+        "exchange_20231222800316",
+        "exchange_20231222800424"
+      ]
+    },
+    {
+      "question_id": "gold_b_ec84639c43268bb42cc60c83",
+      "corp_codes": [
+        "00970453"
+      ],
+      "doc_groups": [
+        "holding"
+      ],
+      "as_of_date": "2025-01-06",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "holding_20250106000284"
+      ],
+      "hard_negative_document_ids": [
+        "holding_20241016000272",
+        "holding_20250422000171",
+        "holding_20240702000380"
+      ]
+    },
+    {
+      "question_id": "gold_b_f23bcdcee714d7436867d683",
+      "corp_codes": [
+        "01316245"
+      ],
+      "doc_groups": [
+        "holding"
+      ],
+      "as_of_date": "2025-04-15",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "holding_20250416000487"
+      ],
+      "hard_negative_document_ids": [
+        "holding_20250304000346",
+        "holding_20250529000497",
+        "holding_20251001000631"
+      ]
+    },
+    {
+      "question_id": "gold_b_f9b84c1e14bca2d1befcce62",
+      "corp_codes": [
+        "00547583"
+      ],
+      "doc_groups": [
+        "holding"
+      ],
+      "as_of_date": "2023-05-26",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "holding_20230608000219"
+      ],
+      "hard_negative_document_ids": [
+        "holding_20230607000361",
+        "holding_20230508000194",
+        "holding_20230807000195"
+      ]
+    },
+    {
+      "question_id": "gold_b_faeb66b34981643d354f6655",
+      "corp_codes": [
+        "00102858"
+      ],
+      "doc_groups": [
+        "holding"
+      ],
+      "as_of_date": "2024-12-18",
+      "expected_answerability": "SUPPORTED",
+      "question_type": "NUMERIC_LOOKUP",
+      "positive_document_ids": [
+        "holding_20241219000061"
+      ],
+      "hard_negative_document_ids": [
+        "holding_20241219000057",
+        "holding_20241204000373",
+        "holding_20250106000154"
+      ]
+    }
+  ]
+}

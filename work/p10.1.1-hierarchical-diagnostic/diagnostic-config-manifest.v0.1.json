@@ -1,0 +1,35 @@
+{
+  "schema_version": "0.1.0",
+  "configurations": {
+    "A_FIXED_BASELINE": {
+      "chunking_config_id": "fixed-token-512-o64.v0.1.0",
+      "funnel": 100
+    },
+    "B_HIERARCHICAL_1536_RAW_FLAT": {
+      "chunking_config_id": "doctype-hier-parent-child-table-dual.v0.2.0-p10-parent1536",
+      "funnel": 30,
+      "source": "reused from P10.1 work/p10.1-chunking-dev-tune/strategy-metrics.v0.1.json, not rerun"
+    },
+    "C_HIERARCHICAL_1024_RAW_FLAT": {
+      "chunking_config_id": "doctype-hier-parent-child-table-dual.v0.2.0",
+      "funnel_diagnostic": 30,
+      "funnel_official": 100
+    },
+    "D_HIERARCHICAL_1024_PARENT_AWARE": {
+      "chunking_config_id": "doctype-hier-parent-child-table-dual.v0.2.0",
+      "funnel": 100,
+      "leaf_only_candidate_pool": true,
+      "sibling_collapse": true,
+      "document_cap": 4
+    }
+  },
+  "embedding_candidate": {
+    "frozen_candidate_id": "bge_m3",
+    "repository_id": "BAAI/bge-m3",
+    "immutable_revision": "5617a9f61b028005a4858fdac845db406aefb181",
+    "embedding_dimension": 1024,
+    "selection_basis": "processing speed was fastest among the 3 pinned frozen candidates in prior calibration; used ONLY as a fixed comparator for this Turn's chunking comparison, never recorded as the final embedding model selection.",
+    "final_embedding_model_selected": false
+  },
+  "return_top_k": 20
+}

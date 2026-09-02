@@ -1,0 +1,8 @@
+{
+  "schema_version": "0.1.0",
+  "generated_at": "2026-09-01T04:25:59.264Z",
+  "dev_tune_gold_sha256_pinned": "7941144c09ce25debeeab6c3fbdfbd4c16761a6be06ab3a844ad159c832f102b",
+  "owner_decision_sha256_pinned": "00dc07913a3674102fbb341b5bf61c10ad3ea3d6e0bf52206f366157f88a6c8d",
+  "row_count": 101,
+  "reused_evaluation_corpus_document_count": 372
+}

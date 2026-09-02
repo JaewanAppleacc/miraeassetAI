@@ -1,0 +1,241 @@
+{
+  "schema_version": "0.1.0",
+  "by_question_type": {
+    "NUMERIC_LOOKUP": {
+      "kure_v1xfixed-token-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.9701754385964911,
+        "n": 57
+      },
+      "kure_v1xsection-aware-flat-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.9558479532163742,
+        "n": 57
+      },
+      "bge_m3xfixed-token-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.9482456140350877,
+        "n": 57
+      },
+      "bge_m3xsection-aware-flat-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.9558479532163742,
+        "n": 57
+      },
+      "pixie_runexfixed-token-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.9672514619883041,
+        "n": 57
+      },
+      "pixie_runexsection-aware-flat-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.9558479532163742,
+        "n": 57
+      }
+    },
+    "NARRATIVE_MULTI_DOC": {
+      "kure_v1xfixed-token-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.9545454545454546,
+        "n": 22
+      },
+      "kure_v1xsection-aware-flat-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.9393939393939393,
+        "n": 22
+      },
+      "bge_m3xfixed-token-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.9848484848484849,
+        "n": 22
+      },
+      "bge_m3xsection-aware-flat-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.9393939393939393,
+        "n": 22
+      },
+      "pixie_runexfixed-token-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.9545454545454546,
+        "n": 22
+      },
+      "pixie_runexsection-aware-flat-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.9393939393939393,
+        "n": 22
+      }
+    },
+    "COMPARISON_CALC": {
+      "kure_v1xfixed-token-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.4583333333333333,
+        "n": 12
+      },
+      "kure_v1xsection-aware-flat-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.2916666666666667,
+        "n": 12
+      },
+      "bge_m3xfixed-token-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.375,
+        "n": 12
+      },
+      "bge_m3xsection-aware-flat-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.2916666666666667,
+        "n": 12
+      },
+      "pixie_runexfixed-token-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.5,
+        "n": 12
+      },
+      "pixie_runexsection-aware-flat-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.4166666666666667,
+        "n": 12
+      }
+    },
+    "ANSWERABILITY": {
+      "kure_v1xfixed-token-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0,
+        "n": 4
+      },
+      "kure_v1xsection-aware-flat-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0,
+        "n": 4
+      },
+      "bge_m3xfixed-token-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0,
+        "n": 4
+      },
+      "bge_m3xsection-aware-flat-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0,
+        "n": 4
+      },
+      "pixie_runexfixed-token-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0,
+        "n": 4
+      },
+      "pixie_runexsection-aware-flat-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0,
+        "n": 4
+      }
+    },
+    "EVENT_TRACE": {
+      "kure_v1xfixed-token-512-o64.v0.1.0": {
+        "recall_at_10_mean": 1,
+        "n": 5
+      },
+      "kure_v1xsection-aware-flat-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.95,
+        "n": 5
+      },
+      "bge_m3xfixed-token-512-o64.v0.1.0": {
+        "recall_at_10_mean": 1,
+        "n": 5
+      },
+      "bge_m3xsection-aware-flat-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.95,
+        "n": 5
+      },
+      "pixie_runexfixed-token-512-o64.v0.1.0": {
+        "recall_at_10_mean": 1,
+        "n": 5
+      },
+      "pixie_runexsection-aware-flat-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.95,
+        "n": 5
+      }
+    }
+  },
+  "by_doc_group": {
+    "holding": {
+      "kure_v1xfixed-token-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.9484848484848485,
+        "n": 33
+      },
+      "kure_v1xsection-aware-flat-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.9237373737373737,
+        "n": 33
+      },
+      "bge_m3xfixed-token-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.9106060606060606,
+        "n": 33
+      },
+      "bge_m3xsection-aware-flat-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.9237373737373737,
+        "n": 33
+      },
+      "pixie_runexfixed-token-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.9434343434343434,
+        "n": 33
+      },
+      "pixie_runexsection-aware-flat-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.9237373737373737,
+        "n": 33
+      }
+    },
+    "major": {
+      "kure_v1xfixed-token-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.8235294117647058,
+        "n": 17
+      },
+      "kure_v1xsection-aware-flat-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.7892156862745099,
+        "n": 17
+      },
+      "bge_m3xfixed-token-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.8627450980392156,
+        "n": 17
+      },
+      "bge_m3xsection-aware-flat-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.7892156862745099,
+        "n": 17
+      },
+      "pixie_runexfixed-token-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.8235294117647058,
+        "n": 17
+      },
+      "pixie_runexsection-aware-flat-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.7892156862745099,
+        "n": 17
+      }
+    },
+    "exchange": {
+      "kure_v1xfixed-token-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.972972972972973,
+        "n": 37
+      },
+      "kure_v1xsection-aware-flat-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.972972972972973,
+        "n": 37
+      },
+      "bge_m3xfixed-token-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.972972972972973,
+        "n": 37
+      },
+      "bge_m3xsection-aware-flat-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.972972972972973,
+        "n": 37
+      },
+      "pixie_runexfixed-token-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.972972972972973,
+        "n": 37
+      },
+      "pixie_runexsection-aware-flat-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.972972972972973,
+        "n": 37
+      }
+    },
+    "periodic": {
+      "kure_v1xfixed-token-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.4230769230769231,
+        "n": 13
+      },
+      "kure_v1xsection-aware-flat-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.2692307692307692,
+        "n": 13
+      },
+      "bge_m3xfixed-token-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.34615384615384615,
+        "n": 13
+      },
+      "bge_m3xsection-aware-flat-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.2692307692307692,
+        "n": 13
+      },
+      "pixie_runexfixed-token-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.46153846153846156,
+        "n": 13
+      },
+      "pixie_runexsection-aware-flat-512-o64.v0.1.0": {
+        "recall_at_10_mean": 0.38461538461538464,
+        "n": 13
+      }
+    }
+  }
+}

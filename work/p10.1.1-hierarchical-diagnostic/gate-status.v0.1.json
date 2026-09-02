@@ -1,0 +1,9 @@
+{
+  "schema_version": "0.1.0",
+  "generated_at": "2026-09-01T04:25:59.312Z",
+  "gate": "DEV_TUNE_INPUT_GATE_REUSED_FROM_P10.1",
+  "status": "GREEN",
+  "dev_check_accessed": false,
+  "holdout_accessed": false,
+  "row_count": 101
+}

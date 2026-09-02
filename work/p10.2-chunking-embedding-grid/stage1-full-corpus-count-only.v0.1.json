@@ -1,0 +1,127 @@
+{
+  "schema_version": "0.1.0",
+  "generated_at": "2026-09-01T05:39:48.684Z",
+  "corpus_snapshot_id": "corpus_04750795e1a2d5c3",
+  "data_layers": {
+    "layer_1_parsed_document_ir_raw": {
+      "role": "THE input this script actually re-chunks",
+      "files": [
+        {
+          "docGroup": "exchange",
+          "filename": "exchange.jsonl",
+          "path": "/Users/jaewan/Documents/Codex/2026-07-28/ai-ai-festival-agent-1-ai/work/a-document-ir/source/exchange.jsonl",
+          "bytes": 24886822
+        },
+        {
+          "docGroup": "major",
+          "filename": "major.jsonl",
+          "path": "/Users/jaewan/Documents/Codex/2026-07-28/ai-ai-festival-agent-1-ai/work/a-document-ir/source/major.jsonl",
+          "bytes": 50745488
+        },
+        {
+          "docGroup": "holding",
+          "filename": "holding.jsonl",
+          "path": "/Users/jaewan/Documents/Codex/2026-07-28/ai-ai-festival-agent-1-ai/work/a-document-ir/source/holding.jsonl",
+          "bytes": 424306881
+        },
+        {
+          "docGroup": "periodic",
+          "filename": "periodic-001.jsonl",
+          "path": "/Users/jaewan/Documents/Codex/2026-07-28/ai-ai-festival-agent-1-ai/work/a-document-ir/source/periodic-001.jsonl",
+          "bytes": 8115592212
+        }
+      ],
+      "total_bytes_measured_now": 8615531403,
+      "total_documents_in_metadata_index": 4204
+    },
+    "layer_2_retrieval_snapshot_downstream_not_used": {
+      "snapshot_id": "docsnap_8e480ec27b33b15bada7b3e764df5385",
+      "document_chunks_path_name": "document-chunks.v0.1.jsonl",
+      "document_chunks_bytes": 2899830197,
+      "document_chunks_sha256": "4fa1ea1c97a550ce35b287164268ed22ae4bd02df357b0c24845604d92bf0b7b",
+      "document_records_path_name": "document-records.v0.1.jsonl",
+      "document_records_bytes": 3877948,
+      "document_records_sha256": "17ffa5dd661de8e61e42fffa55fcbac4679ce9f7a0b3c350fcb35c3055bd3f50",
+      "chunk_count": 1874688,
+      "chunk_text_content_utf8_bytes": 1059299442,
+      "physical_file_present_in_this_environment": false,
+      "chunking_policy": "document-node-first-v0.1 (domain/agent-comparison/retrieval/document-snapshot/*), NOT domain/chunking/chunker.mjs -- structurally incompatible input for Fixed-512/Section-Flat re-chunking"
+    },
+    "layer_3_text_content_sum_not_used": {
+      "bytes_cited": 1059299442,
+      "note": "further-derived statistic over layer 2; this script never reads it"
+    }
+  },
+  "strategies": [
+    {
+      "chunking_config_id": "fixed-token-512-o64.v0.1.0",
+      "documents_processed": 4204,
+      "documents_missing_metadata": 0,
+      "total_chunks": 447895,
+      "search_eligible_chunks": 442549,
+      "unique_content_sha256": 446385,
+      "exact_duplicate_ratio": 0.0033713258687861902,
+      "chunks_per_document": {
+        "p50": 6,
+        "p95": 603,
+        "max": 2439
+      },
+      "char_length": {
+        "p50": 1500,
+        "p95": 2025,
+        "max": 4159
+      },
+      "token_count_proxy": {
+        "p50": 512,
+        "p95": 512,
+        "max": 512
+      },
+      "block_type_rollup": {
+        "PARAGRAPH": 442549,
+        "FALLBACK": 5346
+      },
+      "locator_provenance_violations": 0,
+      "locator_provenance_violation_samples": [],
+      "expected_embedding_calls_if_full_corpus_embedded": 441879,
+      "build_time_ms": 128175,
+      "peak_rss_bytes": 3124199424,
+      "canonical_result_sha256": "0478e9314dcafb09b9c3afca0a2c652f63427059ab01b8208c09bac7f84e1f47",
+      "deterministic_rebuild": true
+    },
+    {
+      "chunking_config_id": "section-aware-flat-512-o64.v0.1.0",
+      "documents_processed": 4204,
+      "documents_missing_metadata": 0,
+      "total_chunks": 522152,
+      "search_eligible_chunks": 516806,
+      "unique_content_sha256": 411695,
+      "exact_duplicate_ratio": 0.2115418498827928,
+      "chunks_per_document": {
+        "p50": 16,
+        "p95": 669,
+        "max": 2533
+      },
+      "char_length": {
+        "p50": 1392,
+        "p95": 1989,
+        "max": 4019
+      },
+      "token_count_proxy": {
+        "p50": 512,
+        "p95": 512,
+        "max": 512
+      },
+      "block_type_rollup": {
+        "TITLE_OR_PARAGRAPH": 516806,
+        "FALLBACK": 5346
+      },
+      "locator_provenance_violations": 0,
+      "locator_provenance_violation_samples": [],
+      "expected_embedding_calls_if_full_corpus_embedded": 492568,
+      "build_time_ms": 122172,
+      "peak_rss_bytes": 3254616064,
+      "canonical_result_sha256": "86091d7cf4798129d54077a3b4d3b9fa6dbda751177a74cfc7cd0ecab452bbf2",
+      "deterministic_rebuild": true
+    }
+  ]
+}

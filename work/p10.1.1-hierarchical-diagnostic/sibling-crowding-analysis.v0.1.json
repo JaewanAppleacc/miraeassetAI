@@ -1,0 +1,13 @@
+{
+  "schema_version": "0.1.0",
+  "mean_sibling_crowded_slot_count_at_20": 5.900990099009901,
+  "crowded_member_chunk_type_counts": {
+    "TABLE_ROW": 574,
+    "PARAGRAPH_CHILD": 5,
+    "FIELD_GROUP_CHILD": 17
+  },
+  "document_cap_excluded_counts_summary": {
+    "total": 2673,
+    "mean_per_item": 26.465346534653467
+  }
+}
