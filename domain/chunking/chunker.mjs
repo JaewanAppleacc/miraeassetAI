@@ -57,7 +57,12 @@ function makeSpan(documentId, node, rowStart = null, rowEnd = null, colStart = n
   };
 }
 
-function sourceSegments(record) {
+// Exported (Turn P10.4) so adaptive-table-chunker.mjs can read the SAME
+// per-node sectionPath/tableMetadata this file already computes (table
+// row segments already carry caption/title_confirmed/unit_text/
+// period_text) instead of re-deriving a parallel, possibly-diverging
+// section-hierarchy walk. No behavior change to this function itself.
+export function sourceSegments(record) {
   const sectionInfo = deriveSectionIds(record.nodes);
   const segments = [];
   for (const node of record.nodes) {
@@ -218,7 +223,7 @@ function findParent(chunks, segments) {
     ?? null;
 }
 
-function qualityEligibility(record) {
+export function qualityEligibility(record) {
   const tier = record.parse_quality?.tier ?? "fallback";
   const hasPdf = (record.source_files ?? []).some((file) => file.content_format === "pdf");
   const hasParseFailure = (record.warnings ?? []).some((warning) => warning.code === "parse_failed");
@@ -229,7 +234,7 @@ function qualityEligibility(record) {
   };
 }
 
-function embedText(document, chunkType, sectionPath, rawText) {
+export function embedText(document, chunkType, sectionPath, rawText) {
   const company = document.manifest_payload?.listed_name ?? document.manifest_payload?.corp_name ?? document.filer_name;
   const context = [
     `기업: ${company}`,
@@ -240,7 +245,7 @@ function embedText(document, chunkType, sectionPath, rawText) {
   return `${context}\n\n${rawText}`;
 }
 
-function chunkMetadata(record, document, eligibility, extra = {}) {
+export function chunkMetadata(record, document, eligibility, extra = {}) {
   return {
     corp_code: document.corp_code,
     corp_name: document.manifest_payload?.corp_name ?? null,
@@ -320,7 +325,12 @@ function makeFinalizer(record, document, config, provenance) {
   };
 }
 
-function chunkFixed(record, document, config, provenance) {
+// Exported (Turn P10.4) so domain/chunking/adaptive-table-chunker.mjs can
+// call the common Fixed-window implementation directly for non-table
+// content, rather than copying/reimplementing it -- byte-identical output
+// guaranteed by construction (same function, same call), not by parallel
+// logic kept in sync by hand. No behavior change to this function itself.
+export function chunkFixed(record, document, config, provenance) {
   const segments = sourceSegments(record);
   const finalizer = makeFinalizer(record, document, config, provenance);
   for (const fileSegments of groupBy(segments, (segment) => segment.span.rel_path).values()) {
