@@ -227,6 +227,19 @@ def check_locators(qs: QuestionScore, store: Any) -> list[dict]:
         doc_id = r.get("doc_id")
         base = {"question_id": qs.question_id, "slot_name": m["slot_name"], "doc_id": doc_id,
                 "node_index": r.get("node_index"), "locator": r.get("locator")}
+        # locator 문자열 자체도 해석한다(vFINAL 14번: 해석 불가 locator는 치명 위반).
+        # 별도 doc_id/node_index 필드만 검사하면 malformed 문자열이 그대로 통과한다(검수 발견 11).
+        loc_str = str(r.get("locator") or "")
+        if loc_str:
+            parsed = parse_locator(loc_str)
+            if parsed is None:
+                out.append({**base, "severity": "critical", "reason": "locator_unparseable"})
+                continue
+            if parsed[0] != doc_id or (r.get("node_index") is not None
+                                       and parsed[1] != r.get("node_index")):
+                out.append({**base, "severity": "critical",
+                            "reason": f"locator_field_mismatch:{parsed[0]}#{parsed[1]}"})
+                continue
         if doc_id not in store:
             out.append({**base, "severity": "critical", "reason": "doc_missing"})
             continue
@@ -376,12 +389,32 @@ def _cd_tiebreak(reports: Mapping[str, dict], cands: Sequence[str], chain: list)
 
 
 def judge(reports: Mapping[str, dict], *, deployable: Mapping[str, bool] | None = None,
-          paraphrase_all_found: Mapping[str, int] | None = None) -> dict[str, Any]:
+          paraphrase_all_found: Mapping[str, int] | None = None,
+          require_arms: set[str] | frozenset[str] | None = None) -> dict[str, Any]:
     """reports: arm -> score_arm() 결과. deployable: vFINAL 19번 최소 배포 가능성(arm별).
-    paraphrase_all_found: LOW_UNDERPOWERED일 때 의역 세트 all_found 수(arm별, vFINAL 8·9번)."""
+    paraphrase_all_found: LOW_UNDERPOWERED일 때 의역 세트 all_found 수(arm별, vFINAL 8·9번).
+    require_arms: 최종 판정에서 {"A","B","C","D"}를 넘겨 완비를 강제한다 — 부분 arm으로도
+    잠정 판정은 돌 수 있으므로(B/D 중간 판정이 그랬다), 누락 arm이 있는 채 최종 승자를
+    선언하는 실수를 판정기 수준에서 막는다(검수 발견 2)."""
     chain: list[dict] = []
     arms = sorted(reports)
     deployable = deployable or {}
+
+    if require_arms is not None:
+        missing_arms = sorted(set(require_arms) - set(arms))
+        extra_arms = sorted(set(arms) - set(require_arms))
+        chain.append({"step": "0 arm completeness", "required": sorted(require_arms),
+                      "missing": missing_arms, "extra": extra_arms})
+        if missing_arms or extra_arms:
+            return {"status": "INVALID",
+                    "reason": f"arm set mismatch: missing={missing_arms} extra={extra_arms}",
+                    "chain": chain}
+        incomplete = {a: reports[a].get("n_missing_or_error", 0) for a in arms
+                      if reports[a].get("n_missing_or_error")}
+        chain.append({"step": "0 per-arm completeness", "missing_or_error": incomplete})
+        if incomplete:
+            return {"status": "INVALID",
+                    "reason": f"arms with missing/error questions: {incomplete}", "chain": chain}
 
     # 14/12 전제: locator 검사를 건너뛴 리포트로는 Hard gate를 평가할 수 없다
     unchecked = [a for a in arms if not reports[a].get("locator_checked", False)]

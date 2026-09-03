@@ -22,10 +22,10 @@ import threading
 import traceback
 from typing import Any
 
-from . import answer_wire, policy_gate
+from . import answer_wire, grounded_answer, policy_gate
 from .agents import qa_agent
 from .llm import get_llm
-from .retriever_adapter import build_line_window_retriever
+from .retriever_adapter import build_serving_retriever
 
 logger = logging.getLogger("dart_detective.answer_api")
 
@@ -35,23 +35,28 @@ DEFAULT_ARM = "D"              # B·D 판정 잠정 승자(PROVISIONAL_WINNER). 
 _lock = threading.Lock()
 _retriever = None
 _store = None
+_arm: str | None = None        # 실제 서빙 arm — readiness는 env 문자열이 아니라 이 값을 보고한다.
+_arm_pins: dict[str, Any] = {}
 
 
 def _get_retriever():
     """지연 로딩 싱글턴. 기동 preload는 qa_service가 readiness()를 불러서 한다."""
-    global _retriever, _store
+    global _retriever, _store, _arm, _arm_pins
     with _lock:
         if _retriever is None:
-            _retriever, _store = build_line_window_retriever()
+            _retriever, _store, _arm, _arm_pins = build_serving_retriever(
+                os.environ.get("DART_QA_ARM", DEFAULT_ARM))
     return _retriever
 
 
 def reset(retriever: Any = None) -> None:
     """테스트용: 캐시를 버리거나 가짜 retriever를 주입한다."""
-    global _retriever, _store
+    global _retriever, _store, _arm, _arm_pins
     with _lock:
         _retriever = retriever
         _store = None
+        _arm = None
+        _arm_pins = {}
 
 
 def _refusal_wire(question_id: str, question: str, decision: policy_gate.Decision) -> dict[str, str]:
@@ -181,13 +186,19 @@ def readiness() -> dict[str, Any]:
         return {
             "ready": True,
             "mode": "real",
-            "arm": os.environ.get("DART_QA_ARM", DEFAULT_ARM),
+            # env 문자열이 아니라 실제 구성된 arm(검수 발견 3) — 주입 테스트 등 arm 미구성 시 기본값.
+            "arm": _arm or os.environ.get("DART_QA_ARM", DEFAULT_ARM),
             "n_docs": len(store) if store is not None else None,
             "llm_provider": getattr(llm, "provider", None),
+            "llm_model": getattr(llm, "model", None),
             "llm_enabled": llm is not None,
-            "pins": {**pins,
+            "pins": {**pins, **_arm_pins,
                      "prompt_version": qa_agent.PROMPT_VERSION,
                      "prompt_fingerprint": qa_agent.prompt_fingerprint(),
+                     # FC 경로(주 경로) 지문 — 캐시 키가 pins 해시라, FC 프롬프트를 바꾸면
+                     # 재배포 시 캐시가 자동 무효화된다(검수 발견 10: 종전엔 수동 삭제 필요).
+                     "fc_prompt_version": grounded_answer.FC_PROMPT_VERSION,
+                     "fc_fingerprint": grounded_answer.fc_fingerprint(),
                      "corpus_cutoff": policy_gate.CORPUS_CUTOFF},
         }
     except Exception as exc:  # noqa: BLE001

@@ -156,8 +156,10 @@ class NodeStore(Mapping):
     def get_raw(self, doc_id: str) -> dict:
         loc = self._locations[doc_id]
         h = self._handle(loc.file)
-        h.seek(loc.offset)
-        data = h.read(loc.length)
+        # pread: 오프셋 지정 원자 읽기 — seek/read 쌍은 공유 핸들에서 스레드가 겹치면
+        # 커서가 밀려 다른 문서의 바이트를 읽는다(클라이언트 단절 후 좀비 스레드와
+        # 재시도 요청이 겹치는 시나리오, 리허설 1차에서 겹침 실재 확인 — 검수 발견 9).
+        data = os.pread(h.fileno(), loc.length, loc.offset)
         return json.loads(data)
 
     def get_document(self, doc_id: str) -> dict:

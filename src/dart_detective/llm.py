@@ -280,9 +280,12 @@ class ClovaLLM:
         (env DART_QA_FC_TEMPERATURE/DART_QA_SEED로 덮어쓸 수 있다 — 실험 전용)."""
         requested = max_tokens or self.max_tokens
         t0 = time.perf_counter()
-        # 실측(2026-09-03, 서비스앱): tools와 출력 길이 파라미터(maxTokens·maxCompletionTokens)는
-        # 함께 보낼 수 없다(40001). temperature·seed는 호환. 출력 상한을 못 거니 FC 호출의 TPM
-        # 소모는 응답 usage로만 확인한다 — v4 §7 예산의 max_tokens는 JSON 경로·수리 호출에만 적용.
+        # 재실측(2026-09-04, 서비스앱): tools와 maxTokens는 함께 보낼 수 **있다** — 단 1024 미만이면
+        # 40001("Invalid parameter: tools, maxTokens")로 거부된다(512 실측). 2026-09-03의 "동시 사용
+        # 불가" 결론은 예산값(512)이 하한 미달이라 나온 오판이었다(검수 발견 4 재검증).
+        # v4 §7 예산이 1024 미만인 전략은 하한 1024로 올려 보낸다 — 출력 상한이 없던 종전보다
+        # 항상 같거나 엄격하다. 실제 전송값은 usage.max_tokens_sent에 남긴다.
+        sent_max_tokens = max(1024, requested)
         payload = {
             "messages": [
                 {"role": "system", "content": system},
@@ -290,6 +293,7 @@ class ClovaLLM:
             ],
             "tools": [{"type": "function", "function": tool}],
             "toolChoice": {"type": "function", "function": {"name": tool["name"]}},
+            "maxTokens": sent_max_tokens,
             "temperature": float(os.environ.get("DART_QA_FC_TEMPERATURE", "0.1")),
             "seed": int(os.environ.get("DART_QA_SEED", "42")),
         }
@@ -303,7 +307,9 @@ class ClovaLLM:
         result = body.get("result") or {}
         message = result.get("message") or {}
         usage = dict(result.get("usage") or {})
+        # requested = 라우팅 예산(v4 §7), sent = 실제 전송값(하한 1024 적용) — 관측을 섞지 않는다.
         usage.setdefault("max_tokens_requested", requested)
+        usage.setdefault("max_tokens_sent", sent_max_tokens)
         if fc_retried:
             usage["fc_40009_retried"] = True
         stop_reason = result.get("stopReason") or result.get("finishReason")

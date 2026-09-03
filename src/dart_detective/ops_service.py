@@ -158,10 +158,16 @@ def _cache_dir() -> str | None:
     return os.environ.get("DART_QA_CACHE_DIR") or None
 
 
+def _valid_wire(obj: Any) -> bool:
+    """캐시에서 꺼낸 응답이 5-string 계약을 지키는가 — 손상 캐시가 200으로 나가는 것을 막는다."""
+    return (isinstance(obj, dict) and set(obj) == set(WIRE_KEYS)
+            and all(isinstance(v, str) for v in obj.values()) and bool(obj["answer"]))
+
+
 def _cache_load(key: str) -> dict[str, str] | None:
     hit = _cache.get(key)
     if hit is not None:
-        return hit
+        return hit if _valid_wire(hit) else None
     d = _cache_dir()
     if d:
         path = os.path.join(d, key + ".json")
@@ -169,9 +175,10 @@ def _cache_load(key: str) -> dict[str, str] | None:
             try:
                 with open(path, encoding="utf-8") as f:
                     loaded = json.load(f)
-                if isinstance(loaded, dict):
+                if _valid_wire(loaded):
                     _cache[key] = loaded
                     return loaded
+                logger.warning("cache entry invalid(5-string 위반) key=%s — miss 처리", key[:12])
             except Exception:  # noqa: BLE001 — 캐시 손상은 miss로 처리
                 logger.warning("cache read failed key=%s", key[:12])
     return None

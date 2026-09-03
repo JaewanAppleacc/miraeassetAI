@@ -242,3 +242,54 @@ def bind(arm: str | None = None, *, dense: DenseReranker | None = None,
         return LineWindowAdapter(retriever, store, arm=arm, dense=dense)
     raise NotImplementedError(
         f"arm {arm}({ARM_LABELS[arm]})의 어댑터는 A/C 스택(팀원1)이 RetrieverAdapter Protocol로 구현한다")
+
+
+class _DenseLowServingRetriever:
+    """B arm 서빙용 — CorpusRetriever 위임 + LOW 세그먼트 dense 재정렬.
+
+    qa_agent는 CorpusRetriever 인터페이스(conditions/retrieve/docs_by_id/statement_scopes)를
+    쓰므로 어댑터(search)를 직접 못 꽂는다. 재정렬 규칙은 LineWindowAdapter.search와 동일:
+    LOW에서만, BM25 후보 dense_pool개를 재정렬해 k개로 자른다. (검수 발견 3 — 서빙이
+    선택 arm을 실제로 타지 않던 문제의 B쪽 배선.)
+    """
+
+    def __init__(self, retriever: CorpusRetriever, dense: DenseReranker,
+                 dense_pool: int | None = None):
+        self._retriever = retriever
+        self._dense = dense
+        self._pool = int(dense_pool or getattr(dense, "dense_pool", 0) or 50)
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._retriever, name)
+
+    def retrieve(self, question: str, conditions: Any = None, k: int | None = None) -> list:
+        cond = conditions if conditions is not None else self._retriever.conditions(question)
+        kk = k or 20
+        if segment_of(cond) != "LOW":
+            return self._retriever.retrieve(question, cond, k=kk)
+        hits = self._retriever.retrieve(question, cond, k=max(kk, self._pool))
+        ranked = self._dense.rerank(question, [chunk_from_retrieved(h) for h in hits])
+        order = {c["chunk_id"]: i for i, c in enumerate(ranked)}
+        return sorted(hits, key=lambda h: order.get(h.chunk_id, len(order)))[:kk]
+
+
+def build_serving_retriever(arm: str | None = None, **paths: Any
+                            ) -> tuple[Any, NodeStore, str, dict[str, Any]]:
+    """서빙(answer_api)용 retriever. 반환: (retriever, store, 실제 arm, arm pin).
+
+    bind()와 같은 선택 규칙(DART_QA_ARM, 기본 D)을 따르되, qa_agent가 소비할 수 있는
+    CorpusRetriever 인터페이스로 돌려준다. A/C는 명확히 실패한다 — readiness가
+    ready=False로 드러나며, 환경변수만 바꿔 다른 arm을 주장할 수 없다.
+    """
+    arm = (arm or os.environ.get("DART_QA_ARM") or "D").upper()
+    if arm not in ("B", "D"):
+        raise NotImplementedError(
+            f"서빙 arm {arm}은 아직 배선되지 않았다 — A/C 스택 통합 시 build_serving_retriever에 추가")
+    retriever, store = build_line_window_retriever(**paths)
+    pins: dict[str, Any] = {"strategy": retriever.strategy}
+    if arm == "B":
+        from .dense_rerank import build_kure_reranker
+        dense = build_kure_reranker()
+        pins.update(dense.pins() if hasattr(dense, "pins") else {})
+        return _DenseLowServingRetriever(retriever, dense), store, arm, pins
+    return retriever, store, arm, pins

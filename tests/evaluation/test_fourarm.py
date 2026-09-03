@@ -217,3 +217,17 @@ def test_judge_refuses_reports_without_locator_check():
     reps["D"]["locator_checked"] = False
     j = fa.judge(reps)
     assert j["status"] == "INVALID" and "locator" in j["reason"]
+
+
+def test_judge_require_arms_blocks_partial_sets():
+    """검수 발견 2: 최종 판정은 A/B/C/D 완비 + 문항 누락 0을 강제할 수 있어야 한다."""
+    reps = {a: _report(a, r_all=0.9, r_high=0.9, low_all_found=10) for a in ("B", "D")}
+    # 잠정 판정(require 없음)은 그대로 돈다 — B/D 중간 판정 호환.
+    assert fa.judge(reps)["status"] == "PROVISIONAL_WINNER"
+    j = fa.judge(reps, require_arms={"A", "B", "C", "D"})
+    assert j["status"] == "INVALID" and "missing=['A', 'C']" in j["reason"]
+    reps4 = {a: _report(a, r_all=0.9, r_high=0.9, low_all_found=10) for a in "ABCD"}
+    assert fa.judge(reps4, require_arms={"A", "B", "C", "D"})["status"] == "PROVISIONAL_WINNER"
+    reps4["A"]["n_missing_or_error"] = 3
+    j = fa.judge(reps4, require_arms={"A", "B", "C", "D"})
+    assert j["status"] == "INVALID" and "missing/error" in j["reason"]

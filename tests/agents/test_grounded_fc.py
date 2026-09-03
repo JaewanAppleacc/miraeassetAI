@@ -42,10 +42,11 @@ def test_complete_tool_sends_tool_choice_and_parses_dict_arguments(monkeypatch):
     r = llm.complete_tool("sys", "user", ga.SUBMIT_GROUNDED_ANSWER, max_tokens=512)
     assert captured["toolChoice"]["function"]["name"] == "submit_grounded_answer"
     assert captured["tools"][0]["function"]["name"] == "submit_grounded_answer"
-    # 실측 40001: tools와 출력 길이 파라미터는 함께 못 보낸다 — payload에 없어야 한다
-    assert "maxTokens" not in captured and "maxCompletionTokens" not in captured
+    # 재실측(2026-09-04): tools+maxTokens는 1024 이상이면 호환(512는 40001) — 하한 1024로 보낸다.
+    assert captured["maxTokens"] == 1024 and "maxCompletionTokens" not in captured
     assert "seed" in captured and "temperature" in captured
-    assert r.usage["max_tokens_requested"] == 512          # 기록은 남긴다(관측용)
+    assert r.usage["max_tokens_requested"] == 512          # 라우팅 예산(관측용)
+    assert r.usage["max_tokens_sent"] == 1024              # 실제 전송값
     assert r.data["claims"][0]["doc_id"] == DOC
 
 
