@@ -1015,10 +1015,18 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
             if grounded_answer.enabled(llm):
                 # ⑧ Native FC(v4 §12): claim 단위 생성 → claim별 bound 게이트 → 코드 조립.
                 doc_meta = {c.doc_id: dict(c.metadata) for c in state.retrieval_results}
-                payload, meta, extra_allowed = grounded_answer.fc_answer(
-                    llm, user_prompt, sources=sources, doc_meta=doc_meta,
-                    derived_allowed=sorted(derived_allowed), question=question,
-                    max_tokens=state.route.budget.max_tokens)
+                try:
+                    payload, meta, extra_allowed = grounded_answer.fc_answer(
+                        llm, user_prompt, sources=sources, doc_meta=doc_meta,
+                        derived_allowed=sorted(derived_allowed), question=question,
+                        max_tokens=state.route.budget.max_tokens)
+                except LLMUnavailable as fc_exc:
+                    # FC 계약 실패(실측: 간헐 40009가 재시도 후에도 남음) → 검증된 JSON 경로로
+                    # 1회 대체. 도구를 안 쓰므로 같은 오류에 노출되지 않는다. 실패 분류는 유지.
+                    payload, meta = _llm_answer(llm, user_prompt,
+                                                max_tokens=state.route.budget.max_tokens)
+                    meta["fc_fallback_json"] = True
+                    meta["fc_error"] = str(fc_exc)[:120]
             else:
                 payload, meta = _llm_answer(llm, user_prompt,
                                             max_tokens=state.route.budget.max_tokens)

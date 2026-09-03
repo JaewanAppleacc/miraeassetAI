@@ -221,3 +221,36 @@ def test_complete_tool_retries_once_on_40009(monkeypatch):
     monkeypatch.setattr(llm, "_post", always_fail)
     with pytest.raises(LLMUnavailable):
         llm.complete_tool("s", "u", ga.SUBMIT_GROUNDED_ANSWER)
+
+
+def test_qa_agent_falls_back_to_json_path_when_fc_unavailable(monkeypatch):
+    """FC가 재시도 후에도 실패하면(실측 40009) 검증된 JSON 경로로 1회 대체한다."""
+    from dart_corpus.retrieval import DocumentIndex, IndexedDocument
+    from dart_corpus.retrieval.corp_dictionary import CorpDictionary
+    from dart_detective.corpus_retriever import CorpusRetriever
+    from dart_detective.agents import qa_agent
+    from dart_detective.llm import LLMResult
+
+    table = "매출액 | 10,891,443"
+    corp = CorpDictionary.from_rows([{"corp_name": "HMM", "listed_name": "HMM", "stock_code": "011200"}])
+    doc = IndexedDocument(doc_id=DOC, corp_name="HMM", corp_code="HMM", filer_name="HMM",
+                          doc_group="periodic", doc_subtype="annual", report_nm="사업보고서 (2025.12)",
+                          rcept_dt="20260318", base_year=2025, base_month=12, is_correction=False, text=table)
+    retriever = CorpusRetriever(
+        document_index=DocumentIndex([doc], corp), corp_dict=corp,
+        docs_by_id={DOC: {"doc_id": DOC, "doc_group": "periodic",
+                          "nodes": [{"node_index": 0, "kind": "table", "section_hierarchy": [], "text": table}]}})
+
+    class FlakyFC:
+        provider = "fake-fc"
+        def complete_tool(self, *a, **k):
+            raise LLMUnavailable('CLOVA HTTP 400: {"status":{"code":"40009"}}')
+        def complete_json(self, system, user, schema, *, max_tokens=None):
+            return LLMResult(data={"answer": "매출액은 10,891,443이다",
+                                   "evidence": [{"document_id": DOC, "quote_or_fact": "매출액 | 10,891,443"}],
+                                   "uncertainty": ""}, provider="fake-fc", model="m", latency_ms=1)
+
+    state = qa_agent.answer_question("HMM의 2025년 매출액은 얼마인가?", retriever, llm=FlakyFC())
+    assert state.llm["used"] is True and state.llm.get("fc_fallback_json") is True
+    assert "40009" in state.llm.get("fc_error", "")
+    assert "10,891,443" in state.answer and not state.llm.get("degraded")
