@@ -76,4 +76,4 @@ data/index/
 results/**/*.results.jsonl
 results/e2e/devtune101.jsonl
 results/e2e/safety.jsonl
-results/judge/wires.jsonl
+results/judge*/wires.jsonl
