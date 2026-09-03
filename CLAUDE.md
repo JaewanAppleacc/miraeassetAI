@@ -46,6 +46,12 @@
 - 중간 캐시·실험 산출물은 `work/`에 두고 `.gitignore`한다. 끝나면 지운다.
 - 큰 파일을 만들기 전에 `df -h`로 여유를 확인한다.
 
+## 팀 병합 상태 (2026-09-03 저녁)
+- 팀원2 산출물 병합 완료: ops_service(qa_service 실물, answer_ex 자동 연결)·deploy_probe·team_deploy.md·안전세트 v1(사람 판)·별칭 점검.
+- 별칭 채택: `data/corpus/corp_aliases.v1.json` → 어댑터 `load_corp_dictionary`가 주입(검색 코어 무변경). 실측: LG엔솔→LG이노텍 오귀속이 LG에너지솔루션 정확 매칭으로 교정.
+- conditions **v2 승격**(SHA `83d5b8a0…`): v1과 차이 1문항 candidate_terms뿐(corps·세그먼트 동일). **B/D는 v2로 재실행 필요**(pin 일치) — E2E 종료 후.
+- 안전 세트: v1(팀원2, expected_behavior 서술) + v2(`safety_set.v2.jsonl`, 기계 검증판 20문항·러너 기본) — 20/20 통과.
+
 ## 작업 방식
 - 수정은 한 번에 원자적으로. 배치를 나눠 오래 끌지 않는다.
 - 피드백은 방어 없이 객관적으로 판정하고, 타당하면 즉시 반영한다.

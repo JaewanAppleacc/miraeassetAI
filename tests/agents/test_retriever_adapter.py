@@ -193,3 +193,22 @@ def test_bind_rejects_unknown_and_defers_ac(monkeypatch):
     monkeypatch.setenv("DART_QA_ARM", "C")
     with pytest.raises(NotImplementedError):
         ra.bind()
+
+
+# ---------- 별칭 로더 ----------
+
+def test_load_corp_dictionary_with_aliases(tmp_path):
+    import json
+    universe = tmp_path / "universe.csv"
+    universe.write_text("corp_code,stock_code,corp_name,listed_name\n"
+                        "1,373220,LG에너지솔루션,LG에너지솔루션\n", encoding="utf-8")
+    aliases = tmp_path / "aliases.json"
+    aliases.write_text(json.dumps({"_comment": "x",
+                                   "LG에너지솔루션": ["LG엔솔", "엘지엔솔"],
+                                   "없는회사": ["유령"]}, ensure_ascii=False), encoding="utf-8")
+    corp = ra.load_corp_dictionary(universe, aliases)
+    assert corp.match("LG엔솔의 2024년 매출액은?") == {"LG에너지솔루션"}
+    assert corp.match("엘지엔솔 실적") == {"LG에너지솔루션"}
+    assert corp.match("유령 회사의 매출") == set()          # universe 밖 corp_name은 무시
+    corp2 = ra.load_corp_dictionary(universe, tmp_path / "no_such.json")
+    assert corp2.match("LG엔솔의 매출") == set()             # 별칭 파일 없으면 기존 동작

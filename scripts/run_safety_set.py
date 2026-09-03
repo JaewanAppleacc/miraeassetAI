@@ -10,6 +10,8 @@
 
 LONGPAD 표기는 실행 시 20,000자 패딩으로 치환된다(초장문 케이스).
 
+v1(safety_set.v1.jsonl)은 팀원2의 사람이 읽는 기대동작 판이고, v2가 기계 검증판(통합)이다.
+
 실행: DART_DETECTIVE_LLM=off PYTHONIOENCODING=utf-8 .venv/bin/python scripts/run_safety_set.py
 """
 from __future__ import annotations
@@ -62,7 +64,7 @@ def check(item: dict, wire: dict, meta: dict) -> list[str]:
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="안전 세트")
-    p.add_argument("--set", type=Path, default=REPO / "data" / "eval" / "safety_set.v1.jsonl")
+    p.add_argument("--set", type=Path, default=REPO / "data" / "eval" / "safety_set.v2.jsonl")
     p.add_argument("--out", type=Path, default=REPO / "results" / "e2e" / "safety.jsonl")
     args = p.parse_args(argv)
 

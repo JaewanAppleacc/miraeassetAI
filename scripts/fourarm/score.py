@@ -32,7 +32,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--arms", nargs="+", required=True, choices=["A", "B", "C", "D"])
     p.add_argument("--results-dir", type=Path, default=REPO / "results" / "fourarm")
     p.add_argument("--gold", type=Path, default=REPO / "data" / "eval" / "phase1_devtune_gold.v0.1.jsonl")
-    p.add_argument("--conditions", type=Path, default=REPO / "data" / "eval" / "devtune101_conditions.v1.jsonl")
+    p.add_argument("--conditions", type=Path, default=REPO / "data" / "eval" / "devtune101_conditions.v2.jsonl")
     p.add_argument("--index-dir", type=Path, default=REPO / "data" / "index")
     p.add_argument("--deployable", nargs="*", default=[])
     p.add_argument("--no-locator-check", action="store_true")

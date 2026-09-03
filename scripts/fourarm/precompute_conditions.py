@@ -33,7 +33,7 @@ sys.path.insert(0, str(REPO / "src"))
 from dart_corpus.retrieval.segments import hard_condition_count, segment_of  # noqa: E402
 from dart_detective.retriever_adapter import build_line_window_retriever  # noqa: E402
 
-VERSION = "v1"
+VERSION = "v2"
 ALLOWED_GOLD_FIELDS = ("question_id", "question")     # non-leak: 이 둘 외에는 읽지 않는다
 
 

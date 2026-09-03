@@ -1,7 +1,7 @@
 """4-arm 러너(B/D) — 사전 계산 조건으로 101문항을 검색하고 interfaces.md §1-1·§1-3 형식으로 기록한다.
 
 non-leak(vFINAL 20번)은 구조로 보장한다: 이 스크립트는 Gold 파일을 열지 않는다. 질문 목록과 조건은
-사전 계산 파일(devtune101_conditions.v1.jsonl)에서만 읽는다.
+사전 계산 파일(devtune101_conditions.v2.jsonl)에서만 읽는다.
 
 실행:
     PYTHONIOENCODING=utf-8 .venv/bin/python scripts/fourarm/run_arm.py --arm D
@@ -70,7 +70,7 @@ def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="4-arm 러너 (B/D)")
     p.add_argument("--arm", required=True, choices=["B", "D"])
     p.add_argument("--conditions", type=Path,
-                   default=REPO / "data" / "eval" / "devtune101_conditions.v1.jsonl")
+                   default=REPO / "data" / "eval" / "devtune101_conditions.v2.jsonl")
     p.add_argument("--out-dir", type=Path, default=REPO / "results" / "fourarm")
     p.add_argument("--k", type=int, default=REPORT_K)
     p.add_argument("--limit", type=int, default=0, help="디버그용: 앞 N문항만")

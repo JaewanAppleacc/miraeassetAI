@@ -34,7 +34,7 @@ Gold(DEV_TUNE 101)의 `source_locator`는 두 표기가 섞여 있다(실측 345
 | DEV_TUNE 101 Gold | `data/eval/phase1_devtune_gold.v0.1.jsonl` | `7941144c09ce25debeeab6c3fbdfbd4c16761a6be06ab3a844ad159c832f102b` |
 | `data/corpus/universe.csv` | 확보·검증 완료 | `96560165c836b10e315cb253ab96a99b369478c3f71a0415d16b7b6fadbfa1dc` |
 | `data/corpus/manifest.jsonl` | 확보·검증 완료 | `04750795e1a2d5c35f73e4bb7766ebede02ff3512d33c382bd4c3a51daba3364` |
-| conditions 파일 | `data/eval/devtune101_conditions.v1.jsonl` (§1-2) | **`6ff1b4fce45bb46db0179d79439a310bcbb95cb3c1e1b2e2ddb2acd165137cf5`** (2026-09-03 04:24, code 056ed14) |
+| conditions 파일 | `data/eval/devtune101_conditions.v2.jsonl` (§1-2) | **`83d5b8a02de2e3e79e388ec417ed104c81b08eb0a8dc8a8366b020df36b5e527`** (v2 · 별칭 채택 반영. v1 `6ff1b4fc…`과 차이는 1문항 candidate_terms뿐 — corps·세그먼트 동일) |
 | 채점기 코드 + arm별 config | `scripts/fourarm/` (§1) | 실행 직전 HEAD SHA + config SHA 기록 |
 
 ---
@@ -63,7 +63,7 @@ Gold(DEV_TUNE 101)의 `source_locator`는 두 표기가 섞여 있다(실측 345
 - `chunk_text_sha256`는 `sha256(NFC 정규화 + 공백 제거한 청크 본문)`. 채점기가 원문 역참조로 대조할 때 쓴다.
 - 문항 하나가 실패하면 `"results": []`에 `"error": "…"`를 붙이고 다음 문항으로. 실패 문항만 재실행 금지(15번).
 
-### 1-2. 사전 계산 conditions 파일 `data/eval/devtune101_conditions.v1.jsonl` — 소유: 나, 네 arm 공통 입력
+### 1-2. 사전 계산 conditions 파일 `data/eval/devtune101_conditions.v2.jsonl` — 소유: 나, 네 arm 공통 입력
 ```json
 {"question_id": "…", "segment": "LOW",
  "n_hard_conditions": 2,

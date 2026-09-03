@@ -179,6 +179,31 @@ def _env_path(name: str, default: Path) -> Path:
     return Path(v) if v else default
 
 
+def load_corp_dictionary(universe_csv: Path | str,
+                         aliases_path: Path | str | None = None) -> CorpDictionary:
+    """universe.csv + 채택 별칭(corp_aliases.v1.json: alias→corp_name)으로 기업 사전을 만든다.
+
+    별칭 점검(docs/reports/alias_coverage.md) 실측: 통용 표기(LG엔솔·포스코·현대중공업 등)가
+    미매칭이면 기업 필터가 비어 **엉뚱한 회사** 문서가 상위에 온다(LG엔솔→LG이노텍 실측).
+    검색 코어(corp_dictionary.py)는 수정하지 않는다 — 별칭을 listed_name 행으로 주입만 한다.
+    별칭 파일의 corp_name이 universe에 없으면 무시한다(오타로 유령 기업을 만들지 않기 위해)."""
+    import csv
+    with Path(universe_csv).open(encoding="utf-8-sig", newline="") as f:
+        rows = list(csv.DictReader(f))
+    known = {r.get("corp_name", "").strip() for r in rows}
+    path = (Path(aliases_path) if aliases_path
+            else _env_path("DART_QA_ALIASES", REPO_ROOT / "data" / "corpus" / "corp_aliases.v1.json"))
+    if path.exists():
+        import json as _json
+        data = _json.loads(path.read_text(encoding="utf-8"))
+        for corp_name, aliases in data.items():
+            if corp_name.startswith("_") or corp_name not in known:
+                continue
+            for alias in aliases:
+                rows.append({"corp_name": corp_name, "listed_name": alias, "stock_code": ""})
+    return CorpDictionary.from_rows(rows)
+
+
 def build_line_window_retriever(*, doc_index: Path | str | None = None,
                                 universe_csv: Path | str | None = None,
                                 index_dir: Path | str | None = None,
@@ -191,7 +216,7 @@ def build_line_window_retriever(*, doc_index: Path | str | None = None,
                     else _env_path("DART_QA_UNIVERSE", REPO_ROOT / "data" / "corpus" / "universe.csv"))
     document_ir_dir = Path(document_ir_dir) if document_ir_dir else _env_path(
         "DART_QA_DOCUMENT_IR_DIR", default_document_ir_dir())
-    corp = CorpDictionary.from_universe_csv(universe_csv)
+    corp = load_corp_dictionary(universe_csv)
     index = DocumentIndex.from_jsonl(doc_index, corp)
     kwargs = {"cache_size": cache_size} if cache_size else {}
     store = NodeStore(index_dir, document_ir_dir, **kwargs)
