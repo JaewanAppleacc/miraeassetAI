@@ -993,6 +993,10 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
         question, state.slots,
         {m.slot: m.picked_value for m in state.evidence_matches if m.picked_value},
         {m.slot: m.evidence_text for m in state.evidence_matches})
+    state.derived += calculator.derive_percent_of(
+        question,
+        {m.slot: m.picked_value for m in state.evidence_matches if m.picked_value},
+        {m.slot: m.evidence_text for m in state.evidence_matches})
 
     sources = [c.as_source() for c in state.retrieval_results]
     answer, uncertainty = fallback_answer(state.evidence_matches)
@@ -1035,6 +1039,13 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
                         llm, user_prompt, sources=sources, doc_meta=doc_meta,
                         derived_allowed=sorted(derived_allowed), question=question,
                         max_tokens=state.route.budget.max_tokens)
+                    if (meta.get("claims") or {}).get("kept") == 0 and (meta.get("claims") or {}).get("total", 0) > 0:
+                        # claim 전멸(전부 게이트 탈락) — 검증된 JSON 경로로 1회 대체(심사 2차: 13문항).
+                        payload2, meta2 = _llm_answer(llm, user_prompt,
+                                                      max_tokens=state.route.budget.max_tokens)
+                        meta2["fc_claims_all_dropped"] = meta["claims"]
+                        payload, meta = payload2, meta2
+                        extra_allowed = set()
                 except LLMUnavailable as fc_exc:
                     # FC 계약 실패(실측: 간헐 40009가 재시도 후에도 남음) → 검증된 JSON 경로로
                     # 1회 대체. 도구를 안 쓰므로 같은 오류에 노출되지 않는다. 실패 분류는 유지.

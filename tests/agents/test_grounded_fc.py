@@ -254,3 +254,14 @@ def test_qa_agent_falls_back_to_json_path_when_fc_unavailable(monkeypatch):
     assert state.llm["used"] is True and state.llm.get("fc_fallback_json") is True
     assert "40009" in state.llm.get("fc_error", "")
     assert "10,891,443" in state.answer and not state.llm.get("degraded")
+
+
+def test_percent_of_derivation():
+    from dart_detective.agents import calculator
+    d = calculator.derive_percent_of(
+        "현대건설 지분(32%)에 해당하는 계약금액은 얼마인가?",
+        {"계약금액": "3,832,253,000,000"}, {"계약금액": "계약금액 | 3,832,253,000,000"})
+    assert len(d) == 1 and d[0].kind == "percent_of"
+    assert d[0].value == "1,226,320,960,000"                 # 3.832조 × 32% — LLM 산술 금지 대상
+    assert calculator.derive_percent_of("비율 없는 질문", {"x": "100"}, {}) == []
+    assert "1,226,320,960,000" in calculator.allowed_numbers(d)

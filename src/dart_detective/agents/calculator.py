@@ -208,6 +208,34 @@ def compare_entities(item: str, corp_a: str, raw_a: str,
     return out
 
 
+_PERCENT_OF_RE = re.compile(r"(\d{1,2}(?:\.\d+)?)\s*%\s*[)\s]*에\s*해당하는")
+
+
+def derive_percent_of(question: str, values: Mapping[str, str],
+                      texts: Mapping[str, str]) -> list[Derived]:
+    """"지분(32%)에 해당하는 금액" — 총액 × 비율을 코드가 계산한다.
+
+    심사 실측(3df555): LLM이 이 곱셈을 직접 해 틀린 금액(1조1,567억, 정답 1조2,263억)이
+    검증을 통과해 나갔다. 원본 총액 slot 값에 질문의 비율을 곱한 파생값을 만들어
+    LLM 산술을 대체한다. 비율이나 총액을 못 찾으면 아무것도 만들지 않는다."""
+    m = _PERCENT_OF_RE.search(question or "")
+    if not m:
+        return []
+    pct = Decimal(m.group(1))
+    out: list[Derived] = []
+    for slot, raw in values.items():
+        base = parse_number(raw)
+        if base is None or base <= 0:
+            continue
+        share = (base * pct / Decimal(100)).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+        unit = unit_of(texts.get(slot, ""))
+        out.append(Derived(metric=slot, kind="percent_of",
+                           formula=f"{_fmt(base)} × {pct}%",
+                           value=_fmt(share), unit=unit,
+                           source_slots=(slot,), source_values=(_fmt(base),)))
+    return out
+
+
 def derive(question: str, slots: Sequence[str],
            values_by_slot: Mapping[str, str],
            lines_by_slot: Mapping[str, str] | None = None) -> list[Derived]:
@@ -297,6 +325,9 @@ def subject_particle(word: str) -> str:
     return "이" if has_final_consonant(word) else "가"
 
 
+_KIND_LABEL = {"percent_of": "비율 적용 금액"}
+
+
 def describe(derived: Sequence[Derived]) -> str:
     """계산 결과를 사람이 읽는 문장으로. 원문 인용과 섞지 않는다."""
     if not derived:
@@ -316,6 +347,9 @@ def describe(derived: Sequence[Derived]) -> str:
         elif d.kind == "pair_change":
             lines.append(f"- {d.metric}: {d.source_values[0]} → {d.source_values[1]} "
                          f"({'+' if not d.value.startswith('-') else ''}{d.value}{unit.strip() or ''} 변동)")
+        elif d.kind == "percent_of":
+            lines.append(f"- {d.metric} × 질문의 비율({d.formula.split('×')[-1].strip()}): "
+                         f"{d.value}{unit}")
         elif d.kind == "larger_side":
             lines.append(f"- {d.metric}{subject_particle(d.metric)} 더 큰 쪽: {d.value}")
         elif d.kind == "amount_million":
