@@ -293,17 +293,12 @@ class ClovaLLM:
             "temperature": float(os.environ.get("DART_QA_FC_TEMPERATURE", "0.1")),
             "seed": int(os.environ.get("DART_QA_SEED", "42")),
         }
+        # 40009(간헐 "Unsupported function")는 여기서 재시도하지 않는다 — qa_agent가 즉시 JSON
+        # 경로로 대체한다(2중 안전망). 재시도를 끼우면 문항당 최악 LLM 호출이 3회(FC→FC→JSON)가
+        # 되어 서버 응답이 120초를 넘는 사례가 나왔다(리허설 실측: 재시도 3문항이 전부 이 꼴).
+        # 60초 안팎을 넘는 무통신 응답은 중간 경로에서 끊길 위험이 있어 최악 시간을 줄이는 쪽을 택한다.
         fc_retried = False
-        try:
-            body = self._post(payload)
-        except LLMUnavailable as exc:
-            # 실측: 동일 요청이 간헐적으로 40009("Unsupported function")를 받고 재시도에서 성공한다
-            # (101문항 중 22건, 재실행 시 정상). 서버 쪽 일시 오류로 판단 — 이 코드에 한해 1회 재시도.
-            if "40009" not in str(exc):
-                raise
-            fc_retried = True
-            time.sleep(RETRY_WAIT_SECONDS)
-            body = self._post(payload)
+        body = self._post(payload)
         latency_ms = int((time.perf_counter() - t0) * 1000)
         result = body.get("result") or {}
         message = result.get("message") or {}

@@ -198,29 +198,18 @@ def test_qa_agent_fc_path_survives_final_validator(monkeypatch):
     assert state.fallback_stage == ""
 
 
-def test_complete_tool_retries_once_on_40009(monkeypatch):
-    from dart_detective import llm as llm_mod
+def test_complete_tool_40009_raises_immediately_no_retry(monkeypatch):
+    """40009은 complete_tool이 재시도하지 않고 즉시 예외 → qa_agent의 JSON 폴백이 받는다.
+    (리허설 실측: FC 재시도가 최악 호출 3회를 만들어 응답이 120초를 넘는 문항 발생 → 제거)"""
     llm = ClovaLLM(api_key="k")
     calls = {"n": 0}
-    def fake_post(payload):
-        calls["n"] += 1
-        if calls["n"] == 1:
-            raise LLMUnavailable('CLOVA HTTP 400: {"status":{"code":"40009","message":"Unsupported function"}}')
-        return {"result": {"message": {"toolCalls": [{"type": "function", "function": {
-            "name": "submit_grounded_answer",
-            "arguments": {"claims": [], "not_found_slots": [], "uncertainty": ""}}}]},
-            "usage": {}}}
-    monkeypatch.setattr(llm, "_post", fake_post)
-    monkeypatch.setattr(llm_mod.time, "sleep", lambda s: None)
-    r = llm.complete_tool("s", "u", ga.SUBMIT_GROUNDED_ANSWER)
-    assert calls["n"] == 2 and r.usage["fc_40009_retried"] is True
-
-    calls["n"] = 10                                        # 두 번째도 40009면 그대로 예외
     def always_fail(payload):
+        calls["n"] += 1
         raise LLMUnavailable('CLOVA HTTP 400: {"status":{"code":"40009"}}')
     monkeypatch.setattr(llm, "_post", always_fail)
     with pytest.raises(LLMUnavailable):
         llm.complete_tool("s", "u", ga.SUBMIT_GROUNDED_ANSWER)
+    assert calls["n"] == 1
 
 
 def test_qa_agent_falls_back_to_json_path_when_fc_unavailable(monkeypatch):

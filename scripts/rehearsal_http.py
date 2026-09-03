@@ -22,28 +22,37 @@ TIMEOUT_S = 300
 MAX_RETRIES = 2
 
 
-def get(base: str, params: dict, timeout: int = TIMEOUT_S) -> tuple[int, dict | None, int, int]:
-    """(status, json, latency_ms, retries) — 평가자 재현: 타임아웃/5xx만 재시도."""
+def get(base: str, params: dict, timeout: int = TIMEOUT_S
+        ) -> tuple[int, dict | None, int, int, list[dict]]:
+    """(status, json, latency_ms(성공 시도), retries, attempts) — 평가자 재현: 타임아웃/5xx만 재시도.
+
+    attempts에는 시도별 소요·예외 문구를 남긴다 — 1차 리허설에서 재시도 원인(타임아웃인지
+    연결 리셋인지)을 기록하지 않아 추적이 안 됐던 것의 교정."""
     url = f"{base}/answer?" + urllib.parse.urlencode(params)
     retries = 0
+    attempts: list[dict] = []
     while True:
         t0 = time.perf_counter()
         try:
             with urllib.request.urlopen(url, timeout=timeout) as r:
                 body = json.loads(r.read().decode("utf-8"))
-                return r.status, body, int((time.perf_counter() - t0) * 1000), retries
+                ms = int((time.perf_counter() - t0) * 1000)
+                attempts.append({"ms": ms, "outcome": "200"})
+                return r.status, body, ms, retries, attempts
         except urllib.error.HTTPError as e:
             ms = int((time.perf_counter() - t0) * 1000)
+            attempts.append({"ms": ms, "outcome": f"HTTP {e.code}"})
             if e.code >= 500 and retries < MAX_RETRIES:
                 retries += 1
                 continue
-            return e.code, None, ms, retries
-        except Exception:  # noqa: BLE001 — 타임아웃·연결 오류
+            return e.code, None, ms, retries, attempts
+        except Exception as e:  # noqa: BLE001 — 타임아웃·연결 오류
             ms = int((time.perf_counter() - t0) * 1000)
+            attempts.append({"ms": ms, "outcome": f"{type(e).__name__}: {str(e)[:80]}"})
             if retries < MAX_RETRIES:
                 retries += 1
                 continue
-            return 0, None, ms, retries
+            return 0, None, ms, retries, attempts
 
 
 def trace_answerability(wire: dict) -> str:
@@ -63,8 +72,8 @@ def main() -> int:
     lat, ans, n_contract_bad, n_http_bad, n_retried = [], collections.Counter(), 0, 0, 0
     with (out_dir / "rehearsal.jsonl").open("w", encoding="utf-8") as f:
         for i, g in enumerate(gold, 1):
-            status, wire, ms, retries = get(base, {"question_id": g["question_id"],
-                                                   "question": g["question"]})
+            status, wire, ms, retries, attempts = get(base, {"question_id": g["question_id"],
+                                                              "question": g["question"]})
             lat.append(ms)
             n_retried += retries
             ok_http = status == 200 and wire is not None
@@ -81,7 +90,7 @@ def main() -> int:
             match = got == exp or (exp == "SUPPORTED" and got not in ("NOT_FOUND", "WITHHELD"))
             ans[match] += 1
             f.write(json.dumps({"question_id": g["question_id"], "http": status, "retries": retries,
-                                "latency_ms": ms, "contract_ok": ok_contract,
+                                "latency_ms": ms, "attempts": attempts, "contract_ok": ok_contract,
                                 "expected": exp, "got": got, "match": match},
                                ensure_ascii=False) + "\n")
             if i % 10 == 0:
