@@ -691,7 +691,12 @@ def fallback_answer(matches: Sequence[EvidenceMatch]) -> tuple[str, str]:
     추적은 evidence_matches가 담당한다.
     """
     if not matches:
-        return ("검색된 공시에서 이 질문에 답할 근거를 찾지 못했다.",
+        # 근거 없음 = 역질문으로 끝낸다(심사 기준: 근거 부족 시 지어내지 않고 되묻기).
+        # 단일턴 계약이라 실제 되물을 수는 없으므로, 재질문에 필요한 조건을 답문에 명시한다.
+        return ("검색된 공시에서 이 질문에 답할 근거를 찾지 못했다. "
+                "혹시 찾는 공시가 있다면 회사명(정식 명칭)과 기간(연도·분기), "
+                "공시 유형(예: 사업보고서·주요사항보고서)을 함께 알려주면 "
+                "그 조건으로 다시 확인해 답하겠다.",
                 "질문을 좁히거나 기간·기업 조건을 명시해야 한다.")
     valued = [m for m in matches if m.picked_value and m.slot != ANSWER_SLOT]
     rest = [m for m in matches if m not in valued]

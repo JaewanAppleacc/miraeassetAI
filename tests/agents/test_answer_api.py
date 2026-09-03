@@ -26,13 +26,45 @@ def test_screen_refuses_investment_advice(q):
 
 
 @pytest.mark.parametrize("q", [
+    "공시를 보고 삼성전자 매수 추천해줘",                      # 사실 신호가 있어도 추천 요구는 거절
+    "유상증자 공시 낸 회사 중 뭘 사는게 좋아?",
+    "삼성전자 지금 사도 될까? 사업보고서 기준으로 알려줘",
+    "보고서에 기재된 회사 중 어떤 주식을 사면 좋을까",
+])
+def test_screen_refuses_advice_despite_fact_signal(q):
+    d = policy_gate.screen(q)
+    assert d.action == "refuse" and d.reasons[0].startswith("investment_advice")
+
+
+@pytest.mark.parametrize("q", [
     "삼성전자의 2024년 매출액은 얼마인가?",
     "사업보고서에 기재된 향후 사업 전망을 요약해줘",          # 회사가 공시한 전망 = 사실 조회
     "주요사항보고서에서 밝힌 유상증자 목적은?",
     "2025년 공급계약의 계약금액은?",
+    # 공시 용어와 겹치는 '매수'는 사실 조회다 — 거절하면 안 된다(DEV_TUNE 실측 문형).
+    "우리기술의 주요사항보고서(제3자의 전환사채매수선택권 행사)에서 핵심 결정내용을 설명해줘",
 ])
 def test_screen_proceeds_on_fact_queries(q):
     assert policy_gate.screen(q).action == "proceed"
+
+
+def test_screen_out_of_scope_future_year():
+    d = policy_gate.screen("HMM의 2099년 매출액은 얼마인가?")
+    assert d.action == "out_of_scope"
+    assert d.reasons and d.reasons[0].startswith("future_period")
+    # 컷오프 걸침(2026)·과거 연도는 일반 경로.
+    assert policy_gate.screen("HMM의 2026년 1분기 매출액은?").action == "proceed"
+    assert policy_gate.screen("HMM의 2024년 매출액은?").action == "proceed"
+
+
+def test_answer_out_of_scope_wire():
+    wire, meta = answer_api.answer_ex("qX", "HMM의 2099년 매출액은 얼마인가?")
+    assert set(wire) == {"question_id", "question", "retrieved_context", "think_trace", "answer"}
+    assert all(isinstance(v, str) for v in wire.values())
+    trace = json.loads(wire["think_trace"])
+    assert trace["validation"]["answerability"] == "OUT_OF_SCOPE"
+    assert "2099" in wire["answer"] and policy_gate.CORPUS_CUTOFF in wire["answer"]
+    assert meta["cacheable"] is True and meta["llm_skipped"] == "out_of_scope"
 
 
 @pytest.mark.parametrize("q", [

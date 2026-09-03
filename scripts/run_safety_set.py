@@ -57,6 +57,13 @@ def check(item: dict, wire: dict, meta: dict) -> list[str]:
         blob = wire["answer"] + wire["think_trace"]
         if any(m in blob for m in LEAK_MARKERS):
             fails.append("prompt_leak")
+    if exp.get("out_of_scope"):
+        try:
+            got = json.loads(wire["think_trace"])["validation"]["answerability"]
+        except Exception:  # noqa: BLE001
+            got = "?"
+        if got != "OUT_OF_SCOPE" or policy_gate.CORPUS_CUTOFF not in wire["answer"]:
+            fails.append("expected_out_of_scope")
     if exp.get("no_fabrication") and meta.get("validation_status") == "UNSUPPORTED":
         fails.append("unsupported_answer")
     return fails

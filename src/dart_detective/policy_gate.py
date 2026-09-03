@@ -32,17 +32,27 @@ TIME_NOTICE_TEMPLATE = "※ '{word}'은(는) 제공 코퍼스 기준일({cutoff}
 
 # ---------- 어휘 (구현 세부 — v4는 범주만 정한다) ----------
 
-# 투자의견·예측 요구. "전망"·"계획" 단독은 아님 — 회사가 공시한 전망을 묻는 건 사실 조회다.
+# 무조건 거절 — 사실 조회 신호가 있어도 투자 판단 요구 자체는 사라지지 않는다.
+# ("공시를 보고 매수 추천해줘"는 공시 조회가 아니라 추천 요구다 — 검수 재현으로 확인된 우회.)
+# "매수" 단독은 여기 없다: 전환사채매수선택권·주식매수청구권 같은 공시 용어와 겹친다(DEV_TUNE 실측 1건).
+_ADVICE_HARD_RES = tuple(re.compile(p) for p in (
+    r"(매수|매도|손절|익절)\s*(추천|의견|타이밍)",
+    r"(종목|주식|회사|기업)[^\n]{0,10}추천",
+    r"(뭘|뭐를|무엇을)\s*(사|매수|투자)",
+    r"(어느|어떤)\s*(종목|주식|회사|기업)[^\n]{0,8}(사|매수|투자)",
+    r"(사는\s*게|사는게|파는\s*게|파는게|살\s*만|살만|팔\s*만|팔만)\s*(좋|나|낫)",
+    r"(사도|팔아도|사야|팔아야)\s*(될까|되나|할까|하나|좋)",
+    r"투자\s*(해도\s*될까|할까|할\s*만|하기\s*좋|하면\s*좋)",
+    r"목표\s*주가",
+    r"(오를까|떨어질까|상승할까|하락할까)",
+    r"수익률?\s*(예상|예측|전망|보장)",
+))
+# 투자의견·예측 요구(약한 신호). "전망"·"계획" 단독은 아님 — 회사가 공시한 전망을 묻는 건 사실 조회다.
 _ADVICE_RES = tuple(re.compile(p) for p in (
-    r"(매수|매도|손절|익절)\s*(추천|의견|해야|할까|하는\s*게|타이밍)",
-    r"(사도|팔아도|사야|팔아야|사는\s*게|파는\s*게)\s*(될까|하나|좋을|맞|낫)",
+    r"(매수|매도|손절|익절)\s*(해야|할까|하는\s*게)",
     r"투자(해도|할까|할\s*만|하기\s*좋|해야|하면\s*좋)",
     r"(주가|주식\s*가격|시세)[^\n]{0,12}(오를|내릴|떨어질|상승할|하락할|어떻게\s*될|예측|전망)",
-    r"목표\s*주가",
     r"유망(한|해\s*보이는)?\s*(종목|주식|기업)",
-    r"(종목|주식)[^\n]{0,10}추천",
-    r"수익률?\s*(예상|예측|전망|보장)",
-    r"(오를까|떨어질까|상승할까|하락할까)",
     r"(오를|떨어질|망할|망하)\s*것\s*같",
     r"어디에?\s*투자",
 ))
@@ -70,10 +80,22 @@ _INJECTION_RES = tuple(re.compile(p, re.IGNORECASE) for p in (
 
 _RELATIVE_TIME_RE = re.compile(r"(현재|지금|요즘|오늘날|최근)")
 
+# 코퍼스 기간 밖의 미래 연도(v4 §6: 기간 밖이면 OUT_OF_SCOPE로 LLM 0회 종료).
+# 컷오프가 2026-03-31이므로 2027년 이후를 명시한 질문은 검색 자체가 무의미하다.
+# 2026년은 1분기까지 걸쳐 있으므로 여기서 자르지 않는다(일반 경로가 근거 유무로 답한다).
+_FUTURE_YEAR_RE = re.compile(r"(202[7-9]|20[3-9][0-9])\s*년")
+
+OUT_OF_SCOPE_ANSWER_TEMPLATE = (
+    "{year}년은 제공된 공시 코퍼스의 범위(기준일 {cutoff}) 밖이라 답할 근거가 없다. "
+    "이 서비스는 코퍼스에 수록된 공시 사실만 근거로 답하며, 미래 시점의 값은 예측하지 않는다. "
+    "혹시 {cutoff} 이전의 특정 연도·분기 값을 찾는 것이라면, 그 기간을 명시해 다시 질문해 주면 "
+    "해당 공시를 근거로 확인하겠다."
+)
+
 
 @dataclass(frozen=True)
 class Decision:
-    action: str                      # "proceed" | "refuse"
+    action: str                      # "proceed" | "refuse" | "out_of_scope"
     reasons: tuple[str, ...] = ()
     injection_detected: bool = False
     notices: tuple[str, ...] = ()    # 답변 끝에 붙일 고지(무력화·시점 해석)
@@ -95,6 +117,18 @@ def screen(question: str) -> Decision:
     q = question or ""
     reasons: list[str] = []
     notices: list[str] = []
+
+    # 강한 투자 판단 요구는 사실 조회 신호와 무관하게 거절한다 — "공시를 보고 추천해줘"의
+    # '공시'는 근거 요구일 뿐, 요구 자체는 추천 생성이다(일반 사용자가 가장 흔히 묻는 형태).
+    hard = _first_match(q, _ADVICE_HARD_RES)
+    if hard:
+        return Decision(action="refuse", reasons=(f"investment_advice:{hard}",))
+
+    future = _FUTURE_YEAR_RE.search(q)
+    if future:
+        # 코퍼스 기간 밖 — 검색·LLM 없이 조기 종료(v4 §6). 연도는 answer_api가 답문에 쓴다.
+        return Decision(action="out_of_scope",
+                        reasons=(f"future_period:{future.group(0)}",))
 
     advice = _first_match(q, _ADVICE_RES)
     fact_signal = _first_match(q, _FACT_RES)

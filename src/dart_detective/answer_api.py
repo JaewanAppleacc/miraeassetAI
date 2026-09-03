@@ -70,6 +70,29 @@ def _refusal_wire(question_id: str, question: str, decision: policy_gate.Decisio
     }
 
 
+def _out_of_scope_wire(question_id: str, question: str,
+                       decision: policy_gate.Decision) -> dict[str, str]:
+    """코퍼스 기간 밖의 미래 연도 — 검색·LLM 없이 종료(v4 §6). 역질문으로 재질문을 유도한다."""
+    year = ""
+    for r in decision.reasons:
+        if r.startswith("future_period:"):
+            year = r.split(":", 1)[1].replace("년", "").strip()
+    trace = {
+        "execution_mode": "EARLY_EXIT",
+        "operations": [{"step": "policy_gate", **decision.to_dict()}],
+        "calculation": {},
+        "validation": {"answerability": "OUT_OF_SCOPE", "status": "SUPPORTED", "checks": []},
+    }
+    return {
+        "question_id": question_id,
+        "question": question,
+        "retrieved_context": "",
+        "think_trace": json.dumps(trace, ensure_ascii=False),
+        "answer": policy_gate.OUT_OF_SCOPE_ANSWER_TEMPLATE.format(
+            year=year, cutoff=policy_gate.CORPUS_CUTOFF),
+    }
+
+
 def _error_wire(question_id: str, question: str, exc: BaseException) -> dict[str, str]:
     """어떤 내부 실패에도 유효한 5필드를 돌려준다(5xx는 재시도만 부른다 — 계약 위반이 더 나쁘다)."""
     trace = {"execution_mode": "EARLY_EXIT",
@@ -112,6 +135,11 @@ def answer_ex(question_id: str, question: str, *,
             return _refusal_wire(question_id, question, decision), {
                 "cacheable": True, "fallback_stage": "", "degraded": False, "llm_used": False,
                 "llm_skipped": "policy_refusal", "policy": decision.to_dict(),
+                "strategy": None, "validation_status": "SUPPORTED"}
+        if decision.action == "out_of_scope":
+            return _out_of_scope_wire(question_id, question, decision), {
+                "cacheable": True, "fallback_stage": "", "degraded": False, "llm_used": False,
+                "llm_skipped": "out_of_scope", "policy": decision.to_dict(),
                 "strategy": None, "validation_status": "SUPPORTED"}
 
         llm_skipped = None
