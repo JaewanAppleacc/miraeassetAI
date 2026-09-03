@@ -22,6 +22,7 @@
 - **D arm 실측(전체 코퍼스)**: Recall@10 0.605 · @20 0.675 · LOW all_found@10 11/19 · 치명/경미/미해결 0 · p95 4.3s · RSS 1.24GB. **예전 "슬롯 97%"는 정답 문서 106건만 청킹한 풀의 수치였다** — `docs/interfaces.md` §5-8.
 - **B arm 실측**: Recall@10 0.6084 · LOW all_found@10 12/19 · p95 19714ms · RSS 2240.6MB. **B·D 판정: D = PROVISIONAL_WINNER**(dense-off 우선, 동률). A/C 대기. 1차 검수 반영 후 커밋 `bbdaa24`(clean tree)로 재실행·재채점 — 지표 동일, 미해결 0, coarse(정보) B 103·D 106. `results/fourarm/summary.md`.
 - 팀 계약 초안: `docs/interfaces.md` (킥오프에서 확정).
+- **구현 4건 완료(2026-09-03)**: ⓪ 정책 게이트(`policy_gate.py` — 투자의견 거절·인젝션 무력화·컷오프 고지, 규칙 기반) + ② 서버 경계(`answer_api.py` — answer/answer_ex/readiness, 절대 예외 없음, deadline 시 LLM 생략, meta.cacheable로 캐시 제외). qa_service(팀원2)는 answer_ex만 부르면 됨 — `docs/interfaces.md` §2-1.
 - **구현 2건 완료(2026-09-03)**: ④ node_store(DocumentIR byte-offset 지연 로딩, `src/dart_corpus/retrieval/node_store.py`, 검색 코어 기존 파일 무변경) + segments(vFINAL 1번 LOW/HIGH 단일 정의) + retriever_adapter(B/D 바인딩, `bind(arm)`). 실측: D arm bind 2.8s, 문항당 검색 0.9~3.1s, Gold 8/8 상위20 포함, Gold locator 345개 전부 색인에서 해석.
 - **구현 1건 완료(2026-09-03)**: ③ 라우팅·LLM 예산 — `src/dart_detective/routing.py`(v4 §7 전략 7종 + 실행 매트릭스), `llm.py` 호출별 `max_tokens`, `qa_agent.py` 연결. 테스트 `tests/agents/test_routing.py` 27개. 프롬프트 동결 지문 불변. Codex 검수 대기: `docs/reviews/codex-review-routing-budget.md`.
 - 구현 순서와 분담: `docs/team-split.md`.

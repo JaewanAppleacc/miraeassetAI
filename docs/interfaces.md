@@ -109,19 +109,23 @@ Gold(DEV_TUNE 101)의 `source_locator`는 두 표기가 섞여 있다(실측 345
 
 ## 2. 계약 ② — `/answer` 경계 (소유: 에이전트 함수 = 나 / HTTP·운영 = 팀원2)
 
-### 2-1. 에이전트가 노출하는 함수 (딱 두 개)
+### 2-1. 에이전트가 노출하는 함수 — **구현 완료(2026-09-03, `src/dart_detective/answer_api.py`)**
 ```python
-# src/dart_detective/answer_api.py  (신규 — 나)
 def answer(question_id: str, question: str, *, deadline_s: float | None = None) -> dict[str, str]:
-    """5개 str 필드만 반환. 어떤 내부 실패에도 예외를 던지지 않는다 —
-    폴백(템플릿/발췌)으로 유효 응답을 만들고 think_trace에 실패 분류를 남긴다.
-    deadline_s: 호출자가 남겨준 예산(초). 검색60/LLM40/합성30 소프트 컷은 이 안에서 나눈다."""
+    """5개 str 필드만 반환. 어떤 내부 실패에도 예외를 던지지 않는다(내부 오류도 유효 5필드)."""
+
+def answer_ex(question_id, question, *, deadline_s=None) -> tuple[dict[str, str], dict]:
+    """qa_service용: (wire, meta). meta.cacheable=False(폴백·degraded·deadline 생략)면 캐시 금지(v4 §14).
+    meta: {cacheable, degraded, llm_used, llm_skipped, policy, strategy, validation_status}"""
 
 def readiness() -> dict:
-    """{"ready": bool, "missing": [...], "pins": {"corpus_sha": …, "index_sha": …, "model_rev": …,
-        "prompt_version": …, "config_sha": …}, "mode": "real" | "degraded"}  — vFINAL 19번·/ready용"""
+    """{"ready", "mode": "real"|"degraded", "arm", "n_docs", "llm_provider", "llm_enabled",
+        "pins": {document_ir SHA·manifest SHA·text_recipe·prompt_version·prompt_fingerprint·corpus_cutoff}}"""
 ```
-반환 키는 정확히 `question_id, question, retrieved_context, think_trace, answer` (전부 `str`). 현재 `answer_wire.to_answer_wire`가 이미 이 모양이다.
+반환 키는 정확히 `question_id, question, retrieved_context, think_trace, answer` (전부 `str`).
+- **⓪ 정책 게이트 내장**(`policy_gate.py`, 규칙 기반·LLM 없음): 투자의견·예측·추천 → 거절 템플릿(유효 5필드) · 질문 내 지시문 → 무력화 + 고지 후 사실 질의만 처리 · "현재/최근" → 컷오프 2026-03-31 해석 고지. 판정 근거는 think_trace 첫 단계(`policy_gate`)에 기록.
+- `deadline_s < 45`면 LLM 생략(호출 상한 40s + 여유), 결정론 경로로 답하고 `cacheable=False`(재시도가 완전한 답을 다시 만들 수 있게).
+- **팀원2는 `answer_ex`를 쓰고 meta.cacheable로 캐시 여부를 정한다.**
 
 ### 2-2. 팀원2(qa_service)가 소유하는 것
 - `GET /answer` 파라미터 검증(누락·빈 값·중복 → 400), `application/json`, 5필드 그대로 전달.
