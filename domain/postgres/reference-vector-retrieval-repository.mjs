@@ -14,6 +14,7 @@
 // domain/agent-comparison/retrieval/pgvector-retriever-adapter.mjs).
 import { createHash } from "node:crypto";
 import { RequestAbortedError, abortReason } from "../runtime/abortable.mjs";
+import { buildEligibilityWhereClause } from "../retrieval/metadata-filter.mjs";
 
 const INDEXES_TABLE = "disclosure_reference.reference_retrieval_indexes";
 const CHUNKS_TABLE = "disclosure_reference.reference_retrieval_chunks";
@@ -165,6 +166,18 @@ export function createPostgresVectorRetrievalRepository({ client }) {
   async function search({
     retrievalIndexId, sourceKinds, queryVector, topK,
     corpCodes, documentIds, similarityThreshold, expectedPins,
+    // Turn AC-VFINAL-ALIGNMENT-AND-DISCOVERY, section G: `filters`
+    // (optional, additive) is the FULL metadata_filters object
+    // (corp_codes/document_ids/doc_groups/doc_subtypes/base_years/
+    // base_months/receipt_date_from/receipt_date_to/is_correction/
+    // retrieval_eligible). When present, it supersedes corpCodes/
+    // documentIds entirely (built via the SAME buildEligibilityWhereClause
+    // the BM25-leg prefilter query uses, so both legs apply IDENTICAL
+    // filter semantics) and every field is pushed into the SQL WHERE
+    // clause BEFORE the ORDER BY/LIMIT -- a true prefilter, not a post-hoc
+    // prune. A caller that omits `filters` keeps the legacy corpCodes/
+    // documentIds-only behavior, byte-for-byte unchanged.
+    filters,
   }, { signal } = {}) {
     assertNonEmptyString(retrievalIndexId, "retrievalIndexId");
     if (!Array.isArray(queryVector) || queryVector.length === 0) throw new TypeError("queryVector must be a non-empty array of numbers");
@@ -188,13 +201,19 @@ export function createPostgresVectorRetrievalRepository({ client }) {
       params.push(sourceKinds);
       conditions.push(`c.source_kind = ANY($${params.length})`);
     }
-    if (Array.isArray(corpCodes) && corpCodes.length > 0) {
-      params.push(corpCodes);
-      conditions.push(`c.corp_code = ANY($${params.length})`);
-    }
-    if (Array.isArray(documentIds) && documentIds.length > 0) {
-      params.push(documentIds);
-      conditions.push(`c.source_document_id = ANY($${params.length})`);
+    if (filters) {
+      const built = buildEligibilityWhereClause(filters, params.length + 1, "c.");
+      conditions.push(...built.conditions);
+      params.push(...built.params);
+    } else {
+      if (Array.isArray(corpCodes) && corpCodes.length > 0) {
+        params.push(corpCodes);
+        conditions.push(`c.corp_code = ANY($${params.length})`);
+      }
+      if (Array.isArray(documentIds) && documentIds.length > 0) {
+        params.push(documentIds);
+        conditions.push(`c.source_document_id = ANY($${params.length})`);
+      }
     }
     const distanceExpr = `c.embedding ${metric.operator} $2::vector`;
     if (distanceBound !== null) {

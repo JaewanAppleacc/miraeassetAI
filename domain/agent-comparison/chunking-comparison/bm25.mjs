@@ -76,9 +76,20 @@ export function bm25Score(index, docId, queryTokens) {
 // Returns [{ id, score }] sorted by score desc, then by id ASC on an exact
 // tie (matches P10_COMPARISON_CONDITIONS.tie_break) -- never truncated
 // below the full corpus before sorting, so topK is a pure post-sort slice.
-export function bm25Search(index, queryText, { topK = 10 } = {}) {
+//
+// Turn AC-VFINAL-ALIGNMENT-AND-DISCOVERY, section G: `eligibleIds`
+// (optional, additive -- every existing caller that omits it keeps
+// scoring the WHOLE index, byte-for-byte unchanged) restricts the
+// candidate pool to a Set of ids BEFORE scoring/ranking, not after -- a
+// true prefilter. Without it, a caller that wants a metadata-filtered
+// result has to rank the full topK first and then prune, which can leave
+// fewer than topK filter-compliant candidates even when more exist further
+// down the ranking; with it, topK is always computed over the
+// already-eligible pool.
+export function bm25Search(index, queryText, { topK = 10, eligibleIds = null } = {}) {
   const queryTokens = index.tokenize(queryText);
-  const scored = index.orderedIds.map((id) => ({ id, score: bm25Score(index, id, queryTokens) }));
+  const candidateIds = eligibleIds ? index.orderedIds.filter((id) => eligibleIds.has(id)) : index.orderedIds;
+  const scored = candidateIds.map((id) => ({ id, score: bm25Score(index, id, queryTokens) }));
   scored.sort((a, b) => (b.score - a.score) || a.id.localeCompare(b.id));
   return scored.slice(0, topK);
 }

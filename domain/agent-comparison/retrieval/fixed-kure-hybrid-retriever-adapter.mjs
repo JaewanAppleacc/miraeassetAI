@@ -23,6 +23,7 @@
 // boundary. No provider/SQL code is ever imported by a flows/*.mjs file.
 import { reciprocalRankFusion } from "../chunking-comparison/rrf.mjs";
 import { bm25Search } from "./fixed-kure-bm25-index.mjs";
+import { passesMetadataFilters, fetchEligibleChunkIds } from "../../retrieval/metadata-filter.mjs";
 
 const BM25_TOP_K = 100; // P10.2's own pinned candidate funnel (scripts/p10.2-stage2-embedding-grid.mjs:44)
 const RRF_K_CONSTANT = 60; // P10.2's own pinned RRF constant (ibid:46)
@@ -68,13 +69,6 @@ function toResultItem(row, { rank, score, scoreType, componentScores }) {
   };
 }
 
-function passesFilters(row, filters) {
-  if (Array.isArray(filters?.corp_codes) && filters.corp_codes.length > 0 && !filters.corp_codes.includes(row.corp_code)) return false;
-  if (Array.isArray(filters?.document_ids) && filters.document_ids.length > 0 && !filters.document_ids.includes(row.source_document_id)) return false;
-  if (Array.isArray(filters?.doc_groups) && filters.doc_groups.length > 0 && !filters.doc_groups.includes(row.metadata?.doc_group)) return false;
-  return true;
-}
-
 // `client` is a plain `pg` client/pool (query(sql, params) -> {rows}) --
 // this module's own only piece of raw SQL: hydrating a bounded (<=100) set
 // of BM25 candidate chunk_ids into full rows, since bm25Search only ever
@@ -113,44 +107,67 @@ export function createFixedKureHybridRetrieverAdapter({
     async retrieve(request, { signal } = {}) {
       const startedAt = Date.now();
       const filters = request.metadata_filters;
+      const isUnion = request.retrieval_method === "HYBRID_UNION_RRF";
 
-      const bm25Ranked = bm25Search(bm25Index, request.question, { topK: bm25TopK });
+      // Turn AC-VFINAL-ALIGNMENT-AND-DISCOVERY, section G: metadata filter
+      // applied to the candidate pool BEFORE ranking, on BOTH legs -- never
+      // a post-hoc prune of an already-ranked top-K. fetchEligibleChunkIds
+      // restricts BM25's own candidate pool via eligibleIds (bm25Search
+      // then only ever scores/ranks eligible chunks); `filters` passed
+      // straight through to the dense leg's own SQL WHERE (same shared
+      // buildEligibilityWhereClause, so both legs apply IDENTICAL
+      // semantics for every filter field).
+      const eligibleIds = await fetchEligibleChunkIds(client, retrievalIndexId, filters, { signal });
+      const bm25Ranked = bm25Search(bm25Index, request.question, { topK: bm25TopK, eligibleIds });
       const queryVector = await embeddingAdapter.embedQuery(request.question);
       const denseRows = await vectorRepository.searchDocumentChunksByVector(
-        {
-          retrievalIndexId, queryVector, topK: request.top_k,
-          corpCodes: filters?.corp_codes?.length ? filters.corp_codes : undefined,
-          documentIds: filters?.document_ids?.length ? filters.document_ids : undefined,
-          expectedPins,
-        },
+        { retrievalIndexId, queryVector, topK: request.top_k, filters, expectedPins },
         { signal },
       );
 
       const bm25ChunkIds = bm25Ranked.map((r) => r.id);
       const bm25RowsById = await fetchChunksByIds(client, retrievalIndexId, bm25ChunkIds);
+      // Row-level double-check (defense in depth on top of the SQL-level
+      // prefilter above) -- never expected to drop anything the prefilter
+      // already excluded, but never trusted blindly either.
       const bm25RankedFiltered = bm25Ranked
-        .filter((r) => { const row = bm25RowsById.get(r.id); return row && passesFilters(row, filters); })
+        .filter((r) => { const row = bm25RowsById.get(r.id); return row && passesMetadataFilters(row, filters); })
         .map((r) => ({ id: r.id, score: r.score }));
 
       const denseRowsById = new Map(denseRows.map((r) => [r.chunk_id, r]));
       const denseRanked = denseRows.map((r) => ({ id: r.chunk_id, score: r.similarity_score }));
 
-      // domain/contracts.mjs's RETRIEVAL_METHOD_REQUIRED_COMPONENTS.HYBRID_RRF
-      // = ["bm25", "dense", "rrf"] (frozen, this Turn never redefines it):
-      // every HYBRID_RRF result must carry a non-null score from BOTH legs,
-      // so RRF here fuses the INTERSECTION of the two candidate sets, never
-      // their union -- a chunk found by only one method is not a valid
-      // HYBRID_RRF result and is dropped before fusion (still discoverable
-      // via a separate BM25-only or DENSE-only request.retrieval_method).
-      const denseIds = new Set(denseRanked.map((r) => r.id));
-      const bm25Ids = new Set(bm25RankedFiltered.map((r) => r.id));
-      const bm25Intersected = bm25RankedFiltered.filter((r) => denseIds.has(r.id));
-      const denseIntersected = denseRanked.filter((r) => bm25Ids.has(r.id));
+      let bm25Leg;
+      let denseLeg;
+      if (isUnion) {
+        // vFINAL section C: official candidate A fuses the UNION of both
+        // candidate sets -- a chunk found by only one leg is never dropped
+        // before fusion; reciprocalRankFusion already handles this
+        // correctly (an id present in only one list still gets fused, with
+        // the absent leg contributing exactly 0 -- see rrf.mjs's own test
+        // coverage), so no intersection step runs at all here.
+        bm25Leg = bm25RankedFiltered;
+        denseLeg = denseRanked;
+      } else {
+        // domain/contracts.mjs's RETRIEVAL_METHOD_REQUIRED_COMPONENTS.HYBRID_RRF
+        // = ["bm25", "dense", "rrf"] (frozen, unchanged): every HYBRID_RRF
+        // result must carry a non-null score from BOTH legs, so RRF here
+        // fuses the INTERSECTION of the two candidate sets, never their
+        // union -- a chunk found by only one method is not a valid
+        // HYBRID_RRF result and is dropped before fusion (still
+        // discoverable via a separate BM25-only or DENSE-only
+        // request.retrieval_method). Byte-for-byte the same behavior this
+        // adapter already had before HYBRID_UNION_RRF existed.
+        const denseIds = new Set(denseRanked.map((r) => r.id));
+        const bm25Ids = new Set(bm25RankedFiltered.map((r) => r.id));
+        bm25Leg = bm25RankedFiltered.filter((r) => denseIds.has(r.id));
+        denseLeg = denseRanked.filter((r) => bm25Ids.has(r.id));
+      }
 
-      const fused = reciprocalRankFusion([bm25Intersected, denseIntersected], { k: rrfK, topK: request.top_k });
+      const fused = reciprocalRankFusion([bm25Leg, denseLeg], { k: rrfK, topK: request.top_k });
 
-      const bm25ScoreById = new Map(bm25Intersected.map((r) => [r.id, r.score]));
-      const denseScoreById = new Map(denseIntersected.map((r) => [r.id, r.score]));
+      const bm25ScoreById = new Map(bm25Leg.map((r) => [r.id, r.score]));
+      const denseScoreById = new Map(denseLeg.map((r) => [r.id, r.score]));
       const results = fused.map((entry, index) => {
         const row = bm25RowsById.get(entry.id) ?? denseRowsById.get(entry.id);
         return toResultItem(row, {

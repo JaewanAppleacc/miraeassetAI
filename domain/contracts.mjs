@@ -123,6 +123,14 @@ export const RETRIEVAL_METHODS = Object.freeze([
   "DENSE",
   "HYBRID_RRF",
   "HYBRID_RRF_RERANKER",
+  // Turn AC-VFINAL-ALIGNMENT-AND-DISCOVERY, section C: vFINAL's official
+  // candidate A fuses the UNION of BM25 and dense candidates (an absent
+  // leg contributes 0 to RRF, never dropped from the result) -- distinct
+  // from HYBRID_RRF above, whose contract (RETRIEVAL_METHOD_REQUIRED_COMPONENTS
+  // below) requires BOTH legs non-null, i.e. INTERSECTION-only. HYBRID_RRF's
+  // own existing behavior/consumers are unchanged; this is a new, additive
+  // method value, used only by official candidate A.
+  "HYBRID_UNION_RRF",
 ]);
 
 export const SCORE_TYPES = Object.freeze(["BM25", "COSINE", "RRF", "RERANKER"]);
@@ -164,6 +172,7 @@ const RETRIEVAL_METHOD_SCORE_TYPE = Object.freeze({
   DENSE: "COSINE",
   HYBRID_RRF: "RRF",
   HYBRID_RRF_RERANKER: "RERANKER",
+  HYBRID_UNION_RRF: "RRF",
 });
 
 const RETRIEVAL_METHOD_REQUIRED_COMPONENTS = Object.freeze({
@@ -171,6 +180,13 @@ const RETRIEVAL_METHOD_REQUIRED_COMPONENTS = Object.freeze({
   DENSE: ["dense"],
   HYBRID_RRF: ["bm25", "dense", "rrf"],
   HYBRID_RRF_RERANKER: ["bm25", "dense", "rrf", "reranker"],
+  // Only rrf is required non-null: a UNION result item may legitimately
+  // come from only one leg (bm25 XOR dense), so requiring BOTH here (as
+  // HYBRID_RRF does) would make honest single-leg-only union entries fail
+  // validation. component_scores.{bm25,dense} are still carried through --
+  // null exactly when that leg is genuinely absent, never a fabricated
+  // value -- so the fusion stays fully auditable.
+  HYBRID_UNION_RRF: ["rrf"],
 });
 
 export const QUESTION_TYPES = Object.freeze([

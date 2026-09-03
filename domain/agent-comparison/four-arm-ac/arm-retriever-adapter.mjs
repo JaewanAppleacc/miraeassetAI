@@ -20,6 +20,7 @@ import { createHash } from "node:crypto";
 import { createFixedKureHybridRetrieverAdapter } from "../retrieval/fixed-kure-hybrid-retriever-adapter.mjs";
 import { bm25Search } from "../retrieval/fixed-kure-bm25-index.mjs";
 import { buildMetadataFiltersFromConditions } from "./conditions-fixture.mjs";
+import { passesMetadataFilters, fetchEligibleChunkIds } from "../../retrieval/metadata-filter.mjs";
 import {
   classifySpans, verifyNodeIdentity, summarizeLocatorCoverage,
   buildProvenanceSet, buildDownstreamExpansionInput,
@@ -48,20 +49,14 @@ function sha256Hex(text) {
   return createHash("sha256").update(text, "utf8").digest("hex");
 }
 
-// The SAME filter predicate fixed-kure-hybrid-retriever-adapter.mjs's own
-// (private) passesFilters applies to its BM25 leg -- reproduced here
-// (rather than imported, since the original is not exported) so arm C's
-// BM25-only candidates are filtered identically to arm A's BM25 leg, per
-// vFINAL section C ("C: metadata filter → A와 동일한 BM25 candidates/
-// ranking → top 20").
-function passesMetadataFilters(row, filters) {
-  if (Array.isArray(filters?.corp_codes) && filters.corp_codes.length > 0 && !filters.corp_codes.includes(row.corp_code)) return false;
-  if (Array.isArray(filters?.document_ids) && filters.document_ids.length > 0 && !filters.document_ids.includes(row.source_document_id)) return false;
-  if (Array.isArray(filters?.doc_groups) && filters.doc_groups.length > 0 && !filters.doc_groups.includes(row.metadata?.doc_group)) return false;
-  if (Array.isArray(filters?.doc_subtypes) && filters.doc_subtypes.length > 0 && !filters.doc_subtypes.includes(row.metadata?.doc_subtype)) return false;
-  if (filters?.retrieval_eligible === true && row.metadata?.retrieval_eligible === false) return false;
-  return true;
-}
+// Turn AC-VFINAL-ALIGNMENT-AND-DISCOVERY, section F/G: passesMetadataFilters
+// is now the ONE shared predicate (domain/retrieval/metadata-filter.mjs)
+// arm A's BM25 leg (fixed-kure-hybrid-retriever-adapter.mjs) and arm C
+// (below) both import -- no separate copy exists here anymore. Before this
+// Turn, this file had its OWN local copy that diverged from arm A's
+// (different field coverage), despite a comment here claiming they were
+// "the same predicate" -- see the Turn's final report for the actual
+// discrepancy found.
 
 async function fetchChunksByIds(client, retrievalIndexId, chunkIds) {
   if (chunkIds.length === 0) return new Map();
@@ -170,7 +165,10 @@ export function createArmRetrieverAdapter({
     const request = {
       schema_version: "0.1.0", query_id: `query_ac_a_${sha256Hex(question).slice(0, 16)}`, question,
       corpus_snapshot_id: snapshotId, chunking_config_id: CHUNKING_POLICY_ID, index_snapshot_id: retrievalIndexId,
-      metadata_filters: filters, top_k: k, retrieval_method: "HYBRID_RRF",
+      // vFINAL section C: official candidate A fuses the UNION of BM25 and
+      // dense candidates (an absent leg contributes 0 to RRF, never
+      // dropped) -- HYBRID_UNION_RRF, not the intersection-only HYBRID_RRF.
+      metadata_filters: filters, top_k: k, retrieval_method: "HYBRID_UNION_RRF",
     };
     const result = await hybridAdapter.retrieve(request, {});
     const chunkIds = result.results.map((r) => r.chunk_id);
@@ -187,14 +185,25 @@ export function createArmRetrieverAdapter({
   // Zero embeddingAdapter/vectorRepository/reciprocalRankFusion references
   // anywhere in this function -- the ONLY candidate generation here is
   // bm25Search over the SAME bm25Index arm A's BM25 leg uses, at the SAME
-  // BM25_TOP_K, filtered by the SAME passesMetadataFilters predicate.
+  // BM25_TOP_K, filtered by the SAME shared passesMetadataFilters
+  // predicate/fetchEligibleChunkIds prefilter arm A's BM25 leg uses.
+  //
+  // Turn AC-VFINAL-ALIGNMENT-AND-DISCOVERY, section G: the metadata filter
+  // is applied to the candidate pool BEFORE ranking (fetchEligibleChunkIds
+  // -> bm25Search's eligibleIds), not as a post-hoc prune of an
+  // already-ranked top-100 -- so a filter that excludes many candidates
+  // can never leave fewer than min(topK, eligible-count) results the way a
+  // post-hoc prune of a fixed top-100 could.
   async function searchArmC(question, filters, k) {
-    const bm25Ranked = bm25Search(bm25Index, question, { topK: bm25TopK });
+    const eligibleIds = await fetchEligibleChunkIds(client, retrievalIndexId, filters);
+    const bm25Ranked = bm25Search(bm25Index, question, { topK: bm25TopK, eligibleIds });
     const chunkIds = bm25Ranked.map((r) => r.id);
     const [rowsById, spansById] = await Promise.all([
       fetchChunksByIds(client, retrievalIndexId, chunkIds),
       fetchStagingSpans(client, loadSessionId, chunkIds),
     ]);
+    // Row-level double-check (defense in depth on top of the SQL-level
+    // prefilter above), matching arm A's own BM25 leg exactly.
     const filtered = bm25Ranked.filter((r) => {
       const row = rowsById.get(r.id);
       return row !== undefined && passesMetadataFilters(row, filters);

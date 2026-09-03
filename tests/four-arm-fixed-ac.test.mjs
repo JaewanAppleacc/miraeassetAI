@@ -75,6 +75,16 @@ function fakeClient({ chunkRows = new Map(), stagingSpans = new Map(), indexRow 
     calls: [],
     async query(sql, params) {
       this.calls.push({ sql, params });
+      // Turn AC-VFINAL-ALIGNMENT-AND-DISCOVERY, section G: fetchEligibleChunkIds's
+      // own prefilter query ("SELECT chunk_id FROM ... WHERE
+      // retrieval_index_id = $1 ...", no chunk_id list param) targets the
+      // SAME table as the hydrate-by-id query below -- distinguished by
+      // selecting exactly one column. None of these fixtures exercise an
+      // active metadata filter that would exclude a real row, so every
+      // known chunk_id is eligible.
+      if (sql.trim().startsWith("SELECT chunk_id FROM disclosure_reference.reference_retrieval_chunks")) {
+        return { rows: [...chunkRows.keys()].map((chunk_id) => ({ chunk_id })) };
+      }
       if (sql.includes("FROM disclosure_reference.reference_retrieval_chunks")) {
         const ids = params[1];
         return { rows: ids.filter((id) => chunkRows.has(id)).map((id) => chunkRows.get(id)) };

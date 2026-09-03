@@ -5,6 +5,14 @@
 // and continue.
 export const ALLOWED_PAIR_DIFF_KEYS = Object.freeze([
   "arm_code", "arm_id", "dense", "embedding", "rrf",
+  // Turn AC-VFINAL-ALIGNMENT-AND-DISCOVERY, section E: the new named k/method
+  // fields that replace the ambiguous final_top_k. bm25_candidate_k/
+  // retrieval_output_k/primary_evaluation_k/reported_cutoffs/k_field_note
+  // are deliberately NOT listed here -- they must stay identical between A
+  // and C (vFINAL section D), so a real divergence there still fails
+  // CONFIG_PAIR_MISMATCH. Only the fields directly tied to the dense
+  // ablation itself may differ.
+  "retrieval_method", "dense_candidate_k", "rrf_constant", "rrf_candidate_set",
 ]);
 
 function deepEqual(a, b) {

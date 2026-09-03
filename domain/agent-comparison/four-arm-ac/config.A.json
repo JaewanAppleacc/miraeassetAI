@@ -40,9 +40,17 @@
   "rrf": {
     "enabled": true,
     "constant": 60,
-    "fusion_pool": "INTERSECTION of BM25 top-100 and dense top-20 candidates (fixed-kure-hybrid-retriever-adapter.mjs's own HYBRID_RRF invariant: every result carries a non-null bm25 AND dense component score)"
+    "fusion_pool": "UNION of BM25 top-100 and full-corpus dense top-20 candidates (vFINAL section C: an absent leg contributes 0 to RRF, never dropped -- retrieval_method HYBRID_UNION_RRF, not the intersection-only HYBRID_RRF)"
   },
-  "final_top_k": 20,
+  "retrieval_method": "HYBRID_UNION_RRF",
+  "bm25_candidate_k": 100,
+  "dense_candidate_k": 20,
+  "retrieval_output_k": 20,
+  "primary_evaluation_k": 10,
+  "reported_cutoffs": [5, 10, 20],
+  "rrf_constant": 60,
+  "rrf_candidate_set": "UNION",
+  "k_field_note": "vFINAL section E: replaces the ambiguous final_top_k=20 (evaluation cutoff vs. retrieval output count conflated) with named fields, identical across config.A.json/config.C.json except dense_candidate_k/rrf_constant/rrf_candidate_set (the dense ablation itself). The official runner computes one top-20 retrieval_output_k result and derives Recall@5/10/20 (reported_cutoffs) from it; the winner-determination Recall uses primary_evaluation_k=10 only.",
   "code_head_sha256": null,
   "code_head_sha256_note": "Not yet stamped -- this Turn does not execute DEV_TUNE-101. Stamp with `git rev-parse HEAD` immediately before any real execution, per vFINAL section 15.",
   "embedding_index_config_sha256": "8cc6628eb38fff0ee48cf138a586978a627260a7e41157dddd45e52f97761d4e",

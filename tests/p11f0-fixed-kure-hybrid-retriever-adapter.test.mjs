@@ -23,7 +23,18 @@ function chunkRow(id, overrides = {}) {
 function fakeClient(rowsById) {
   return {
     async query(sql, params) {
-      // Only the "hydrate BM25 candidates by id" query is ever issued directly by this adapter.
+      // Turn AC-VFINAL-ALIGNMENT-AND-DISCOVERY, section G: the adapter now
+      // also issues an eligibility-prefilter query
+      // (fetchEligibleChunkIds, "SELECT chunk_id FROM ... WHERE
+      // retrieval_index_id = $1 ...", no chunk_id list param) BEFORE
+      // bm25Search -- distinguished here from the "hydrate BM25 candidates
+      // by id" query (which selects multiple columns and always carries a
+      // chunk_id list as params[1]). None of these fixtures exercise an
+      // active metadata filter that would exclude a real row, so every
+      // known chunk_id is eligible.
+      if (sql.trim().startsWith("SELECT chunk_id FROM")) {
+        return { rows: [...rowsById.keys()].map((chunk_id) => ({ chunk_id })) };
+      }
       const ids = params[1];
       return { rows: ids.filter((id) => rowsById.has(id)).map((id) => rowsById.get(id)) };
     },
