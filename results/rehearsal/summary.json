@@ -1,0 +1,15 @@
+{
+ "endpoint": "http://49.50.141.174",
+ "n": 101,
+ "http_failures": 0,
+ "retries_total": 5,
+ "contract_violations": 0,
+ "answerability_match": "98/101",
+ "latency_ms": {
+  "p50": 13749,
+  "p95": 48125,
+  "max": 58543,
+  "total_s": 1772.7
+ },
+ "timeout_budget_s": 300
+}
