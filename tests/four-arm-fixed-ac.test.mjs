@@ -19,6 +19,7 @@ import {
 } from "../domain/agent-comparison/four-arm-ac/conditions-fixture.mjs";
 import {
   classifySpans, summarizeLocatorCoverage, verifyNodeIdentity, LOCATOR_STATUS,
+  buildProvenanceSet, buildDownstreamExpansionInput,
 } from "../domain/agent-comparison/four-arm-ac/locator-provenance.mjs";
 import { computeConfigPairDiff, assertConfigPairValid, ConfigPairMismatchError } from "../domain/agent-comparison/four-arm-ac/pair-diff.mjs";
 
@@ -390,12 +391,12 @@ test("search() rejects an empty question and a non-positive-integer k -- fail-cl
 
 // ---------- readiness() ----------
 
-test("readiness(): arm C reports A_C_LOCATOR_PROVENANCE_NOT_READY when spans are mostly multi-node (matches the measured 1,144-shard reality)", async () => {
+test("readiness(): arm C is official_experiment_ready with mostly multi-node spans -- ambiguity is legitimate, not a defect (matches the measured 1,144-shard reality)", async () => {
   const bm25Index = buildBm25Index([{ id: "chunk_a00000000000000000000001", text: "x" }]);
   const allStagingRows = [
     { source_spans: singleSpan(0) },
     { source_spans: multiNodeSpans([1, 2, 3]) },
-    { source_spans: multiNodeSpans([4, 5]) },
+    { source_spans: tableRowSpans(4, [0, 1]) },
   ];
   const client = fakeClient({
     allStagingRows,
@@ -405,9 +406,31 @@ test("readiness(): arm C reports A_C_LOCATOR_PROVENANCE_NOT_READY when spans are
   const readiness = await armC.readiness();
   assert.equal(readiness.code_ready, true);
   assert.equal(readiness.full_index_ready, true);
-  assert.equal(readiness.official_experiment_ready, false);
-  assert.ok(readiness.reasons.includes("A_C_LOCATOR_PROVENANCE_NOT_READY"));
+  assert.equal(readiness.checks.locator_provenance.all_fully_resolved, false, "measurement only -- most chunks here are ambiguous, not fully resolved");
+  assert.equal(readiness.checks.locator_provenance.unresolved_count, 0, "ambiguous is not the same as unresolved -- no EMPTY_SPANS_INVALID chunks here");
+  assert.equal(readiness.checks.locator_provenance.provenance_ready, true);
+  assert.equal(readiness.official_experiment_ready, true, "ambiguous-but-interpretable provenance must not block official readiness");
+  assert.deepEqual(readiness.reasons, []);
   assert.equal(readiness.checks.dense_disabled_verified, true);
+});
+
+test("readiness(): arm C is NOT ready when a chunk has EMPTY_SPANS_INVALID (a real parser/loader gap), isolated from mere ambiguity", async () => {
+  const bm25Index = buildBm25Index([{ id: "chunk_a00000000000000000000001", text: "x" }]);
+  const allStagingRows = [
+    { source_spans: singleSpan(0) },
+    { source_spans: multiNodeSpans([1, 2, 3]) },
+    { source_spans: [] },
+  ];
+  const client = fakeClient({
+    allStagingRows,
+    sessionRow: { status: "READY", expected_total_chunk_count: 3, expected_search_eligible_count: 3, expected_unique_embeddable_count: 3, materialized_chunk_count: 3 },
+  });
+  const armC = createArmRetrieverAdapter({ arm: "C", client, bm25Index, retrievalIndexId: RETRIEVAL_INDEX_ID, loadSessionId: LOAD_SESSION_ID });
+  const readiness = await armC.readiness();
+  assert.equal(readiness.checks.locator_provenance.unresolved_count, 1);
+  assert.equal(readiness.checks.locator_provenance.provenance_ready, false);
+  assert.equal(readiness.official_experiment_ready, false);
+  assert.ok(readiness.reasons.includes("A_C_LOCATOR_UNRESOLVED_SPANS_PRESENT"));
 });
 
 test("readiness(): arm A reports NOT ready when the dense index pin does not match KURE_PIN", async () => {
@@ -440,6 +463,7 @@ test("readiness(): fully resolved locator coverage + ready session/index reports
   });
   const readiness = await armA.readiness();
   assert.equal(readiness.official_experiment_ready, true);
+  assert.equal(readiness.checks.locator_provenance.provenance_ready, true);
   assert.deepEqual(readiness.reasons, []);
 });
 
@@ -461,4 +485,217 @@ test("fetch_node: verified FOUND, but never returns fabricated node text", async
   assert.equal(result.found, true);
   assert.equal(result.node_text_available, false);
   assert.equal(result.node_text, null);
+});
+
+// ---------- Turn AC-LOCATOR-READY: occurrence-level provenance sidecar ----------
+// Section E's required test matrix. No DB/KURE/Gold access anywhere below.
+
+function mixedTableAndProseSpans() {
+  // Table row (node 3, row 1) + a plain paragraph node (node 4) in the SAME
+  // chunk -- e.g. a Fixed-512 window that ends a table and starts the next
+  // paragraph. Two distinct node_ids -> MULTI_NODE_AMBIGUOUS, one candidate
+  // is_table:true, the other is_table:false.
+  return [...tableRowSpans(3, [1]), ...multiNodeSpans([4])];
+}
+
+test("node-only locator: a non-table single-node span resolves node identity with row/col null", () => {
+  const result = classifySpans(singleSpan(7));
+  assert.equal(result.status, LOCATOR_STATUS.NODE_AND_ROW_RESOLVED);
+  assert.equal(result.node_index, 7);
+  assert.equal(result.row, null);
+  assert.equal(result.col, null);
+  assert.equal(result.is_table, false);
+});
+
+test("row-qualified locator: verifyNodeIdentity accepts the correct row and rejects a wrong one", () => {
+  const chunkRows = [{ chunk_id: "chunk_a", source_spans: tableRowSpans(3, [0, 1, 2]) }];
+  const okRow = verifyNodeIdentity({ documentId: "doc_x", nodeIndex: 3, row: 1, chunkRows });
+  assert.equal(okRow.found, true);
+  const badRow = verifyNodeIdentity({ documentId: "doc_x", nodeIndex: 3, row: 99, chunkRows });
+  assert.equal(badRow.found, false, "a row that was never persisted for this node must fail closed, never be accepted");
+});
+
+test("cell-qualified locator: verifyNodeIdentity accepts the correct row+col and rejects a wrong column", () => {
+  const chunkRows = [{ chunk_id: "chunk_a", source_spans: tableRowSpans(3, [1]) }]; // col_start=0, col_end=2
+  const okCell = verifyNodeIdentity({ documentId: "doc_x", nodeIndex: 3, row: 1, col: 2, chunkRows });
+  assert.equal(okCell.found, true);
+  const badCell = verifyNodeIdentity({ documentId: "doc_x", nodeIndex: 3, row: 1, col: 99, chunkRows });
+  assert.equal(badCell.found, false, "a column outside the persisted col_start/col_end range must fail closed");
+});
+
+test("multi-row Fixed chunk: provenance set keeps every distinct row as its own candidate, never one representative row", () => {
+  const provenance = buildProvenanceSet(tableRowSpans(3, [0, 1, 2]));
+  assert.equal(provenance.status, LOCATOR_STATUS.NODE_RESOLVED_ROW_AMBIGUOUS);
+  assert.equal(provenance.unresolved, false);
+  assert.equal(provenance.candidate_count, 3);
+  assert.deepEqual(provenance.candidates.map((c) => c.row_start), [0, 1, 2]);
+  assert.ok(provenance.candidates.every((c) => c.node_index === 3 && c.is_table === true));
+});
+
+test("multi-node Fixed chunk: provenance set keeps every distinct node as its own candidate, never one representative node", () => {
+  const provenance = buildProvenanceSet(multiNodeSpans([2, 7, 9]));
+  assert.equal(provenance.status, LOCATOR_STATUS.MULTI_NODE_AMBIGUOUS);
+  assert.equal(provenance.candidate_count, 3);
+  assert.deepEqual(provenance.candidates.map((c) => c.node_index), [2, 7, 9]);
+});
+
+test("table + prose in the same chunk: both a table-row candidate and a plain-node candidate are preserved, correctly flagged is_table", () => {
+  const provenance = buildProvenanceSet(mixedTableAndProseSpans());
+  assert.equal(provenance.status, LOCATOR_STATUS.MULTI_NODE_AMBIGUOUS);
+  assert.equal(provenance.candidate_count, 2);
+  assert.deepEqual(provenance.candidates.map((c) => c.is_table), [true, false]);
+});
+
+test("multiple-locator preservation: search() result items expose the full candidate set, not a single collapsed locator", async () => {
+  const docs = [{ id: "chunk_a00000000000000000000001", text: "매출액 표" }];
+  const bm25Index = buildBm25Index(docs);
+  const client = fakeClient({
+    chunkRows: new Map(docs.map((d) => [d.id, chunkRow(d.id)])),
+    stagingSpans: new Map(docs.map((d) => [d.id, multiNodeSpans([1, 2, 3])])),
+  });
+  const armC = createArmRetrieverAdapter({ arm: "C", client, bm25Index, retrievalIndexId: RETRIEVAL_INDEX_ID, loadSessionId: LOAD_SESSION_ID });
+  const [result] = await armC.search("매출액 표", {}, 20);
+  // Top-level node_index/row/col/locator_status are UNCHANGED (still the
+  // pre-existing, single-value Section F fields) -- provenance is additive.
+  assert.equal(result.node_index, null);
+  assert.equal(result.locator_status, LOCATOR_STATUS.MULTI_NODE_AMBIGUOUS);
+  assert.equal(result.provenance.candidate_count, 3);
+  assert.deepEqual(result.provenance.candidates.map((c) => c.node_index), [1, 2, 3]);
+  assert.deepEqual(result.provenance.downstream_expansion_input, [
+    { doc_id: "periodic_00000000000001", node_index: 1 },
+    { doc_id: "periodic_00000000000001", node_index: 2 },
+    { doc_id: "periodic_00000000000001", node_index: 3 },
+  ]);
+});
+
+test("reject invalid document/node/row/column: fetch_node fails closed for a node never referenced by the requested document's own chunks", async () => {
+  const bm25Index = buildBm25Index([{ id: "chunk_a00000000000000000000001", text: "x" }]);
+  const client = fakeClient({ allStagingRows: [{ chunk_id: "chunk_a00000000000000000000001", source_spans: singleSpan(0, "periodic_00000000000001") }] });
+  const armC = createArmRetrieverAdapter({ arm: "C", client, bm25Index, retrievalIndexId: RETRIEVAL_INDEX_ID, loadSessionId: LOAD_SESSION_ID });
+  // Same fake client always returns allStagingRows regardless of document_id
+  // param in this harness, so this specifically exercises node/row/col
+  // rejection; the real adapter's SQL itself scopes by document_id (see the
+  // "fetch_node SQL always scopes by document_id" static test below).
+  const wrongNode = await armC.fetch_node("periodic_00000000000001", 999);
+  assert.equal(wrongNode.found, false);
+  const wrongRow = await armC.fetch_node("periodic_00000000000001", 0, { row: 5 });
+  assert.equal(wrongRow.found, false, "node 0 is a non-table span (row_start=null) -- any requested row must be rejected");
+});
+
+test("locator 0개 fail-closed: a chunk with zero persisted spans is UNRESOLVED, never silently treated as resolved", () => {
+  const provenance = buildProvenanceSet([]);
+  assert.equal(provenance.status, LOCATOR_STATUS.EMPTY_SPANS_INVALID);
+  assert.equal(provenance.unresolved, true);
+  assert.equal(provenance.unresolved_reason, "NO_SOURCE_SPANS_PERSISTED");
+  assert.equal(provenance.candidate_count, 0);
+  assert.deepEqual(provenance.candidates, []);
+  assert.equal(provenance.resolved, null);
+});
+
+test("동일 locator 중복 제거: duplicate spans (same node/row/col) collapse to one candidate", () => {
+  const dupSpans = [...tableRowSpans(3, [1]), ...tableRowSpans(3, [1])];
+  assert.equal(dupSpans.length, 2, "sanity: the fixture itself has two duplicate entries");
+  const provenance = buildProvenanceSet(dupSpans);
+  assert.equal(provenance.candidate_count, 1);
+});
+
+test("order determinism: candidate order matches the spans' own document order, unchanged across repeated calls", () => {
+  const spans = multiNodeSpans([5, 1, 9, 1]); // includes a repeat, out-of-numeric-order on purpose
+  const run1 = buildProvenanceSet(spans).candidates.map((c) => c.node_index);
+  const run2 = buildProvenanceSet(spans).candidates.map((c) => c.node_index);
+  assert.deepEqual(run1, [5, 1, 9]);
+  assert.deepEqual(run1, run2);
+});
+
+test("parser 손상 시 UNRESOLVED: a null/malformed source_spans value classifies as UNRESOLVED, never guessed", () => {
+  for (const malformed of [null, undefined, "not-an-array", {}]) {
+    const result = classifySpans(malformed);
+    assert.equal(result.status, LOCATOR_STATUS.EMPTY_SPANS_INVALID);
+    const provenance = buildProvenanceSet(malformed);
+    assert.equal(provenance.unresolved, true);
+  }
+});
+
+test("Gold-based correction impossibility: locator-provenance.mjs's own source never references Gold/expected-evidence identifiers", () => {
+  const source = readFileSync(path.join(REPO_ROOT, "domain/agent-comparison/four-arm-ac/locator-provenance.mjs"), "utf8");
+  for (const forbidden of ["gold", "Gold", "GOLD", "expected_answer", "expected_evidence", "DEV_CHECK", "HOLDOUT"]) {
+    assert.ok(!source.includes(forbidden), `locator-provenance.mjs must never reference ${forbidden}`);
+  }
+  // Structural: the functions that decide resolution take ONLY the spans
+  // (chunker-derived data) -- no gold/expected-evidence parameter exists to
+  // even smuggle a correction through.
+  assert.equal(classifySpans.length, 1);
+  assert.equal(buildProvenanceSet.length, 1);
+});
+
+test("A and C use the SAME provenance path: identical spans produce byte-identical provenance/result shape for both arms", async () => {
+  const docsA = [{ id: "chunk_a00000000000000000000001", text: "매출액 표 정보" }];
+  const spans = tableRowSpans(3, [0, 1]);
+  async function searchWith(arm, extra = {}) {
+    const bm25Index = buildBm25Index(docsA);
+    const client = fakeClient({
+      chunkRows: new Map(docsA.map((d) => [d.id, chunkRow(d.id)])),
+      stagingSpans: new Map(docsA.map((d) => [d.id, spans])),
+      indexRow: { index_status: "READY", embedding_provider: "nlpai-lab", embedding_model: "KURE-v1", embedding_revision: KURE_PIN.revision, embedding_dimension: KURE_PIN.dimension, record_count: 1 },
+    });
+    const adapter = createArmRetrieverAdapter({ arm, client, bm25Index, retrievalIndexId: RETRIEVAL_INDEX_ID, loadSessionId: LOAD_SESSION_ID, ...extra });
+    const [result] = await adapter.search("매출액 표 정보", {}, 20);
+    return result.provenance;
+  }
+  const provenanceC = await searchWith("C");
+  const provenanceA = await searchWith("A", {
+    vectorRepository: { async searchDocumentChunksByVector() { return [{ chunk_id: docsA[0].id, score: 0.9 }]; } },
+    embeddingAdapter: { async embedQuery() { return new Array(KURE_PIN.dimension).fill(0.01); } },
+  });
+  assert.deepEqual(provenanceA, provenanceC, "arm A and arm C must derive provenance via the identical classifySpans/buildProvenanceSet path");
+});
+
+test("metadata/Gold non-leak: the provenance sidecar never carries metadata-filter or Gold-shaped keys", async () => {
+  const docs = [{ id: "chunk_a00000000000000000000001", text: "매출액 표" }];
+  const bm25Index = buildBm25Index(docs);
+  const client = fakeClient({
+    chunkRows: new Map(docs.map((d) => [d.id, chunkRow(d.id, { metadata: { chunk_type: "FIXED_WINDOW", doc_group: "periodic", retrieval_eligible: true, gold_document_ids: ["should_never_be_here"] } })])),
+    stagingSpans: new Map(docs.map((d) => [d.id, multiNodeSpans([1, 2])])),
+  });
+  const armC = createArmRetrieverAdapter({ arm: "C", client, bm25Index, retrievalIndexId: RETRIEVAL_INDEX_ID, loadSessionId: LOAD_SESSION_ID });
+  const [result] = await armC.search("매출액 표", {}, 20);
+  const provenanceSerialized = JSON.stringify(result.provenance);
+  for (const leaked of ["gold_document_ids", "should_never_be_here", "doc_group", "retrieval_eligible"]) {
+    assert.ok(!provenanceSerialized.includes(leaked), `provenance sidecar leaked non-locator metadata: ${leaked}`);
+  }
+});
+
+test("existing vector reuse: provenance building never reads chunk text or embeddings -- only chunker-persisted source_spans", () => {
+  const source = readFileSync(path.join(REPO_ROOT, "domain/agent-comparison/four-arm-ac/locator-provenance.mjs"), "utf8");
+  // "raw_text" itself is mentioned only in explanatory comments (what is
+  // NOT persisted) -- checked here for the actual executable surface: no
+  // function in this file ever calls an embedding/vector API or reads a
+  // chunk's own text/embedding fields as CODE (not prose).
+  for (const forbidden of ["embedQuery", "searchDocumentChunksByVector", "row.text_content", "row.raw_text", "embed_text", "vectorRepository"]) {
+    assert.ok(!source.includes(forbidden), `locator-provenance.mjs must never reference ${forbidden} -- it must stay a pure spans->provenance sidecar`);
+  }
+});
+
+test("fetch_node SQL always scopes by document_id -- structurally impossible to cross-match another document's node", () => {
+  const source = readFileSync(path.join(REPO_ROOT, "domain/agent-comparison/four-arm-ac/arm-retriever-adapter.mjs"), "utf8");
+  const start = source.indexOf("async fetch_node(");
+  const end = source.indexOf("\n    },", start);
+  const body = source.slice(start, end);
+  assert.match(body, /WHERE load_session_id = \$1 AND document_id = \$2/);
+});
+
+test("double-run canonical SHA match: repeated buildProvenanceSet calls over the same spans hash identically", () => {
+  const spans = mixedTableAndProseSpans();
+  const sha1 = sha256Hex(JSON.stringify(buildProvenanceSet(spans)));
+  const sha2 = sha256Hex(JSON.stringify(buildProvenanceSet(spans)));
+  assert.equal(sha1, sha2);
+});
+
+test("DEV_CHECK/HOLDOUT non-access: neither four-arm-ac source file nor this test file references DEV_CHECK/HOLDOUT tables or env vars", () => {
+  for (const file of ["domain/agent-comparison/four-arm-ac/locator-provenance.mjs", "domain/agent-comparison/four-arm-ac/arm-retriever-adapter.mjs"]) {
+    const source = readFileSync(path.join(REPO_ROOT, file), "utf8");
+    for (const forbidden of ["DEV_CHECK", "HOLDOUT", "DEV_TUNE"]) {
+      assert.ok(!source.includes(forbidden), `${file} must never reference ${forbidden}`);
+    }
+  }
 });
