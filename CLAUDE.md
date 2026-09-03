@@ -20,7 +20,8 @@
 - **B arm 구성 완료**: torch 2.x + sentence-transformers(.venv, 약 1GB) · KURE-v1 rev `4ed4540…e4f`(HF 캐시 2.1GB) · `src/dart_detective/dense_rerank.py`(LOW 세그먼트에서 BM25 후보 50개를 cosine 재정렬, MPS fp16, max_seq 512, 점수 3자리 반올림·동률은 BM25 순). `bind("B")`가 자동 구성. 실측: 20청크 재정렬 8.1s(MPS), CPU 대비 순서 동일.
 - **4-arm 실험 자산 완료**: 조건 사전 계산(`data/eval/devtune101_conditions.v1.jsonl`, SHA `6ff1b4fc…`, LOW 20/HIGH 81 → 의역 세트 불필요) · 러너 `scripts/fourarm/run_arm.py` · 채점기+판정 체인 `src/dart_corpus/evaluation/fourarm.py` + `scripts/fourarm/score.py`.
 - **D arm 실측(전체 코퍼스)**: Recall@10 0.605 · @20 0.675 · LOW all_found@10 11/19 · 치명/경미/미해결 0 · p95 4.3s · RSS 1.24GB. **예전 "슬롯 97%"는 정답 문서 106건만 청킹한 풀의 수치였다** — `docs/interfaces.md` §5-8.
-- **B arm 실측**: Recall@10 0.6084 · LOW all_found@10 12/19 · p95 19714ms · RSS 2240.6MB. **B·D 판정: D = PROVISIONAL_WINNER**(dense-off 우선, 동률). A/C 대기. 1차 검수 반영 후 커밋 `bbdaa24`(clean tree)로 재실행·재채점 — 지표 동일, 미해결 0, coarse(정보) B 103·D 106. `results/fourarm/summary.md`.
+- **B arm 실측**: Recall@10 0.6084 · LOW all_found@10 12/19. **B·D 판정: D = PROVISIONAL_WINNER**(dense-off 우선, 동률). A/C 대기. 최종 pin: 코드 `c950a00` · conditions **v2** `83d5b8a0…`(별칭 채택 반영 재실행 — 지표 완전 동일). `results/fourarm/summary.md`.
+- **실 HCX E2E 3회 완주**(101문항·서비스앱 키): 계약 위반 0 · 답변가능성 98/101 · UNSUPPORTED로 나간 답 0 고정. 3차(FC→재시도→JSON 2중 안전망): 간헐 40009 오류 17→0, 캐시 가능 65→**81**/101, p95 38.9s(예산 290s). 남은 LLM 실패는 JSON 추출 불가 2건뿐(결정론 답으로 회복). `results/e2e/summary.json`.
 - 팀 계약 초안: `docs/interfaces.md` (킥오프에서 확정).
 - **통합 E2E(LLM 없음) 실측 완료(2026-09-03)**: 서빙 경계(answer_ex) 그대로 101문항 — 계약 위반 0 · 답변가능성 98/101 · 검증 SUPPORTED 93·PARTIALLY 8·UNSUPPORTED 0(폴백 1건이 template로 회복) · 캐시 가능 100/101 · p95 4.2s. 전략 분포 DIRECT 49·NARRATIVE 40·CALC 7·EXISTENCE 5. `results/e2e/summary.json`, 러너 `scripts/run_e2e_devtune.py`(키 있으면 그대로 실 E2E).
   - 어긋난 3문항(전부 알테오젠·LGES 유보 계열): 예전 실측은 정답문서 106건 풀 기준이라 유보 판정 규칙이 다른 발췌를 봤다. HCX 켠 E2E에서 재확인 — `results/e2e/devtune101.jsonl`의 7b9dd4·40322d·e549bb.

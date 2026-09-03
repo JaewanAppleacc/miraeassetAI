@@ -1,12 +1,12 @@
 {
  "arm": "D",
  "label": "LINE_WINDOW+DENSE_OFF",
- "started_at": "2026-09-03T12:20:46",
- "finished_at": "2026-09-03T12:24:10",
+ "started_at": "2026-09-03T13:55:46",
+ "finished_at": "2026-09-03T13:58:55",
  "host": "ijiyeong-ui-MacBookPro.local",
  "platform": "macOS-14.0-arm64-arm-64bit",
  "python": "3.12.6",
- "code_sha256": "bbdaa24dadd09d3efac50326c8ebefa009347f16",
+ "code_sha256": "c950a00324a90c912b34a4e30043cf7b5f9e9b9d",
  "git_dirty": false,
  "git_dirty_paths": [],
  "config": {
@@ -32,7 +32,7 @@
  },
  "config_sha256": "f4914226620b425dbe1e13da5c2c6921391fe2afbf33ae83e80f9bc9146389b2",
  "input_sha256": {
-  "conditions": "6ff1b4fce45bb46db0179d79439a310bcbb95cb3c1e1b2e2ddb2acd165137cf5",
+  "conditions": "83d5b8a02de2e3e79e388ec417ed104c81b08eb0a8dc8a8366b020df36b5e527",
   "document_ir": {
    "exchange.jsonl": "80000c1c12f09bb59ce5bea41f62c5a70a39bdc965859c8436c261e9bde02c2a",
    "holding.jsonl": "fd88d83c53a4c465ec1cbedce0a41046cfa7819822e2d7df046fccf42b8cbc09",
@@ -45,15 +45,15 @@
  },
  "n_questions": 101,
  "n_errors": 0,
- "bind_s": 3.0,
+ "bind_s": 2.9,
  "latency_ms": {
-  "p50": 1340,
-  "p95": 4770,
-  "mean": 1977,
-  "max": 13818,
-  "total_s": 199.7
+  "p50": 1347,
+  "p95": 4052,
+  "mean": 1831,
+  "max": 12877,
+  "total_s": 185.0
  },
- "peak_rss_mb": 1244.6,
+ "peak_rss_mb": 1276.1,
  "external_services": [],
- "results_sha256": "5197750dd9d135cc54685e852cdb9d2046586e782f1e06d861400480cfd7e0be"
+ "results_sha256": "20bc9c6b618f9dd467b169ce2bdd6ee18dda0c7381b22a10a38f5af6041a51bb"
 }

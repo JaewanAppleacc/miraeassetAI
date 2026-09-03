@@ -14,21 +14,21 @@
   "EXISTENCE_CHECK": 5
  },
  "validation_status": {
-  "SUPPORTED": 90,
-  "PARTIALLY_SUPPORTED": 11
+  "SUPPORTED": 86,
+  "PARTIALLY_SUPPORTED": 15
  },
  "fallback_stages": {
-  "template": 5
+  "template": 4
  },
  "llm_errors": {
-  "LLMUnavailable: CLOVA HTTP 400: {\"status\":{\"code\":\"40009\",\"m": 17
+  "LLMUnavailable: 응답에서 JSON을 찾지 못했다": 2
  },
- "n_llm_errors": 17,
- "cacheable": "65/101",
+ "n_llm_errors": 2,
+ "cacheable": "81/101",
  "latency_ms": {
-  "p50": 10838,
-  "p95": 31655,
-  "max": 55406,
-  "total_s": 1267.8
+  "p50": 9399,
+  "p95": 38908,
+  "max": 46261,
+  "total_s": 1166.1
  }
 }
