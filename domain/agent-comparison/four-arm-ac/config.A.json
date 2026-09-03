@@ -1,0 +1,50 @@
+{
+  "schema_version": "0.1.0",
+  "arm_code": "A",
+  "arm_id": "FIXED+FULL_DENSE",
+  "corpus_snapshot_id": "corpus_04750795e1a2d5c3_shard_val_750",
+  "corpus_manifest_sha256": "8cc6628eb38fff0ee48cf138a586978a627260a7e41157dddd45e52f97761d4e",
+  "corpus_scope": "VALIDATION_SHARD_750",
+  "corpus_scope_note": "Pinned to the existing READY 1,144-chunk validation shard (load_session_id=fixed_kure_session_21f4fafafafe8f7c38e8cd94897bc583). Re-pin corpus_snapshot_id/corpus_manifest_sha256 to the full corpus (corpus_04750795e1a2d5c3) only after FULL_LOAD_START_READY and a completed, independently-verified full DISCOVERY+EMBEDDING+MATERIALIZATION run -- see AC_IMPL_HANDOFF.md section J.",
+  "chunker": {
+    "chunking_policy_id": "fixed-token-512-o64.v0.1.0",
+    "chunking_policy_sha256": "f8ec08aa8286313b6bb77a4ec452b98e6f4e8f3e042291db91444a78a8b1e6eb",
+    "chunk_size": 512,
+    "overlap": 64,
+    "module": "domain/chunking/chunker.mjs (chunkFixed, unmodified)"
+  },
+  "metadata_filter": {
+    "source": "SYNTHETIC_FIXTURE_ONLY",
+    "conditions_sha256": null,
+    "module": "domain/agent-comparison/four-arm-ac/conditions-fixture.mjs",
+    "note": "This repository has no conditions.py (that name belongs to a separate team's Python codebase referenced only as background material -- CLAUDE.md section 0). Per vFINAL section D's own fallback, metadata filters are exercised with synthetic, question-text-only fixtures only; no official conditions file/SHA is pinned yet."
+  },
+  "bm25": {
+    "tokenizer": "unicode-word-punct (domain/chunking/chunker.mjs tokenizeWithOffsets, lowercased)",
+    "algorithm": "Okapi BM25 k1=1.5 b=0.75",
+    "index_module": "domain/agent-comparison/retrieval/fixed-kure-bm25-index.mjs",
+    "candidate_count": 100
+  },
+  "dense": {
+    "enabled": true,
+    "candidate_count": 20,
+    "index_module": "domain/postgres/reference-vector-retrieval-repository.mjs",
+    "distance_metric": "cosine"
+  },
+  "embedding": {
+    "provider": "nlpai-lab",
+    "repository": "nlpai-lab/KURE-v1",
+    "revision": "4ed4540949c70b7da2c74004a915e1f2d5e46e4f",
+    "dimension": 1024
+  },
+  "rrf": {
+    "enabled": true,
+    "constant": 60,
+    "fusion_pool": "INTERSECTION of BM25 top-100 and dense top-20 candidates (fixed-kure-hybrid-retriever-adapter.mjs's own HYBRID_RRF invariant: every result carries a non-null bm25 AND dense component score)"
+  },
+  "final_top_k": 20,
+  "code_head_sha256": null,
+  "code_head_sha256_note": "Not yet stamped -- this Turn does not execute DEV_TUNE-101. Stamp with `git rev-parse HEAD` immediately before any real execution, per vFINAL section 15.",
+  "embedding_index_config_sha256": "8cc6628eb38fff0ee48cf138a586978a627260a7e41157dddd45e52f97761d4e",
+  "embedding_index_config_sha256_note": "= disclosure_reference.reference_retrieval_indexes.manifest_sha256 for retrieval_index_id=fixed_kure_index_21f4fafafafe8f7c38e8cd94897bc583 (equal to corpus_manifest_sha256 for this loader). Kept identical across config.A.json/config.C.json -- both arms share one auditable corpus/materialization pin, even though arm C never queries the dense index."
+}

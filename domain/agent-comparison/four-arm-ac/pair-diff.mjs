@@ -1,0 +1,52 @@
+// Turn AC-IMPL, section E: A↔C pair-diff. vFINAL's own rule ("쌍 내(A↔C,
+// B↔D)는 dense 플래그 외 모든 조건 동일 보장") only allows a fixed set of
+// top-level config keys to differ between config.A.json and config.C.json.
+// Anything else that differs is CONFIG_PAIR_MISMATCH -- reject, never warn
+// and continue.
+export const ALLOWED_PAIR_DIFF_KEYS = Object.freeze([
+  "arm_code", "arm_id", "dense", "embedding", "rrf",
+]);
+
+function deepEqual(a, b) {
+  if (a === b) return true;
+  if (typeof a !== typeof b || a === null || b === null) return false;
+  if (typeof a !== "object") return false;
+  const aKeys = Object.keys(a);
+  const bKeys = Object.keys(b);
+  if (aKeys.length !== bKeys.length) return false;
+  return aKeys.every((key) => deepEqual(a[key], b[key]));
+}
+
+// Compares only TOP-LEVEL keys, as vFINAL section E's own field list is
+// top-level (arm_code/arm_id, corpus SHA, chunker id/config, BM25 ..., etc)
+// -- a nested difference inside an ALLOWED key (e.g. dense.candidate_count)
+// is not separately flagged, since the whole `dense` subtree is allowed to
+// differ by design (dense is literally what A/C ablate).
+export function computeConfigPairDiff(configA, configC) {
+  const keys = new Set([...Object.keys(configA), ...Object.keys(configC)]);
+  const diffKeys = [];
+  for (const key of keys) {
+    if (!deepEqual(configA[key], configC[key])) diffKeys.push(key);
+  }
+  const disallowedKeys = diffKeys.filter((key) => !ALLOWED_PAIR_DIFF_KEYS.includes(key));
+  return Object.freeze({
+    diff_keys: Object.freeze(diffKeys),
+    disallowed_keys: Object.freeze(disallowedKeys),
+    ok: disallowedKeys.length === 0,
+  });
+}
+
+export class ConfigPairMismatchError extends Error {
+  constructor(disallowedKeys) {
+    super(`CONFIG_PAIR_MISMATCH: config.A.json and config.C.json differ on non-allowed key(s): ${disallowedKeys.join(", ")}`);
+    this.name = "ConfigPairMismatchError";
+    this.code = "CONFIG_PAIR_MISMATCH";
+    this.disallowed_keys = disallowedKeys;
+  }
+}
+
+export function assertConfigPairValid(configA, configC) {
+  const diff = computeConfigPairDiff(configA, configC);
+  if (!diff.ok) throw new ConfigPairMismatchError(diff.disallowed_keys);
+  return diff;
+}
