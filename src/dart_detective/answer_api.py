@@ -152,7 +152,9 @@ def answer_ex(question_id: str, question: str, *,
         if llm is not None and deadline_s is not None and deadline_s < LLM_MIN_BUDGET_S:
             llm, llm_skipped = None, "deadline"
 
-        state = qa_agent.answer_question(question, _get_retriever(), llm=llm)
+        # 인젝션 탐지 시 지시문 스팬을 지운 질문으로 파이프라인을 돌린다(wire 에코는 원문 유지).
+        pipeline_q = decision.sanitized_question or question
+        state = qa_agent.answer_question(pipeline_q, _get_retriever(), llm=llm)
         if decision.notices:
             state.answer = state.answer + "\n\n" + "\n".join(decision.notices)
         out = state.to_dict()

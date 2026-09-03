@@ -1078,6 +1078,12 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
     if note:
         # 답변은 막지 않는다 — 다만 기업이 어긋날 수 있다는 사실을 답과 함께 내보낸다.
         uncertainty = f"{note} {uncertainty}".strip()
+    # 근거에 정정공시가 섞였으면 명시한다(심사위원 안내: 정정 이력 표시는 가점 요소).
+    # 어느 공시가 정정본인지는 인라인 출처의 공시명([기재정정] 등)으로 이미 드러난다.
+    meta_by_chunk = {c.chunk_id: c.metadata for c in state.retrieval_results}
+    if any((meta_by_chunk.get(m.chunk_id) or {}).get("is_correction")
+           for m in state.evidence_matches):
+        answer = f"{answer}\n\n※ 근거 중 일부는 정정공시로, 최초 공시 이후 정정된 내용이 반영된 것이다."
     state.answer = answer
     state.uncertainty = uncertainty
     final_derived = set(calculator.allowed_numbers(state.derived))

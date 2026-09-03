@@ -99,6 +99,9 @@ class Decision:
     reasons: tuple[str, ...] = ()
     injection_detected: bool = False
     notices: tuple[str, ...] = ()    # 답변 끝에 붙일 고지(무력화·시점 해석)
+    # 인젝션 탐지 시 지시문 스팬을 제거한 질문(빈 문자열 = 원문 그대로 사용).
+    # 파이프라인·LLM에는 이것을 넘기고, 응답 wire의 question 에코는 원문을 유지한다.
+    sanitized_question: str = ""
 
     def to_dict(self) -> dict:
         return {"action": self.action, "reasons": list(self.reasons),
@@ -139,9 +142,19 @@ def screen(question: str) -> Decision:
         reasons.append(f"advice_like_but_fact_query:{advice}|{fact_signal}")
 
     injection = _first_match(q, _INJECTION_RES)
+    sanitized = ""
     if injection:
         reasons.append(f"injection:{injection}")
         notices.append(INJECTION_NOTICE)
+        # 지시문 스팬을 지운 질문을 만든다 — 탐지만 하고 원문을 그대로 LLM에 넘기면
+        # 프롬프트 노출 등 비수치 탈선 여지가 남는다(검수 발견 7). 사실 질의가 안 남으면
+        # 빈 검색 → 기존 "근거 없음" 경로가 안전하게 답한다.
+        sanitized = q
+        for p in _INJECTION_RES:
+            sanitized = p.sub(" ", sanitized)
+        sanitized = re.sub(r"\s{2,}", " ", sanitized).strip()
+        if sanitized == q.strip():
+            sanitized = ""
 
     rel = _RELATIVE_TIME_RE.search(q)
     if rel:
@@ -149,4 +162,5 @@ def screen(question: str) -> Decision:
         notices.append(TIME_NOTICE_TEMPLATE.format(word=rel.group(0), cutoff=CORPUS_CUTOFF))
 
     return Decision(action="proceed", reasons=tuple(reasons),
-                    injection_detected=bool(injection), notices=tuple(notices))
+                    injection_detected=bool(injection), notices=tuple(notices),
+                    sanitized_question=sanitized)
