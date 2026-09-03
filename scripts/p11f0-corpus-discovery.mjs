@@ -198,80 +198,85 @@ async function main() {
 
   const client = new Client({ connectionString: databaseUrl });
   await client.connect();
-  const repo = createFixedKureLoadSessionRepository({ client });
+  // try/finally around everything after connect: a thrown error mid-stream
+  // (e.g. a filesystem permission error reading the raw corpus) must still
+  // close the connection, or the process hangs forever holding it open
+  // instead of exiting -- same class of bug already fixed in
+  // p11f0-shard-integration-smoke.mjs.
+  try {
+    const repo = createFixedKureLoadSessionRepository({ client });
 
-  const pins = {
-    releaseId: "seed-release-v0.20",
-    corpusSnapshotId: effectiveCorpusSnapshotId,
-    corpusManifestSha256,
-    embeddingProvider: "nlpai-lab",
-    embeddingModel: "KURE-v1",
-    embeddingRevision: "4ed4540949c70b7da2c74004a915e1f2d5e46e4f",
-    embeddingDimension: 1024,
-    distanceMetric: "cosine",
-    chunkingPolicyId: policy.chunking_config_id,
-    chunkingPolicySha256,
-    batchSize: 8,
-    discoveryBatchSize: DISCOVERY_BATCH_SIZE,
-    maxRetryAttempts: 3,
-    leaseDurationMs: 120000,
-    codeRevision: process.env.P11F0_CODE_REVISION ?? "unknown",
-  };
+    const pins = {
+      releaseId: "seed-release-v0.20",
+      corpusSnapshotId: effectiveCorpusSnapshotId,
+      corpusManifestSha256,
+      embeddingProvider: "nlpai-lab",
+      embeddingModel: "KURE-v1",
+      embeddingRevision: "4ed4540949c70b7da2c74004a915e1f2d5e46e4f",
+      embeddingDimension: 1024,
+      distanceMetric: "cosine",
+      chunkingPolicyId: policy.chunking_config_id,
+      chunkingPolicySha256,
+      batchSize: 8,
+      discoveryBatchSize: DISCOVERY_BATCH_SIZE,
+      maxRetryAttempts: 3,
+      leaseDurationMs: 120000,
+      codeRevision: process.env.P11F0_CODE_REVISION ?? "unknown",
+    };
 
-  const { session, created } = await repo.createOrGetSession(pins);
-  console.error(`[discovery] session ${session.load_session_id} created=${created} status=${session.status}`);
+    const { session, created } = await repo.createOrGetSession(pins);
+    console.error(`[discovery] session ${session.load_session_id} created=${created} status=${session.status}`);
 
-  if (session.status !== "CREATED" && session.status !== "DISCOVERING") {
-    console.error(`[discovery] session already past DISCOVERY (status=${session.status}) -- nothing to do`);
+    if (session.status !== "CREATED" && session.status !== "DISCOVERING") {
+      console.error(`[discovery] session already past DISCOVERY (status=${session.status}) -- nothing to do`);
+      return;
+    }
+    if (session.status === "CREATED") await repo.transitionStatus(session.load_session_id, ["CREATED"], "DISCOVERING");
+
+    const provenance = { targetCorpusSnapshotId: effectiveCorpusSnapshotId, parserCodeRevision: process.env.P11F0_PARSER_CODE_REVISION ?? "0".repeat(40), parserConfigHash: "0".repeat(64) };
+
+    let lastReport = Date.now();
+    console.error("[discovery] PASS 1 (write) starting...");
+    const pass1 = await runDiscoveryPass({
+      policy, metadataIndex, provenance, maxDocuments,
+      sink: { mode: "write", repo, loadSessionId: session.load_session_id },
+      onProgress: (p) => {
+        const now = Date.now();
+        if (now - lastReport >= 30000) {
+          console.error(`[discovery][pass1] documents=${p.documentCount} chunks=${p.chunkCount} search_eligible=${p.searchEligibleCount} unique_texts=${p.uniqueTextCount}`);
+          lastReport = now;
+        }
+      },
+    });
+    console.error(`[discovery] PASS 1 complete: documents=${pass1.documentCount} chunks=${pass1.chunkCount} search_eligible=${pass1.searchEligibleCount} unique_texts=${pass1.uniqueTextCount} stream_sha256=${pass1.streamSha256}`);
+    await repo.recordPassStreamSha256(session.load_session_id, 1, pass1.streamSha256);
+
+    console.error("[discovery] PASS 2 (verify-only, no DB writes) starting...");
+    lastReport = Date.now();
+    const pass2 = await runDiscoveryPass({
+      policy, metadataIndex, provenance, maxDocuments,
+      sink: { mode: "verify-only" },
+      onProgress: (p) => {
+        const now = Date.now();
+        if (now - lastReport >= 30000) {
+          console.error(`[discovery][pass2] documents=${p.documentCount} chunks=${p.chunkCount}`);
+          lastReport = now;
+        }
+      },
+    });
+    console.error(`[discovery] PASS 2 complete: stream_sha256=${pass2.streamSha256}`);
+    await repo.recordPassStreamSha256(session.load_session_id, 2, pass2.streamSha256);
+
+    if (pass1.streamSha256 !== pass2.streamSha256 || pass1.chunkCount !== pass2.chunkCount) {
+      await repo.transitionStatus(session.load_session_id, ["DISCOVERING"], "FAILED", { last_error_code: "DOUBLE_PASS_DETERMINISM_MISMATCH" });
+      throw new Error(`DOUBLE_PASS_DETERMINISM_MISMATCH: pass1 sha256=${pass1.streamSha256} count=${pass1.chunkCount}; pass2 sha256=${pass2.streamSha256} count=${pass2.chunkCount}`);
+    }
+
+    const completed = await repo.completeDiscovery(session.load_session_id);
+    console.error(`[discovery] DISCOVERY_COMPLETE: load_session_id=${completed.load_session_id} expected_total_chunk_count=${completed.expected_total_chunk_count} expected_search_eligible_count=${completed.expected_search_eligible_count} expected_unique_embeddable_count=${completed.expected_unique_embeddable_count}`);
+  } finally {
     await client.end();
-    return;
   }
-  if (session.status === "CREATED") await repo.transitionStatus(session.load_session_id, ["CREATED"], "DISCOVERING");
-
-  const provenance = { targetCorpusSnapshotId: effectiveCorpusSnapshotId, parserCodeRevision: process.env.P11F0_PARSER_CODE_REVISION ?? "0".repeat(40), parserConfigHash: "0".repeat(64) };
-
-  let lastReport = Date.now();
-  console.error("[discovery] PASS 1 (write) starting...");
-  const pass1 = await runDiscoveryPass({
-    policy, metadataIndex, provenance, maxDocuments,
-    sink: { mode: "write", repo, loadSessionId: session.load_session_id },
-    onProgress: (p) => {
-      const now = Date.now();
-      if (now - lastReport >= 30000) {
-        console.error(`[discovery][pass1] documents=${p.documentCount} chunks=${p.chunkCount} search_eligible=${p.searchEligibleCount} unique_texts=${p.uniqueTextCount}`);
-        lastReport = now;
-      }
-    },
-  });
-  console.error(`[discovery] PASS 1 complete: documents=${pass1.documentCount} chunks=${pass1.chunkCount} search_eligible=${pass1.searchEligibleCount} unique_texts=${pass1.uniqueTextCount} stream_sha256=${pass1.streamSha256}`);
-  await repo.recordPassStreamSha256(session.load_session_id, 1, pass1.streamSha256);
-
-  console.error("[discovery] PASS 2 (verify-only, no DB writes) starting...");
-  lastReport = Date.now();
-  const pass2 = await runDiscoveryPass({
-    policy, metadataIndex, provenance, maxDocuments,
-    sink: { mode: "verify-only" },
-    onProgress: (p) => {
-      const now = Date.now();
-      if (now - lastReport >= 30000) {
-        console.error(`[discovery][pass2] documents=${p.documentCount} chunks=${p.chunkCount}`);
-        lastReport = now;
-      }
-    },
-  });
-  console.error(`[discovery] PASS 2 complete: stream_sha256=${pass2.streamSha256}`);
-  await repo.recordPassStreamSha256(session.load_session_id, 2, pass2.streamSha256);
-
-  if (pass1.streamSha256 !== pass2.streamSha256 || pass1.chunkCount !== pass2.chunkCount) {
-    await repo.transitionStatus(session.load_session_id, ["DISCOVERING"], "FAILED", { last_error_code: "DOUBLE_PASS_DETERMINISM_MISMATCH" });
-    await client.end();
-    throw new Error(`DOUBLE_PASS_DETERMINISM_MISMATCH: pass1 sha256=${pass1.streamSha256} count=${pass1.chunkCount}; pass2 sha256=${pass2.streamSha256} count=${pass2.chunkCount}`);
-  }
-
-  const completed = await repo.completeDiscovery(session.load_session_id);
-  console.error(`[discovery] DISCOVERY_COMPLETE: load_session_id=${completed.load_session_id} expected_total_chunk_count=${completed.expected_total_chunk_count} expected_search_eligible_count=${completed.expected_search_eligible_count} expected_unique_embeddable_count=${completed.expected_unique_embeddable_count}`);
-
-  await client.end();
 }
 
 main().catch((error) => {

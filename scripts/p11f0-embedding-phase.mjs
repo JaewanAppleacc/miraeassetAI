@@ -53,6 +53,14 @@ async function main() {
 
   const client = new Client({ connectionString: databaseUrl });
   await client.connect();
+  // try/finally around everything after connect: this phase runs for
+  // hours against a live embedding server -- any uncaught error (a DB
+  // hiccup outside the per-batch try/catch below, a bad session lookup)
+  // must still close the connection so the process actually exits instead
+  // of hanging silently and burning wall-clock time undetected. Same class
+  // of bug already fixed in p11f0-shard-integration-smoke.mjs and
+  // p11f0-corpus-discovery.mjs.
+  try {
   const repo = createFixedKureLoadSessionRepository({ client });
 
   const loadSessionId = computeFixedKureLoadSessionId({
@@ -69,7 +77,6 @@ async function main() {
     session = await repo.transitionStatus(loadSessionId, ["DISCOVERY_COMPLETE"], "EMBEDDING");
   } else if (session.status !== "EMBEDDING") {
     console.error(`[embedding] session status is ${session.status}, not DISCOVERY_COMPLETE/EMBEDDING -- nothing to do`);
-    await client.end();
     return;
   }
 
@@ -140,10 +147,11 @@ async function main() {
   report("embedding_complete");
   if (permanentFailureCount > 0) {
     await repo.transitionStatus(loadSessionId, ["EMBEDDING"], "FAILED", { last_error_code: "EMBEDDING_PERMANENT_FAILURES" });
-    await client.end();
     throw new Error(`EMBEDDING phase ended with ${permanentFailureCount} permanently failed unique text(s) -- refusing to proceed to MATERIALIZING`);
   }
-  await client.end();
+  } finally {
+    await client.end();
+  }
 }
 
 main().catch((error) => {
