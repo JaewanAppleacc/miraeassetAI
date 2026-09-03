@@ -1,7 +1,7 @@
-"""팀원2 운영 계약(interfaces.md §2) — ops_service 검증.
+"""팀원2 운영 계약(interfaces §2 + 09-03 업데이트 8번) — ops_service 검증.
 
-계약 요점: 파라미터 검증 400 · 5필드 전부 문자열 · 캐시(폴백·degraded 제외) ·
-세마포어 1 · /health와 /ready 분리.
+계약 요점: 파라미터 검증 400 · 5필드 전부 문자열 · 캐시는 meta.cacheable=True일 때만
+(degraded 모드 금지) · 세마포어 1 · /health와 /ready 분리 · 예외에도 유효 5필드.
 """
 from __future__ import annotations
 
@@ -15,16 +15,17 @@ from fastapi.testclient import TestClient
 from dart_detective import ops_service
 
 
+def _wire(qid, q, answer="답"):
+    return {"question_id": qid, "question": q,
+            "retrieved_context": "[근거1] x [/근거1]",
+            "think_trace": json.dumps({"mode": "real"}), "answer": answer}
+
+
 @pytest.fixture()
 def client():
     ops_service._cache.clear()
     ops_service.configure(
-        answer_fn=lambda qid, q, *, deadline_s=None: {
-            "question_id": qid, "question": q,
-            "retrieved_context": "[근거1] x [/근거1]",
-            "think_trace": json.dumps({"mode": "real"}),
-            "answer": "답",
-        },
+        call_fn=lambda qid, q, *, deadline_s=None: (_wire(qid, q), {"cacheable": True}),
         readiness_fn=lambda: {"ready": True, "missing": [], "pins": {"v": 1},
                               "mode": "real"},
     )
@@ -50,34 +51,45 @@ def test_five_string_fields(client):
     assert body["question_id"] == "q1"
 
 
-def test_cache_hits_second_call(client):
+def test_cacheable_true_hits_second_call(client):
     calls = {"n": 0}
 
     def provider(qid, q, *, deadline_s=None):
         calls["n"] += 1
-        return {"question_id": qid, "question": q, "retrieved_context": "",
-                "think_trace": json.dumps({"mode": "real"}), "answer": "답"}
+        return _wire(qid, q), {"cacheable": True}
 
-    ops_service.configure(answer_fn=provider)
+    ops_service.configure(call_fn=provider)
     for _ in range(2):
         assert client.get("/answer", params={"question_id": "q2",
                                              "question": "같은 질문"}).status_code == 200
     assert calls["n"] == 1
 
 
-def test_fallback_answer_is_not_cached(client):
+def test_meta_cacheable_false_is_not_cached(client):
+    """업데이트 8번: meta.cacheable=False면 캐시에 넣지 않는다 — 폴백·저하·시간부족 답."""
     calls = {"n": 0}
 
     def provider(qid, q, *, deadline_s=None):
         calls["n"] += 1
-        return {"question_id": qid, "question": q, "retrieved_context": "",
-                "think_trace": json.dumps({"fallback": True, "reason": "x"}),
-                "answer": "폴백"}
+        return _wire(qid, q, answer="폴백"), {"cacheable": False, "reason": "fallback"}
 
-    ops_service.configure(answer_fn=provider)
+    ops_service.configure(call_fn=provider)
     for _ in range(2):
         client.get("/answer", params={"question_id": "q3", "question": "질문"})
-    assert calls["n"] == 2           # 두 번 다 실계산 — 폴백은 박제하지 않는다
+    assert calls["n"] == 2
+
+
+def test_missing_cacheable_defaults_to_not_cached(client):
+    calls = {"n": 0}
+
+    def provider(qid, q, *, deadline_s=None):
+        calls["n"] += 1
+        return _wire(qid, q), {}
+
+    ops_service.configure(call_fn=provider)
+    for _ in range(2):
+        client.get("/answer", params={"question_id": "q3b", "question": "질문"})
+    assert calls["n"] == 2
 
 
 def test_degraded_mode_is_not_cached(client):
@@ -85,11 +97,10 @@ def test_degraded_mode_is_not_cached(client):
 
     def provider(qid, q, *, deadline_s=None):
         calls["n"] += 1
-        return {"question_id": qid, "question": q, "retrieved_context": "",
-                "think_trace": json.dumps({"mode": "real"}), "answer": "답"}
+        return _wire(qid, q), {"cacheable": True}
 
     ops_service.configure(
-        answer_fn=provider,
+        call_fn=provider,
         readiness_fn=lambda: {"ready": True, "missing": [], "pins": {},
                               "mode": "degraded"})
     for _ in range(2):
@@ -102,11 +113,10 @@ def test_pins_change_invalidates_cache(client):
 
     def provider(qid, q, *, deadline_s=None):
         calls["n"] += 1
-        return {"question_id": qid, "question": q, "retrieved_context": "",
-                "think_trace": json.dumps({"mode": "real"}), "answer": "답"}
+        return _wire(qid, q), {"cacheable": True}
 
     pins = {"v": 1}
-    ops_service.configure(answer_fn=provider,
+    ops_service.configure(call_fn=provider,
                           readiness_fn=lambda: {"ready": True, "missing": [],
                                                 "pins": dict(pins), "mode": "real"})
     client.get("/answer", params={"question_id": "q5", "question": "질문"})
@@ -128,12 +138,25 @@ def test_provider_exception_still_returns_five_fields(client):
     def provider(qid, q, *, deadline_s=None):
         raise RuntimeError("내부 폭발")
 
-    ops_service.configure(answer_fn=provider)
+    ops_service.configure(call_fn=provider)
     r = client.get("/answer", params={"question_id": "q6", "question": "질문"})
     assert r.status_code == 200
     body = r.json()
     assert set(body) == set(ops_service.WIRE_KEYS)
     assert "fallback" in body["think_trace"]
+
+
+def test_exception_fallback_is_not_cached(client):
+    calls = {"n": 0}
+
+    def provider(qid, q, *, deadline_s=None):
+        calls["n"] += 1
+        raise RuntimeError("내부 폭발")
+
+    ops_service.configure(call_fn=provider)
+    for _ in range(2):
+        client.get("/answer", params={"question_id": "q7", "question": "질문"})
+    assert calls["n"] == 2           # 예외 폴백 답이 박제되지 않는다
 
 
 def test_semaphore_serializes_concurrent_requests(client):
@@ -147,10 +170,9 @@ def test_semaphore_serializes_concurrent_requests(client):
         time.sleep(0.2)
         with lock:
             active["now"] -= 1
-        return {"question_id": qid, "question": q, "retrieved_context": "",
-                "think_trace": json.dumps({"mode": "real"}), "answer": "답"}
+        return _wire(qid, q), {"cacheable": True}
 
-    ops_service.configure(answer_fn=provider)
+    ops_service.configure(call_fn=provider)
     threads = [threading.Thread(target=lambda i=i: client.get(
         "/answer", params={"question_id": f"c{i}", "question": f"질문{i}"}))
         for i in range(3)]
@@ -162,11 +184,13 @@ def test_semaphore_serializes_concurrent_requests(client):
 
 
 def test_dummy_mode_works_without_answer_api():
-    """answer_api가 없어도(오늘의 스켈레톤) 유효한 5필드가 나온다."""
+    """answer_api가 없어도(스켈레톤) 유효한 5필드가 나오고 캐시는 안 된다."""
+    ops_service._cache.clear()
     ops_service.configure()          # 자동 탐색 — answer_api 없으면 더미
     with TestClient(ops_service.app) as c:
         r = c.get("/answer", params={"question_id": "d1", "question": "확인"})
-    assert r.status_code == 200
-    body = r.json()
-    assert set(body) == set(ops_service.WIRE_KEYS)
-    assert all(isinstance(v, str) for v in body.values())
+        assert r.status_code == 200
+        body = r.json()
+        assert set(body) == set(ops_service.WIRE_KEYS)
+        assert all(isinstance(v, str) for v in body.values())
+    assert ops_service._cache == {}  # 더미는 절대 캐시되지 않는다
