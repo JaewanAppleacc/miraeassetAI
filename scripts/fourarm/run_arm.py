@@ -51,6 +51,16 @@ def git_head() -> str:
         return "unknown"
 
 
+def git_dirty_paths() -> list[str]:
+    """실행 코드(src/·scripts/)에 커밋되지 않은 변경이 있으면 HEAD pin으로 재구성할 수 없다(vFINAL 15번)."""
+    try:
+        out = subprocess.check_output(["git", "status", "--porcelain", "--", "src", "scripts"],
+                                      cwd=REPO, text=True)
+    except Exception:  # noqa: BLE001
+        return ["(git unavailable)"]
+    return [ln[3:] for ln in out.splitlines() if ln.strip()]
+
+
 def peak_rss_mb() -> float:
     rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     return round(rss / (1024 * 1024 if platform.system() == "Darwin" else 1024), 1)
@@ -64,7 +74,16 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--out-dir", type=Path, default=REPO / "results" / "fourarm")
     p.add_argument("--k", type=int, default=REPORT_K)
     p.add_argument("--limit", type=int, default=0, help="디버그용: 앞 N문항만")
+    p.add_argument("--allow-dirty", action="store_true",
+                   help="src/·scripts/에 미커밋 변경이 있어도 실행(디버그 전용 — 결과는 판정에 쓰지 말 것)")
     args = p.parse_args(argv)
+
+    dirty = git_dirty_paths()
+    if dirty and not args.allow_dirty:
+        print(json.dumps({"status": "REFUSED", "reason": "uncommitted changes in src/ or scripts/ — "
+                          "commit first so code_sha256 pins the executed code (vFINAL 15)", "paths": dirty},
+                         ensure_ascii=False, indent=1))
+        return 3
 
     rows = [json.loads(l) for l in args.conditions.open(encoding="utf-8") if l.strip()]
     if args.limit:
@@ -115,22 +134,18 @@ def main(argv: list[str] | None = None) -> int:
             if i % 20 == 0:
                 print(f"{args.arm}: {i}/{len(rows)} · 누적 {sum(latencies)/1000:.0f}s", file=sys.stderr, flush=True)
 
-    pins = ready.get("pins") or {}
-    config = {
-        "arm": args.arm, "label": ready.get("label"), "k": args.k,
-        "strategy": pins.get("strategy"), "stage1_k": pins.get("stage1_k"), "chunk_k": pins.get("chunk_k"),
-        "text_recipe": pins.get("text_recipe"), "text_cap": pins.get("text_cap"),
-        "dense": ready.get("dense"), "dense_model": pins.get("dense_model"), "dense_rev": pins.get("dense_rev"),
-        "dense_pool": pins.get("dense_pool"), "dense_device": pins.get("dense_device"),
-        "dense_dtype": pins.get("dense_dtype"),
-        "conditions_source": "precomputed",
-    }
+    pins = dict(ready.get("pins") or {})
+    # readiness().pins **전부**가 config다 — 골라 담으면 config_sha256이 실제 설정을 동결하지 못한다(검수 7번).
+    config = {"arm": args.arm, "label": ready.get("label"), "k": args.k, "dense": ready.get("dense"),
+              "conditions_source": "precomputed", **pins}
     index_manifest = json.loads((REPO / "data" / "index" / "index_manifest.json").read_text(encoding="utf-8"))
     run = {
         "arm": args.arm, "label": ready.get("label"),
         "started_at": started, "finished_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
         "host": platform.node(), "platform": platform.platform(), "python": platform.python_version(),
         "code_sha256": git_head(),
+        "git_dirty": bool(dirty),
+        "git_dirty_paths": dirty,
         "config": config,
         "config_sha256": hashlib.sha256(json.dumps(config, sort_keys=True, ensure_ascii=False).encode()).hexdigest(),
         "input_sha256": {

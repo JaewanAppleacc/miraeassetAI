@@ -34,15 +34,15 @@ vFINAL 4-arm 실험을 실제로 돌릴 수 있는 B/D 쪽 자산과 **네 arm �
 - [ ] A1. `segments.hard_condition_count` = interfaces.md §1-2 규칙. LOW = ≤2. 정의가 **한 곳**뿐인가(`grep -rn "LOW" src/`)
 - [ ] A2. `fourarm.slot_found`: 1순위 (doc_id, node_index ∪ node_indices) 일치, 2순위 같은 doc_id에서 evidence_span 한 줄(공백 제거·6자↑) 포함. Gold 두 locator 표기 모두 파싱(`parse_locator`)
 - [ ] A3. Recall@k = slots_found/slots_total(micro), all_found@k = 필수 slot 전부 found 문항 수, 0-slot 문항 제외 — 코드와 docstring·interfaces.md §1-5가 일치하는가
-- [ ] A4. locator 검사(14번): **slot-match 청크만** 검사하는가. 문서 없음·node 범위 밖 = 치명, 텍스트 대조 불가 = UNRESOLVED(치명 아님), row/col = 경미. top-k 비관련 청크를 위반으로 세지 않는가
-- [ ] A5. `judge` 순서가 vFINAL 판정 체인과 같은가: 20 pins → 16 unresolved → 12 Hard → 12 Quality(hard-safe 최고 대비 −0.01, 전체·HIGH) → 2 LOW all_found(LOW≥10) → 5 FINAL_TIE_SET(≤1) → dense-off 우선 → 11+18 C/D tie-break(경미→p95 ≤5%→RSS ≤5%→외부 서비스→D) → A/B 동률 B(PERFORMANCE_TIE_BREAK_SELECTION) → 3/8 LOW<10 의역 → 10 B fallback(두 gate+배포 가능성) → BLOCKED
+- [ ] A4. locator 검사(14번): **slot-match 청크만** 검사하는가. 문서 없음·node 범위 밖 = 치명 · 텍스트 없음 또는 node 원문과 대조 불가 = UNRESOLVED(치명 아님) · Gold와 청크 모두 row/col이 있는데 다름 = 경미 · 청크에 row/col이 없음 = coarse(위반 아님, 정보). top-k 비관련 청크를 위반으로 세지 않는가
+- [ ] A5. `judge` 순서가 vFINAL 판정 체인과 같은가: 14 locator 검사 여부(미검사 → INVALID) → 20 pins → 16 unresolved → 12 Hard → 12 Quality(hard-safe 최고 대비 차이 < 0.01 이어야 통과 — "0.01 이상 낮으면 탈락", 전체·HIGH) → 2 LOW all_found(LOW≥10) → 5 FINAL_TIE_SET(≤1) → dense-off 우선 → 11+18 C/D tie-break(경미→p95 ≤5%→RSS ≤5%→외부 서비스→D) → A/B 동률 B(PERFORMANCE_TIE_BREAK_SELECTION) → 3/8 LOW<10 의역 → 10 B fallback(두 gate+배포 가능성) → BLOCKED
 - [ ] A6. 12번: Hard-failed arm 점수가 Quality 기준값에 **쓰이지 않는가**(hard_safe 안에서만 max)
 - [ ] A7. 5번: 최고−2 이상 arm 탈락, FINAL_TIE_SET에 C/D 있으면 dense-off 우선, C·D 둘 다면 11번
 - [ ] A8. 10번: B fallback은 B가 Hard·Quality 통과 **그리고** deployable일 때만. 성능 승자와 구분(`selection_type`)
-- [ ] A9. 16번: UNRESOLVED 패킷에 arm 라벨이 없는가(`unresolved_packets`). 승자에 unresolved가 있으면 상태가 PENDING인가
+- [ ] A9. 16번: UNRESOLVED 패킷에 arm 라벨이 없고 id가 내용 해시라 arm 간 충돌하지 않는가(`unresolved_packets`, score.py는 전 arm 패킷을 모아 한 번 기록). 승자에 unresolved가 있으면 상태 `PENDING_UNRESOLVED` + `candidate`(winner 없음)인가 — 16C 선택 보류
 - [ ] A10. 17번: 결과가 PROVISIONAL_WINNER로만 표기되고 FINAL로 승격하는 코드가 없는가(DEV_CHECK는 이번 범위 밖)
 - [ ] A11. 20번 non-leak: `precompute_conditions.py`가 Gold에서 `question_id`·`question`만 읽는가(`ALLOWED_GOLD_FIELDS`). `run_arm.py`가 Gold를 **열지 않는가**. 어댑터·NodeStore가 gold 파일을 읽지 않는가
-- [ ] A12. 15번: 러너가 실패 문항만 재실행하지 않는가(예외 기록 후 계속). `run.json`에 config·config_sha·code_sha·input_sha(conditions·document_ir·doc_index·universe·manifest)가 있는가
+- [ ] A12. 15번: 러너가 실패 문항만 재실행하지 않는가(예외 기록 후 계속). `run.json`에 config(= readiness pins **전부**)·config_sha·code_sha·`git_dirty`(src/·scripts/ 미커밋 변경 시 실행 거부, `--allow-dirty`는 디버그 전용)·input_sha(conditions·document_ir·doc_index·universe·manifest)가 있는가. **`code_sha256`가 실제 실행 코드를 담은 커밋인가**
 - [ ] A13. 18번: warm-up 1회(미기록) 후 측정, p50/p95, arm별 독립 프로세스 peak RSS
 
 ### B. as-built·무변경

@@ -75,7 +75,7 @@ def _report(arm, *, r_all, r_high, low_all_found, low_q=12, critical=0, minor=0,
                          "LOW": seg(0.8, low_all_found, low_q)},
             "violations": {"critical": critical, "minor": minor, "unresolved": unresolved, "items": []},
             "latency_ms": {"p95": p95}, "peak_rss_mb": rss, "external_services": list(ext),
-            "pins": {"conditions_sha_matches": pins_ok}}
+            "pins": {"conditions_sha_matches": pins_ok}, "locator_checked": True}
 
 
 def test_score_arm_aggregates_by_segment():
@@ -124,12 +124,31 @@ def test_check_locators_severities():
     assert sev == [("critical", "doc_missing"), ("critical", "node_missing"), ("unresolved", "claim_text_not_in_node")]
 
 
-def test_unresolved_packets_are_arm_blind():
-    rep = {"arm": "B", "violations": {"items": [
-        {"severity": "unresolved", "question_id": "q", "slot_name": "s", "doc_id": "d", "node_index": 1,
-         "reason": "claim_text_not_in_node", "chunk_text": "t"}]}}
-    pk = fa.unresolved_packets(rep)
-    assert len(pk) == 1 and "B" not in pk[0]["packet_id"] and "arm" not in pk[0]
+def test_check_locators_no_text_is_unresolved_and_row_col_rules():
+    store = _Store({"d1": ["구분 | 값", "매출액 | 10"]})
+    qs = fa.QuestionScore("q", "LOW", 3, False)
+    qs.slot_matches = [
+        {"slot_name": "a", "method": "node", "result": _res("d1", 1), "gold_row_col": None},          # text 없음 → 판정 불가
+        {"slot_name": "b", "method": "node", "result": _res("d1", 1, text="매출액 | 10"), "gold_row_col": (1, 2)},   # 청크에 row/col 없음 → coarse
+        {"slot_name": "c", "method": "node", "result": _res("d1", 1, text="매출액 | 10", row=1, col=3), "gold_row_col": (1, 2)},  # 다름 → 경미
+        {"slot_name": "d", "method": "node", "result": _res("d1", 1, text="매출액 | 10", row=1, col=2), "gold_row_col": (1, 2)},  # 같음 → 없음
+    ]
+    v = fa.check_locators(qs, store)
+    got = sorted((x["slot_name"], x["severity"], x["reason"].split(":")[0]) for x in v)
+    assert got == [("a", "unresolved", "no_text_to_verify"), ("b", "coarse", "no_row_col_in_chunk"),
+                   ("c", "minor", "row_col_differs")]
+
+
+def test_unresolved_packets_are_arm_blind_and_unique_across_arms():
+    item = {"severity": "unresolved", "question_id": "q", "slot_name": "s", "doc_id": "d", "node_index": 1,
+            "reason": "claim_text_not_in_node", "chunk_text": "t"}
+    other = {**item, "node_index": 2}
+    pb = fa.unresolved_packets({"arm": "B", "violations": {"items": [item]}})
+    pd = fa.unresolved_packets({"arm": "D", "violations": {"items": [other]}})
+    assert len(pb) == 1 and "arm" not in pb[0] and pb[0]["packet_id"].startswith("u-")
+    assert pb[0]["packet_id"] != pd[0]["packet_id"]                      # 다른 청크 → 다른 id (arm 무관)
+    same = fa.unresolved_packets({"arm": "D", "violations": {"items": [item]}})
+    assert same[0]["packet_id"] == pb[0]["packet_id"]                    # 같은 청크·사유 → 같은 id (중복 제거 가능)
 
 
 # ---------- judge (판정 체인) ----------
@@ -147,6 +166,8 @@ def test_quality_gate_margin_and_no_selection():
             "D": _report("D", r_all=0.88, r_high=0.90, low_all_found=12)}      # ALL 0.02 낮음 → 탈락
     j = fa.judge(reps)
     assert j["winner"] == "A"
+    reps["D"]["segments"]["ALL"]["recall@10"] = 0.89                             # 정확히 0.01 낮음 → "0.01 이상" 탈락
+    assert fa.judge(reps)["winner"] == "A"
     reps["D"]["segments"]["ALL"]["recall@10"] = 0.895                            # 0.005 낮음 → 통과, LOW 12 vs 8 → D
     assert fa.judge(reps)["winner"] == "D"
 
@@ -187,4 +208,12 @@ def test_pins_mismatch_is_invalid_and_unresolved_marks_pending():
     reps["C"]["pins"]["conditions_sha_matches"] = True
     reps["D"]["violations"]["unresolved"] = 2
     j = fa.judge(reps)
-    assert j["winner"] == "D" and j["status"] == "PROVISIONAL_WINNER_PENDING_UNRESOLVED"
+    assert j["status"] == "PENDING_UNRESOLVED" and j["candidate"] == "D" and "winner" not in j
+
+
+def test_judge_refuses_reports_without_locator_check():
+    reps = {"C": _report("C", r_all=0.9, r_high=0.9, low_all_found=10),
+            "D": _report("D", r_all=0.9, r_high=0.9, low_all_found=10)}
+    reps["D"]["locator_checked"] = False
+    j = fa.judge(reps)
+    assert j["status"] == "INVALID" and "locator" in j["reason"]

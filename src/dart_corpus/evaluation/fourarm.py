@@ -18,6 +18,9 @@
 → dense-off 우선 → 11+18 C/D 동률(경미 위반 → p95 ≤5% → RSS ≤5% → 외부 서비스 수 → D)
 → A/B만 동률이면 B(PERFORMANCE_TIE_BREAK_SELECTION) → 3/8 LOW<10이면 LOW_UNDERPOWERED(의역 절차)
 → 10 B fallback 조건 → 불성립 BLOCKED. 승자는 PROVISIONAL_WINNER(17번 DEV_CHECK 전).
+
+상태 라벨(혼용 금지): INVALID · BLOCKED · NO_SELECTION · PENDING_UNRESOLVED(후보만, 승자 없음 — 16C)
+· PROVISIONAL_WINNER · OPERATIONAL_FALLBACK.
 """
 from __future__ import annotations
 
@@ -207,7 +210,10 @@ def score_question(gq: GoldQuestion, rec: Mapping[str, Any] | None, segment: str
     for slot in gq.slots:
         ok, r, method = slot_found(slot, results, EVAL_K)
         if ok and r is not None:
-            qs.slot_matches.append({"slot_name": slot.slot_name, "method": method, "result": dict(r)})
+            nodes = _result_nodes(r)
+            src = next((x for x in slot.sources if x.doc_id == r.get("doc_id") and x.node_index in nodes), None)
+            qs.slot_matches.append({"slot_name": slot.slot_name, "method": method, "result": dict(r),
+                                    "gold_row_col": (src.row, src.col) if src else None})
     return qs
 
 
@@ -232,13 +238,24 @@ def check_locators(qs: QuestionScore, store: Any) -> list[dict]:
             continue
         text = norm_text(r.get("text") or "")
         if not text:
-            continue                                     # 텍스트 없으면 node 존재만 검사(경미 없음)
+            # 텍스트가 없으면 "claim 미지지"를 판정할 수 없다 → 14번 "판정 불가 = UNRESOLVED".
+            out.append({**base, "severity": "unresolved", "reason": "no_text_to_verify", "chunk_text": ""})
+            continue
         node_text = "".join(norm_text(store.fetch_node(doc_id, n)["text"]) for n in nodes)
         head = text[:60]
-        if head in node_text or node_text[:60] in text or (len(text) >= 20 and text in node_text):
+        if not (head in node_text or node_text[:60] in text or (len(text) >= 20 and text in node_text)):
+            out.append({**base, "severity": "unresolved", "reason": "claim_text_not_in_node",
+                        "chunk_text": r.get("text", "")[:400]})
             continue
-        out.append({**base, "severity": "unresolved", "reason": "claim_text_not_in_node",
-                    "chunk_text": r.get("text", "")[:400]})
+        # row/col: Gold가 (row, col)을 지정하고 청크도 (row, col)을 보고했는데 서로 다르면 경미(동일 근거·offset 차이).
+        # 청크에 row/col이 없는 것은 "상이"가 아니라 더 거친 locator다 → 위반이 아니라 coarse로만 센다.
+        gold_rc = m.get("gold_row_col")
+        if gold_rc and gold_rc != (None, None):
+            rc = (r.get("row"), r.get("col"))
+            if rc == (None, None):
+                out.append({**base, "severity": "coarse", "reason": "no_row_col_in_chunk"})
+            elif rc != gold_rc:
+                out.append({**base, "severity": "minor", "reason": f"row_col_differs:{rc}!={gold_rc}"})
     return out
 
 
@@ -273,7 +290,7 @@ def score_arm(arm: str, results: Mapping[str, dict], gold: Mapping[str, GoldQues
     if store is not None:
         for q in qscores:
             violations.extend(check_locators(q, store))
-    sev = {"critical": 0, "minor": 0, "unresolved": 0}
+    sev = {"critical": 0, "minor": 0, "unresolved": 0, "coarse": 0}
     for v in violations:
         sev[v["severity"]] += 1
     run = run or {}
@@ -287,6 +304,7 @@ def score_arm(arm: str, results: Mapping[str, dict], gold: Mapping[str, GoldQues
     }
     return {
         "arm": arm,
+        "locator_checked": store is not None,        # False면 Hard gate 미평가 — judge가 INVALID로 막는다
         "n_questions": len(qscores),
         "n_excluded_zero_slot": sum(1 for q in qscores if q.excluded),
         "n_missing_or_error": sum(1 for q in qscores if q.error),
@@ -301,12 +319,18 @@ def score_arm(arm: str, results: Mapping[str, dict], gold: Mapping[str, GoldQues
 
 
 def unresolved_packets(report: Mapping[str, Any]) -> list[dict]:
-    """vFINAL 16번: arm 라벨을 뺀 UNRESOLVED 패킷. Owner가 arm-blind로 원인만 판정한다."""
+    """vFINAL 16번: arm 라벨을 뺀 UNRESOLVED 패킷. Owner가 arm-blind로 원인만 판정한다.
+
+    packet_id는 (question_id, slot, doc_id, node_index, reason, chunk_text)의 해시 — arm과 무관하고
+    arm 간에 충돌하지 않는다. 두 arm이 같은 청크를 같은 사유로 올리면 같은 패킷 하나가 된다."""
+    import hashlib
     packets = []
-    for i, v in enumerate(report["violations"]["items"]):
+    for v in report["violations"]["items"]:
         if v["severity"] != "unresolved":
             continue
-        packets.append({"packet_id": f"u-{report['arm']}-{i:03d}".replace(f"-{report['arm']}-", "-x-"),
+        key = "|".join(str(v.get(k, "")) for k in ("question_id", "slot_name", "doc_id", "node_index", "reason", "chunk_text"))
+        pid = "u-" + hashlib.sha256(key.encode("utf-8")).hexdigest()[:12]
+        packets.append({"packet_id": pid,
                         "question_id": v["question_id"], "slot_name": v["slot_name"],
                         "doc_id": v["doc_id"], "node_index": v["node_index"],
                         "chunk_text": v.get("chunk_text", ""), "reason": v["reason"]})
@@ -359,6 +383,13 @@ def judge(reports: Mapping[str, dict], *, deployable: Mapping[str, bool] | None 
     arms = sorted(reports)
     deployable = deployable or {}
 
+    # 14/12 전제: locator 검사를 건너뛴 리포트로는 Hard gate를 평가할 수 없다
+    unchecked = [a for a in arms if not reports[a].get("locator_checked", False)]
+    chain.append({"step": "14 locator checked", "unchecked": unchecked})
+    if unchecked:
+        return {"status": "INVALID", "reason": f"locator check skipped: {unchecked} — hard gate not evaluated",
+                "chain": chain}
+
     # 20 non-leak pins
     bad_pins = [a for a in arms if not reports[a]["pins"]["conditions_sha_matches"]]
     chain.append({"step": "20 pins", "bad": bad_pins})
@@ -380,8 +411,11 @@ def judge(reports: Mapping[str, dict], *, deployable: Mapping[str, bool] | None 
     def r10(a, seg): return reports[a]["segments"][seg].get(f"recall@{EVAL_K}") or 0.0
     best_all = max(r10(a, "ALL") for a in hard_safe)
     best_high = max(r10(a, "HIGH") for a in hard_safe)
+    def not_inferior(value: float, best: float) -> bool:
+        # vFINAL 4·12번: 최고치보다 0.01 **이상** 낮으면 탈락 → 차이 < 0.01 이어야 통과. 소수 6자리에서 비교.
+        return round(best - value, 6) < QUALITY_MARGIN
     quality = [a for a in hard_safe
-               if r10(a, "ALL") >= best_all - QUALITY_MARGIN and r10(a, "HIGH") >= best_high - QUALITY_MARGIN]
+               if not_inferior(r10(a, "ALL"), best_all) and not_inferior(r10(a, "HIGH"), best_high)]
     chain.append({"step": "12 quality gate", "best_all": best_all, "best_high": best_high,
                   "values": {a: {"ALL": r10(a, "ALL"), "HIGH": r10(a, "HIGH")} for a in hard_safe},
                   "passed": quality})
@@ -423,23 +457,25 @@ def judge(reports: Mapping[str, dict], *, deployable: Mapping[str, bool] | None 
         sel = "PERFORMANCE_TIE_BREAK_SELECTION"
         chain.append({"step": "5 A/B tie → B", "winner": winner})
 
-    status = "PROVISIONAL_WINNER"
     if unresolved.get(winner):
-        status = "PROVISIONAL_WINNER_PENDING_UNRESOLVED"       # 16C: 관련 arm 선택 보류
-    chain.append({"step": "winner", "winner": winner, "selection_type": sel, "status": status})
-    return {"status": status, "winner": winner, "selection_type": sel, "tie_set": tie_set,
+        # 16C: 관련 arm 선택 보류 — 승자가 아니라 후보로만 기록한다. Owner 판정 후 재실행.
+        chain.append({"step": "16C selection held", "candidate": winner, "selection_type": sel})
+        return {"status": "PENDING_UNRESOLVED", "candidate": winner, "selection_type": sel,
+                "tie_set": tie_set, "counts": counts, "chain": chain}
+    chain.append({"step": "winner", "winner": winner, "selection_type": sel, "status": "PROVISIONAL_WINNER"})
+    return {"status": "PROVISIONAL_WINNER", "winner": winner, "selection_type": sel, "tie_set": tie_set,
             "counts": counts, "chain": chain}
 
 
 def summary_table(reports: Mapping[str, dict]) -> str:
-    rows = ["arm | Recall@5 | Recall@10 | Recall@20 | HIGH R@10 | LOW R@10 | LOW all_found@10 | 치명 | 경미 | 미해결 | p95(ms) | RSS(MB)",
-            "---|---|---|---|---|---|---|---|---|---|---|---"]
+    rows = ["arm | Recall@5 | Recall@10 | Recall@20 | HIGH R@10 | LOW R@10 | LOW all_found@10 | 치명 | 경미 | 미해결 | coarse | p95(ms) | RSS(MB)",
+            "---|---|---|---|---|---|---|---|---|---|---|---|---"]
     for a, r in sorted(reports.items()):
         s = r["segments"]; v = r["violations"]
         rows.append(" | ".join(str(x) for x in [
             a, s["ALL"].get("recall@5"), s["ALL"].get("recall@10"), s["ALL"].get("recall@20"),
             s["HIGH"].get("recall@10"), s["LOW"].get("recall@10"),
             f'{s["LOW"].get("all_found@10")}/{s["LOW"].get("questions")}',
-            v["critical"], v["minor"], v["unresolved"],
+            v["critical"], v["minor"], v["unresolved"], v.get("coarse", 0),
             (r.get("latency_ms") or {}).get("p95"), r.get("peak_rss_mb")]))
     return "\n".join(rows)

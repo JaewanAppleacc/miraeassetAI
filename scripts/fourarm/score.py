@@ -45,6 +45,9 @@ def main(argv: list[str] | None = None) -> int:
     store = None if args.no_locator_check else NodeStore(args.index_dir)
 
     reports = {}
+    packets: dict[str, dict] = {}                      # packet_id → 패킷 (arm 간 동일 패킷은 하나로)
+    if args.no_locator_check:
+        print("경고: --no-locator-check — Hard gate 미평가. judge는 INVALID를 돌려준다.", file=sys.stderr)
     for arm in args.arms:
         rpath = args.results_dir / f"{arm}.results.jsonl"
         runpath = args.results_dir / f"{arm}.run.json"
@@ -58,19 +61,22 @@ def main(argv: list[str] | None = None) -> int:
         reports[arm] = rep
         (args.results_dir / f"score.{arm}.json").write_text(
             json.dumps(rep, ensure_ascii=False, indent=1), encoding="utf-8")
-        packets = fourarm.unresolved_packets(rep)
-        if packets:
-            udir = args.results_dir / "unresolved"
-            udir.mkdir(exist_ok=True)
-            for pk in packets:
-                (udir / f"{pk['packet_id']}.json").write_text(
-                    json.dumps(pk, ensure_ascii=False, indent=1), encoding="utf-8")
-        print(f"[{arm}] 채점 완료 · 미해결 패킷 {len(packets)}", file=sys.stderr)
+        arm_packets = fourarm.unresolved_packets(rep)
+        for pk in arm_packets:
+            packets.setdefault(pk["packet_id"], pk)
+        print(f"[{arm}] 채점 완료 · 미해결 {len(arm_packets)}", file=sys.stderr)
 
     if store is not None:
         store.close()
     if not reports:
         return 1
+    if packets:
+        udir = args.results_dir / "unresolved"
+        udir.mkdir(exist_ok=True)
+        for pid, pk in sorted(packets.items()):
+            (udir / f"{pid}.json").write_text(json.dumps(pk, ensure_ascii=False, indent=1), encoding="utf-8")
+        (udir / "index.json").write_text(json.dumps(sorted(packets), ensure_ascii=False, indent=1), encoding="utf-8")
+        print(f"UNRESOLVED 패킷 {len(packets)}건 → {udir} (arm 라벨 없음)", file=sys.stderr)
 
     table = fourarm.summary_table(reports)
     out = [f"# 4-arm 채점 요약 (k={fourarm.EVAL_K} 평가 · Gold {gold_sha[:8]} · conditions {cond_sha[:8]})", "", table]
@@ -79,8 +85,14 @@ def main(argv: list[str] | None = None) -> int:
         judgement = fourarm.judge(reports, deployable={a: True for a in args.deployable})
         (args.results_dir / "judgement.json").write_text(
             json.dumps(judgement, ensure_ascii=False, indent=1), encoding="utf-8")
-        out += ["", f"## 판정: {judgement['status']}" + (f" → {judgement.get('winner')} ({judgement.get('selection_type')})"
-                                                      if judgement.get("winner") else ""),
+        head = f"## 판정: {judgement['status']}"
+        if judgement.get("winner"):
+            head += f" → {judgement['winner']} ({judgement.get('selection_type')})"
+        elif judgement.get("candidate"):
+            head += f" — 후보 {judgement['candidate']} (Owner UNRESOLVED 판정 후 재실행)"
+        elif judgement.get("reason"):
+            head += f" — {judgement['reason']}"
+        out += ["", head,
                 "", "```json", json.dumps(judgement["chain"], ensure_ascii=False, indent=1), "```"]
     (args.results_dir / "summary.md").write_text("\n".join(out) + "\n", encoding="utf-8")
     print("\n".join(out))
