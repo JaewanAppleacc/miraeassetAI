@@ -5,17 +5,26 @@
   "corpus_snapshot_id": "corpus_04750795e1a2d5c3",
   "corpus_manifest_sha256": "8cc6628eb38fff0ee48cf138a586978a627260a7e41157dddd45e52f97761d4e",
   "corpus_scope": "FULL_CORPUS",
-  "corpus_scope_note": "Turn AC-VFINAL-ALIGNMENT-AND-DISCOVERY section N: re-pinned to the full 4,204-document corpus after an independently double-pass-verified, no-DB spool Discovery + native COPY load went GREEN (documents=4204, total_chunk_count=442549 search-eligible, unique_embeddable=447225, pass1/pass2 stream SHA identical). discovery.execution_attempt_id/chunk_stream_sha256 below are the real values from that run. Embedding and materialization have NOT run (forbidden this Turn) -- see full_dense_ready/official_4arm_execution_ready.",
+  "corpus_scope_note": "Turn AC-VFINAL-ALIGNMENT-AND-DISCOVERY section N: re-pinned to the full 4,204-document corpus after an independently double-pass-verified, no-DB spool Discovery + native COPY load went GREEN (documents=4204, total_chunk_count=442549 search-eligible, pass1/pass2 stream SHA identical). discovery.execution_attempt_id/chunk_stream_sha256 below are the real values from that run. A post-hoc correction (see discovery.canonical_scope_correction) found the attempt's own discovered_unique_text_count/expected_unique_embeddable_count included 5,346 'orphan' unique texts referenced by no retrieval_eligible chunk -- the attempt is now INVALID_DISCOVERY_CANONICAL_SCOPE (chunk_staging/canonical_queue rows themselves untouched) and the corrected, properly-scoped embedding-input manifest (embedding-input-manifest.summary.json) is the authoritative source for the true embedding target (441,879). Embedding and materialization have NOT run (forbidden this Turn) -- see full_dense_ready/official_4arm_execution_ready.",
   "discovery": {
     "logical_load_id": "fixed_kure_session_8fe191342205848d1d6a6123f38a54e7",
     "execution_attempt_id": "fixed_kure_attempt_c7ee3363a0af161c7a0572d024dfbf36",
     "retrieval_index_id": "fixed_kure_index_8fe191342205848d1d6a6123f38a54e7",
-    "status": "DISCOVERY_COMPLETE",
+    "status": "INVALID_DISCOVERY_CANONICAL_SCOPE",
+    "status_note": "Discovery ITSELF (chunk generation/streaming, spool, native COPY load) is GREEN and unaffected -- see discovery_stream_green/native_copy_green below. Only this row's OWN discovered_unique_text_count/expected_unique_embeddable_count summary fields were wrong (orphan-inflated); status reflects that, not a defect in the chunk/document data.",
     "chunk_stream_sha256": "d1413262575c2f9c9d11860665f46ca5e3e4eda39c0a22204667ba1d64b97107",
     "discovered_document_count": 4204,
     "discovered_search_eligible_chunk_count": 442549,
-    "discovered_unique_embeddable_count": 447225,
-    "expected_reference_note": "Reference expectation (not enforced) was total_chunks=447895/search_eligible=442549/unique_embeddable=441879. total_chunks and search_eligible matched exactly; unique_embeddable measured 447225 (higher than expected -- fewer exact-duplicate embed_texts than anticipated). Reported as-is, not forced to match -- see this Turn's final report.",
+    "canonical_scope_correction": {
+      "raw_canonical_queue_row_count": 447225,
+      "orphan_canonical_row_count": 5346,
+      "corrected_unique_embeddable_count": 441879,
+      "corrected_manifest": "domain/agent-comparison/four-arm-ac/embedding-input-manifest.summary.json (scope_correction field carries the same numbers, independently re-derived via count(DISTINCT embed_text_sha256) FROM chunk_staging)"
+    },
+    "discovery_stream_green": true,
+    "native_copy_green": true,
+    "eligible_embedding_manifest_green": true,
+    "expected_reference_note": "Reference expectation (not enforced) was total_chunks=447895/search_eligible=442549/unique_embeddable=441879. All three now match exactly after the scope correction.",
     "superseded_attempt": "fixed_kure_attempt_f40dc66a8daf48a12397353dd65bc0c6 (status=FAILED_DISCOVERY_RESOURCE_EXHAUSTED, preserved, immutable, excluded from the active-attempt gate)"
   },
   "chunker": {

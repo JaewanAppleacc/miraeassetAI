@@ -90,7 +90,8 @@ const SESSION_COLUMNS = `
   expected_document_count, expected_total_chunk_count, expected_search_eligible_count, expected_unique_embeddable_count,
   discovered_document_count, discovered_total_chunk_count, discovered_search_eligible_count, discovered_unique_text_count,
   embedded_unique_text_count, materialized_chunk_count, last_error_code, created_at, updated_at,
-  logical_load_id, execution_attempt_id, loader_contract_version, supersedes_load_session_id
+  logical_load_id, execution_attempt_id, loader_contract_version, supersedes_load_session_id,
+  terminal_diagnostics
 `;
 
 function trimmedSessionRow(row) {
@@ -302,6 +303,27 @@ export function createFixedKureLoadSessionRepository({ client }) {
   async function failDiscoveryResourceExhausted(loadSessionId, { reasonCode = "FAILED_DISCOVERY_RESOURCE_EXHAUSTED" } = {}) {
     return transitionStatus(loadSessionId, ["DISCOVERING"], "FAILED_DISCOVERY_RESOURCE_EXHAUSTED", {
       last_error_code: reasonCode,
+    });
+  }
+
+  // Turn AC-VFINAL-ALIGNMENT-AND-DISCOVERY (post-hoc correction) official
+  // API: marks a DISCOVERY_COMPLETE row INVALID_DISCOVERY_CANONICAL_SCOPE
+  // -- for an attempt whose discovered_unique_text_count/
+  // expected_unique_embeddable_count include "orphan" canonical rows (a
+  // unique embed_text referenced by NO retrieval_eligible=true chunk --
+  // v1's pre-existing, unmodified-by-this-Turn unique-text tracking adds
+  // every chunk's hash to the canonical queue regardless of eligibility).
+  // chunk_staging/canonical_queue rows themselves are NOT deleted or
+  // altered by this call -- only this row's own status/diagnostics change.
+  // The trigger (012) independently re-verifies embedded_unique_text_count
+  // and materialized_chunk_count are exactly zero and rejects otherwise;
+  // this function does not trust its own caller's belief that neither ran.
+  // Excluded from the active-attempt uniqueness gate, like
+  // SUPERSEDED_ZERO_PROGRESS/FAILED_DISCOVERY_RESOURCE_EXHAUSTED.
+  async function markInvalidDiscoveryCanonicalScope(loadSessionId, diagnostics) {
+    return transitionStatus(loadSessionId, ["DISCOVERY_COMPLETE"], "INVALID_DISCOVERY_CANONICAL_SCOPE", {
+      last_error_code: "INVALID_DISCOVERY_CANONICAL_SCOPE",
+      terminal_diagnostics: JSON.stringify(diagnostics),
     });
   }
 
@@ -773,7 +795,7 @@ export function createFixedKureLoadSessionRepository({ client }) {
   }
 
   return Object.freeze({
-    getSession, createOrGetSession, createOrGetAttempt, supersedeZeroProgressSession, failDiscoveryResourceExhausted, resetDiscoveryCheckpoint,
+    getSession, createOrGetSession, createOrGetAttempt, supersedeZeroProgressSession, failDiscoveryResourceExhausted, markInvalidDiscoveryCanonicalScope, resetDiscoveryCheckpoint,
     transitionStatus, updateDiscoveryCheckpoint, recordPassStreamSha256, completeDiscovery,
     insertCanonicalBatch, insertChunkBatch, leaseCanonicalBatch, markEmbedded, markEmbeddingBatchFailed,
     queueStatusCounts, ensureRetrievalIndexRow, materializeChunkBatch, finalize, runInTransaction,
