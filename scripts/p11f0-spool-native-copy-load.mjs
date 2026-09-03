@@ -35,6 +35,22 @@ import pg from "pg";
 
 const { Client } = pg;
 
+// Turn AC-VFINAL-ALIGNMENT-AND-DISCOVERY: shard filenames come from
+// manifest.json -- untrusted input from the loader's point of view (a
+// corrupt or tampered manifest is an explicitly anticipated case, section
+// K's own "corrupt/missing/duplicate shard 거부"). A filename that does not
+// match this exact pattern is rejected fail-closed BEFORE it is ever
+// joined into a filesystem path (path traversal via "../") or interpolated
+// into a psql script's `\copy ... FROM '<path>'` literal (breaking out of
+// the quoted literal to inject additional SQL/meta-commands).
+export const SAFE_SHARD_FILENAME = /^(canonical|chunk)-\d{6}\.copy$/;
+
+export function assertSafeShardFilename(filename) {
+  if (!SAFE_SHARD_FILENAME.test(filename)) {
+    throw new Error(`UNSAFE_SHARD_FILENAME: "${filename}" does not match ${SAFE_SHARD_FILENAME} -- refusing to use it in a filesystem path or psql script (path traversal / injection defense)`);
+  }
+}
+
 async function sha256OfFile(filePath) {
   const hash = createHash("sha256");
   const buf = await readFile(filePath);
@@ -57,9 +73,41 @@ async function saveCheckpointAtomic(checkpointPath, value) {
   await rename(partialPath, checkpointPath);
 }
 
+// Turn AC-VFINAL-ALIGNMENT-AND-DISCOVERY: a `postgresql://user:pass@host:port/db`
+// connection string carries a password in cleartext. Passed as a `psql`
+// CLI argument, it is visible to any other local user via `ps`/`ps aux`
+// (process argv is not private) for as long as the process runs. Parsed
+// here into components instead: host/port/user/dbname go on the psql
+// command line (not secret), the password (if any) is set ONLY in the
+// spawned subprocess's own environment as PGPASSWORD -- never inherited by
+// this script's own process.env, never logged, never in argv.
+export function parsePgConnectionParts(databaseUrl) {
+  const url = new URL(databaseUrl);
+  if (!/^postgres(ql)?:$/.test(url.protocol)) {
+    throw new Error(`DATABASE_URL must use the postgresql:// scheme, got "${url.protocol}"`);
+  }
+  return {
+    host: url.hostname || undefined,
+    port: url.port || undefined,
+    user: url.username ? decodeURIComponent(url.username) : undefined,
+    password: url.password ? decodeURIComponent(url.password) : undefined,
+    database: url.pathname ? decodeURIComponent(url.pathname.replace(/^\//, "")) : undefined,
+  };
+}
+
 function runPsqlScript({ psqlBin, databaseUrl, script }) {
-  const result = spawnSync(psqlBin, ["-v", "ON_ERROR_STOP=1", "-X", "-q", databaseUrl], {
-    input: script, encoding: "utf8", maxBuffer: 1024 * 1024 * 64,
+  const conn = parsePgConnectionParts(databaseUrl);
+  const args = ["-v", "ON_ERROR_STOP=1", "-X", "-q"];
+  if (conn.host) args.push("-h", conn.host);
+  if (conn.port) args.push("-p", conn.port);
+  if (conn.user) args.push("-U", conn.user);
+  if (conn.database) args.push("-d", conn.database);
+  const env = { ...process.env };
+  if (conn.password) env.PGPASSWORD = conn.password;
+  else delete env.PGPASSWORD;
+
+  const result = spawnSync(psqlBin, args, {
+    input: script, encoding: "utf8", maxBuffer: 1024 * 1024 * 64, env,
   });
   if (result.status !== 0) {
     throw new Error(`psql exited ${result.status}: ${result.stderr || result.stdout}`);
@@ -74,6 +122,7 @@ async function loadTable({ psqlBin, databaseUrl, spoolDir, shards, tableName, co
       console.error(`[spool-copy-load] SKIP (already loaded per checkpoint): ${tableName}/${shard.filename}`);
       continue;
     }
+    assertSafeShardFilename(shard.filename);
     const shardPath = path.join(spoolDir, shard.filename);
     const info = await stat(shardPath).catch(() => null);
     if (!info) throw new Error(`SHARD_MISSING: ${shardPath} (manifest declares it, file not found)`);
@@ -202,7 +251,13 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(`[spool-copy-load] FAILED: ${error.stack ?? error.message}`);
-  process.exitCode = 1;
-});
+// Guarded so tests can import this module's exported helpers
+// (assertSafeShardFilename, parsePgConnectionParts) without also
+// triggering this CLI's own main() -- behavior when this file is run
+// directly (`node scripts/p11f0-spool-native-copy-load.mjs`) is unchanged.
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main().catch((error) => {
+    console.error(`[spool-copy-load] FAILED: ${error.stack ?? error.message}`);
+    process.exitCode = 1;
+  });
+}
