@@ -7,11 +7,14 @@
 
 ```bash
 sudo apt-get update && sudo apt-get install -y python3-pip python3-venv git
-git clone -b qa/dart-qa-standalone https://github.com/jiyoung04lee/demo_ai_fesfival.git dart-qa
+git clone -b share/dart-qa-handoff https://github.com/jiyoung04lee/demo_ai_fesfival.git dart-qa
 cd dart-qa
 python3 -m venv .venv
-.venv/bin/pip install fastapi "uvicorn[standard]" pydantic
+.venv/bin/pip install fastapi "uvicorn[standard]" pydantic certifi numpy
 ```
+
+정본 브랜치는 `share/dart-qa-handoff`다(standalone은 뒤처짐). certifi는 CLOVA HTTPS
+인증서 검증용 — 코드가 certifi CA를 쓰도록 되어 있어 빠지면 실 호출이 실패할 수 있다.
 
 ## 2. 동작 확인 (포그라운드)
 
@@ -60,6 +63,8 @@ systemctl status dart-qa --no-pager | head -5
 ```
 
 경로가 다르면(`/home/ubuntu`가 아니면) WorkingDirectory·Environment·ExecStart 세 줄만 바꾼다.
+**주의: 코드는 `.env`를 자동으로 읽지 않는다.** 실물 엔진(CLOVA 키·데이터 경로)을 붙일 때는
+`[Service]`에 `EnvironmentFile=/home/ubuntu/dart-qa/.env` 한 줄을 추가한다(스켈레톤 단계엔 불필요).
 죽여도 3초 안에 살아나는지 확인: `sudo systemctl kill dart-qa && sleep 4 && curl -s localhost/health`.
 
 ## 4. 나중에 실물 엔진 연결될 때 (지금 아님)
