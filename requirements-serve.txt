@@ -1,0 +1,12 @@
+# 서빙(제출) 재현 환경 — Python 3.12 (Ubuntu 24.04 기본 python3)
+# 실서버(49.50.141.174, 2026-09-03 배포)에서 검증된 버전 고정.
+# 검색 arm D(BM25) 기준 — torch/sentence-transformers 불필요.
+# arm B로 확정될 경우에만: torch, sentence-transformers 추가 설치(문서 참조).
+fastapi==0.141.1
+uvicorn==0.52.4
+pydantic==2.13.5
+certifi==2026.7.22
+numpy==2.5.2
+tiktoken==0.14.0
+beautifulsoup4==4.15.0
+jsonschema==4.26.0
