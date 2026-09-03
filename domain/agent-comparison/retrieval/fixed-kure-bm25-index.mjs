@@ -22,7 +22,9 @@
 // task-owned cache file (never git, never work/) -- a later process
 // start loads it back from disk instead of re-querying/re-tokenizing the
 // whole chunk set, and NEVER re-scans the raw 8.6GB corpus.
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
+import { openSync, writeSync, fsyncSync, closeSync, renameSync, createReadStream } from "node:fs";
+import { createInterface } from "node:readline";
 import { createHash } from "node:crypto";
 import path from "node:path";
 import { buildBm25Index, bm25Search, defaultTokenize } from "../chunking-comparison/bm25.mjs";
@@ -60,43 +62,79 @@ export async function buildFixedKureBm25Index(client, loadSessionId) {
   return { index: buildBm25Index(documents), documentCount: documents.length };
 }
 
-function serializeIndex(index) {
-  return {
-    documentCount: index.documentCount,
-    averageDocLength: index.averageDocLength,
-    idf: [...index.idf.entries()],
-    docTokens: [...index.docTokens.entries()],
-    orderedIds: index.orderedIds,
-  };
-}
-
-function deserializeIndex(serialized) {
-  return Object.freeze({
-    documentCount: serialized.documentCount,
-    averageDocLength: serialized.averageDocLength,
-    idf: new Map(serialized.idf),
-    docTokens: new Map(serialized.docTokens),
-    orderedIds: serialized.orderedIds,
-    tokenize: defaultTokenize,
-  });
-}
-
+// Turn AC-FULL-LOAD-V3 Section G: real full-corpus measurement (442,549
+// chunks) reproduced the EXACT SAME "Invalid string length" failure this
+// whole AC-STREAMING-FIXED-DISCOVERY/AC-VFINAL-ALIGNMENT investigation is
+// about, here in persistFixedKureBm25Index's own single JSON.stringify(...)
+// over the full docTokens map (442,549 documents' worth of tokenized
+// arrays exceeds V8's ~1GB max string length). Fixed the SAME way as
+// scripts/p11f0-embedding-input-manifest.mjs's own fix: never build one
+// in-memory string for the whole index. On-disk format changed from one
+// JSON object (v1) to newline-delimited JSON (v2, ".ndjson" -- a new
+// bm25CachePath extension, so a stale v1 cache file is never
+// mis-interpreted as v2): line 1 is a header object (idf/orderedIds/counts
+// -- bounded by vocabulary size, tens of MB at most, safe to hold as one
+// string), followed by one line per docTokens entry (the only part that
+// scales with 442K+ documents). No format-version fixture depends on the
+// old shape (grep-verified: only the exported persist/load functions are
+// used by any caller/test, never the file's raw bytes).
 export function bm25CachePath(cacheDir, loadSessionId) {
-  return path.join(cacheDir, `${loadSessionId}.bm25-index.v1.json`);
+  return path.join(cacheDir, `${loadSessionId}.bm25-index.v2.ndjson`);
 }
 
 export async function persistFixedKureBm25Index(cacheDir, loadSessionId, index) {
   await mkdir(cacheDir, { recursive: true });
-  const serialized = serializeIndex(index);
-  const json = JSON.stringify(serialized);
-  const sha256 = createHash("sha256").update(json, "utf8").digest("hex");
-  await writeFile(bm25CachePath(cacheDir, loadSessionId), json, "utf8");
-  return { sha256, bytes: Buffer.byteLength(json, "utf8"), documentCount: serialized.documentCount };
+  const finalPath = bm25CachePath(cacheDir, loadSessionId);
+  const partialPath = `${finalPath}.partial`;
+  const fd = openSync(partialPath, "w");
+  const hash = createHash("sha256");
+  let bytes = 0;
+  try {
+    const writeLine = (value) => {
+      const buf = Buffer.from(`${JSON.stringify(value)}\n`, "utf8");
+      writeSync(fd, buf);
+      hash.update(buf);
+      bytes += buf.length;
+    };
+    writeLine({
+      format: "fixed-kure-bm25-index-ndjson-v2",
+      documentCount: index.documentCount,
+      averageDocLength: index.averageDocLength,
+      idf: [...index.idf.entries()],
+      orderedIds: index.orderedIds,
+    });
+    for (const entry of index.docTokens.entries()) writeLine(entry);
+    fsyncSync(fd);
+  } finally {
+    closeSync(fd);
+  }
+  renameSync(partialPath, finalPath);
+  return { sha256: hash.digest("hex"), bytes, documentCount: index.documentCount };
 }
 
 export async function loadFixedKureBm25Index(cacheDir, loadSessionId) {
-  const raw = await readFile(bm25CachePath(cacheDir, loadSessionId), "utf8");
-  return deserializeIndex(JSON.parse(raw));
+  const filePath = bm25CachePath(cacheDir, loadSessionId);
+  const rl = createInterface({ input: createReadStream(filePath, { encoding: "utf8" }), crlfDelay: Infinity });
+  let header = null;
+  const docTokens = new Map();
+  for await (const line of rl) {
+    if (line.length === 0) continue;
+    if (header === null) {
+      header = JSON.parse(line);
+      continue;
+    }
+    const [docId, tokens] = JSON.parse(line);
+    docTokens.set(docId, tokens);
+  }
+  if (header === null) throw new Error(`bm25 index cache file "${filePath}" has no header line`);
+  return Object.freeze({
+    documentCount: header.documentCount,
+    averageDocLength: header.averageDocLength,
+    idf: new Map(header.idf),
+    docTokens,
+    orderedIds: header.orderedIds,
+    tokenize: defaultTokenize,
+  });
 }
 
 // Re-exported so callers never need a second import of bm25.mjs directly

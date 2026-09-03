@@ -25,7 +25,25 @@
     "native_copy_green": true,
     "eligible_embedding_manifest_green": true,
     "expected_reference_note": "Reference expectation (not enforced) was total_chunks=447895/search_eligible=442549/unique_embeddable=441879. All three now match exactly after the scope correction.",
-    "superseded_attempt": "fixed_kure_attempt_f40dc66a8daf48a12397353dd65bc0c6 (status=FAILED_DISCOVERY_RESOURCE_EXHAUSTED, preserved, immutable, excluded from the active-attempt gate)"
+    "superseded_attempt": "fixed_kure_attempt_f40dc66a8daf48a12397353dd65bc0c6 (status=FAILED_DISCOVERY_RESOURCE_EXHAUSTED, preserved, immutable, excluded from the active-attempt gate)",
+    "successor_attempt": {
+      "execution_attempt_id": "fixed_kure_attempt_23b88aea167c04400bf77a1a58839f2e",
+      "status": "CREATED",
+      "supersedes_load_session_id": "fixed_kure_attempt_c7ee3363a0af161c7a0572d024dfbf36",
+      "created_via": "createOrGetAttempt() official v2 API (domain/postgres/reference-fixed-kure-load-session-repository.mjs) -- supersede-validation was additively widened this Turn to also accept INVALID_DISCOVERY_CANONICAL_SCOPE, not only SUPERSEDED_ZERO_PROGRESS",
+      "note": "Provenance-only row: same logical_load_id/retrieval_index_id as the invalid attempt (identical corpus/chunking/embedding pins), a new code_revision-derived execution_attempt_id. It has ZERO of its own reference_fixed_kure_chunk_staging/canonical_queue rows -- those tables are scoped by load_session_id with no official reparenting API, and re-running discovery under the new id would duplicate the already-verified ~2.8GB chunk_staging set (disk-unsafe, forbidden). The actual, unaffected chunk data continues to live under the invalid attempt's own load_session_id (fixed_kure_attempt_c7ee3363a0af161c7a0572d024dfbf36) -- see bm25.built_against_load_session_id below, which reads from there directly. A real embedding run must still filter canonical_queue to the corrected 441,879-row eligible scope (e.g. the same EXISTS-against-chunk_staging technique embedding-input-manifest.summary.json already uses), never all 447,225 raw rows -- this successor row's mere existence does not by itself enforce that filter."
+    },
+    "bm25": {
+      "built_against_load_session_id": "fixed_kure_attempt_c7ee3363a0af161c7a0572d024dfbf36",
+      "index_sha256": "d5a58b0addbfda9ce6b807b0659a2c4ef7ded97a3f1d7797115f46aebfa929c6",
+      "index_bytes": 1825159768,
+      "document_count": 442549,
+      "documents_with_eligible_chunks": 4123,
+      "deterministic_rebuild_verified": true,
+      "self_match_probe_verified": true,
+      "cache_format": "domain/agent-comparison/retrieval/fixed-kure-bm25-index.mjs bm25-index-ndjson-v2 (streaming persist/load -- Turn AC-FULL-LOAD-V3 fixed a real 'Invalid string length' crash in the prior single-JSON.stringify v1 format at this full 442,549-document scale)",
+      "cache_location": "~/Library/Caches/ai-festival-p11f0-bm25-index/ (task-owned, never git)"
+    }
   },
   "chunker": {
     "chunking_policy_id": "fixed-token-512-o64.v0.1.0",
@@ -80,11 +98,11 @@
   "readiness": {
     "full_load_ready": true,
     "full_load_ready_note": "No-DB spool Discovery + native COPY load are GREEN and independently double-pass-verified (see discovery.* above). This flag is about DISCOVERY only.",
-    "bm25_ready": false,
-    "bm25_ready_note": "reference_fixed_kure_chunk_staging is fully populated (442,549 search-eligible rows), but the persisted BM25 index artifact (fixed-kure-bm25-index.mjs's buildFixedKureBm25Index/persistFixedKureBm25Index) has not been built for this execution_attempt_id in this Turn -- out of this Turn's scope. Arm C's actual state is reported honestly here, not assumed ready because Discovery is green.",
+    "bm25_ready": true,
+    "bm25_ready_note": "Turn AC-FULL-LOAD-V3 section G: built, persisted, and verified (deterministic rebuild, exact row-count match, self-match probe rank 1, zero dense/RRF calls) -- see discovery.bm25 above for the sha256/counts/cache location. Built against the data-bearing load_session_id (the invalid attempt's own chunk_staging, itself unaffected by the canonical-scope correction), not the provenance-only successor_attempt id -- see successor_attempt.note for why.",
     "full_dense_ready": null,
     "full_dense_ready_note": "Not applicable to arm C (dense OFF, structural guarantee).",
     "official_4arm_execution_ready": false,
-    "official_4arm_execution_ready_note": "Blocked on: (1) no OFFICIAL_CONDITIONS_ARTIFACT (metadata_filter.source is SYNTHETIC_FIXTURE_ONLY), (2) bm25_ready=false. Reported honestly, not forced true."
+    "official_4arm_execution_ready_note": "Blocked on: no OFFICIAL_CONDITIONS_ARTIFACT (metadata_filter.source is SYNTHETIC_FIXTURE_ONLY). bm25_ready is now true (section G), so this is the only remaining blocker for arm C specifically. Reported honestly, not forced true."
   }
 }

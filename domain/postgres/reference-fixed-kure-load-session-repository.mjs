@@ -37,6 +37,16 @@ function sha256Hex(value) {
   return createHash("sha256").update(typeof value === "string" ? value : JSON.stringify(value)).digest("hex");
 }
 
+// Terminal statuses a new attempt is allowed to supersede via
+// createOrGetAttempt({ supersedesLoadSessionId }). SUPERSEDED_ZERO_PROGRESS
+// is the original zero-progress-abandon case. INVALID_DISCOVERY_CANONICAL_SCOPE
+// (Turn AC-FULL-LOAD-V3) is a terminal status for an attempt whose discovery
+// data (chunk_staging/canonical_queue rows) is fully valid and reusable --
+// only that attempt's OWN discovered_unique_text_count/expected_unique_embeddable_count
+// summary fields were wrong (orphan-inflated) -- so a corrected successor
+// attempt is legitimate provenance, not a fresh unrelated load.
+const SUPERSEDABLE_TERMINAL_STATUSES = Object.freeze(["SUPERSEDED_ZERO_PROGRESS", "INVALID_DISCOVERY_CANONICAL_SCOPE"]);
+
 // load_session_id is deterministic in the SAME pins -> SAME id sense as
 // computeDedupLoadSessionId (Turn P8) -- one (corpus_snapshot_id,
 // chunking_policy, embedding_config) identity, one session, one index.
@@ -371,9 +381,9 @@ export function createFixedKureLoadSessionRepository({ client }) {
       if (!superseded) {
         throw new FixedKureLoadSessionError(`supersedesLoadSessionId "${supersedesLoadSessionId}" does not exist`, "SUPERSEDED_SESSION_NOT_FOUND");
       }
-      if (superseded.status !== "SUPERSEDED_ZERO_PROGRESS") {
+      if (!SUPERSEDABLE_TERMINAL_STATUSES.includes(superseded.status)) {
         throw new FixedKureLoadSessionError(
-          `supersedesLoadSessionId "${supersedesLoadSessionId}" is not SUPERSEDED_ZERO_PROGRESS (status=${superseded.status}) -- supersede it via supersedeZeroProgressSession() before creating a replacement attempt`,
+          `supersedesLoadSessionId "${supersedesLoadSessionId}" is not in a supersedable terminal status (status=${superseded.status}, allowed: ${SUPERSEDABLE_TERMINAL_STATUSES.join(", ")}) -- supersede it via supersedeZeroProgressSession() or markInvalidDiscoveryCanonicalScope() before creating a replacement attempt`,
           "SUPERSEDED_SESSION_NOT_ACTUALLY_SUPERSEDED",
         );
       }
