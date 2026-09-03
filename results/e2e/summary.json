@@ -1,0 +1,30 @@
+{
+ "n": 101,
+ "llm_enabled": true,
+ "contract_violations": 0,
+ "answerability_match": "98/101",
+ "answerability_confusion": {
+  "SUPPORTED->WITHHELD": 1,
+  "WITHHELD->SUPPORTED": 2
+ },
+ "strategies": {
+  "DIRECT_LOOKUP": 49,
+  "NARRATIVE": 40,
+  "CALCULATION": 7,
+  "EXISTENCE_CHECK": 5
+ },
+ "validation_status": {
+  "SUPPORTED": 87,
+  "PARTIALLY_SUPPORTED": 14
+ },
+ "fallback_stages": {
+  "template": 4
+ },
+ "cacheable": "64/101",
+ "latency_ms": {
+  "p50": 8297,
+  "p95": 16300,
+  "max": 38882,
+  "total_s": 901.9
+ }
+}

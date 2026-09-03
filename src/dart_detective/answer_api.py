@@ -97,6 +97,7 @@ def _meta_of(state: Any, decision: policy_gate.Decision, llm_skipped: str | None
         "degraded": degraded,
         "llm_used": bool(llm.get("used")),
         "llm_skipped": llm.get("skipped") or llm_skipped,
+        "llm_error": llm.get("error"),
         "policy": decision.to_dict(),
         "strategy": state.route.strategy if getattr(state, "route", None) else None,
         "validation_status": (getattr(state, "validation", None) or {}).get("status"),

@@ -283,7 +283,7 @@ class ClovaLLM:
         # 실측(2026-09-03, 서비스앱): tools와 출력 길이 파라미터(maxTokens·maxCompletionTokens)는
         # 함께 보낼 수 없다(40001). temperature·seed는 호환. 출력 상한을 못 거니 FC 호출의 TPM
         # 소모는 응답 usage로만 확인한다 — v4 §7 예산의 max_tokens는 JSON 경로·수리 호출에만 적용.
-        body = self._post({
+        payload = {
             "messages": [
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
@@ -292,12 +292,25 @@ class ClovaLLM:
             "toolChoice": {"type": "function", "function": {"name": tool["name"]}},
             "temperature": float(os.environ.get("DART_QA_FC_TEMPERATURE", "0.1")),
             "seed": int(os.environ.get("DART_QA_SEED", "42")),
-        })
+        }
+        fc_retried = False
+        try:
+            body = self._post(payload)
+        except LLMUnavailable as exc:
+            # 실측: 동일 요청이 간헐적으로 40009("Unsupported function")를 받고 재시도에서 성공한다
+            # (101문항 중 22건, 재실행 시 정상). 서버 쪽 일시 오류로 판단 — 이 코드에 한해 1회 재시도.
+            if "40009" not in str(exc):
+                raise
+            fc_retried = True
+            time.sleep(RETRY_WAIT_SECONDS)
+            body = self._post(payload)
         latency_ms = int((time.perf_counter() - t0) * 1000)
         result = body.get("result") or {}
         message = result.get("message") or {}
         usage = dict(result.get("usage") or {})
         usage.setdefault("max_tokens_requested", requested)
+        if fc_retried:
+            usage["fc_40009_retried"] = True
         stop_reason = result.get("stopReason") or result.get("finishReason")
         if stop_reason:
             usage["stop_reason"] = stop_reason

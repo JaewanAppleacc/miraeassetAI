@@ -59,6 +59,7 @@ def main(argv: list[str] | None = None) -> int:
     ans_match = collections.Counter()
     strategies = collections.Counter()
     val_status = collections.Counter()
+    llm_errors = collections.Counter()
     fallback_stages = collections.Counter()
     latencies = []
     n_cacheable = 0
@@ -83,6 +84,8 @@ def main(argv: list[str] | None = None) -> int:
             ans_match[(expected, got)] += 1
             strategies[meta.get("strategy") or "?"] += 1
             val_status[meta.get("validation_status") or "?"] += 1
+            if meta.get("llm_error"):
+                llm_errors[str(meta["llm_error"])[:60]] += 1
             if meta.get("fallback_stage"):
                 fallback_stages[meta["fallback_stage"]] += 1
             n_cacheable += int(bool(meta.get("cacheable")))
@@ -91,7 +94,8 @@ def main(argv: list[str] | None = None) -> int:
                 "question_id": qid, "expected_answerability": expected, "got_answerability": got,
                 "strategy": meta.get("strategy"), "validation_status": meta.get("validation_status"),
                 "fallback_stage": meta.get("fallback_stage"), "cacheable": meta.get("cacheable"),
-                "llm_used": meta.get("llm_used"), "latency_ms": ms,
+                "llm_used": meta.get("llm_used"), "llm_error": (meta.get("llm_error") or "")[:80],
+                "latency_ms": ms,
                 "answer_chars": len(wire["answer"]), "context_chars": len(wire["retrieved_context"]),
                 "contract_ok": ok_contract,
             }, ensure_ascii=False) + "\n")
@@ -110,6 +114,8 @@ def main(argv: list[str] | None = None) -> int:
         "strategies": dict(strategies.most_common()),
         "validation_status": dict(val_status.most_common()),
         "fallback_stages": dict(fallback_stages.most_common()),
+        "llm_errors": dict(llm_errors.most_common(5)),
+        "n_llm_errors": sum(llm_errors.values()),
         "cacheable": f"{n_cacheable}/{len(rows)}",
         "latency_ms": {"p50": int(statistics.median(latencies)),
                        "p95": int(sorted(latencies)[max(0, round(0.95 * len(latencies)) - 1)]),

@@ -196,3 +196,28 @@ def test_qa_agent_fc_path_survives_final_validator(monkeypatch):
     # 인라인 출처의 접수번호·일자가 '지어낸 숫자'로 잡히지 않아야 한다
     assert state.validation["status"] != "UNSUPPORTED", state.validation
     assert state.fallback_stage == ""
+
+
+def test_complete_tool_retries_once_on_40009(monkeypatch):
+    from dart_detective import llm as llm_mod
+    llm = ClovaLLM(api_key="k")
+    calls = {"n": 0}
+    def fake_post(payload):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise LLMUnavailable('CLOVA HTTP 400: {"status":{"code":"40009","message":"Unsupported function"}}')
+        return {"result": {"message": {"toolCalls": [{"type": "function", "function": {
+            "name": "submit_grounded_answer",
+            "arguments": {"claims": [], "not_found_slots": [], "uncertainty": ""}}}]},
+            "usage": {}}}
+    monkeypatch.setattr(llm, "_post", fake_post)
+    monkeypatch.setattr(llm_mod.time, "sleep", lambda s: None)
+    r = llm.complete_tool("s", "u", ga.SUBMIT_GROUNDED_ANSWER)
+    assert calls["n"] == 2 and r.usage["fc_40009_retried"] is True
+
+    calls["n"] = 10                                        # 두 번째도 40009면 그대로 예외
+    def always_fail(payload):
+        raise LLMUnavailable('CLOVA HTTP 400: {"status":{"code":"40009"}}')
+    monkeypatch.setattr(llm, "_post", always_fail)
+    with pytest.raises(LLMUnavailable):
+        llm.complete_tool("s", "u", ga.SUBMIT_GROUNDED_ANSWER)
