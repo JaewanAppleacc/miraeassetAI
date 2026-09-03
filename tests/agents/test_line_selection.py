@@ -145,11 +145,13 @@ def test_identical_lines_from_different_chunks_are_not_repeated():
     assert len(texts) == len(set(texts))
 
 
-def test_second_line_is_labelled_in_the_reason():
+def test_multiple_lines_from_one_table_with_rank_and_score_reason():
+    """전역 선발로 바뀌며 reason 표기가 "N위 · 줄 점수"로 변경(2026-09-03, 선택손실 개선)."""
     matches = qa_agent.match_evidence(
         ["answer"], [chunk(INVEST_TABLE)],
         question="투자금액과 자기자본 대비 비율은?", drop=CORP_DROP)
-    assert "같은 표의 2번째" in matches[1].reason
+    assert len(matches) >= 2                              # 두 값 요구 → 같은 표에서 두 줄
+    assert all("Retrieval 1위" in m.reason and "줄 점수" in m.reason for m in matches[:2])
 
 
 def test_duplicate_lines_are_not_emitted_twice():

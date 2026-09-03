@@ -33,7 +33,7 @@ from ..llm import LLMResult, LLMUnavailable
 from .. import fallback as fallback_chain, grounded_answer, routing
 from . import calculator, confidence, validator
 
-MAX_EVIDENCE = 5
+MAX_EVIDENCE = 8            # 심사 실측(2026-09-03): 5줄 상한 + 얕은 스캔이 선택손실 28문항의 주범
 ANSWER_SLOT = "answer"
 # LLM에 넘길 청크 수. slot으로 고른 근거 줄만 주면 문맥이 너무 좁다 — 25문항 실측에서
 # 검색이 gold 근거 140건 중 132건을 후보에 담아 오는데, slot 줄만 넘기면 9건만 전달됐다.
@@ -295,7 +295,10 @@ def _line_score(line: str, q_tokens: set[str], weights: dict[str, float],
     return score
 
 
-ANSWER_CHUNKS = 3           # 지표 없는 질문에서 근거로 볼 상위 청크 수
+ANSWER_CHUNKS = 20          # 지표 없는 질문에서 근거로 볼 상위 청크 수.
+                            # 3이었을 때 정답 줄이 7~20위에 있는 슬롯 49개가 통째로 버려졌다
+                            # (심사 실측). 줄 선택은 _line_score가 하므로 깊게 봐도 잡음 줄이
+                            # 앞서지 않는다 — 순위는 confidence(1/rank)로 보존된다.
 LINES_PER_CHUNK = 3         # 한 청크에서 인용할 줄 수 — 표는 값이 여러 행에 흩어진다
                             # 2->3 스윕 실측: gold25 근거 41->47/140, 새 24문항 불변(25/36)
 
@@ -484,29 +487,41 @@ def match_evidence(slots: Sequence[str], chunks: Sequence[RetrievedChunk],
     want_scope = wanted_scope(question)
 
     def fill_free_slot() -> None:
-        """자유 자리 — 상위 청크에서 질문과 맞는 줄을 채운다.
+        """자유 자리 — 상위 ANSWER_CHUNKS개 청크의 후보 줄을 **전역 점수순**으로 채운다.
 
-        한 청크에서 한 줄만 뽑으면 "투자금액과 자기자본 대비 비율은?"처럼 두 값을 묻는
-        질문에서 한쪽이 반드시 빠진다 — 같은 표의 다른 행이기 때문이다(실측 11/24).
-        항목 자리가 이미 가져간 줄은 건너뛴다.
+        예전에는 순위대로 청크를 돌며 상한까지 채웠는데, 그러면 상위 3~4개 청크가
+        상한을 독식해 7~20위 청크에 있는 정답 줄이 통째로 버려졌다(심사 실측: 그런
+        슬롯 49개). 지금은 후보 줄을 다 모아 줄 점수(질문 단어·값 셀) 우선, 검색 순위는
+        동점자 결정용으로만 쓴다. 문서당 최대 4줄 — 한 문서가 상한을 독식하지 않게.
         """
         seen = {m.evidence_text for m in matches}
+        q_tokens = set(tokenize(question)) - drop if question else set()
+        want_value = asks_for_value(question)
+        candidates: list[tuple[float, int, int, RetrievedChunk, str]] = []
         for rank, chunk in enumerate(list(chunks)[:ANSWER_CHUNKS], start=1):
+            lines = chunk_lines(chunk)
+            weights = _line_weights(lines) if lines else {}
             for order, line in enumerate(_best_lines(chunk, question, drop,
                                                      LINES_PER_CHUNK)):
-                if line in seen:
-                    continue
-                seen.add(line)
-                matches.append(EvidenceMatch(
-                    slot=ANSWER_SLOT, chunk_id=chunk.chunk_id, doc_id=chunk.doc_id,
-                    evidence_text=line, section_path=chunk.section_path,
-                    node_index=chunk.node_index,
-                    rcept_no=str(chunk.metadata.get("rcept_no") or ""),
-                    confidence=round(1.0 / (rank + order), 4),
-                    reason=f"Retrieval {rank}위" if order == 0
-                           else f"Retrieval {rank}위 · 같은 표의 {order + 1}번째 근거 줄"))
-                if len(matches) >= limit:
-                    return
+                score = (_line_score(line, q_tokens, weights, want_value=want_value)
+                         if q_tokens else 0.0)
+                candidates.append((score, rank, order, chunk, line))
+        candidates.sort(key=lambda c: (-c[0], c[1], c[2]))
+        per_doc: dict[str, int] = {}
+        for score, rank, order, chunk, line in candidates:
+            if line in seen or per_doc.get(chunk.doc_id, 0) >= 4:
+                continue
+            seen.add(line)
+            per_doc[chunk.doc_id] = per_doc.get(chunk.doc_id, 0) + 1
+            matches.append(EvidenceMatch(
+                slot=ANSWER_SLOT, chunk_id=chunk.chunk_id, doc_id=chunk.doc_id,
+                evidence_text=line, section_path=chunk.section_path,
+                node_index=chunk.node_index,
+                rcept_no=str(chunk.metadata.get("rcept_no") or ""),
+                confidence=round(1.0 / (rank + order), 4),
+                reason=f"Retrieval {rank}위 · 줄 점수 {score:.2f}"))
+            if len(matches) >= limit:
+                return
 
     if tuple(slots) == (ANSWER_SLOT,):
         fill_free_slot()
