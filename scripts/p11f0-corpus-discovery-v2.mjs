@@ -28,7 +28,7 @@ import { loadDocumentMetadataIndex } from "../domain/agent-comparison/chunking-c
 import { createFixedKureLoadSessionRepository } from "../domain/postgres/reference-fixed-kure-load-session-repository.mjs";
 import {
   runDiscoveryPass, verifyCorpusPin, loadFixedChunkingPolicy, canonicalSha256,
-  CORPUS_SNAPSHOT_ID, DOCUMENTS_JSONL_PATH,
+  CORPUS_SNAPSHOT_ID, getDocumentsJsonlPath,
 } from "./p11f0-corpus-discovery.mjs";
 
 const { Client } = pg;
@@ -63,7 +63,7 @@ async function main() {
   const chunkingPolicySha256 = canonicalSha256(policy);
   console.error(`[discovery-v2] chunking policy pinned: ${policy.chunking_config_id} sha256=${chunkingPolicySha256}`);
 
-  const metadataIndex = await loadDocumentMetadataIndex(DOCUMENTS_JSONL_PATH);
+  const metadataIndex = await loadDocumentMetadataIndex(getDocumentsJsonlPath());
 
   const client = new Client({ connectionString: databaseUrl });
   await client.connect();

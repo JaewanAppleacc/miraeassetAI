@@ -34,9 +34,23 @@ import { createFixedKureLoadSessionRepository } from "../domain/postgres/referen
 
 const { Client } = pg;
 const ROOT = path.resolve(import.meta.dirname, "..");
-const MAIN_CHECKOUT_ROOT = "/Users/jaewan/Documents/Codex/2026-07-28/ai-ai-festival-agent-1-ai";
-export const RAW_SOURCE_DIR = path.join(MAIN_CHECKOUT_ROOT, "work/a-document-ir/source");
-export const DOCUMENTS_JSONL_PATH = path.join(MAIN_CHECKOUT_ROOT, "work/domain-seed/documents.jsonl");
+
+// Turn AC-STREAMING-FIXED-DISCOVERY, section D: no personal absolute path in
+// code -- both are required env vars, resolved lazily (not at module-import
+// time) so importing this module for its other exports (canonicalSha256,
+// loadFixedChunkingPolicy, etc. -- e.g. from tests) never requires them.
+// Fail-closed: missing/empty throws immediately when actually needed, never
+// silently falls back to a default path.
+export function getRawSourceDir() {
+  const value = process.env.P11F0_CORPUS_ROOT;
+  if (!value) throw new Error("P11F0_CORPUS_ROOT is required (directory containing exchange.jsonl/major.jsonl/holding.jsonl/periodic-001.jsonl) -- no default path");
+  return value;
+}
+export function getDocumentsJsonlPath() {
+  const value = process.env.P11F0_DOCUMENTS_JSONL_PATH;
+  if (!value) throw new Error("P11F0_DOCUMENTS_JSONL_PATH is required (path to documents.jsonl metadata index) -- no default path");
+  return value;
+}
 
 // Canonical, already-established corpus snapshot id (domain/HANDOFF.md,
 // domain/adapters/a-snapshot-contract.mjs's own A_TO_B_SNAPSHOT_MAP) --
@@ -61,9 +75,9 @@ export function canonicalSha256(value) {
 }
 
 export async function verifyCorpusPin() {
-  const fileStats = await corpusSourceFileStats(RAW_SOURCE_DIR);
+  const fileStats = await corpusSourceFileStats(getRawSourceDir());
   const totalBytes = fileStats.reduce((sum, f) => sum + f.bytes, 0);
-  const docsRaw = await readFile(DOCUMENTS_JSONL_PATH, "utf8");
+  const docsRaw = await readFile(getDocumentsJsonlPath(), "utf8");
   const documentCount = docsRaw.split("\n").filter((l) => l.trim() !== "").length;
 
   if (totalBytes !== EXPECTED_TOTAL_BYTES) {
@@ -118,22 +132,80 @@ export async function runDiscoveryPass({ policy, metadataIndex, sink, provenance
 
   async function flushBatch() {
     if (sink.mode === "write" && (pendingCanonicalRows.length > 0 || pendingChunkRows.length > 0)) {
-      await sink.repo.insertCanonicalBatch(sink.loadSessionId, pendingCanonicalRows);
-      await sink.repo.insertChunkBatch(sink.loadSessionId, pendingChunkRows);
-      await sink.repo.updateDiscoveryCheckpoint(sink.loadSessionId, {
-        sourceFilesProgress,
-        newDocumentCount: batchDocCount,
-        newTotalChunkCount: pendingChunkRows.length,
-        newSearchEligibleCount: pendingChunkRows.filter((r) => r.retrievalEligible).length,
-        newUniqueTextCount: pendingCanonicalRows.length,
+      // Turn AC-STREAMING-FIXED-DISCOVERY: canonical insert + chunk insert +
+      // checkpoint update are one atomic unit -- runInTransaction guarantees
+      // no half-applied batch (rows written but counters not updated, or
+      // vice versa) survives an error partway through. insertCanonicalBatch/
+      // insertChunkBatch may each internally issue several row/payload-
+      // bounded sub-batch round trips (see splitIntoSubBatches in the
+      // repository), all inside this SAME transaction.
+      await sink.repo.runInTransaction(async () => {
+        await sink.repo.insertCanonicalBatch(sink.loadSessionId, pendingCanonicalRows);
+        await sink.repo.insertChunkBatch(sink.loadSessionId, pendingChunkRows);
+        await sink.repo.updateDiscoveryCheckpoint(sink.loadSessionId, {
+          sourceFilesProgress,
+          newDocumentCount: batchDocCount,
+          newTotalChunkCount: pendingChunkRows.length,
+          newSearchEligibleCount: pendingChunkRows.filter((r) => r.retrievalEligible).length,
+          newUniqueTextCount: pendingCanonicalRows.length,
+        });
       });
+      // Turn AC-STREAMING-FIXED-DISCOVERY, section B/C experiment variable
+      // (kept OPTIONAL and out of the default write path -- only a caller
+      // that explicitly sets sink.afterBatchFlush opts in): lets a
+      // diagnostic/production caller recycle the DB connection between
+      // batches (never mid-batch/mid-transaction) to isolate whether
+      // long-lived-connection state, not query/payload size, drives the
+      // real-corpus OOM. sink.repo is read fresh on every flushBatch() call,
+      // so a hook that reassigns it here takes effect starting next batch.
+      if (sink.afterBatchFlush) await sink.afterBatchFlush();
+    }
+    // Turn AC-VFINAL-ALIGNMENT-AND-DISCOVERY, section I: the no-DB spool
+    // sink. NO Node `pg` call anywhere in this branch or anything it calls
+    // -- writes ONLY to local disk via sink.canonicalShardSet/chunkShardSet
+    // (domain/agent-comparison/chunking-comparison/discovery-file-spool.mjs).
+    // A separate, later process (native `psql \copy`) does the actual
+    // PostgreSQL bulk-load, entirely outside this function.
+    if (sink.mode === "spool") {
+      // addRow() is synchronous and returns undefined on the common
+      // (no-shard-roll) path -- only `await` when it actually returns a
+      // Promise (a real shard roll, roughly once per
+      // DEFAULT_MAX_ROWS_PER_SHARD rows, not once per row). Awaiting an
+      // unconditional per-row Promise here reproduced the same heap-growth/
+      // OOM pattern real-corpus reproduction traced to event-loop yield
+      // FREQUENCY -- see discovery-file-spool.mjs's own comment.
+      for (const row of pendingCanonicalRows) {
+        const maybePromise = sink.canonicalShardSet.addRow([sink.loadSessionId, row.embedTextSha256, row.embedText, row.charLength]);
+        // eslint-disable-next-line no-await-in-loop
+        if (maybePromise) await maybePromise;
+      }
+      for (const row of pendingChunkRows) {
+        const maybePromise = sink.chunkShardSet.addRow([
+          sink.loadSessionId, row.chunkId, row.documentId, row.chunkIndex, row.chunkType, row.parentChunkId,
+          row.contentSha256, row.rawText, row.embedTextSha256, row.tokenCount,
+          row.corpCode, row.docGroup, row.receiptDate, JSON.stringify(row.sectionPath ?? []),
+          row.sourceLocator, JSON.stringify(row.sourceSpans ?? []),
+          row.chunkingPolicyId, row.chunkingPolicyVersion, row.retrievalEligible, JSON.stringify(row.metadata ?? {}),
+        ]);
+        // eslint-disable-next-line no-await-in-loop
+        if (maybePromise) await maybePromise;
+      }
+      if (sink.onCheckpoint) {
+        sink.onCheckpoint({
+          sourceFilesProgress,
+          documentCount: batchDocCount,
+          chunkCount: pendingChunkRows.length,
+          searchEligibleCount: pendingChunkRows.filter((r) => r.retrievalEligible).length,
+          uniqueTextCount: pendingCanonicalRows.length,
+        });
+      }
     }
     pendingCanonicalRows = [];
     pendingChunkRows = [];
     batchDocCount = 0;
   }
 
-  for await (const { documentId, docGroup, rawRecord } of streamAllDocuments(RAW_SOURCE_DIR)) {
+  for await (const { documentId, docGroup, rawRecord } of streamAllDocuments(getRawSourceDir())) {
     if (documentCount >= maxDocuments) break;
     if (currentFile !== docGroup) { currentFile = docGroup; lineInFile = 0; }
     lineInFile += 1;
@@ -208,7 +280,7 @@ async function main() {
   const chunkingPolicySha256 = canonicalSha256(policy);
   console.error(`[discovery] chunking policy pinned: ${policy.chunking_config_id} sha256=${chunkingPolicySha256}`);
 
-  const metadataIndex = await loadDocumentMetadataIndex(DOCUMENTS_JSONL_PATH);
+  const metadataIndex = await loadDocumentMetadataIndex(getDocumentsJsonlPath());
 
   const client = new Client({ connectionString: databaseUrl });
   await client.connect();
@@ -296,7 +368,7 @@ async function main() {
 // Turn AC-FULL-LOAD-V2: guarded so scripts/p11f0-corpus-discovery-v2.mjs (and
 // tests) can `import` this module's helpers (runDiscoveryPass,
 // verifyCorpusPin, loadFixedChunkingPolicy, canonicalSha256, the CORPUS_*/
-// EXPECTED_*/RAW_SOURCE_DIR/DOCUMENTS_JSONL_PATH constants) without also
+// EXPECTED_*/getRawSourceDir/getDocumentsJsonlPath constants) without also
 // triggering this v1 CLI's own main() -- behavior when this file is run
 // directly (`node scripts/p11f0-corpus-discovery.mjs`) is unchanged.
 if (import.meta.url === `file://${process.argv[1]}`) {

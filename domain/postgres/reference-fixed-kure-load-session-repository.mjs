@@ -98,6 +98,71 @@ function trimmedSessionRow(row) {
   return Object.freeze({ ...row });
 }
 
+// Turn AC-STREAMING-FIXED-DISCOVERY: real-corpus reproduction (see the
+// Turn's final report) showed the full-corpus OOM lives in this write path,
+// not in domain/chunking/chunker.mjs (which measurement exonerated --
+// unmodified per this Turn's own instructions). insertCanonicalBatch/
+// insertChunkBatch now split their caller-given row array into row-count-
+// AND payload-byte-bounded sub-batches before issuing any SQL, so a single
+// discoveryBatchSize (document-count) batch that happens to contain a large
+// document's many chunks never builds one oversized node-postgres text[]
+// array-literal parameter in one client.query() call. Row/document/chunk
+// count and content are UNCHANGED -- only how many SQL round trips they are
+// split across.
+//
+// Caps fixed from real corpus per-chunk byte measurements (periodic-001.jsonl
+// documents averaged ~2.5-3KB raw_text/chunk) BEFORE the real-corpus
+// validation run, never tuned to its outcome: row count (750) is the
+// expected binding constraint in the typical case; the payload-byte cap
+// (12 MiB) is the safety net for outlier documents with unusually large
+// individual chunks/metadata/source_spans.
+const PG_WRITE_MAX_ROWS_PER_SUBBATCH = 750;
+const PG_WRITE_MAX_PAYLOAD_BYTES_PER_SUBBATCH = 12 * 1024 * 1024;
+
+// Opt-in, zero-cost-when-unset instrumentation: row/byte counts and
+// heap/RSS only, NEVER raw chunk/document text.
+const PG_TRACE = process.env.P11F0_PG_TRACE === "1";
+function pgTrace(stage, extra = {}) {
+  if (!PG_TRACE) return;
+  const mem = process.memoryUsage();
+  console.error(JSON.stringify({
+    trace: "pg_write_trace", stage,
+    heap_used: mem.heapUsed, heap_total: mem.heapTotal, rss: mem.rss,
+    ...extra,
+  }));
+}
+
+function byteLen(value) {
+  if (value == null) return 0;
+  return Buffer.byteLength(typeof value === "string" ? value : JSON.stringify(value), "utf8");
+}
+
+// Splits `rows` into sub-batches respecting BOTH PG_WRITE_MAX_ROWS_PER_SUBBATCH
+// and PG_WRITE_MAX_PAYLOAD_BYTES_PER_SUBBATCH (estimated per row via
+// `estimateRowBytes`). A single row whose own estimated size exceeds the
+// payload cap still gets its own (oversized) sub-batch rather than being
+// dropped, truncated, or merged -- every row is always inserted; only SQL
+// round-trip granularity changes.
+function splitIntoSubBatches(rows, estimateRowBytes) {
+  const subBatches = [];
+  let current = [];
+  let currentBytes = 0;
+  for (const row of rows) {
+    const rowBytes = estimateRowBytes(row);
+    const wouldExceedRows = current.length + 1 > PG_WRITE_MAX_ROWS_PER_SUBBATCH;
+    const wouldExceedBytes = current.length > 0 && currentBytes + rowBytes > PG_WRITE_MAX_PAYLOAD_BYTES_PER_SUBBATCH;
+    if (current.length > 0 && (wouldExceedRows || wouldExceedBytes)) {
+      subBatches.push(current);
+      current = [];
+      currentBytes = 0;
+    }
+    current.push(row);
+    currentBytes += rowBytes;
+  }
+  if (current.length > 0) subBatches.push(current);
+  return subBatches;
+}
+
 export function createFixedKureLoadSessionRepository({ client }) {
   if (!client || typeof client.query !== "function") throw new TypeError("client is required");
 
@@ -211,6 +276,31 @@ export function createFixedKureLoadSessionRepository({ client }) {
   // same trigger).
   async function supersedeZeroProgressSession(loadSessionId, { reasonCode = "SUPERSEDED_ZERO_PROGRESS" } = {}) {
     return transitionStatus(loadSessionId, ["CREATED", "DISCOVERING"], "SUPERSEDED_ZERO_PROGRESS", {
+      last_error_code: reasonCode,
+    });
+  }
+
+  // Turn AC-VFINAL-ALIGNMENT-AND-DISCOVERY, section L official API: marks a
+  // DISCOVERING row FAILED_DISCOVERY_RESOURCE_EXHAUSTED -- for an attempt
+  // that made REAL, non-zero discovery progress before terminating due to
+  // resource exhaustion (the real full-corpus OOM this Turn's own
+  // investigation root-caused), as opposed to supersedeZeroProgressSession's
+  // zero-progress case above. The row's OWN trigger
+  // (010_reference_fixed_kure_failed_resource_exhausted_transition.sql)
+  // independently re-verifies embedded_unique_text_count and
+  // materialized_chunk_count are exactly zero and rejects
+  // (ILLEGAL_TRANSITION, from transitionStatus's RETURNING 0 rows below) if
+  // not -- this function does not trust its own caller's belief that
+  // embedding/materialization never ran; discovery progress itself
+  // (documents/chunks/unique-text counters) is preserved untouched, never
+  // zeroed. The row is never deleted or reused -- only its status and
+  // last_error_code change; every identity/pin column and every discovery
+  // counter stay exactly as they were (enforced by the same trigger). Also
+  // excluded from the active-attempt uniqueness gate (010's index), exactly
+  // like SUPERSEDED_ZERO_PROGRESS, so a fresh attempt of the same logical
+  // load may be created without colliding with this terminal row.
+  async function failDiscoveryResourceExhausted(loadSessionId, { reasonCode = "FAILED_DISCOVERY_RESOURCE_EXHAUSTED" } = {}) {
+    return transitionStatus(loadSessionId, ["DISCOVERING"], "FAILED_DISCOVERY_RESOURCE_EXHAUSTED", {
       last_error_code: reasonCode,
     });
   }
@@ -396,93 +486,110 @@ export function createFixedKureLoadSessionRepository({ client }) {
   // mechanism.
   async function insertCanonicalBatch(loadSessionId, rows) {
     if (rows.length === 0) return { insertedHashes: [] };
-    const hashes = rows.map((r) => r.embedTextSha256);
-    const texts = rows.map((r) => r.embedText);
-    const lengths = rows.map((r) => r.charLength);
+    const subBatches = splitIntoSubBatches(rows, (r) => byteLen(r.embedText) + byteLen(r.embedTextSha256) + 8);
+    const insertedHashes = [];
+    for (const subBatch of subBatches) {
+      const hashes = subBatch.map((r) => r.embedTextSha256);
+      const payloadBytes = subBatch.reduce((sum, r) => sum + byteLen(r.embedText), 0);
 
-    const existing = await client.query(
-      `SELECT embed_text_sha256, embed_text FROM disclosure_reference.reference_fixed_kure_canonical_queue
-       WHERE load_session_id = $1 AND embed_text_sha256 = ANY($2::text[])`,
-      [loadSessionId, hashes],
-    );
-    const existingByHash = new Map(existing.rows.map((r) => [r.embed_text_sha256, r.embed_text]));
-    for (const row of rows) {
-      const priorText = existingByHash.get(row.embedTextSha256);
-      if (priorText !== undefined && priorText !== row.embedText) {
-        throw new FixedKureLoadSessionError(
-          `embed_text_sha256 collision with different text content: ${row.embedTextSha256}`,
-          "TEXT_SHA256_COLLISION",
-        );
+      pgTrace("before_canonical_select", { load_session_id: loadSessionId, row_count: subBatch.length, raw_text_bytes: payloadBytes, estimated_payload_bytes: payloadBytes + hashes.length * 64 });
+      const existing = await client.query(
+        `SELECT embed_text_sha256, embed_text FROM disclosure_reference.reference_fixed_kure_canonical_queue
+         WHERE load_session_id = $1 AND embed_text_sha256 = ANY($2::text[])`,
+        [loadSessionId, hashes],
+      );
+      const existingByHash = new Map(existing.rows.map((r) => [r.embed_text_sha256, r.embed_text]));
+      for (const row of subBatch) {
+        const priorText = existingByHash.get(row.embedTextSha256);
+        if (priorText !== undefined && priorText !== row.embedText) {
+          throw new FixedKureLoadSessionError(
+            `embed_text_sha256 collision with different text content: ${row.embedTextSha256}`,
+            "TEXT_SHA256_COLLISION",
+          );
+        }
       }
-    }
 
-    const inserted = await client.query(
-      `INSERT INTO disclosure_reference.reference_fixed_kure_canonical_queue (load_session_id, embed_text_sha256, embed_text, char_length)
-       SELECT $1, t, c, l FROM unnest($2::text[], $3::text[], $4::int[]) AS x(t, c, l)
-       ON CONFLICT (load_session_id, embed_text_sha256) DO NOTHING
-       RETURNING embed_text_sha256`,
-      [loadSessionId, hashes, texts, lengths],
-    );
-    return { insertedHashes: inserted.rows.map((r) => r.embed_text_sha256) };
+      pgTrace("before_canonical_insert", { load_session_id: loadSessionId, row_count: subBatch.length, raw_text_bytes: payloadBytes, estimated_payload_bytes: payloadBytes + hashes.length * 64 });
+      // Turn AC-STREAMING-FIXED-DISCOVERY: jsonb_to_recordset instead of
+      // unnest($n::text[]) -- a single JSON.stringify'd parameter goes
+      // through node-postgres as a plain string (prepareValue's `typeof val
+      // !== 'object'` branch), never through arrayString/escapeElement's
+      // per-element regex .replace() loop (lib/utils.js), which real-corpus
+      // reproduction traced the OOM into. Row/hash/text/char_length content
+      // and ON CONFLICT DO NOTHING dedup semantics are unchanged.
+      const canonicalPayload = subBatch.map((r) => ({
+        t: r.embedTextSha256, c: r.embedText, l: r.charLength,
+      }));
+      const inserted = await client.query(
+        `INSERT INTO disclosure_reference.reference_fixed_kure_canonical_queue (load_session_id, embed_text_sha256, embed_text, char_length)
+         SELECT $1, x.t, x.c, x.l FROM jsonb_to_recordset($2::jsonb) AS x(t text, c text, l int)
+         ON CONFLICT (load_session_id, embed_text_sha256) DO NOTHING
+         RETURNING embed_text_sha256`,
+        [loadSessionId, JSON.stringify(canonicalPayload)],
+      );
+      insertedHashes.push(...inserted.rows.map((r) => r.embed_text_sha256));
+    }
+    return { insertedHashes };
   }
 
   // Bulk-insert one discovery batch's chunk canonical-digest rows (the full
   // per-chunk provenance CLAUDE.md Turn P11-F0 section C requires).
   async function insertChunkBatch(loadSessionId, rows) {
     if (rows.length === 0) return { insertedCount: 0 };
-    const cols = [
-      "chunk_id", "document_id", "chunk_index", "chunk_type", "parent_chunk_id", "content_sha256",
-      "raw_text", "embed_text_sha256", "token_count",
-      "corp_code", "doc_group", "receipt_date", "section_path", "source_locator", "source_spans",
-      "chunking_policy_id", "chunking_policy_version", "retrieval_eligible", "metadata",
-    ];
-    const arrays = Object.fromEntries(cols.map((c) => [c, []]));
-    for (const r of rows) {
-      arrays.chunk_id.push(r.chunkId);
-      arrays.document_id.push(r.documentId);
-      arrays.chunk_index.push(r.chunkIndex);
-      arrays.chunk_type.push(r.chunkType);
-      arrays.parent_chunk_id.push(r.parentChunkId ?? null);
-      arrays.content_sha256.push(r.contentSha256);
-      arrays.raw_text.push(r.rawText);
-      arrays.embed_text_sha256.push(r.embedTextSha256);
-      arrays.token_count.push(r.tokenCount);
-      arrays.corp_code.push(r.corpCode ?? null);
-      arrays.doc_group.push(r.docGroup);
-      arrays.receipt_date.push(r.receiptDate ?? null);
-      arrays.section_path.push(JSON.stringify(r.sectionPath ?? []));
-      arrays.source_locator.push(r.sourceLocator);
-      arrays.source_spans.push(JSON.stringify(r.sourceSpans ?? []));
-      arrays.chunking_policy_id.push(r.chunkingPolicyId);
-      arrays.chunking_policy_version.push(r.chunkingPolicyVersion);
-      arrays.retrieval_eligible.push(r.retrievalEligible);
-      arrays.metadata.push(JSON.stringify(r.metadata ?? {}));
+    const subBatches = splitIntoSubBatches(rows, (r) =>
+      byteLen(r.rawText) + byteLen(r.sectionPath) + byteLen(r.sourceLocator) + byteLen(r.sourceSpans) + byteLen(r.metadata) + 128);
+    let insertedCount = 0;
+    for (const subBatch of subBatches) {
+      let rawTextBytes = 0;
+      let spansMetadataBytes = 0;
+      // Turn AC-STREAMING-FIXED-DISCOVERY: jsonb_to_recordset instead of
+      // unnest($n::text[], ...) -- see insertCanonicalBatch's comment above
+      // for why (a single JSON.stringify'd parameter bypasses node-postgres'
+      // arrayString/escapeElement per-element regex .replace() loop, the
+      // code path real-corpus reproduction traced the OOM into). Column
+      // names/types/order and ON CONFLICT DO NOTHING semantics unchanged.
+      const chunkPayload = subBatch.map((r) => {
+        if (PG_TRACE) {
+          rawTextBytes += byteLen(r.rawText);
+          spansMetadataBytes += byteLen(r.sourceSpans) + byteLen(r.metadata) + byteLen(r.sectionPath);
+        }
+        return {
+          chunk_id: r.chunkId, document_id: r.documentId, chunk_index: r.chunkIndex, chunk_type: r.chunkType,
+          parent_chunk_id: r.parentChunkId ?? null, content_sha256: r.contentSha256,
+          raw_text: r.rawText, embed_text_sha256: r.embedTextSha256, token_count: r.tokenCount,
+          corp_code: r.corpCode ?? null, doc_group: r.docGroup, receipt_date: r.receiptDate ?? null,
+          section_path: r.sectionPath ?? [], source_locator: r.sourceLocator, source_spans: r.sourceSpans ?? [],
+          chunking_policy_id: r.chunkingPolicyId, chunking_policy_version: r.chunkingPolicyVersion,
+          retrieval_eligible: r.retrievalEligible, metadata: r.metadata ?? {},
+        };
+      });
+      pgTrace("before_chunk_insert", {
+        load_session_id: loadSessionId, row_count: subBatch.length,
+        raw_text_bytes: rawTextBytes, spans_metadata_bytes: spansMetadataBytes,
+        estimated_payload_bytes: rawTextBytes + spansMetadataBytes,
+      });
+      const result = await client.query(
+        `INSERT INTO disclosure_reference.reference_fixed_kure_chunk_staging
+           (load_session_id, chunk_id, document_id, chunk_index, chunk_type, parent_chunk_id, content_sha256,
+            raw_text, embed_text_sha256, token_count,
+            corp_code, doc_group, receipt_date, section_path, source_locator, source_spans,
+            chunking_policy_id, chunking_policy_version, retrieval_eligible, metadata)
+         SELECT $1, x.chunk_id, x.document_id, x.chunk_index, x.chunk_type, x.parent_chunk_id, x.content_sha256,
+                x.raw_text, x.embed_text_sha256, x.token_count,
+                x.corp_code, x.doc_group, x.receipt_date, x.section_path, x.source_locator, x.source_spans,
+                x.chunking_policy_id, x.chunking_policy_version, x.retrieval_eligible, x.metadata
+         FROM jsonb_to_recordset($2::jsonb) AS x(
+           chunk_id text, document_id text, chunk_index int, chunk_type text, parent_chunk_id text, content_sha256 text,
+           raw_text text, embed_text_sha256 text, token_count int,
+           corp_code text, doc_group text, receipt_date text, section_path jsonb, source_locator text, source_spans jsonb,
+           chunking_policy_id text, chunking_policy_version text, retrieval_eligible boolean, metadata jsonb)
+         ON CONFLICT (load_session_id, chunk_id) DO NOTHING
+         RETURNING chunk_id`,
+        [loadSessionId, JSON.stringify(chunkPayload)],
+      );
+      insertedCount += result.rows.length;
     }
-    const result = await client.query(
-      `INSERT INTO disclosure_reference.reference_fixed_kure_chunk_staging
-         (load_session_id, chunk_id, document_id, chunk_index, chunk_type, parent_chunk_id, content_sha256,
-          raw_text, embed_text_sha256, token_count,
-          corp_code, doc_group, receipt_date, section_path, source_locator, source_spans,
-          chunking_policy_id, chunking_policy_version, retrieval_eligible, metadata)
-       SELECT $1, x.* FROM unnest(
-         $2::text[], $3::text[], $4::int[], $5::text[], $6::text[], $7::text[],
-         $8::text[], $9::text[], $10::int[],
-         $11::text[], $12::text[], $13::text[], $14::jsonb[], $15::text[], $16::jsonb[],
-         $17::text[], $18::text[], $19::boolean[], $20::jsonb[]
-       ) AS x(chunk_id, document_id, chunk_index, chunk_type, parent_chunk_id, content_sha256,
-              raw_text, embed_text_sha256, token_count,
-              corp_code, doc_group, receipt_date, section_path, source_locator, source_spans,
-              chunking_policy_id, chunking_policy_version, retrieval_eligible, metadata)
-       ON CONFLICT (load_session_id, chunk_id) DO NOTHING
-       RETURNING chunk_id`,
-      [
-        loadSessionId, arrays.chunk_id, arrays.document_id, arrays.chunk_index, arrays.chunk_type, arrays.parent_chunk_id,
-        arrays.content_sha256, arrays.raw_text, arrays.embed_text_sha256, arrays.token_count, arrays.corp_code, arrays.doc_group, arrays.receipt_date,
-        arrays.section_path, arrays.source_locator, arrays.source_spans, arrays.chunking_policy_id,
-        arrays.chunking_policy_version, arrays.retrieval_eligible, arrays.metadata,
-      ],
-    );
-    return { insertedCount: result.rows.length };
+    return { insertedCount };
   }
 
   // Lease (FOR UPDATE SKIP LOCKED) up to `limit` unique-text rows that are
@@ -646,10 +753,29 @@ export function createFixedKureLoadSessionRepository({ client }) {
     return transitionStatus(loadSessionId, ["MATERIALIZING"], "READY");
   }
 
+  // Turn AC-STREAMING-FIXED-DISCOVERY: runs `fn` (which may itself issue
+  // several sub-batched insertCanonicalBatch/insertChunkBatch round trips --
+  // see splitIntoSubBatches above) inside one BEGIN/COMMIT. A caller that
+  // wraps insertCanonicalBatch + insertChunkBatch + updateDiscoveryCheckpoint
+  // in this gets atomicity across all of them: on any error, ROLLBACK
+  // guarantees no half-applied discovery batch (some chunk rows written,
+  // checkpoint counters not updated, or vice versa) is ever left behind.
+  async function runInTransaction(fn) {
+    await client.query("BEGIN");
+    try {
+      const result = await fn();
+      await client.query("COMMIT");
+      return result;
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    }
+  }
+
   return Object.freeze({
-    getSession, createOrGetSession, createOrGetAttempt, supersedeZeroProgressSession, resetDiscoveryCheckpoint,
+    getSession, createOrGetSession, createOrGetAttempt, supersedeZeroProgressSession, failDiscoveryResourceExhausted, resetDiscoveryCheckpoint,
     transitionStatus, updateDiscoveryCheckpoint, recordPassStreamSha256, completeDiscovery,
     insertCanonicalBatch, insertChunkBatch, leaseCanonicalBatch, markEmbedded, markEmbeddingBatchFailed,
-    queueStatusCounts, ensureRetrievalIndexRow, materializeChunkBatch, finalize,
+    queueStatusCounts, ensureRetrievalIndexRow, materializeChunkBatch, finalize, runInTransaction,
   });
 }
