@@ -75,3 +75,4 @@ data/index/
 # 4-arm 실행 원본(문항별 청크 텍스트 포함, 수 MB) — run.json·채점 리포트만 커밋
 results/**/*.results.jsonl
 results/e2e/devtune101.jsonl
+results/e2e/safety.jsonl
