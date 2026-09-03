@@ -7,7 +7,9 @@ JSON 프롬프트 경로(qa_agent SYSTEM_PROMPT)와 다른 점: 모델이 자유
 claim 게이트(하나라도 걸리면 그 claim 폐기 — 답 전체 폐기가 아니다):
     citation_bound   claim.doc_id ∈ 실사용 근거 문서 집합(접수번호∈실사용 근거)
     quote_grounded   claim.quote가 그 문서 원문의 부분문자열(공백만 무시 — validator._squash와 동일 규칙)
-    numbers_bound    claim.text의 모든 숫자 ∈ quote ∪ derived ∪ 연도. claim.value도 quote ∪ derived 안.
+    numbers_bound    claim.text의 모든 숫자 ∈ quote ∪ derived ∪ 연도 ∪ **질문에 적힌 숫자**
+                     (질문의 날짜·기수를 문장에서 반복하는 것은 날조가 아니다 — 실측 오탐 교정).
+                     claim.value는 질문 허용 없이 quote ∪ derived 안이어야 한다(값 자체는 원문 몫).
     period_bound     claim.period의 연도가 quote 또는 그 문서 원문·메타(rcept_dt·report_nm)에 존재
 
 units_exact(자릿수·환산)는 claim 게이트가 아니라 **최종 답변 수준**에서 기존
@@ -102,7 +104,7 @@ def _years_of(text: str) -> set[str]:
 
 def validate_claim(claim: Mapping[str, Any], doc_text_squashed: Mapping[str, str],
                    doc_meta: Mapping[str, Mapping[str, Any]],
-                   derived_allowed: set[str]) -> tuple[bool, list[str]]:
+                   derived_allowed: set[str], question_numbers: set[str] = frozenset()) -> tuple[bool, list[str]]:
     """(통과 여부, 실패 사유 목록). 사유 코드는 v4 §11 게이트 이름을 그대로 쓴다."""
     fails: list[str] = []
     doc_id = str(claim.get("doc_id") or "")
@@ -117,7 +119,7 @@ def validate_claim(claim: Mapping[str, Any], doc_text_squashed: Mapping[str, str
 
     quote_nums = set(numbers_in(quote))
     for n in _claim_numbers(text):
-        if n not in quote_nums and n not in derived_allowed:
+        if n not in quote_nums and n not in derived_allowed and n not in question_numbers:
             fails.append(f"numbers_bound:{n}")
     value = claim.get("value")
     if value not in (None, ""):
@@ -176,7 +178,8 @@ def compose(claims: Sequence[Mapping[str, Any]], not_found: Sequence[str], uncer
 
 def fc_answer(llm: Any, user_prompt: str, *, sources: Sequence[Mapping[str, Any]],
               doc_meta: Mapping[str, Mapping[str, Any]], derived_allowed: Sequence[str],
-              max_tokens: int | None = None) -> tuple[dict[str, Any], dict[str, Any], set[str]]:
+              question: str = "", max_tokens: int | None = None
+              ) -> tuple[dict[str, Any], dict[str, Any], set[str]]:
     """반환: (기존 JSON 경로와 같은 모양의 payload, llm 메타, validator 허용 추가 숫자).
 
     payload = {"answer", "evidence": [{document_id, quote_or_fact}], "uncertainty"} — 이후 단계
@@ -199,11 +202,12 @@ def fc_answer(llm: Any, user_prompt: str, *, sources: Sequence[Mapping[str, Any]
         by_doc.setdefault(str(s.get("document_id") or ""), []).append(str(s.get("text") or ""))
     doc_squashed = {d: _squash("\n".join(ts)) for d, ts in by_doc.items()}
     derived_set = {str(d).replace(",", "") for d in derived_allowed}
+    q_nums = set(numbers_in(question))
 
     kept: list[Mapping[str, Any]] = []
     dropped: list[dict[str, Any]] = []
     for c in raw_claims:
-        ok, fails = validate_claim(c, doc_squashed, doc_meta, derived_set)
+        ok, fails = validate_claim(c, doc_squashed, doc_meta, derived_set, q_nums)
         if ok:
             kept.append(c)
         else:

@@ -220,6 +220,17 @@ class ClovaLLM:
     def url(self) -> str:
         return f"{self.endpoint}/{self.model}"
 
+    @staticmethod
+    def _ssl_context():
+        """macOS 프레임워크 Python은 시스템 CA를 못 찾아 SSL 검증이 실패한다(실측 2026-09-03).
+        certifi가 있으면 그 CA 묶음을 쓴다 — 배포 서버에서도 동일하게 동작한다."""
+        try:
+            import ssl
+            import certifi
+            return ssl.create_default_context(cafile=certifi.where())
+        except ImportError:
+            return None
+
     def _post(self, payload: dict[str, Any]) -> dict[str, Any]:
         """한 번 보낸다. 429(속도 제한)일 때만 딱 한 번 더 보낸다.
 
@@ -242,7 +253,8 @@ class ClovaLLM:
                 method="POST",
             )
             try:
-                with urllib.request.urlopen(request, timeout=self.timeout) as response:
+                with urllib.request.urlopen(request, timeout=self.timeout,
+                                            context=self._ssl_context()) as response:
                     return json.loads(response.read().decode("utf-8"))
             except urllib.error.HTTPError as exc:  # 4xx/5xx는 fallback 대상이다
                 if exc.code == RETRY_STATUS and attempt < MAX_RETRIES:
@@ -250,7 +262,11 @@ class ClovaLLM:
                     self.last_retries = attempt
                     time.sleep(RETRY_WAIT_SECONDS)
                     continue
-                raise LLMUnavailable(f"CLOVA HTTP {exc.code}") from exc
+                try:
+                    detail = exc.read().decode("utf-8", "replace")[:400]
+                except Exception:  # noqa: BLE001
+                    detail = ""
+                raise LLMUnavailable(f"CLOVA HTTP {exc.code}: {detail}") from exc
             except urllib.error.URLError as exc:
                 raise LLMUnavailable(f"CLOVA 연결 실패: {exc.reason}") from exc
 
@@ -264,6 +280,9 @@ class ClovaLLM:
         (env DART_QA_FC_TEMPERATURE/DART_QA_SEED로 덮어쓸 수 있다 — 실험 전용)."""
         requested = max_tokens or self.max_tokens
         t0 = time.perf_counter()
+        # 실측(2026-09-03, 서비스앱): tools와 출력 길이 파라미터(maxTokens·maxCompletionTokens)는
+        # 함께 보낼 수 없다(40001). temperature·seed는 호환. 출력 상한을 못 거니 FC 호출의 TPM
+        # 소모는 응답 usage로만 확인한다 — v4 §7 예산의 max_tokens는 JSON 경로·수리 호출에만 적용.
         body = self._post({
             "messages": [
                 {"role": "system", "content": system},
@@ -271,7 +290,6 @@ class ClovaLLM:
             ],
             "tools": [{"type": "function", "function": tool}],
             "toolChoice": {"type": "function", "function": {"name": tool["name"]}},
-            "maxTokens": requested,
             "temperature": float(os.environ.get("DART_QA_FC_TEMPERATURE", "0.1")),
             "seed": int(os.environ.get("DART_QA_SEED", "42")),
         })

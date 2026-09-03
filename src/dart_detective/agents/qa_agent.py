@@ -1017,7 +1017,7 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
                 doc_meta = {c.doc_id: dict(c.metadata) for c in state.retrieval_results}
                 payload, meta, extra_allowed = grounded_answer.fc_answer(
                     llm, user_prompt, sources=sources, doc_meta=doc_meta,
-                    derived_allowed=sorted(derived_allowed),
+                    derived_allowed=sorted(derived_allowed), question=question,
                     max_tokens=state.route.budget.max_tokens)
             else:
                 payload, meta = _llm_answer(llm, user_prompt,
@@ -1058,11 +1058,13 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
     state.uncertainty = uncertainty
     final_derived = set(calculator.allowed_numbers(state.derived))
     if (state.llm or {}).get("fc"):
-        # FC 조립 답변의 인라인 출처(접수번호·일자)는 코드가 메타데이터에서 붙인 값이다.
+        # FC 조립 답변의 인라인 출처(접수번호·일자)와 질문에 적힌 숫자(날짜·기수 반복)는
+        # 코드·질문에서 온 값이다 — 날조가 아니므로 허용 목록에 넣는다.
         doc_meta = {c.doc_id: dict(c.metadata) for c in state.retrieval_results}
         for m in state.evidence_matches:
             _, nums = grounded_answer.attribution_of(m.doc_id, doc_meta.get(m.doc_id) or {})
             final_derived |= nums
+        final_derived |= set(grounded_answer.numbers_in(question))
     state.validation = validator.validate(answer, citations, sources, derived=final_derived)
     if state.validation["status"] == "UNSUPPORTED":
         # ⑨ 3단 폴백(v4 §11) — 최종 답이 게이트를 못 넘으면 수리(OFF)→템플릿→발췌 순서로 대체.

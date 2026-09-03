@@ -134,7 +134,7 @@ def clova(monkeypatch):
 def test_429_is_retried_once_and_succeeds(clova, monkeypatch):
     calls = {"n": 0}
 
-    def fake_open(request, timeout=None):
+    def fake_open(request, timeout=None, context=None):
         calls["n"] += 1
         if calls["n"] == 1:
             raise llm_mod.urllib.error.HTTPError(clova.url, 429, "Too Many Requests",
@@ -151,7 +151,7 @@ def test_429_is_retried_once_and_succeeds(clova, monkeypatch):
 def test_two_consecutive_429_falls_back(clova, monkeypatch):
     calls = {"n": 0}
 
-    def fake_open(request, timeout=None):
+    def fake_open(request, timeout=None, context=None):
         calls["n"] += 1
         raise llm_mod.urllib.error.HTTPError(clova.url, 429, "Too Many Requests",
                                              None, None)
@@ -166,7 +166,7 @@ def test_two_consecutive_429_falls_back(clova, monkeypatch):
 def test_non_429_http_error_is_not_retried(clova, monkeypatch):
     calls = {"n": 0}
 
-    def fake_open(request, timeout=None):
+    def fake_open(request, timeout=None, context=None):
         calls["n"] += 1
         raise llm_mod.urllib.error.HTTPError(clova.url, 500, "Server Error", None, None)
 
@@ -180,7 +180,7 @@ def test_non_429_http_error_is_not_retried(clova, monkeypatch):
 def test_connection_error_is_not_retried(clova, monkeypatch):
     calls = {"n": 0}
 
-    def fake_open(request, timeout=None):
+    def fake_open(request, timeout=None, context=None):
         calls["n"] += 1
         raise llm_mod.urllib.error.URLError("연결 없음")
 

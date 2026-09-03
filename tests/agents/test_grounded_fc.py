@@ -42,7 +42,10 @@ def test_complete_tool_sends_tool_choice_and_parses_dict_arguments(monkeypatch):
     r = llm.complete_tool("sys", "user", ga.SUBMIT_GROUNDED_ANSWER, max_tokens=512)
     assert captured["toolChoice"]["function"]["name"] == "submit_grounded_answer"
     assert captured["tools"][0]["function"]["name"] == "submit_grounded_answer"
-    assert captured["maxTokens"] == 512 and "seed" in captured
+    # 실측 40001: tools와 출력 길이 파라미터는 함께 못 보낸다 — payload에 없어야 한다
+    assert "maxTokens" not in captured and "maxCompletionTokens" not in captured
+    assert "seed" in captured and "temperature" in captured
+    assert r.usage["max_tokens_requested"] == 512          # 기록은 남긴다(관측용)
     assert r.data["claims"][0]["doc_id"] == DOC
 
 
@@ -102,6 +105,20 @@ def test_claim_unit_outside_quote_is_not_dropped():
     """표 밖 단위("단위: 백만원")가 인용에 없어도 claim은 살아야 한다 — 자릿수는 최종 validator 몫."""
     ok, fails = _validate(_claim(unit="백만원"))
     assert ok, fails
+
+
+def test_claim_allows_numbers_from_question():
+    """질문의 날짜·기수를 문장에서 반복하는 것은 날조가 아니다(실측 오탐 교정). 값은 예외 없음."""
+    c = _claim(text="보고서작성기준일 2024년 03월 22일 기준 매출액은 10,891,443이다", unit=None)
+    ok, fails = _validate(c)
+    assert not ok and any(f.startswith("numbers_bound") for f in fails)
+    squashed = {DOC: ga._squash(SOURCES[0]["text"])}
+    ok, fails = ga.validate_claim(c, squashed, DOC_META, set(),
+                                  question_numbers=set(ga.numbers_in("보고서작성기준일 2024년 03월 22일")))
+    assert ok, fails
+    bad_value = _claim(value="03")                          # 값 자체는 질문 허용 없음
+    ok, fails = ga.validate_claim(bad_value, squashed, DOC_META, set(), question_numbers={"03"})
+    assert not ok and any("value" in f for f in fails)
 
 
 def test_claim_allows_derived_numbers():
