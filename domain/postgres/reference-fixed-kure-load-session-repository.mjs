@@ -115,6 +115,25 @@ export function createFixedKureLoadSessionRepository({ client }) {
 
     const existing = await getSession(loadSessionId);
     if (existing) {
+      // Additive fail-closed guard: code_revision is recorded on the row
+      // but is NOT part of the load_session_id hash above (identity is
+      // corpus/embedding/chunking pins only), so without this check a
+      // session started under one code_revision could be silently resumed
+      // -- and have checkpoint data written into it -- by a DIFFERENT
+      // code_revision, with nothing recording that the two passes ran
+      // under different code. Refuse instead of guessing which revision
+      // is authoritative; the caller must resolve this explicitly (e.g.
+      // an operator decision to supersede the old attempt) rather than
+      // have this function pick a side.
+      if (existing.code_revision !== codeRevision) {
+        throw new FixedKureLoadSessionError(
+          `load session "${loadSessionId}" already exists with a DIFFERENT code_revision `
+          + `(recorded="${existing.code_revision}", requested="${codeRevision}") -- refusing to resume `
+          + "under a different revision than it was started with; this would silently mix checkpoint "
+          + "data across code versions",
+          "CODE_REVISION_MISMATCH",
+        );
+      }
       if (existing.embedding_config_sha256 !== embeddingConfigSha256) {
         throw new FixedKureLoadSessionError(
           `load session "${loadSessionId}" already exists with a DIFFERENT embedding_config_sha256`,

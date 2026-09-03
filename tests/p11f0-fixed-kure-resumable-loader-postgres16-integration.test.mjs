@@ -142,6 +142,24 @@ test("idempotent resume: createOrGetSession on the SAME pins twice returns the S
   assert.equal(first.load_session_id, second.load_session_id);
 });
 
+test("code revision pin: resuming an existing session under a DIFFERENT code_revision is refused, never silently continued", async () => {
+  const pins = uniquePins("code-revision-pin");
+  const { session: first } = await repo.createOrGetSession(pins);
+  assert.equal(first.code_revision, "integration-test");
+  await assert.rejects(
+    () => repo.createOrGetSession({ ...pins, codeRevision: "integration-test-DIFFERENT-revision" }),
+    (error) => { assert.equal(error.code, "CODE_REVISION_MISMATCH"); return true; },
+  );
+  // The mismatch must not have modified the recorded row.
+  const unchanged = await repo.getSession(first.load_session_id);
+  assert.equal(unchanged.code_revision, "integration-test");
+  // The SAME code_revision as recorded must still resume cleanly (this is
+  // not a general "never resume" guard, only a cross-revision one).
+  const { session: resumed, created } = await repo.createOrGetSession(pins);
+  assert.equal(created, false);
+  assert.equal(resumed.load_session_id, first.load_session_id);
+});
+
 test("duplicate/collision rejection: a different embedding_config_sha256 under the SAME corpus/chunking identity is refused, never silently reused", async () => {
   const pins = uniquePins("collision");
   await repo.createOrGetSession(pins);
