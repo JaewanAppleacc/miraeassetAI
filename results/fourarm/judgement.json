@@ -12,6 +12,10 @@
  },
  "chain": [
   {
+   "step": "14 locator checked",
+   "unchecked": []
+  },
+  {
    "step": "20 pins",
    "bad": []
   },
