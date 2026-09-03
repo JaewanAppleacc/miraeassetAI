@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://disclosure-analyst.local/schema/gpu-benchmark-result.v1.json",
+  "title": "GPU Benchmark Result v1",
+  "description": "Turn AC-VFINAL-ALIGNMENT-AND-DISCOVERY section O. One JSON Lines file per GPU run (Kaggle P100 or Colab CUDA), one record per embedded benchmark-sample input. Consumed by scripts/p11f0-gpu-benchmark-result-verify.mjs -- never trusted without independent verification against the pinned sample manifest.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "embedding_input_id", "embed_text_sha256", "model_repository", "model_revision",
+    "dimension", "dtype", "normalization", "vector", "runner", "elapsed_ms"
+  ],
+  "properties": {
+    "embedding_input_id": { "type": "string", "pattern": "^embin_[0-9a-f]{24}$" },
+    "embed_text_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "model_repository": { "const": "nlpai-lab/KURE-v1" },
+    "model_revision": { "const": "4ed4540949c70b7da2c74004a915e1f2d5e46e4f" },
+    "dimension": { "const": 1024 },
+    "dtype": { "const": "float32" },
+    "normalization": { "const": "l2" },
+    "vector": {
+      "type": "array",
+      "minItems": 1024,
+      "maxItems": 1024,
+      "items": { "type": "number" }
+    },
+    "runner": { "enum": ["KAGGLE_P100", "COLAB_CUDA"] },
+    "elapsed_ms": { "type": "number", "minimum": 0 }
+  }
+}

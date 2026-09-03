@@ -2,10 +2,22 @@
   "schema_version": "0.1.0",
   "arm_code": "C",
   "arm_id": "FIXED+DENSE_OFF",
-  "corpus_snapshot_id": "corpus_04750795e1a2d5c3_shard_val_750",
+  "corpus_snapshot_id": "corpus_04750795e1a2d5c3",
   "corpus_manifest_sha256": "8cc6628eb38fff0ee48cf138a586978a627260a7e41157dddd45e52f97761d4e",
-  "corpus_scope": "VALIDATION_SHARD_750",
-  "corpus_scope_note": "Pinned to the existing READY 1,144-chunk validation shard (load_session_id=fixed_kure_session_21f4fafafafe8f7c38e8cd94897bc583). Re-pin corpus_snapshot_id/corpus_manifest_sha256 to the full corpus (corpus_04750795e1a2d5c3) only after FULL_LOAD_START_READY and a completed, independently-verified full DISCOVERY+EMBEDDING+MATERIALIZATION run -- see AC_IMPL_HANDOFF.md section J.",
+  "corpus_scope": "FULL_CORPUS",
+  "corpus_scope_note": "Turn AC-VFINAL-ALIGNMENT-AND-DISCOVERY section N: re-pinned to the full 4,204-document corpus after an independently double-pass-verified, no-DB spool Discovery + native COPY load went GREEN (documents=4204, total_chunk_count=442549 search-eligible, unique_embeddable=447225, pass1/pass2 stream SHA identical). discovery.execution_attempt_id/chunk_stream_sha256 below are the real values from that run. Embedding and materialization have NOT run (forbidden this Turn) -- see full_dense_ready/official_4arm_execution_ready.",
+  "discovery": {
+    "logical_load_id": "fixed_kure_session_8fe191342205848d1d6a6123f38a54e7",
+    "execution_attempt_id": "fixed_kure_attempt_c7ee3363a0af161c7a0572d024dfbf36",
+    "retrieval_index_id": "fixed_kure_index_8fe191342205848d1d6a6123f38a54e7",
+    "status": "DISCOVERY_COMPLETE",
+    "chunk_stream_sha256": "d1413262575c2f9c9d11860665f46ca5e3e4eda39c0a22204667ba1d64b97107",
+    "discovered_document_count": 4204,
+    "discovered_search_eligible_chunk_count": 442549,
+    "discovered_unique_embeddable_count": 447225,
+    "expected_reference_note": "Reference expectation (not enforced) was total_chunks=447895/search_eligible=442549/unique_embeddable=441879. total_chunks and search_eligible matched exactly; unique_embeddable measured 447225 (higher than expected -- fewer exact-duplicate embed_texts than anticipated). Reported as-is, not forced to match -- see this Turn's final report.",
+    "superseded_attempt": "fixed_kure_attempt_f40dc66a8daf48a12397353dd65bc0c6 (status=FAILED_DISCOVERY_RESOURCE_EXHAUSTED, preserved, immutable, excluded from the active-attempt gate)"
+  },
   "chunker": {
     "chunking_policy_id": "fixed-token-512-o64.v0.1.0",
     "chunking_policy_sha256": "f8ec08aa8286313b6bb77a4ec452b98e6f4e8f3e042291db91444a78a8b1e6eb",
@@ -17,7 +29,7 @@
     "source": "SYNTHETIC_FIXTURE_ONLY",
     "conditions_sha256": null,
     "module": "domain/agent-comparison/four-arm-ac/conditions-fixture.mjs",
-    "note": "This repository has no conditions.py (that name belongs to a separate team's Python codebase referenced only as background material -- CLAUDE.md section 0). Per vFINAL section D's own fallback, metadata filters are exercised with synthetic, question-text-only fixtures only; no official conditions file/SHA is pinned yet."
+    "note": "This repository has no conditions.py (that name belongs to a separate team's Python codebase referenced only as background material -- CLAUDE.md section 0). Per vFINAL section D's own fallback, metadata filters are exercised with synthetic, question-text-only fixtures only; no official conditions file/SHA is pinned yet. official-conditions-importer.mjs's assertOfficialExecutionReady() fail-closes any official run against this source value."
   },
   "bm25": {
     "tokenizer": "unicode-word-punct (domain/chunking/chunker.mjs tokenizeWithOffsets, lowercased)",
@@ -52,8 +64,18 @@
   "rrf_constant": null,
   "rrf_candidate_set": null,
   "k_field_note": "vFINAL section E: replaces the ambiguous final_top_k=20 (evaluation cutoff vs. retrieval output count conflated) with named fields, identical across config.A.json/config.C.json except dense_candidate_k/rrf_constant/rrf_candidate_set (the dense ablation itself). The official runner computes one top-20 retrieval_output_k result and derives Recall@5/10/20 (reported_cutoffs) from it; the winner-determination Recall uses primary_evaluation_k=10 only.",
-  "code_head_sha256": null,
-  "code_head_sha256_note": "Not yet stamped -- this Turn does not execute DEV_TUNE-101. Stamp with `git rev-parse HEAD` immediately before any real execution, per vFINAL section 15.",
+  "code_head_sha256": "de3e16584d1038b1a3acfa54ad33573fa75f1c5c",
+  "code_head_sha256_note": "Stamped at `git rev-parse HEAD` immediately after this Turn's discovery-separation + security-fix commits, per vFINAL section 15 -- this Turn still does not execute DEV_TUNE-101.",
   "embedding_index_config_sha256": "8cc6628eb38fff0ee48cf138a586978a627260a7e41157dddd45e52f97761d4e",
-  "embedding_index_config_sha256_note": "= disclosure_reference.reference_retrieval_indexes.manifest_sha256 for retrieval_index_id=fixed_kure_index_21f4fafafafe8f7c38e8cd94897bc583 (equal to corpus_manifest_sha256 for this loader). Kept identical across config.A.json/config.C.json -- both arms share one auditable corpus/materialization pin, even though arm C never queries the dense index."
+  "embedding_index_config_sha256_note": "= corpus_manifest_sha256 for this loader (the corpus-identity pin, unchanged whether a run is a validation shard or the full corpus -- it hashes the four fixed source files, not a document subset). Kept identical across config.A.json/config.C.json -- both arms share one auditable corpus/materialization pin, even though arm C never queries the dense index.",
+  "readiness": {
+    "full_load_ready": true,
+    "full_load_ready_note": "No-DB spool Discovery + native COPY load are GREEN and independently double-pass-verified (see discovery.* above). This flag is about DISCOVERY only.",
+    "bm25_ready": false,
+    "bm25_ready_note": "reference_fixed_kure_chunk_staging is fully populated (442,549 search-eligible rows), but the persisted BM25 index artifact (fixed-kure-bm25-index.mjs's buildFixedKureBm25Index/persistFixedKureBm25Index) has not been built for this execution_attempt_id in this Turn -- out of this Turn's scope. Arm C's actual state is reported honestly here, not assumed ready because Discovery is green.",
+    "full_dense_ready": null,
+    "full_dense_ready_note": "Not applicable to arm C (dense OFF, structural guarantee).",
+    "official_4arm_execution_ready": false,
+    "official_4arm_execution_ready_note": "Blocked on: (1) no OFFICIAL_CONDITIONS_ARTIFACT (metadata_filter.source is SYNTHETIC_FIXTURE_ONLY), (2) bm25_ready=false. Reported honestly, not forced true."
+  }
 }

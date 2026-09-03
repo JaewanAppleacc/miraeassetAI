@@ -13,6 +13,14 @@ export const ALLOWED_PAIR_DIFF_KEYS = Object.freeze([
   // CONFIG_PAIR_MISMATCH. Only the fields directly tied to the dense
   // ablation itself may differ.
   "retrieval_method", "dense_candidate_k", "rrf_constant", "rrf_candidate_set",
+  // Turn AC-VFINAL-ALIGNMENT-AND-DISCOVERY, section N: `readiness` reports
+  // PER-ARM state (bm25_ready/full_dense_ready/official_4arm_execution_ready)
+  // -- full_dense_ready is structurally meaningless for arm C (dense OFF),
+  // so this subtree legitimately differs between A/C, same as dense/rrf.
+  // `discovery` (the shared Discovery attempt identity/counts) is NOT
+  // listed here -- it must stay byte-identical between config.A.json and
+  // config.C.json, since both arms search the SAME underlying attempt.
+  "readiness",
 ]);
 
 function deepEqual(a, b) {
