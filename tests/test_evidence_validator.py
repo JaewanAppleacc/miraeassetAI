@@ -61,7 +61,8 @@ def test_quote_attributed_to_wrong_document_is_partial():
 
 def test_unit_conversion_of_won_amount_is_allowed():
     result = validator.validate(
-        "투자금액은 약 4,732억원이다.", [],
+        "투자금액은 약 4,732억원이다.",
+        [{"document_id": "D01", "quote_or_fact": "2. 투자내역 | 투자금액(원) | 473,200,000,000"}],
         [{"document_id": "D01", "document_date": "2023-05-23", "title": "t",
           "text": "2. 투자내역 | 투자금액(원) | 473,200,000,000", "score": 1.0}],
     )
@@ -86,6 +87,14 @@ def test_no_sources_makes_any_number_unsupported():
 
 def test_answer_without_numbers_or_judgment_is_supported():
     assert _v("공시에 현금및현금성자산 항목이 있다.")["status"] == "SUPPORTED"
+
+
+def test_numeric_answer_without_citation_is_partially_supported():
+    """검수 발견 5: 수치가 원문에 있어도 인용이 0개면 SUPPORTED로 두지 않는다(soft)."""
+    result = _v("현금및현금성자산은 239,036,839,774원이다.")
+    assert result["status"] == "PARTIALLY_SUPPORTED"
+    check = next(c for c in result["checks"] if c["check"] == "citation_present")
+    assert not check["passed"]
 
 
 def test_empty_quote_is_treated_as_ungrounded():
@@ -115,7 +124,9 @@ def test_unit_divisor_values_pass_even_when_the_unit_word_is_wrong():
     """알려진 한계: 만/백만/억/조 환산값을 통째로 허용하므로,
     239,036,839,774를 '239,036원'이라 적어도(단위가 틀려도) 수치 검사는 통과한다.
     단위 오기까지 잡으려면 별도 규칙이 필요하다 — 지금은 잡지 않는다."""
-    result = _v("현금은 239,036원이다.")
+    result = _v("현금은 239,036원이다.",
+                [{"document_id": "D02",
+                  "quote_or_fact": "현금및현금성자산 | 239,036,839,774 | 320,363,496,754"}])
     assert result["status"] == "SUPPORTED"
 
 
@@ -131,7 +142,10 @@ def test_document_id_digits_in_answer_count_as_fabricated_numbers():
 def test_year_in_source_is_not_flagged():
     sources = [{"document_id": "D03", "document_date": "2025-08-14", "title": "t",
                 "text": "2025년 6월 26일 10,347,131주를 소각함", "score": 1.0}]
-    result = validator.validate("2025년에 10,347,131주를 소각했다.", [], sources)
+    result = validator.validate(
+        "2025년에 10,347,131주를 소각했다.",
+        [{"document_id": "D03", "quote_or_fact": "2025년 6월 26일 10,347,131주를 소각함"}],
+        sources)
     assert result["status"] == "SUPPORTED"
 
 
@@ -148,8 +162,10 @@ def test_multiple_failures_report_all_checks():
 def test_decimal_and_percent_values_are_matched_verbatim():
     sources = [{"document_id": "D04", "document_date": "2026-03-16", "title": "t",
                 "text": "해지금액(원) | 114,800,000,000 | 매출액대비(%) | 1.9", "score": 1.0}]
-    ok = validator.validate("매출액대비는 1.9%다.", [], sources)
-    bad = validator.validate("매출액대비는 2.1%다.", [], sources)
+    cite = [{"document_id": "D04",
+             "quote_or_fact": "해지금액(원) | 114,800,000,000 | 매출액대비(%) | 1.9"}]
+    ok = validator.validate("매출액대비는 1.9%다.", cite, sources)
+    bad = validator.validate("매출액대비는 2.1%다.", cite, sources)
     assert ok["status"] == "SUPPORTED"
     assert bad["status"] == "UNSUPPORTED"
 

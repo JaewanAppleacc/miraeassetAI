@@ -200,6 +200,17 @@ def validate(
     if fabricated:
         hard_fail = True
 
+    # 2-0) 인용 유무 — 수치를 주장하면서 인용이 하나도 없으면 근거 표시가 없는 답이다(soft).
+    #      숫자 자체는 위 2)가 원문 대조로 잡으므로 날조는 아니지만, 출처 없는 채택을
+    #      SUPPORTED로 두지 않는다(검수 발견 5). 수치 없는 안내문(근거 없음 등)은 해당 없음.
+    numeric_claims = [n for n in numbers_in(answer) if not YEAR_RE.fullmatch(n)]
+    if numeric_claims and not citations:
+        checks.append({"check": "citation_present", "passed": False,
+                       "note": "수치 답변에 인용 없음"})
+        soft_fail = True
+    else:
+        checks.append({"check": "citation_present", "passed": True})
+
     # 2-1) 단위 검사 — 숫자는 원문에서 왔지만 자릿수를 바꿔 쓴 경우
     #      "19,300,000,000원"을 "19,300억 원"으로 옮기면 100배가 된다. 숫자 검사만으로는
     #      못 잡는다(19300은 백만 단위 환산값으로 이미 허용되기 때문).

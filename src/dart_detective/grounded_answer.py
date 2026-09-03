@@ -31,6 +31,7 @@ import os
 import re
 from typing import Any, Mapping, Sequence
 
+from .agents import tables
 from .agents.validator import NUM_RE, YEAR_RE, _squash, numbers_in
 
 FC_PROMPT_VERSION = "fc-2026-09-03.2"
@@ -108,9 +109,49 @@ def _years_of(text: str) -> set[str]:
     return {m.group() for m in YEAR_RE.finditer(text or "")}
 
 
+def _column_mismatch(quote: str, value: str, claim_years: set[str],
+                     chunk_texts: Sequence[str],
+                     base_year: int | None) -> str | None:
+    """값 claim의 연도 열에 실제 그 값이 있는지 확인한다(검수 발견 1 — 기간-열 결합).
+
+    보수적으로만 잡는다: 인용 줄을 표 데이터 행으로 특정했고, 그 표의 연도→열 매핑을
+    읽을 수 있고, claim 연도의 열에 claim 값이 **없을 때만** 실패다. 하나라도 못
+    확정하면 기존 period_bound(문서 어딘가에 연도 존재)만 남는다 — 오탐으로 claim이
+    전멸하면 이 게이트보다 약한 JSON 폴백 경로로 넘어가 오히려 검증이 후퇴한다.
+    """
+    vnums = _claim_numbers(value) or list(numbers_in(value))
+    if not vnums:
+        return None
+    q = _squash(quote)
+    for chunk in chunk_texts:
+        if q not in _squash(chunk):
+            continue
+        if len({m.group() for m in YEAR_RE.finditer(chunk)}) < 2:
+            return None                   # 연도가 하나뿐인 표 — 열 오귀속이 성립하지 않는다
+        lines = chunk.split("\n")
+        line = next((ln for ln in lines if q in _squash(ln) or
+                     (len(_squash(ln)) >= 8 and _squash(ln) in q)), None)
+        if line is None or line.count("|") < 2:
+            return None
+        cols = tables.period_columns_of_lines(lines, base_year=base_year)
+        for y in claim_years:
+            col = cols.get(int(y))
+            if col is None:
+                continue
+            cell = tables.value_at(line, col)
+            if cell is None:
+                continue
+            cell_norm = cell.replace(",", "")
+            if not all(v in cell_norm for v in vnums):
+                return f"period_bound:column_mismatch:{y}"
+        return None
+    return None
+
+
 def validate_claim(claim: Mapping[str, Any], doc_text_squashed: Mapping[str, str],
                    doc_meta: Mapping[str, Mapping[str, Any]],
-                   derived_allowed: set[str], question_numbers: set[str] = frozenset()) -> tuple[bool, list[str]]:
+                   derived_allowed: set[str], question_numbers: set[str] = frozenset(),
+                   doc_chunks: Mapping[str, Sequence[str]] | None = None) -> tuple[bool, list[str]]:
     """(통과 여부, 실패 사유 목록). 사유 코드는 v4 §11 게이트 이름을 그대로 쓴다."""
     fails: list[str] = []
     doc_id = str(claim.get("doc_id") or "")
@@ -135,11 +176,31 @@ def validate_claim(claim: Mapping[str, Any], doc_text_squashed: Mapping[str, str
             fails.append(f"numbers_bound:value:{value}")
 
     period = str(claim.get("period") or "")
+    # 열 대조에 쓸 연도: period 우선. period가 비면 text의 연도가 하나일 때만 쓴다 —
+    # 비교 문장("2024년은 2023년보다…")의 값은 어느 연도 소속인지 특정할 수 없다.
+    claim_years = _years_of(period)
+    if not claim_years and value not in (None, ""):
+        text_years = _years_of(text)
+        claim_years = text_years if len(text_years) == 1 else set()
     for year in _years_of(period):
         meta = doc_meta.get(doc_id) or {}
         meta_text = f"{meta.get('report_nm', '')} {meta.get('rcept_dt', '')} {meta.get('base_year', '')}"
         if year not in quote and year not in scope and year not in meta_text:
             fails.append(f"period_bound:{year}")
+
+    # 기간-열 결합(검수 발견 1): "2024년 매출액은 90"이 2023년 열의 90을 인용해도
+    # 기존 검사(연도가 문서 어딘가 존재)는 통과한다. 값 claim은 연도 열까지 대조한다.
+    if value not in (None, "") and len(claim_years) == 1 and doc_chunks:
+        meta = doc_meta.get(doc_id) or {}
+        base = meta.get("base_year")
+        try:
+            base = int(base) if base not in (None, "") else None
+        except (TypeError, ValueError):
+            base = None
+        col_fail = _column_mismatch(quote, str(value), claim_years,
+                                    doc_chunks.get(doc_id) or (), base)
+        if col_fail:
+            fails.append(col_fail)
 
     return not fails, fails
 
@@ -213,7 +274,8 @@ def fc_answer(llm: Any, user_prompt: str, *, sources: Sequence[Mapping[str, Any]
     kept: list[Mapping[str, Any]] = []
     dropped: list[dict[str, Any]] = []
     for c in raw_claims:
-        ok, fails = validate_claim(c, doc_squashed, doc_meta, derived_set, q_nums)
+        ok, fails = validate_claim(c, doc_squashed, doc_meta, derived_set, q_nums,
+                                   doc_chunks=by_doc)
         if ok:
             kept.append(c)
         else:

@@ -31,7 +31,7 @@ from ..corpus_retriever import (CorpusRetriever, RetrievedChunk, chunk_lines,
                                DISCLOSURE_ITEMS, extract_disclosure_items)
 from ..llm import LLMResult, LLMUnavailable
 from .. import fallback as fallback_chain, grounded_answer, routing
-from . import calculator, confidence, validator
+from . import calculator, confidence, tables, validator
 
 MAX_EVIDENCE = 8            # 심사 실측(2026-09-03): 5줄 상한 + 얕은 스캔이 선택손실 28문항의 주범
 ANSWER_SLOT = "answer"
@@ -355,14 +355,10 @@ def _line_for(chunk: RetrievedChunk, metric: str, question: str = "",
     return lines[0]
 
 
-# 표 머리글에서 기간을 읽는다. "제 49 기 2025.01.01 부터 ..." / "(2025.01.01.~ 2025.12.31)"
-_PERIOD_YEAR_RE = re.compile(r"(?:제\s*\d+\s*기[^|]*?)?((?:19|20)\d{2})\s*[.년]\s*\d{1,2}")
-# "2025년 반기"처럼 년 뒤에 숫자가 없는 표기(반기보고서 머리글, Q10 실측).
-# 한 줄에 이런 셀이 2개 이상일 때만 머리글로 인정한다 — 각주("주) 2025년 이후 …")는
-# 셀이 하나라 여기 걸리지 않는다. 완화 매칭이 각주를 연도 열로 오인하면 Q12 보호가
-# 깨진다(회귀 테스트로 잠금).
-_PERIOD_YEAR_LOOSE_RE = re.compile(r"(?:제\s*\d+\s*기[^|]*?)?((?:19|20)\d{2})\s*(?:[.년]\s*\d{1,2}|년)")
-_VALUE_RE = re.compile(r"\d[\d,]*")
+# 표 머리글 판독은 tables.py로 옮겼다(FC claim 게이트와 공유). 아래 별칭은 기존 테스트 호환.
+_PERIOD_YEAR_RE = tables._PERIOD_YEAR_RE
+_PERIOD_YEAR_LOOSE_RE = tables._PERIOD_YEAR_LOOSE_RE
+_VALUE_RE = tables._VALUE_RE
 # 값 칸 판정: 금액·비율만. 날짜(2026-11-30)나 설명 문장은 계산에 쓰지 않는다.
 _PICK_VALUE_RE = re.compile(r"\(?\d[\d,]*(?:\.\d+)?\)?%?")
 # 날짜도 값이다. 계약 시작일·종료일·해지일자는 표에 2023-04-28 형태로 적힌다.
@@ -370,53 +366,21 @@ _PICK_DATE_RE = re.compile(r"(?:19|20)\d{2}[-.]\d{1,2}[-.]\d{1,2}")
 
 
 def period_columns(chunk: RetrievedChunk) -> dict[int, int]:
-    """표 머리글을 읽어 {연도: 값 열 번호(0부터)}를 만든다.
+    """표 머리글 → {연도: 값 열 번호}. 로직은 tables.period_columns_of_lines(FC 게이트와 공유).
 
-    왜 필요한가: 청크 본문에 "2025"라는 글자가 있다는 이유만으로 그 청크를 2025년 값으로
-    쓰면, 2023년 사업보고서(비교 열에 2023/2022/2021이 있는 표)가 2025 자리에 들어간다.
-    실제로 Q12에서 그렇게 잘못 매핑됐다. 그래서 **어느 열이 몇 년인지**를 머리글로 읽는다.
-
-    판독이 애매하면(같은 연도가 여러 열, 머리글 없음) 빈 dict를 돌려준다 —
-    잘못된 매핑보다 빈 근거가 낫다.
+    연도 표기가 없는 당기/전기·제N기 머리글은 문서 기준연도(base_year)로 환산한다 —
+    비교표 열 오선택(검수 발견 1·COMPARISON 5/12)의 원인이던 매핑 공백을 메운다.
     """
-    order: list[int] = []
-    for line in chunk_lines(chunk):
-        cells = [c.strip() for c in line.split("|")]
-        if len(cells) > 1 and sum(1 for c in cells if _VALUE_RE.fullmatch(c.replace(",", ""))) >= 2:
-            continue                      # 데이터 행은 머리글이 아니다
-        found: list[int] = []
-        loose: list[int] = []
-        for cell in cells:
-            m = _PERIOD_YEAR_RE.search(cell)
-            if m:
-                found.append(int(m.group(1)))
-            lm = _PERIOD_YEAR_LOOSE_RE.search(cell)
-            if lm:
-                loose.append(int(lm.group(1)))
-        if len(cells) > 1 and len(loose) > 1:
-            # 한 줄에 여러 기간 셀 — 라벨 칸을 뺀 순서가 곧 값 열 순서다.
-            # 이 다중 셀 머리글에서만 "2025년"식 표기를 인정한다.
-            order = loose
-            break
-        if found:
-            order.extend(found)
-    if not order:
-        return {}
-    mapping: dict[int, int] = {}
-    for idx, year in enumerate(order):
-        if year in mapping:               # 같은 연도가 두 열에 — 애매하면 포기
-            return {}
-        mapping[year] = idx
-    return mapping
+    base = chunk.metadata.get("base_year")
+    if not isinstance(base, int):
+        base = chunk.metadata.get("period_year") if isinstance(
+            chunk.metadata.get("period_year"), int) else None
+    return tables.period_columns_of_lines(chunk_lines(chunk), base_year=base)
 
 
 def value_at(line: str, column: int) -> str | None:
-    """표 행에서 지정한 값 열의 숫자. 라벨 칸(첫 칸)은 세지 않는다."""
-    cells = [c.strip() for c in line.split("|")]
-    if len(cells) <= column + 1:
-        return None
-    cell = cells[column + 1]
-    return cell if _VALUE_RE.search(cell) else None
+    """표 행에서 지정한 값 열의 숫자. tables.value_at 위임(기존 호출자 호환)."""
+    return tables.value_at(line, column)
 
 
 def picked_value_of(line: str, column: int | None) -> str | None:
@@ -726,7 +690,14 @@ def build_user_prompt(question: str, matches: Sequence[EvidenceMatch],
         + f"\n{c.evidence_text}"
         for c in context
     )
-    wanted = "\n".join(f"- {m.slot}: {m.evidence_text}" for m in matches)
+    # 줄마다 출처 doc_id를 붙인다(모델이 옳은 문서를 인용하게). 열까지 확정한 값은 명시한다 —
+    # 표가 줄로 펴지며 머리글-값 대응이 끊기는 것이 추출손실의 주원인이었다(심사 실측, 개선 P2).
+    def _wanted_line(m: EvidenceMatch) -> str:
+        hint = (f" (질문 기간에 해당하는 값: {m.picked_value})"
+                if m.column is not None and m.picked_value else "")
+        return f"- {m.slot} [{m.doc_id}]: {m.evidence_text}{hint}"
+
+    wanted = "\n".join(_wanted_line(m) for m in matches)
     return USER_PROMPT_TEMPLATE.format(
         question=question,
         wanted_block=WANTED_BLOCK_TEMPLATE.format(wanted=wanted) if wanted else "",
@@ -1079,6 +1050,20 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
                 answer = llm_answer
                 uncertainty = payload.get("uncertainty", "")
                 citations = llm_citations
+                # 확정값 보존(검수 P1): 열까지 확정해 둔 값을 LLM이 빠뜨렸으면 결정론
+                # 줄로 덧붙인다. 값·근거 모두 원문에서 온 것이라 검증을 그대로 통과한다.
+                preserved = [m for m in state.evidence_matches
+                             if m.picked_value and m.slot != ANSWER_SLOT
+                             and m.picked_value.replace(",", "")
+                             not in llm_answer.replace(",", "")]
+                if preserved:
+                    answer = (llm_answer + "\n\n공시에서 확인한 값:\n"
+                              + "\n".join(f"- {slot_label(m.slot)}: {m.picked_value}"
+                                          for m in preserved))
+                    citations = llm_citations + [
+                        {"document_id": m.doc_id, "quote_or_fact": m.evidence_text}
+                        for m in preserved]
+                    state.llm["preserved_values"] = len(preserved)
         except (LLMUnavailable, Exception) as exc:  # noqa: BLE001 — 어떤 실패든 fallback
             state.llm = {"used": False, "error": f"{type(exc).__name__}: {exc}"}
         state.timings["llm_ms"] = int((time.perf_counter() - t_llm) * 1000)
