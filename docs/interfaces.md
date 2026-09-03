@@ -206,7 +206,9 @@ def bind(arm: str) -> RetrieverAdapter: ...    # DART_QA_ARM으로 선택
     "not_found_slots": {"type": "array", "items": {"type": "string"}},
     "uncertainty":     {"type": "string"}}}}
 ```
-- 검증 게이트 대응: `quote` → quote_grounded · `value`/`unit` → numbers_bound/units_exact · `period` → period_bound · `doc_id` → citation_bound(실사용 근거 안에 있어야 함).
+- 검증 게이트 대응: `quote` → quote_grounded · `value` → numbers_bound · `period` → period_bound · `doc_id` → citation_bound(실사용 근거 안에 있어야 함). units_exact(자릿수·환산)는 claim이 아니라 **최종 답변 수준**에서 기존 `validator.unit_mismatches`가 검사한다(표 단위가 표 밖에 적히는 실무 때문 — 구현 결정).
+- **구현 완료(2026-09-03)**: `src/dart_detective/grounded_answer.py`(claim 게이트·조립·FC 지문 `fc-2026-09-03.1`) + `llm.py`의 `ClovaLLM.complete_tool`(toolCalls 파싱, 문자열/딕셔너리 인자 모두, toolCalls 부재 시 `fc_contract_failure` 표시 후 content JSON 복구 시도 — §12 "계약 실패=LLM 문제"). 통과 claim만으로 답을 조립하고 사실 문장마다 (공시명, 접수번호, 일자)를 인라인(§13). FC 미지원 클라이언트(테스트 가짜 포함)는 기존 JSON 경로 그대로. 끄기: `DART_QA_FC=off`.
+- **⑨ 3단 폴백 구현 완료**: `fallback.py` — 최종 검증이 UNSUPPORTED일 때만 발동. ①수리(기본 OFF, `DART_QA_REPAIR=on`, 1회, 같은 근거 강제) → ②템플릿(기존 결정론 답) → ③원문 발췌(slot 줄만, 문서당 3줄·총 12줄). 각 단계 게이트 재통과. 발동 시 `fallback_stage` 기록 → answer_ex meta.cacheable=False(§14).
 - 스키마가 곧 계약: 필드 추가·이름 변경은 검증기 재작성이므로 킥오프 후 동결(`prompts/VERSION`에 스키마 SHA 포함).
 - HCX-005 · temperature 0.1 · seed 고정 · 호출 40초 · 429 백오프 1회 · maxTokens 타이트(TPM = input + maxTokens).
 

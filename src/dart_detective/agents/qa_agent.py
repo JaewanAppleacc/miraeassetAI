@@ -30,7 +30,7 @@ from dart_corpus.retrieval.lexical import tokenize
 from ..corpus_retriever import (CorpusRetriever, RetrievedChunk, chunk_lines,
                                DISCLOSURE_ITEMS, extract_disclosure_items)
 from ..llm import LLMResult, LLMUnavailable
-from .. import routing
+from .. import fallback as fallback_chain, grounded_answer, routing
 from . import calculator, confidence, validator
 
 MAX_EVIDENCE = 5
@@ -167,10 +167,13 @@ class AgentState:
     timings: dict[str, int] = field(default_factory=dict)
     # ③ 전략·예산(v4 §7). 검색 전에 정해지고, 발췌 수·maxTokens가 여기서 나온다.
     route: routing.Route | None = None
+    # ⑨ 폴백 체인이 발동했으면 어느 단계가 답했는가("repair"|"template"|"excerpt"|"safe"). 평상시 "".
+    fallback_stage: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "route": self.route.to_dict() if self.route else {},
+            "fallback_stage": self.fallback_stage,
             "answerability": self.answerability,
             "withheld": dict(self.withheld),
             "answer": self.answer,
@@ -1007,13 +1010,23 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
     if llm is not None and state.evidence_matches:
         t_llm = time.perf_counter()
         try:
-            payload, meta = _llm_answer(llm, user_prompt,
-                                        max_tokens=state.route.budget.max_tokens)
+            derived_allowed = set(calculator.allowed_numbers(state.derived))
+            extra_allowed: set[str] = set()
+            if grounded_answer.enabled(llm):
+                # ⑧ Native FC(v4 §12): claim 단위 생성 → claim별 bound 게이트 → 코드 조립.
+                doc_meta = {c.doc_id: dict(c.metadata) for c in state.retrieval_results}
+                payload, meta, extra_allowed = grounded_answer.fc_answer(
+                    llm, user_prompt, sources=sources, doc_meta=doc_meta,
+                    derived_allowed=sorted(derived_allowed),
+                    max_tokens=state.route.budget.max_tokens)
+            else:
+                payload, meta = _llm_answer(llm, user_prompt,
+                                            max_tokens=state.route.budget.max_tokens)
             state.llm = {"used": True, **meta}
             llm_citations = normalize_citations(payload.get("evidence"))
             llm_answer = answer_text(payload.get("answer"))
             check = validator.validate(llm_answer, llm_citations, sources,
-                                       derived=calculator.allowed_numbers(state.derived))
+                                       derived=derived_allowed | extra_allowed)
             if not llm_answer:
                 # 스키마를 안 지켰거나 빈 답을 준 경우 — 빈 답변을 내보내지 않는다.
                 state.llm["degraded"] = True
@@ -1043,9 +1056,25 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
         uncertainty = f"{note} {uncertainty}".strip()
     state.answer = answer
     state.uncertainty = uncertainty
-    state.validation = validator.validate(
-        answer, citations, sources,
-        derived=calculator.allowed_numbers(state.derived))
+    final_derived = set(calculator.allowed_numbers(state.derived))
+    if (state.llm or {}).get("fc"):
+        # FC 조립 답변의 인라인 출처(접수번호·일자)는 코드가 메타데이터에서 붙인 값이다.
+        doc_meta = {c.doc_id: dict(c.metadata) for c in state.retrieval_results}
+        for m in state.evidence_matches:
+            _, nums = grounded_answer.attribution_of(m.doc_id, doc_meta.get(m.doc_id) or {})
+            final_derived |= nums
+    state.validation = validator.validate(answer, citations, sources, derived=final_derived)
+    if state.validation["status"] == "UNSUPPORTED":
+        # ⑨ 3단 폴백(v4 §11) — 최종 답이 게이트를 못 넘으면 수리(OFF)→템플릿→발췌 순서로 대체.
+        resolved = fallback_chain.resolve(
+            matches=state.evidence_matches, sources=sources, derived=state.derived,
+            llm=llm, system_prompt=SYSTEM_PROMPT, user_prompt=user_prompt,
+            template=fallback_answer(state.evidence_matches), answer_schema=ANSWER_SCHEMA)
+        state.answer = answer = resolved["answer"]
+        state.uncertainty = uncertainty = resolved["uncertainty"]
+        state.fallback_stage = resolved["stage"]
+        state.validation = resolved["validation"]
+        state.validation["fallback_attempts"] = resolved["attempts"]
     state.confidence = confidence.assess(
         validation=state.validation, n_evidence=len(state.evidence_matches),
         n_derived=len(state.derived), warnings=state.warnings, llm=state.llm,

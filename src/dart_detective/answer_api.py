@@ -87,11 +87,13 @@ def _error_wire(question_id: str, question: str, exc: BaseException) -> dict[str
 def _meta_of(state: Any, decision: policy_gate.Decision, llm_skipped: str | None) -> dict[str, Any]:
     llm = getattr(state, "llm", None) or {}
     degraded = bool(llm.get("degraded")) or bool(llm.get("error"))
+    fallback_stage = getattr(state, "fallback_stage", "") or ""
     # 결정론 경로(계산기·규칙·유보·존재 판정)는 폴백이 아니라 정상 답이다 — 캐시 가능.
-    # LLM이 있어야 했는데 실패·폐기·예산 부족으로 발췌 폴백이 된 경우만 캐시 제외.
-    fallback = degraded or llm_skipped == "deadline"
+    # LLM 실패·폐기·예산 부족, 또는 ⑨ 폴백 체인 발동(v4 §11 ②③ 캐시 금지)만 캐시 제외.
+    fallback = degraded or llm_skipped == "deadline" or bool(fallback_stage)
     return {
         "cacheable": not fallback,
+        "fallback_stage": fallback_stage,
         "degraded": degraded,
         "llm_used": bool(llm.get("used")),
         "llm_skipped": llm.get("skipped") or llm_skipped,
@@ -107,7 +109,7 @@ def answer_ex(question_id: str, question: str, *,
         decision = policy_gate.screen(question)
         if decision.action == "refuse":
             return _refusal_wire(question_id, question, decision), {
-                "cacheable": True, "degraded": False, "llm_used": False,
+                "cacheable": True, "fallback_stage": "", "degraded": False, "llm_used": False,
                 "llm_skipped": "policy_refusal", "policy": decision.to_dict(),
                 "strategy": None, "validation_status": "SUPPORTED"}
 
@@ -131,7 +133,7 @@ def answer_ex(question_id: str, question: str, *,
     except Exception as exc:  # noqa: BLE001 — 계약: 절대 예외를 밖으로 던지지 않는다
         logger.error("answer_ex failed: %s\n%s", exc, traceback.format_exc())
         return _error_wire(question_id, question, exc), {
-            "cacheable": False, "degraded": True, "llm_used": False,
+            "cacheable": False, "fallback_stage": "error", "degraded": True, "llm_used": False,
             "llm_skipped": "error", "policy": {}, "strategy": None, "validation_status": "ERROR"}
 
 

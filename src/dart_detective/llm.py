@@ -254,6 +254,63 @@ class ClovaLLM:
             except urllib.error.URLError as exc:
                 raise LLMUnavailable(f"CLOVA 연결 실패: {exc.reason}") from exc
 
+    def complete_tool(self, system: str, user: str, tool: dict[str, Any], *,
+                      max_tokens: int | None = None) -> LLMResult:
+        """Native v3 Function Calling(v4 §12) — tool 스키마가 곧 검증 계약이다.
+
+        모델이 toolCalls 대신 평문/JSON을 돌려주면 **계약 실패**다(LLM 문제로 분류, §12).
+        content에서 JSON 복구를 시도하되, 그마저 없으면 LLMUnavailable을 던져
+        호출자(qa_agent)의 폴백 경로로 보낸다. temperature·seed는 §12 고정값
+        (env DART_QA_FC_TEMPERATURE/DART_QA_SEED로 덮어쓸 수 있다 — 실험 전용)."""
+        requested = max_tokens or self.max_tokens
+        t0 = time.perf_counter()
+        body = self._post({
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+            "tools": [{"type": "function", "function": tool}],
+            "toolChoice": {"type": "function", "function": {"name": tool["name"]}},
+            "maxTokens": requested,
+            "temperature": float(os.environ.get("DART_QA_FC_TEMPERATURE", "0.1")),
+            "seed": int(os.environ.get("DART_QA_SEED", "42")),
+        })
+        latency_ms = int((time.perf_counter() - t0) * 1000)
+        result = body.get("result") or {}
+        message = result.get("message") or {}
+        usage = dict(result.get("usage") or {})
+        usage.setdefault("max_tokens_requested", requested)
+        stop_reason = result.get("stopReason") or result.get("finishReason")
+        if stop_reason:
+            usage["stop_reason"] = stop_reason
+            if stop_reason in {"length", "stop_before", "max_tokens"}:
+                usage["truncated"] = True
+        calls = message.get("toolCalls") or []
+        data: dict[str, Any] | None = None
+        raw_text = message.get("content") or ""
+        for call in calls:
+            fn = (call or {}).get("function") or {}
+            if fn.get("name") != tool["name"]:
+                continue
+            args = fn.get("arguments")
+            if isinstance(args, str):                      # 계정에 따라 문자열로 온다
+                try:
+                    args = json.loads(args)
+                except json.JSONDecodeError:
+                    continue
+            if isinstance(args, dict):
+                data = args
+                raw_text = json.dumps(args, ensure_ascii=False)
+                break
+        if data is None:
+            usage["fc_contract_failure"] = True            # §12: 계약 실패 = LLM 문제
+            if raw_text:
+                data = extract_json(raw_text)              # 복구 시도 — 실패 시 예외 → 폴백
+            else:
+                raise LLMUnavailable("CLOVA FC 계약 실패: toolCalls도 content도 없다")
+        return LLMResult(data=data, provider=self.provider, model=self.model,
+                         latency_ms=latency_ms, raw_text=raw_text, usage=usage)
+
     def complete_json(self, system: str, user: str,
                       schema: dict[str, Any], *,
                       max_tokens: int | None = None) -> LLMResult:
