@@ -52,6 +52,27 @@ export function computeEmbeddingConfigSha256({ provider, model, revision, dimens
   return sha256Hex({ provider, model, revision, dimension, distance_metric: distanceMetric });
 }
 
+// Turn AC-FULL-LOAD-V2: the logical/attempt identity split (see
+// 008_reference_fixed_kure_load_sessions_v2_identity.sql's header for the
+// full rationale). logical_load_id is UNCHANGED from computeFixedKureLoadSessionId
+// above -- same pins, same formula, same value -- given its own name because
+// it is now ONE of two identities a row carries, not the only one.
+export function computeFixedKureLogicalLoadId(pins) {
+  return computeFixedKureLoadSessionId(pins);
+}
+
+// execution_attempt_id additionally folds in loaderContractVersion and
+// codeRevision (006's existing code_revision column, reused -- not a new
+// column), so two attempts of the SAME logical load under two DIFFERENT
+// code revisions get two DIFFERENT ids/rows instead of colliding into
+// createOrGetSession's CODE_REVISION_MISMATCH refusal.
+export function computeFixedKureExecutionAttemptId({ logicalLoadId, loaderContractVersion, codeRevision }) {
+  assertNonEmptyString(logicalLoadId, "logicalLoadId");
+  assertNonEmptyString(loaderContractVersion, "loaderContractVersion");
+  assertNonEmptyString(codeRevision, "codeRevision");
+  return `fixed_kure_attempt_${sha256Hex({ logicalLoadId, loaderContractVersion, codeRevision }).slice(0, 32)}`;
+}
+
 function assertNonEmptyString(value, name) {
   if (typeof value !== "string" || value === "") throw new TypeError(`${name} is required and must be a non-empty string`);
 }
@@ -68,7 +89,8 @@ const SESSION_COLUMNS = `
   pass1_chunk_stream_sha256, pass2_chunk_stream_sha256,
   expected_document_count, expected_total_chunk_count, expected_search_eligible_count, expected_unique_embeddable_count,
   discovered_document_count, discovered_total_chunk_count, discovered_search_eligible_count, discovered_unique_text_count,
-  embedded_unique_text_count, materialized_chunk_count, last_error_code, created_at, updated_at
+  embedded_unique_text_count, materialized_chunk_count, last_error_code, created_at, updated_at,
+  logical_load_id, execution_attempt_id, loader_contract_version, supersedes_load_session_id
 `;
 
 function trimmedSessionRow(row) {
@@ -155,13 +177,17 @@ export function createFixedKureLoadSessionRepository({ client }) {
       return { session: existing, created: false };
     }
 
+    // logical_load_id/execution_attempt_id are both set equal to
+    // loadSessionId -- exactly the backfill invariant 008's migration
+    // applied to every pre-existing row (see that migration's header): a
+    // v1-API-created session IS its own logical load's only attempt.
     await client.query(
       `INSERT INTO disclosure_reference.reference_fixed_kure_load_sessions
          (load_session_id, retrieval_index_id, release_id, corpus_snapshot_id, corpus_manifest_sha256,
           chunking_policy_id, chunking_policy_sha256, embedding_config_sha256, embedding_provider, embedding_model,
           embedding_revision, embedding_dimension, distance_metric, batch_size, discovery_batch_size,
-          max_retry_attempts, lease_duration_ms, code_revision, status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,'CREATED')`,
+          max_retry_attempts, lease_duration_ms, code_revision, status, logical_load_id, execution_attempt_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,'CREATED',$1,$1)`,
       [
         loadSessionId, retrievalIndexId, releaseId, corpusSnapshotId, corpusManifestSha256,
         chunkingPolicyId, chunkingPolicySha256, embeddingConfigSha256, embeddingProvider, embeddingModel,
@@ -170,6 +196,100 @@ export function createFixedKureLoadSessionRepository({ client }) {
       ],
     );
     return { session: await getSession(loadSessionId), created: true };
+  }
+
+  // Turn AC-FULL-LOAD-V2 official supersession API. Marks a CREATED or
+  // DISCOVERING row SUPERSEDED_ZERO_PROGRESS -- the row's OWN trigger
+  // (008_reference_fixed_kure_load_sessions_v2_identity.sql) independently
+  // re-verifies every discovered/embedded/materialized counter is exactly
+  // zero and rejects (ILLEGAL_TRANSITION, from the transitionStatus RETURNING
+  // 0 rows below) if not; this function does not trust its own caller's
+  // belief that progress is zero, it relies on the DB-side guard being the
+  // actual authority. The row is never deleted or reused -- only its status
+  // and last_error_code change; load_session_id, logical_load_id, and every
+  // other identity/pin column stay exactly as they were (enforced by the
+  // same trigger).
+  async function supersedeZeroProgressSession(loadSessionId, { reasonCode = "SUPERSEDED_ZERO_PROGRESS" } = {}) {
+    return transitionStatus(loadSessionId, ["CREATED", "DISCOVERING"], "SUPERSEDED_ZERO_PROGRESS", {
+      last_error_code: reasonCode,
+    });
+  }
+
+  // Turn AC-FULL-LOAD-V2 v2 attempt creation. Unlike createOrGetSession
+  // (whose load_session_id hash excludes code_revision -- see that
+  // function's own comment), this computes a load_session_id
+  // (=execution_attempt_id) that DOES fold in loaderContractVersion +
+  // codeRevision, so a fresh attempt of a logical load whose PRIOR attempt
+  // was superseded gets its own distinct row/PK instead of colliding with
+  // (and being fail-closed-refused by) the superseded row's identity.
+  // retrieval_index_id is still computed from logical pins ONLY (unchanged
+  // formula) -- see 008's migration header for why: the eventual
+  // materialized index is named by logical identity, not by which attempt
+  // produced it.
+  async function createOrGetAttempt(pins) {
+    const {
+      releaseId, corpusSnapshotId, corpusManifestSha256,
+      embeddingProvider, embeddingModel, embeddingRevision, embeddingDimension, distanceMetric,
+      chunkingPolicyId, chunkingPolicySha256,
+      batchSize, discoveryBatchSize, maxRetryAttempts, leaseDurationMs, codeRevision,
+      loaderContractVersion, supersedesLoadSessionId = null,
+    } = pins;
+    assertNonEmptyString(loaderContractVersion, "loaderContractVersion");
+
+    const logicalLoadId = computeFixedKureLogicalLoadId({ releaseId, corpusSnapshotId, embeddingProvider, embeddingModel, embeddingRevision, chunkingPolicyId });
+    const retrievalIndexId = computeFixedKureRetrievalIndexId({ releaseId, corpusSnapshotId, embeddingProvider, embeddingModel, embeddingRevision, chunkingPolicyId });
+    const executionAttemptId = computeFixedKureExecutionAttemptId({ logicalLoadId, loaderContractVersion, codeRevision });
+    const embeddingConfigSha256 = computeEmbeddingConfigSha256({
+      provider: embeddingProvider, model: embeddingModel, revision: embeddingRevision, dimension: embeddingDimension, distanceMetric,
+    });
+
+    const existing = await getSession(executionAttemptId);
+    if (existing) {
+      if (existing.logical_load_id !== logicalLoadId) {
+        throw new FixedKureLoadSessionError(
+          `execution attempt "${executionAttemptId}" already exists with a DIFFERENT logical_load_id (this should be impossible -- hash collision or corrupted row)`,
+          "LOGICAL_LOAD_ID_MISMATCH",
+        );
+      }
+      return { session: existing, created: false };
+    }
+
+    if (supersedesLoadSessionId) {
+      const superseded = await getSession(supersedesLoadSessionId);
+      if (!superseded) {
+        throw new FixedKureLoadSessionError(`supersedesLoadSessionId "${supersedesLoadSessionId}" does not exist`, "SUPERSEDED_SESSION_NOT_FOUND");
+      }
+      if (superseded.status !== "SUPERSEDED_ZERO_PROGRESS") {
+        throw new FixedKureLoadSessionError(
+          `supersedesLoadSessionId "${supersedesLoadSessionId}" is not SUPERSEDED_ZERO_PROGRESS (status=${superseded.status}) -- supersede it via supersedeZeroProgressSession() before creating a replacement attempt`,
+          "SUPERSEDED_SESSION_NOT_ACTUALLY_SUPERSEDED",
+        );
+      }
+      if (superseded.logical_load_id !== logicalLoadId) {
+        throw new FixedKureLoadSessionError(
+          `supersedesLoadSessionId "${supersedesLoadSessionId}" has a DIFFERENT logical_load_id than this attempt -- refusing to link provenance across unrelated logical loads`,
+          "SUPERSEDED_SESSION_LOGICAL_LOAD_MISMATCH",
+        );
+      }
+    }
+
+    await client.query(
+      `INSERT INTO disclosure_reference.reference_fixed_kure_load_sessions
+         (load_session_id, retrieval_index_id, release_id, corpus_snapshot_id, corpus_manifest_sha256,
+          chunking_policy_id, chunking_policy_sha256, embedding_config_sha256, embedding_provider, embedding_model,
+          embedding_revision, embedding_dimension, distance_metric, batch_size, discovery_batch_size,
+          max_retry_attempts, lease_duration_ms, code_revision, status,
+          logical_load_id, execution_attempt_id, loader_contract_version, supersedes_load_session_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,'CREATED',$19,$20,$21,$22)`,
+      [
+        executionAttemptId, retrievalIndexId, releaseId, corpusSnapshotId, corpusManifestSha256,
+        chunkingPolicyId, chunkingPolicySha256, embeddingConfigSha256, embeddingProvider, embeddingModel,
+        embeddingRevision, embeddingDimension, distanceMetric, batchSize, discoveryBatchSize,
+        maxRetryAttempts, leaseDurationMs, codeRevision,
+        logicalLoadId, executionAttemptId, loaderContractVersion, supersedesLoadSessionId,
+      ],
+    );
+    return { session: await getSession(executionAttemptId), created: true };
   }
 
   async function transitionStatus(loadSessionId, fromStatuses, toStatus, extraSet = {}) {
@@ -207,6 +327,45 @@ export function createFixedKureLoadSessionRepository({ client }) {
        RETURNING ${SESSION_COLUMNS}`,
       [loadSessionId, JSON.stringify(sourceFilesProgress), newDocumentCount, newTotalChunkCount, newSearchEligibleCount, newUniqueTextCount],
     );
+    return trimmedSessionRow(result.rows[0]);
+  }
+
+  // Turn AC-FULL-LOAD-V2 crash-recovery helper. runDiscoveryPass (the v1
+  // streaming pass, unchanged) does not itself seek/resume from
+  // source_files_progress -- a re-invocation always restreams the corpus
+  // from its start. That is safe to let insertCanonicalBatch/insertChunkBatch
+  // no-op-dedup on (ON CONFLICT DO NOTHING), but updateDiscoveryCheckpoint's
+  // counters are INCREMENTS, not SETs -- restarting pass 1 without first
+  // zeroing them would double-count. This only clears STAGING data for the
+  // current, still-in-flight DISCOVERING attempt (never READY/FAILED/
+  // SUPERSEDED_ZERO_PROGRESS -- the trigger's own terminal-status
+  // immutability, and this function's own explicit status check, both
+  // block that), so it never touches another attempt's rows and never
+  // rewrites what a completed attempt already reported.
+  async function resetDiscoveryCheckpoint(loadSessionId) {
+    const session = await getSession(loadSessionId);
+    if (!session) throw new FixedKureLoadSessionError(`load session "${loadSessionId}" not found`, "SESSION_NOT_FOUND");
+    if (session.status !== "DISCOVERING") {
+      throw new FixedKureLoadSessionError(
+        `load session "${loadSessionId}": resetDiscoveryCheckpoint only allowed while DISCOVERING (status=${session.status})`,
+        "ILLEGAL_RESET",
+      );
+    }
+    await client.query("DELETE FROM disclosure_reference.reference_fixed_kure_chunk_staging WHERE load_session_id = $1", [loadSessionId]);
+    await client.query("DELETE FROM disclosure_reference.reference_fixed_kure_canonical_queue WHERE load_session_id = $1", [loadSessionId]);
+    const result = await client.query(
+      `UPDATE disclosure_reference.reference_fixed_kure_load_sessions
+       SET source_files_progress = '{}'::jsonb, discovery_pass_number = 0,
+           pass1_chunk_stream_sha256 = NULL, pass2_chunk_stream_sha256 = NULL,
+           discovered_document_count = 0, discovered_total_chunk_count = 0,
+           discovered_search_eligible_count = 0, discovered_unique_text_count = 0
+       WHERE load_session_id = $1 AND status = 'DISCOVERING'
+       RETURNING ${SESSION_COLUMNS}`,
+      [loadSessionId],
+    );
+    if (result.rows.length === 0) {
+      throw new FixedKureLoadSessionError(`load session "${loadSessionId}": reset failed (status changed concurrently?)`, "ILLEGAL_RESET");
+    }
     return trimmedSessionRow(result.rows[0]);
   }
 
@@ -488,7 +647,8 @@ export function createFixedKureLoadSessionRepository({ client }) {
   }
 
   return Object.freeze({
-    getSession, createOrGetSession, transitionStatus, updateDiscoveryCheckpoint, recordPassStreamSha256, completeDiscovery,
+    getSession, createOrGetSession, createOrGetAttempt, supersedeZeroProgressSession, resetDiscoveryCheckpoint,
+    transitionStatus, updateDiscoveryCheckpoint, recordPassStreamSha256, completeDiscovery,
     insertCanonicalBatch, insertChunkBatch, leaseCanonicalBatch, markEmbedded, markEmbeddingBatchFailed,
     queueStatusCounts, ensureRetrievalIndexRow, materializeChunkBatch, finalize,
   });

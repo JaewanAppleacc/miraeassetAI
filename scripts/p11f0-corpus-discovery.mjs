@@ -35,18 +35,18 @@ import { createFixedKureLoadSessionRepository } from "../domain/postgres/referen
 const { Client } = pg;
 const ROOT = path.resolve(import.meta.dirname, "..");
 const MAIN_CHECKOUT_ROOT = "/Users/jaewan/Documents/Codex/2026-07-28/ai-ai-festival-agent-1-ai";
-const RAW_SOURCE_DIR = path.join(MAIN_CHECKOUT_ROOT, "work/a-document-ir/source");
-const DOCUMENTS_JSONL_PATH = path.join(MAIN_CHECKOUT_ROOT, "work/domain-seed/documents.jsonl");
+export const RAW_SOURCE_DIR = path.join(MAIN_CHECKOUT_ROOT, "work/a-document-ir/source");
+export const DOCUMENTS_JSONL_PATH = path.join(MAIN_CHECKOUT_ROOT, "work/domain-seed/documents.jsonl");
 
 // Canonical, already-established corpus snapshot id (domain/HANDOFF.md,
 // domain/adapters/a-snapshot-contract.mjs's own A_TO_B_SNAPSHOT_MAP) --
 // reused, never invented fresh, so this loader's index shares identity
 // with every other adapter that already refers to this exact corpus.
-const CORPUS_SNAPSHOT_ID = "corpus_04750795e1a2d5c3";
-const EXPECTED_DOCUMENT_COUNT = 4204;
-const EXPECTED_TOTAL_BYTES = 8615531403;
+export const CORPUS_SNAPSHOT_ID = "corpus_04750795e1a2d5c3";
+export const EXPECTED_DOCUMENT_COUNT = 4204;
+export const EXPECTED_TOTAL_BYTES = 8615531403;
 
-const DISCOVERY_BATCH_SIZE = 200; // documents per checkpoint batch
+export const DISCOVERY_BATCH_SIZE = 200; // documents per checkpoint batch
 
 function sha256Hex(value) {
   return createHash("sha256").update(typeof value === "string" ? value : JSON.stringify(value), "utf8").digest("hex");
@@ -56,11 +56,11 @@ function canonicalize(value) {
   if (value && typeof value === "object") return Object.fromEntries(Object.keys(value).sort().map((k) => [k, canonicalize(value[k])]));
   return value;
 }
-function canonicalSha256(value) {
+export function canonicalSha256(value) {
   return sha256Hex(JSON.stringify(canonicalize(value)));
 }
 
-async function verifyCorpusPin() {
+export async function verifyCorpusPin() {
   const fileStats = await corpusSourceFileStats(RAW_SOURCE_DIR);
   const totalBytes = fileStats.reduce((sum, f) => sum + f.bytes, 0);
   const docsRaw = await readFile(DOCUMENTS_JSONL_PATH, "utf8");
@@ -79,7 +79,7 @@ async function verifyCorpusPin() {
   return { fileStats: relativeFileStats, totalBytes, documentCount, corpusManifestSha256 };
 }
 
-function loadFixedChunkingPolicy() {
+export function loadFixedChunkingPolicy() {
   const policy = strategyConfigs.strategies.find((s) => s.chunking_config_id === "fixed-token-512-o64.v0.1.0");
   if (!policy) throw new Error("fixed-token-512-o64.v0.1.0 not found in strategy-configs.v0.1.json");
   return policy;
@@ -89,7 +89,21 @@ function loadFixedChunkingPolicy() {
 // { mode: "write", repo, loadSessionId } (pass 1, writes batches to
 // Postgres) or { mode: "verify-only" } (pass 2, hashes only). Returns
 // { streamSha256, chunkCount, searchEligibleCount, uniqueTextCount, documentCount, sourceFilesProgress }.
-async function runDiscoveryPass({ policy, metadataIndex, sink, provenance, onProgress, maxDocuments = Infinity }) {
+// Turn AC-FULL-LOAD-V2: discoveryBatchSize is an OPTIONAL parameter,
+// defaulting to the module's own DISCOVERY_BATCH_SIZE constant -- v1's own
+// CLI (main(), below) never passes it, so its flush cadence and therefore
+// its behavior/output are byte-for-byte unchanged. Added because the real
+// full corpus's periodic-001.jsonl is heavily size-skewed (observed up to
+// ~40MB for a single document, vs a corpus-wide per-document average under
+// 2MB) -- a fixed 200-DOCUMENT batch (not byte-bounded) landed enough
+// large documents in one flush to exhaust the V8 heap and then hit V8's
+// hard max-string-length limit ("Invalid string length") when building one
+// pg array-parameter string from an oversized batch. A caller processing
+// this specific corpus can pass a smaller discoveryBatchSize to flush
+// (and release the batch's memory) more often; this changes ONLY flush
+// cadence, never chunking/hashing/dedup semantics -- the double-pass
+// stream_sha256 this function returns is unaffected by batch size.
+export async function runDiscoveryPass({ policy, metadataIndex, sink, provenance, onProgress, maxDocuments = Infinity, discoveryBatchSize = DISCOVERY_BATCH_SIZE }) {
   const accumulator = createChunkStreamDigestAccumulator();
   const seenUniqueTextHashes = new Set(); // O(unique_text_count) memory for the RUNNING count only -- not the text itself beyond the current batch write
   let documentCount = 0;
@@ -156,7 +170,7 @@ async function runDiscoveryPass({ policy, metadataIndex, sink, provenance, onPro
     const fileEntry = CORPUS_SOURCE_FILES.find((f) => f.docGroup === docGroup);
     sourceFilesProgress[fileEntry.filename] = { byte_offset: -1, line_number: lineInFile, done: false };
 
-    if (batchDocCount >= DISCOVERY_BATCH_SIZE) {
+    if (batchDocCount >= discoveryBatchSize) {
       await flushBatch();
       if (onProgress) onProgress({ documentCount, chunkCount, searchEligibleCount, uniqueTextCount: seenUniqueTextHashes.size });
     }
@@ -279,7 +293,15 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(`[discovery] FAILED: ${error.message}`);
-  process.exitCode = 1;
-});
+// Turn AC-FULL-LOAD-V2: guarded so scripts/p11f0-corpus-discovery-v2.mjs (and
+// tests) can `import` this module's helpers (runDiscoveryPass,
+// verifyCorpusPin, loadFixedChunkingPolicy, canonicalSha256, the CORPUS_*/
+// EXPECTED_*/RAW_SOURCE_DIR/DOCUMENTS_JSONL_PATH constants) without also
+// triggering this v1 CLI's own main() -- behavior when this file is run
+// directly (`node scripts/p11f0-corpus-discovery.mjs`) is unchanged.
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main().catch((error) => {
+    console.error(`[discovery] FAILED: ${error.message}`);
+    process.exitCode = 1;
+  });
+}
