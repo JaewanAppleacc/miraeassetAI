@@ -36,6 +36,12 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 logger = logging.getLogger("dart_detective.ops")
+# uvicorn은 자기 로거만 구성한다 — 앱 로그(문항별 소요·캐시·폴백 사유)가 journald에
+# 안 남아 리허설 재시도 원인 추적이 안 됐다(실측 2026-09-03). 루트에 핸들러가 없을 때만
+# 기본 구성을 얹는다(테스트·상위 앱이 이미 구성했다면 건드리지 않음).
+if not logging.getLogger().handlers:
+    logging.basicConfig(level=logging.INFO,
+                        format="%(asctime)s %(name)s %(levelname)s %(message)s")
 
 WIRE_KEYS = ("question_id", "question", "retrieved_context", "think_trace", "answer")
 
