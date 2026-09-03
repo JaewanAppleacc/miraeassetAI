@@ -119,6 +119,8 @@ def _meta_of(state: Any, decision: policy_gate.Decision, llm_skipped: str | None
     # 결정론 경로(계산기·규칙·유보·존재 판정)는 폴백이 아니라 정상 답이다 — 캐시 가능.
     # LLM 실패·폐기·예산 부족, 또는 ⑨ 폴백 체인 발동(v4 §11 ②③ 캐시 금지)만 캐시 제외.
     fallback = degraded or llm_skipped == "deadline" or bool(fallback_stage)
+    usage = llm.get("usage") or {}
+    claims = llm.get("claims") or llm.get("fc_claims_all_dropped") or {}
     return {
         "cacheable": not fallback,
         "fallback_stage": fallback_stage,
@@ -129,6 +131,13 @@ def _meta_of(state: Any, decision: policy_gate.Decision, llm_skipped: str | None
         "policy": decision.to_dict(),
         "strategy": state.route.strategy if getattr(state, "route", None) else None,
         "validation_status": (getattr(state, "validation", None) or {}).get("status"),
+        # FC 경로 관측(judge4 진단 공백 교정): claim 채택/폐기·전멸 후 JSON 대체·절단 여부.
+        "fc": {"claims_total": claims.get("total"), "claims_kept": claims.get("kept"),
+               "all_dropped": "fc_claims_all_dropped" in llm,
+               "fallback_json": bool(llm.get("fc_fallback_json")),
+               "preserved_values": llm.get("preserved_values"),
+               "stop_reason": usage.get("stop_reason"),
+               "truncated": bool(usage.get("truncated"))} if llm.get("used") else None,
     }
 
 

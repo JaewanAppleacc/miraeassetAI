@@ -690,12 +690,13 @@ def build_user_prompt(question: str, matches: Sequence[EvidenceMatch],
         + f"\n{c.evidence_text}"
         for c in context
     )
-    # 줄마다 출처 doc_id를 붙인다(모델이 옳은 문서를 인용하게). 열까지 확정한 값은 명시한다 —
-    # 표가 줄로 펴지며 머리글-값 대응이 끊기는 것이 추출손실의 주원인이었다(심사 실측, 개선 P2).
+    # 열까지 확정한 값만 힌트로 명시한다 — 표가 줄로 펴지며 머리글-값 대응이 끊기는 것이
+    # 추출손실의 주원인이었다(심사 실측, 개선 P2). 줄마다 [doc_id]를 붙이는 형식도 시험했으나
+    # judge4 paired 실측에서 FC claim 형태가 나빠져(값 2개 합침→전멸) 되돌렸다.
     def _wanted_line(m: EvidenceMatch) -> str:
         hint = (f" (질문 기간에 해당하는 값: {m.picked_value})"
                 if m.column is not None and m.picked_value else "")
-        return f"- {m.slot} [{m.doc_id}]: {m.evidence_text}{hint}"
+        return f"- {m.slot}: {m.evidence_text}{hint}"
 
     wanted = "\n".join(_wanted_line(m) for m in matches)
     return USER_PROMPT_TEMPLATE.format(

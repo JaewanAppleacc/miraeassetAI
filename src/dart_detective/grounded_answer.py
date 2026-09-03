@@ -34,7 +34,7 @@ from typing import Any, Mapping, Sequence
 from .agents import tables
 from .agents.validator import NUM_RE, YEAR_RE, _squash, numbers_in
 
-FC_PROMPT_VERSION = "fc-2026-09-03.2"
+FC_PROMPT_VERSION = "fc-2026-09-04.1"
 
 SUBMIT_GROUNDED_ANSWER: dict[str, Any] = {
     "name": "submit_grounded_answer",
@@ -76,7 +76,10 @@ FC_SYSTEM_PROMPT = """너는 공시 분석 Agent다. 아래에 주어진 공시 
 - 발췌에 없는 숫자를 쓰지 마라. 숫자는 발췌에 적힌 그대로 옮겨라. 단위를 임의로 환산하지 마라.
 - 서로 다른 연도·기수·열의 숫자를 섞지 마라. 어느 열이 어느 기간인지 표 머리글로 확인하라.
 - **질문이 요구하는 값·항목마다 claim을 하나씩** 만들어라. 값이 두 개면 claim도 두 개다.
+  "A에서 B로 변했다"처럼 값 2개를 한 문장에 쓰지 마라 — 직전 값 claim과 이번 값 claim으로
+  나누고, 각 claim의 quote에는 그 값이 적힌 줄을 넣어라(값과 quote가 짝이 안 맞으면 폐기된다).
   "=== 질문이 요구하는 항목과 찾아둔 줄 ===" 아래의 줄들을 우선 인용하라.
+- "발췌에 명시되어 있지 않다" 같은 문장을 claim으로 만들지 마라 — 그 항목은 not_found_slots에만 넣어라.
 - 값 claim의 value에는 그 수치를 원문 표기 그대로 적고, quote에는 그 수치가 적힌 줄을 복사하라.
 - 설명·비교형 질문이면: 결론 claim 1개 + 그 결론의 근거가 되는 원문 문장을 quote로 갖는 claim을 2개 이상 만들어라.
   결론만 한 줄로 끝내지 마라 — 근거 문장("~라고 명시되어 있다")까지 claim으로 옮겨라.
