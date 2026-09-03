@@ -127,7 +127,7 @@ test("arm C (FIXED+DENSE_OFF): BM25-only self-match probe -- zero dense/embeddin
   assert.equal(selfHit.component_scores.rrf, null);
 });
 
-test("readiness(): measured against the real shard -- code_ready/full_index_ready true, locator provenance honestly NOT fully resolved", async () => {
+test("readiness(): measured against the real shard -- code_ready/full_index_ready true, ambiguous-but-interpretable locator provenance no longer blocks official readiness", async () => {
   const armC = createArmRetrieverAdapter({ arm: "C", client, bm25Index, retrievalIndexId, loadSessionId });
   const readiness = await armC.readiness();
   assert.equal(readiness.code_ready, true);
@@ -135,13 +135,22 @@ test("readiness(): measured against the real shard -- code_ready/full_index_read
   assert.equal(readiness.checks.load_session_status, "READY");
   assert.ok(readiness.checks.locator_provenance.total_chunks > 0);
   console.log(`[four-arm-ac smoke] locator coverage: ${JSON.stringify(readiness.checks.locator_provenance)}`);
-  // This is a MEASUREMENT, not a fixed expectation of the shard's own
-  // content -- if a future materialization run changes the coverage this
-  // assertion should be revisited, but as of this Turn it is 1,132/1,144
-  // (98.9%) multi-node, so official_experiment_ready is expected false.
-  if (!readiness.checks.locator_provenance.all_fully_resolved) {
+  // Turn AC-LOCATOR-READY: `all_fully_resolved` is now an OBSERVABILITY-ONLY
+  // measurement (as of the AC-IMPL Turn this shard is 12/1,144 == 1.05%
+  // single-node+row, the rest legitimately multi-row/multi-node Fixed-512
+  // chunks -- see locator-provenance.mjs's header). The actual readiness
+  // gate is `provenance_ready`: every chunk has SOME interpretable,
+  // non-empty candidate set. As long as this shard has zero
+  // EMPTY_SPANS_INVALID chunks (unresolved_count === 0, true as measured by
+  // the AC-IMPL Turn's own 12+821+311=1144 breakdown), official readiness
+  // must NOT be blocked by mere multi-row/multi-node ambiguity.
+  assert.equal(readiness.checks.locator_provenance.provenance_ready, readiness.checks.locator_provenance.unresolved_count === 0);
+  if (readiness.checks.locator_provenance.unresolved_count === 0) {
+    assert.equal(readiness.official_experiment_ready, true, "zero unresolved chunks -- ambiguity alone must not block official readiness");
+    assert.ok(!readiness.reasons.includes("A_C_LOCATOR_UNRESOLVED_SPANS_PRESENT"));
+  } else {
     assert.equal(readiness.official_experiment_ready, false);
-    assert.ok(readiness.reasons.includes("A_C_LOCATOR_PROVENANCE_NOT_READY"));
+    assert.ok(readiness.reasons.includes("A_C_LOCATOR_UNRESOLVED_SPANS_PRESENT"));
   }
 });
 

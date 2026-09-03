@@ -20,7 +20,10 @@ import { createHash } from "node:crypto";
 import { createFixedKureHybridRetrieverAdapter } from "../retrieval/fixed-kure-hybrid-retriever-adapter.mjs";
 import { bm25Search } from "../retrieval/fixed-kure-bm25-index.mjs";
 import { buildMetadataFiltersFromConditions } from "./conditions-fixture.mjs";
-import { classifySpans, verifyNodeIdentity, summarizeLocatorCoverage } from "./locator-provenance.mjs";
+import {
+  classifySpans, verifyNodeIdentity, summarizeLocatorCoverage,
+  buildProvenanceSet, buildDownstreamExpansionInput,
+} from "./locator-provenance.mjs";
 
 // vFINAL section C's KURE pin, and P10.2's own pinned retrieval constants
 // (scripts/p10.2-stage2-embedding-grid.mjs:44-46, already reused unchanged
@@ -87,9 +90,19 @@ async function fetchStagingSpans(client, loadSessionId, chunkIds) {
 // RetrieverRequest/RetrieverResult schema arm A's reused hybrid adapter
 // still speaks internally; this function is the only place the two are
 // bridged, and it never mutates the frozen retrieval-result.schema.json.
+// Turn AC-LOCATOR-READY: `provenance` is additive -- every pre-existing
+// field above it (node_index/row/col/locator/locator_status) keeps its
+// prior meaning and value unchanged, so this is not a breaking change to
+// the frozen Section F result-item contract. `provenance` is the full
+// occurrence-level sidecar (Section C.1-C.4): the complete deduplicated
+// candidate list (never collapsed to one arbitrary node/row) plus a
+// ready-to-call fetch_node() input list for node-grounded late expansion,
+// built purely from the already-persisted `source_spans` -- chunk text,
+// chunk_id, and embeddings are never read or touched by this function.
 function toArmResultItem(row, spans, { rank, score, scoreType, componentScores, arm }) {
   if (!row) throw new Error(`toArmResultItem: no reference_retrieval_chunks row found for a ranked chunk_id (retrieval_index_id/chunk_id mismatch)`);
   const resolution = classifySpans(spans ?? []);
+  const provenanceSet = buildProvenanceSet(spans ?? []);
   return Object.freeze({
     rank,
     chunk_id: row.chunk_id,
@@ -99,6 +112,14 @@ function toArmResultItem(row, spans, { rank, score, scoreType, componentScores, 
     row: resolution.row,
     col: resolution.col,
     locator_status: resolution.status,
+    provenance: Object.freeze({
+      status: provenanceSet.status,
+      unresolved: provenanceSet.unresolved,
+      unresolved_reason: provenanceSet.unresolved_reason,
+      candidates: provenanceSet.candidates,
+      candidate_count: provenanceSet.candidate_count,
+      downstream_expansion_input: buildDownstreamExpansionInput(row.source_document_id, provenanceSet),
+    }),
     chunk_text_sha256: row.text_sha256 ?? sha256Hex(row.text_content),
     score,
     score_type: scoreType,
@@ -206,15 +227,23 @@ export function createArmRetrieverAdapter({
     // by this load session's own persisted chunk spans; never fabricates
     // node-level original text (not persisted independently of chunk-level
     // raw_text by this loader -- see locator-provenance.mjs's header).
-    async fetch_node(docId, nodeIndex) {
+    // `row`/`col` (Turn AC-LOCATOR-READY, optional, additive): when a
+    // downstream late-expansion step wants to confirm a specific table
+    // cell -- not just the node -- rather than only the node, pass them
+    // through; verifyNodeIdentity() then fails closed (found:false) unless
+    // that exact row/col is among the node's own persisted spans. Omitting
+    // them preserves the original node-only identity check exactly.
+    async fetch_node(docId, nodeIndex, { row = null, col = null } = {}) {
       if (typeof docId !== "string" || docId === "") throw new TypeError("doc_id is required");
       if (!Number.isInteger(nodeIndex) || nodeIndex < 0) throw new TypeError("node_index must be a non-negative integer");
+      if (row !== null && !Number.isInteger(row)) throw new TypeError("row must be an integer or null");
+      if (col !== null && !Number.isInteger(col)) throw new TypeError("col must be an integer or null");
       const result = await client.query(
         `SELECT chunk_id, source_spans FROM disclosure_reference.reference_fixed_kure_chunk_staging
          WHERE load_session_id = $1 AND document_id = $2`,
         [loadSessionId, docId],
       );
-      return verifyNodeIdentity({ documentId: docId, nodeIndex, chunkRows: result.rows });
+      return verifyNodeIdentity({ documentId: docId, nodeIndex, row, col, chunkRows: result.rows });
     },
 
     // readiness(): code_ready / full_index_ready / official_experiment_ready
@@ -260,11 +289,19 @@ export function createArmRetrieverAdapter({
         `SELECT source_spans FROM disclosure_reference.reference_fixed_kure_chunk_staging WHERE load_session_id = $1`,
         [loadSessionId],
       );
+      // Turn AC-LOCATOR-READY: gate on `provenance_ready` (every chunk has
+      // an interpretable, non-empty candidate set), not `all_fully_resolved`
+      // (100% single-node+row). A Fixed-512 chunk legitimately spanning
+      // multiple rows/nodes of the same table is expected chunker output,
+      // not a readiness defect -- see locator-provenance.mjs's header. Only
+      // a chunk with EMPTY_SPANS_INVALID (no persisted spans at all -- a
+      // real parser/loader gap) blocks official readiness, and it is
+      // reported here isolated from ambiguity via `unresolved_count`.
       const coverage = summarizeLocatorCoverage(spansResult.rows);
-      if (!coverage.all_fully_resolved) reasons.push("A_C_LOCATOR_PROVENANCE_NOT_READY");
+      if (!coverage.provenance_ready) reasons.push("A_C_LOCATOR_UNRESOLVED_SPANS_PRESENT");
 
       const fullIndexReady = bm25Ready && denseReady && shardReady;
-      const officialExperimentReady = fullIndexReady && coverage.all_fully_resolved;
+      const officialExperimentReady = fullIndexReady && coverage.provenance_ready;
 
       return Object.freeze({
         arm_code: ARM_DEFS[arm].arm_code,
