@@ -177,3 +177,13 @@ def test_multi_period_numeric_claim_is_split_enforced():
          "doc_id": _DOC, "quote": prose},
         {_DOC: grounded_answer._squash(prose)}, {_DOC: {}}, set(), doc_chunks={_DOC: [prose]})
     assert ok, fails
+
+
+def test_date_expression_matches_across_formats():
+    """자체 검수: 같은 날짜의 표기 변형("2024-03-22" ↔ "2024년 3월 22일")은 동치로 허용,
+    부분 표현("22일")은 숫자 구성이 달라 불허."""
+    allowed = grounded_answer.context_number_allowance(
+        "2024-03-22 기준 보유비율은?", "2024년 3월 22일 기준으로 5.5%다")
+    assert {"3", "22"} <= allowed
+    assert grounded_answer.context_number_allowance(
+        "2024-03-22 기준 보유비율은?", "계약기간은 22일") == set()

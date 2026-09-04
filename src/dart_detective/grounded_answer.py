@@ -125,23 +125,34 @@ def question_context_numbers(question: str) -> set[str]:
     return out
 
 
-def _context_expressions(text: str) -> set[str]:
-    """날짜·기수 표현을 통째로(공백 제거) 추출한다."""
-    return {_squash(m.group()) for m in _QUESTION_CONTEXT_NUM_RE.finditer(text or "")}
+def _context_expressions(text: str) -> list[tuple[tuple[str, ...], set[str]]]:
+    """날짜·기수 표현마다 (정규화 키, 표면 숫자 토큰들)을 돌려준다.
+
+    정규화 키 = 표현 안 숫자들의 int 정규화 튜플. "2024년 3월 22일"과 "2024-03-22"는
+    표기가 달라도 같은 날짜다 — 문자열 일치로 비교하면 정당한 반복이 표기 차이로 차단된다
+    (자체 검수 발견). 표면 토큰은 numbers_bound가 대조하는 claim 쪽 표기 그대로 남긴다.
+    """
+    out = []
+    for m in _QUESTION_CONTEXT_NUM_RE.finditer(text or ""):
+        toks = set(numbers_in(m.group()))
+        key = tuple(sorted(str(int(t)) for t in toks if t.isdigit()))
+        if key:
+            out.append((key, toks))
+    return out
 
 
 def context_number_allowance(question: str, generated: str) -> set[str]:
-    """생성 텍스트에서 허용되는 질문 유래 숫자 = **표현 전체가 그대로 재사용된** 날짜·기수의 숫자만.
+    """생성 텍스트에서 허용되는 질문 유래 숫자 = **표현 전체가 재사용된** 날짜·기수의 숫자만.
 
     숫자 단위 허용은 "2024년 3월 22일 계약금액은?"의 22를 "계약기간은 22일"로 의미를 바꿔
-    쓰는 전용을 막지 못한다(검수 5차 발견 1). 표현("2024년3월22일") 단위로 정확히 일치할 때만
-    그 표현 안의 숫자를 허용한다 — 부분 표현("22일")은 별개 표현이므로 허용되지 않는다.
+    쓰는 전용을 막지 못한다(검수 5차 발견 1). 표현 단위로 동치일 때만 그 표현 안의 숫자를
+    허용한다 — 부분 표현("22일")은 숫자 구성이 달라 동치가 아니므로 허용되지 않는다.
     """
-    q_exprs = _context_expressions(question)
+    q_keys = {key for key, _ in _context_expressions(question)}
     allowed: set[str] = set()
-    for e in _context_expressions(generated):
-        if e in q_exprs:
-            allowed |= set(numbers_in(e))
+    for key, toks in _context_expressions(generated):
+        if key in q_keys:
+            allowed |= toks
     return allowed
 
 
