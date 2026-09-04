@@ -40,6 +40,21 @@ def numbers_in(text: str) -> list[str]:
     return [_norm_num(m.group()) for m in NUM_RE.finditer(text)]
 
 
+def num_key(tok: str) -> str:
+    """수치 동치 키 — '5'·'5.00'·'5.0'은 같은 수, '90'과 '190'은 다른 수(코덱스 검수 3: 표기 차이로
+    정당한 답을 버리지 않되 부분문자열은 불허). Decimal로 못 읽는 토큰은 정규화 문자열 그대로."""
+    from decimal import Decimal, InvalidOperation
+    t = _norm_num(str(tok))
+    try:
+        return format(Decimal(t).normalize(), "f")
+    except (InvalidOperation, ValueError):
+        return t
+
+
+def num_keys(tokens) -> set[str]:
+    return {num_key(t) for t in tokens}
+
+
 def allowed_numbers(sources: Iterable[str]) -> set[str]:
     """원문 숫자 + 원 단위 금액의 만/백만/억/조 환산값만 허용한다."""
     allowed: set[str] = set()
@@ -187,8 +202,9 @@ def validate(
     #    아니라 '기간 오귀속'이라 등급이 달라야 하기 때문이다.
     allowed = allowed_numbers(source_texts)
     derived_set = {_norm_num(d) for d in derived}
+    allowed_keys = num_keys(allowed) | num_keys(derived_set)
     fabricated = [n for n in numbers_in(answer)
-                  if n not in allowed and n not in derived_set
+                  if num_key(n) not in allowed_keys
                   and not YEAR_RE.fullmatch(n)]
     checks.append({
         "check": "numbers_grounded",

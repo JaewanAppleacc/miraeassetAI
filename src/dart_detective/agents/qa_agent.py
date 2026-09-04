@@ -1117,10 +1117,12 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
         for m in state.evidence_matches:
             _, nums = grounded_answer.attribution_of(m.doc_id, doc_meta.get(m.doc_id) or {})
             final_derived |= nums
-        # 질문의 날짜·기수 **표현 전체**가 답변에 그대로 재사용된 경우만 허용한다
-        # (검수 3·4·5차 — 질문 echo·날짜 토큰 의미 전용 날조 차단).
-        final_derived |= grounded_answer.context_number_allowance(question, answer)
-    state.validation = validator.validate(answer, citations, sources, derived=final_derived)
+    # 질문의 날짜·기수 표현이 답변에 그대로 재사용된 경우는 **그 자리만** 검증에서 지운다 —
+    # 숫자 집합을 전역 허용하면 같은 값의 날조 금액("3월 22일 계약금액은 22원")까지 면제된다
+    # (코덱스 검수 1). 답변 본문(state.answer)은 그대로고, validator에 넘기는 사본만 마스킹.
+    answer_for_validation = grounded_answer.strip_context_expressions(answer, question)
+    state.validation = validator.validate(answer_for_validation, citations, sources,
+                                          derived=final_derived)
     if state.validation["status"] == "UNSUPPORTED":
         # ⑨ 3단 폴백(v4 §11) — 최종 답이 게이트를 못 넘으면 수리(OFF)→템플릿→발췌 순서로 대체.
         resolved = fallback_chain.resolve(

@@ -208,6 +208,10 @@ def main(argv: list[str] | None = None) -> int:
             t: f"{sum(1 for r in supported if r['type'] == t and r['value_score'] == 'full')}/{sum(1 for r in supported if r['type'] == t)}"
             for t in sorted({r["type"] for r in supported})},
         "fallbacks": count(lambda r: r["fallback_stage"]),
+        # 게이트 발동 분포 — 커밋 산출물만으로 검증 가능하게(코덱스 검수: wires 없이는 확인 불가).
+        "llm_degraded_reason": dict(collections.Counter(
+            (m.get("llm_degraded_reason") or "") for _, m in wires.values()
+            if m.get("llm_degraded_reason"))),
     }
     (args.out_dir / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=1), encoding="utf-8")
     print(json.dumps(summary, ensure_ascii=False, indent=1))

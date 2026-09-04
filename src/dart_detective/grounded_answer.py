@@ -33,7 +33,7 @@ import re
 from typing import Any, Mapping, Sequence
 
 from .agents import tables
-from .agents.validator import NUM_RE, YEAR_RE, _squash, numbers_in
+from .agents.validator import NUM_RE, YEAR_RE, _squash, num_key, num_keys, numbers_in
 
 FC_PROMPT_VERSION = "fc-2026-09-04.1"
 
@@ -132,33 +132,55 @@ _CTX_DATE_RE = re.compile(
 _CTX_ORD_RE = re.compile(r"제?\s*(\d{1,3})\s*(월|일|분기|반기|회차|회|기|차)(?![가-힣0-9])")
 
 
-def _context_expressions(text: str) -> list[tuple[tuple, set[str]]]:
-    """날짜·기수 표현마다 (구조화 키, 표면 숫자 토큰들)을 돌려준다.
+def _context_expression_spans(text: str) -> list[tuple[tuple, set[str], tuple[int, int]]]:
+    """(구조화 키, 표면 숫자 토큰들, (start, end)) — 위치까지 돌려준다.
 
-    키는 종류와 자리 순서를 보존한다: ("date", 연, 월, 일) / ("ord", 단위, 수).
-    "2024년 3월 22일"과 "2024-03-22"는 같은 키(표기 무관 동치, 자체 검수 발견)지만
-    "2024년 22월 3일"(자리 스왑)·"3일"(단위 다름)은 다른 키다.
+    값 집합으로 날짜 숫자를 빼면 "3월 22일 계약금액은 22원"의 날조 22원까지 면제된다
+    (코덱스 검수 1 재현). 제외는 반드시 **span 위치**로 한다.
     """
-    out: list[tuple[tuple, set[str]]] = []
+    out: list[tuple[tuple, set[str], tuple[int, int]]] = []
     date_spans: list[tuple[int, int]] = []
     for m in _CTX_DATE_RE.finditer(text or ""):
         key = ("date", int(m.group(1)), int(m.group(2)),
                int(m.group(3)) if m.group(3) else None)
-        out.append((key, set(numbers_in(m.group()))))
+        out.append((key, set(numbers_in(m.group())), m.span()))
         date_spans.append(m.span())
     for m in _CTX_ORD_RE.finditer(text or ""):
         if any(s <= m.start() < e for s, e in date_spans):
-            continue                      # 날짜 안의 "3월"·"22일" 조각을 독립 표현으로 세지 않는다
-        out.append((("ord", m.group(2), int(m.group(1))), set(numbers_in(m.group()))))
-    # 영문 분기/반기(Q1·1H)는 한글 표기(1분기·상반기)와 동치 키를 갖는다 — 질문 "Q1"을
-    # 답이 "1분기"로 되받아도 표현 재사용으로 인정한다(검수 7차 어휘 확장과 짝).
+            continue
+        out.append((("ord", m.group(2), int(m.group(1))), set(numbers_in(m.group())), m.span()))
     for m in re.finditer(r"(?i)(?<![a-z0-9])(?:q([1-4])|([1-4])q)(?![a-z0-9])", text or ""):
         n = int(m.group(1) or m.group(2))
-        out.append((("ord", "분기", n), set(numbers_in(m.group()))))
+        out.append((("ord", "분기", n), set(numbers_in(m.group())), m.span()))
     for m in re.finditer(r"(?i)(?<![a-z0-9])(?:h([12])|([12])h)(?![a-z0-9])", text or ""):
         n = int(m.group(1) or m.group(2))
-        out.append((("ord", "반기", n), set(numbers_in(m.group()))))
+        out.append((("ord", "반기", n), set(numbers_in(m.group())), m.span()))
     return out
+
+
+def strip_context_expressions(text: str, question: str | None = None) -> str:
+    """날짜·기수 표현을 **그 자리에서** 공백으로 지운 텍스트.
+
+    question이 주어지면 질문에 같은 표현(구조화 키 일치)이 있는 것만 지운다(질문 재사용
+    허용) — 그 밖의 숫자는 위치가 어디든 전부 원문 결박 대상으로 남는다.
+    question이 None이면 모든 날짜·기수 표현을 지운다(문장 게이트: 날짜·기수는 값이 아니다).
+    """
+    spans = _context_expression_spans(text)
+    if question is not None:
+        q_keys = {key for key, _, _ in _context_expression_spans(question)}
+        spans = [x for x in spans if x[0] in q_keys]
+    if not spans:
+        return text or ""
+    chars = list(text)
+    for _, _, (s, e) in spans:
+        for i in range(s, e):
+            chars[i] = " "
+    return "".join(chars)
+
+
+def _context_expressions(text: str) -> list[tuple[tuple, set[str]]]:
+    """날짜·기수 표현마다 (구조화 키, 표면 숫자 토큰들). 위치가 필요하면 _context_expression_spans."""
+    return [(key, toks) for key, toks, _ in _context_expression_spans(text)]
 
 
 def context_number_allowance(question: str, generated: str) -> set[str]:
@@ -203,19 +225,8 @@ def _period_tokens(text: str) -> set[str]:
     return toks
 
 
-def _num_key(tok: str) -> str:
-    """수치 동치 키 — '5'·'5.00'·'5.0'은 같은 수, '90'과 '190'은 다른 수(코덱스 수정 취지 유지)."""
-    from decimal import Decimal, InvalidOperation
-    t = str(tok).replace(",", "").strip()
-    try:
-        d = Decimal(t)
-    except (InvalidOperation, ValueError):
-        return t
-    return format(d.normalize(), "f")
-
-
 def _cell_has(cell: str, v: str) -> bool:
-    return _num_key(v) in {_num_key(x) for x in numbers_in(cell)}
+    return num_key(v) in num_keys(numbers_in(cell))
 
 
 def _column_mismatch(quote: str, value: str, claim_years: set[str],
@@ -346,7 +357,7 @@ def _has_multi_period_table(quote: str, chunk_texts: Sequence[str],
     (검수 재현: "2024년 말 종업원 수는 1,234명" 문단 인용이 폐기됐다).
     """
     q = _squash(quote)
-    for chunk in chunk_texts:
+    for chunk in chunk_texts:              # 인용을 담은 **모든** 청크를 본다(순서 의존 제거)
         if q not in _squash(chunk):
             continue
         lines = chunk.split("\n")
@@ -354,7 +365,6 @@ def _has_multi_period_table(quote: str, chunk_texts: Sequence[str],
             return True
         if len(tables.period_token_columns(lines)) >= 2:
             return True
-        return False
     return False
 
 
@@ -406,18 +416,18 @@ def _quote_table_columns(quote: str, chunk_texts: Sequence[str],
     전년 동기·제N기 단독)은 토큰 맵으로 결박한다(검수 7차 발견 2).
     """
     q = _squash(quote)
-    for chunk in chunk_texts:
-        if q not in _squash(chunk):
-            continue
+    for chunk in chunk_texts:              # 인용을 담은 **모든** 청크를 본다 — 같은 줄이 단일 행
+        if q not in _squash(chunk):        # 청크와 다기간 표 청크에 함께 있으면 표 쪽이 판정한다
+            continue                       # (코덱스 검수 2: 청크 순서에 따라 결과가 갈렸다)
         lines = chunk.split("\n")
         line = next((ln for ln in lines if q in _squash(ln) or
                      (len(_squash(ln)) >= 8 and _squash(ln) in q)), None)
         if line is None or line.count("|") < 2:
-            return None
+            continue
         year_cols = tables.period_columns_of_lines(lines, base_year=base_year)
         token_cols = tables.period_token_columns(lines)
         if len(year_cols) < 2 and len(token_cols) < 2:
-            return None                   # 기간 열이 하나뿐(또는 판독 불가) — 오귀속이 성립하지 않는다
+            continue                       # 이 청크에선 기간 열이 하나뿐 — 다른 청크를 더 본다
         return line, year_cols, token_cols
     return None
 
@@ -459,11 +469,9 @@ def check_generated_answer(answer: str, citations: Sequence[Mapping[str, Any]],
         # 날짜·기수 표현("3월 22일"·"제3회차") 속 숫자는 값이 아니라 결박 대상에서 뺀다 —
         # 안 빼면 "2025년 3월 22일 체결된 계약금액은 X"의 3·22가 인용에 없다고 폐기된다
         # (자체 재현; judge12 period_unbound 일부가 이 오탐). 질문 표현 재사용도 같은 취급.
-        ctx_nums: set[str] = set()
-        for _, toks in _context_expressions(sent):
-            ctx_nums |= toks
-        ctx_nums |= context_number_allowance(question, sent)
-        nums = [n for n in _claim_numbers(sent) if n not in ctx_nums]
+        # 값 집합이 아니라 **위치**로 뺀다 — "제100기 계약금액은 100원"의 100원은 기수 밖에
+        # 있으므로 결박 대상이다(코덱스 검수 1).
+        nums = _claim_numbers(strip_context_expressions(sent))
         if not nums:
             continue
         ptoks = _period_tokens(sent)
@@ -504,7 +512,7 @@ def check_generated_answer(answer: str, citations: Sequence[Mapping[str, Any]],
                 except (TypeError, ValueError):
                     base = None
                 for q in quotes:
-                    if _num_key(n) not in {_num_key(x) for x in numbers_in(q)}:
+                    if num_key(n) not in num_keys(numbers_in(q)):
                         continue
                     # 원문 문장을 그대로 옮긴 서술형 인용은 표 열 대조가 필요 없다.
                     if sq and sq in _squash(q):
@@ -552,17 +560,17 @@ def validate_claim(claim: Mapping[str, Any], doc_text_squashed: Mapping[str, str
         fails.append("quote_grounded")
 
     quote_nums = set(numbers_in(quote))
-    # 질문 유래 숫자는 표현 전체가 그대로 재사용될 때만 허용(검수 4·5차 발견 1 — 숫자 단위
-    # 허용은 "3월 22일"의 22를 "계약기간은 22일"로 전용하는 우회를 남긴다).
-    q_allowed = context_number_allowance(question, text)
-    for n in _claim_numbers(text):
-        if n not in quote_nums and n not in derived_allowed and n not in q_allowed:
+    allowed_keys = num_keys(quote_nums) | num_keys(derived_allowed)
+    # 질문 유래 숫자는 표현 전체가 그대로 재사용될 때만, **그 표현 자리에서만** 면제한다
+    # (검수 4·5차 발견 1 + 코덱스 검수 1: 값 집합 면제는 "3월 22일 계약금액은 22원"의 날조
+    # 22원까지 면제했다). 그 밖의 숫자는 위치 무관 전부 원문 결박. 비교는 수치 동치.
+    for n in _claim_numbers(strip_context_expressions(text, question)):
+        if num_key(n) not in allowed_keys:
             fails.append(f"numbers_bound:{n}")
     value = claim.get("value")
     if value not in (None, ""):
-        v = str(value).replace(",", "")
         vnums = set(numbers_in(str(value)))
-        if vnums and not (vnums <= quote_nums | derived_allowed) and v not in derived_allowed:
+        if vnums and not (num_keys(vnums) <= allowed_keys):
             fails.append(f"numbers_bound:value:{value}")
 
     period = str(claim.get("period") or "")

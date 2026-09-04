@@ -414,3 +414,63 @@ def test_column_compare_is_numeric_equality_not_substring():
     assert grounded_answer.check_generated_answer(
         "2024년 매출액은 90이다.", [{"document_id": _DOC, "quote_or_fact": "매출액 | 190 | 90"}],
         {_DOC: [t2]}, {_DOC: {}})
+
+
+def test_date_number_exemption_is_positional_not_value_based():
+    """코덱스 검수 1: 날짜·기수 숫자와 같은 값의 날조 금액은 면제되지 않는다(span 위치 기준)."""
+    q = "2025년 3월 22일 계약금액은?"
+    ok, fails = grounded_answer.validate_claim(
+        {"text": "2025년 3월 22일 계약금액은 22원이다", "value": None, "period": None,
+         "doc_id": _DOC, "quote": "계약금액 | 100원"},
+        {_DOC: grounded_answer._squash("계약금액 | 100원")}, {_DOC: {}}, set(), question=q)
+    assert not ok and any(f.startswith("numbers_bound:22") for f in fails)
+    assert grounded_answer.check_generated_answer(
+        "2025년 3월 22일 계약금액은 22원이다.", [{"document_id": _DOC, "quote_or_fact": "계약금액 | 100원"}],
+        {_DOC: ["계약금액 | 100원"]}, {_DOC: {}}, question=q)
+    chunk = "제100기\n계약금액 | 500원"
+    assert grounded_answer.check_generated_answer(
+        "제100기 계약금액은 100원이다.", [{"document_id": _DOC, "quote_or_fact": "계약금액 | 500원"}],
+        {_DOC: [chunk]}, {_DOC: {}})
+    # 정당한 반복(날짜 자리)은 여전히 허용.
+    ok, fails = grounded_answer.validate_claim(
+        {"text": "2025년 3월 22일 계약금액은 100원이다", "value": "100", "period": None,
+         "doc_id": _DOC, "quote": "계약금액 | 100원"},
+        {_DOC: grounded_answer._squash("계약금액 | 100원")}, {_DOC: {}}, set(), question=q)
+    assert ok, fails
+    masked = grounded_answer.strip_context_expressions("2025년 3월 22일 계약금액은 22원이다", q)
+    assert "22원" in masked and "3월" not in masked
+
+
+def test_quote_table_lookup_is_chunk_order_independent():
+    """코덱스 검수 2: 같은 인용이 단일 행 청크와 다기간 표 청크에 함께 있으면 순서 무관 표가 판정."""
+    t = "구분 | 2024년 | 2023년\n매출액 | 100 | 90\n기타 | 90"
+    for chunks in (["기타 | 90", t], [t, "기타 | 90"]):
+        assert grounded_answer.check_generated_answer(
+            "2024년 값은 90이다.", [{"document_id": _DOC, "quote_or_fact": "기타 | 90"}],
+            {_DOC: chunks}, {_DOC: {}}), chunks
+    for chunks in (["매출액 | 100 | 90", t], [t, "매출액 | 100 | 90"]):
+        ok, fails = grounded_answer.validate_claim(
+            {"text": "2024년 매출액은 90이다", "value": "90", "period": "2024",
+             "doc_id": _DOC, "quote": "매출액 | 100 | 90"},
+            {_DOC: grounded_answer._squash("\n".join(chunks))}, {_DOC: {}}, set(),
+            doc_chunks={_DOC: chunks})
+        assert not ok and any("column_mismatch" in f for f in fails), chunks
+
+
+def test_numeric_equivalence_shared_by_claim_and_final_validator():
+    """코덱스 검수 3: '5'와 '5.00'의 동치가 claim 게이트·최종 validator에도 적용된다."""
+    from dart_detective.agents import validator
+    table = "구분 | 2024년 | 2023년\n보유비율 | 5.00 | 4.10"
+    ok, fails = grounded_answer.validate_claim(
+        {"text": "2024년 보유비율은 5%이다", "value": "5", "period": "2024",
+         "doc_id": _DOC, "quote": "보유비율 | 5.00 | 4.10"},
+        {_DOC: grounded_answer._squash(table)}, {_DOC: {}}, set(), doc_chunks={_DOC: [table]})
+    assert ok, fails
+    r = validator.validate("2024년 보유비율은 5%이다.",
+                           [{"document_id": _DOC, "quote_or_fact": "보유비율 | 5.00 | 4.10"}],
+                           [{"document_id": _DOC, "text": table, "score": 1.0}])
+    assert r["status"] == "SUPPORTED", r
+    # '90'은 '190'과 다른 수 — 부분문자열 불허 유지.
+    r = validator.validate("매출액은 90이다.", [{"document_id": _DOC, "quote_or_fact": "매출액 | 190"}],
+                           [{"document_id": _DOC, "text": "매출액 | 190", "score": 1.0}])
+    assert r["status"] == "UNSUPPORTED"
