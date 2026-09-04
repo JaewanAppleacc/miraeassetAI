@@ -368,3 +368,16 @@ def test_llm_answer_without_citations_is_not_adopted(retriever):
     assert state.llm.get("degraded") is True
     assert state.llm.get("degraded_reason") == "citation_unbound"
     assert "회사는 해운업을 영위한다" not in state.answer
+
+
+def test_json_fallback_swapped_answer_is_not_adopted(retriever):
+    """검수 7차 발견 1(파이프라인): 스왑된 JSON 답변은 period_unbound로 폐기돼야 한다."""
+    quote = "매출액 | 10,891,443 | 8,400,969"
+    llm = FakeLLM(payload={"answer": "2025년 매출액은 8,400,969이다",   # 2024년(제51기) 열 값
+                           "evidence": [{"document_id": "periodic_hmm_2025",
+                                         "quote_or_fact": quote}],
+                           "uncertainty": ""})
+    state = qa_agent.answer_question("HMM의 2025년 매출액은 얼마인가?", retriever, llm=llm)
+    assert state.llm.get("degraded") is True
+    assert state.llm.get("degraded_reason") == "period_unbound"
+    assert "8,400,969이다" not in state.answer

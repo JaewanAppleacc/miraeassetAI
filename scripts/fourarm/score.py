@@ -123,6 +123,19 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"최종 판정 불가 — {arm} config의 arm/label이 arm 정의와 다름: "
                       f"{cfg.get('arm')}/{cfg.get('label')}", file=sys.stderr)
                 return 1
+            # arm/label 문자열은 함께 위조할 수 있다 — 실제 설정 의미까지 arm 정의와 대조한다
+            # (검수 7차 발견 3: B 결과의 config 전체를 A로 고쳐 써도 strategy=line_window가 남는다).
+            # A/C(팀원1 스택)의 config에는 strategy(≠line_window)·dense 표시가 있어야 한다.
+            is_lw = str(cfg.get("strategy") or "") == "line_window"
+            dense_off = str(cfg.get("dense") or "off").lower() in ("off", "none", "false", "absent", "")
+            expect_lw = arm in ("B", "D")
+            expect_dense_off = arm in ("C", "D")
+            if is_lw != expect_lw or dense_off != expect_dense_off:
+                print(f"최종 판정 불가 — {arm} config 의미가 arm 정의와 다름: "
+                      f"strategy={cfg.get('strategy')!r} dense={cfg.get('dense')!r} "
+                      f"(기대: line_window={expect_lw}, dense_off={expect_dense_off})",
+                      file=sys.stderr)
+                return 1
             rpath = args.results_dir / f"{arm}.results.jsonl"
             # 결과 파일 사후 변조 검출(검수 5차 발견 4) + §1-1 행 SHA 결박(검수 6차 —
             # 행마다 config_sha256/code_sha256이 계약이다. 종전 "계약에 없음" 판단은 오독).

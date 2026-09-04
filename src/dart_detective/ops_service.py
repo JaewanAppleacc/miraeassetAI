@@ -271,7 +271,9 @@ async def answer_endpoint(request: Request) -> JSONResponse:
 
     meta: dict[str, Any] = {"cacheable": False}
     disconnected = False
-    async with _gate:
+    await _gate.acquire()
+    gate_owned = True                     # 데드라인 시 janitor에게 소유권을 넘긴다(아래)
+    try:
         # 세마포어 획득 후 캐시 재확인(검수 4차 발견 4): 단절된 선행 요청이 방금 계산을 끝내고
         # 캐시에 넣었을 수 있다 — 없으면 이 재시도가 같은 계산을 처음부터 반복한다.
         hit = _cache_load(key)
@@ -298,14 +300,29 @@ async def answer_endpoint(request: Request) -> JSONResponse:
                     disconnected = True
                     logger.info("answer disconnect(계산 유지) qid=%s", question_id)
         except TimeoutError:
-            # 데드라인은 응답 의무가 남아 취소한다 — 스레드 좀비 가능성은 데드라인 케이스에
-            # 한정되며(현재 최대 40s « 예산 290s라 실측 0회), 폴백 5필드로 응답한다.
-            task.cancel()
-            logger.warning("answer deadline qid=%s", question_id)
+            # 데드라인에는 응답 의무가 있어 폴백으로 답하되, 취소하지 않는다 — 취소해도
+            # to_thread 스레드는 계속 돌고 세마포어만 풀려 다음 요청과 겹친다(검수 7차
+            # 발견 4 실측). janitor가 세마포어를 쥔 채 스레드 종료까지 자리를 지킨다.
+            gate_owned = False
+
+            async def _janitor(t: asyncio.Task = task, qid: str = question_id) -> None:
+                try:
+                    await t
+                except Exception:  # noqa: BLE001 — 결과는 버린다, 자리만 지킨다
+                    pass
+                finally:
+                    _gate.release()
+                    logger.info("answer janitor released qid=%s", qid)
+
+            asyncio.create_task(_janitor())
+            logger.warning("answer deadline(janitor 세마포어 유지) qid=%s", question_id)
             response = _fallback_wire(question_id, question, "deadline")
         except Exception as exc:  # noqa: BLE001 — 어떤 실패에도 유효 5필드
             logger.error("answer error qid=%s err=%s", question_id, type(exc).__name__)
             response = _fallback_wire(question_id, question, type(exc).__name__)
+    finally:
+        if gate_owned:
+            _gate.release()
 
     try:
         # dict가 아닌 반환(None 등)도 여기서 잡는다(검수 4차 발견 3 — 정규화 자체가 예외였다).

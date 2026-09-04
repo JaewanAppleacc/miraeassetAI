@@ -976,6 +976,10 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
         {m.slot: m.evidence_text for m in state.evidence_matches})
 
     sources = [c.as_source() for c in state.retrieval_results]
+    sources_by_doc: dict[str, list[str]] = {}
+    for s in sources:
+        sources_by_doc.setdefault(str(s.get("document_id") or ""), []).append(str(s.get("text") or ""))
+    doc_meta_all = {c.doc_id: dict(c.metadata) for c in state.retrieval_results}
     answer, uncertainty = fallback_answer(state.evidence_matches)
     if state.derived:
         answer = calculator.describe(state.derived) + "\n\n" + answer
@@ -1056,6 +1060,14 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
                 # 결정론 경로(발췌·템플릿)는 이 조임의 영향을 받지 않는다.
                 state.llm["degraded"] = True
                 state.llm["degraded_reason"] = "citation_unbound"
+                state.llm["degraded_answer"] = llm_answer
+            elif (period_fails := grounded_answer.check_generated_answer(
+                    llm_answer, llm_citations, sources_by_doc, doc_meta_all, question)):
+                # 문장 단위 기간-값 결박(검수 7차 발견 1): FC가 실패해 JSON 답변이 왔을 때도
+                # claim 게이트와 같은 기간 규칙을 통과해야 채택한다. 탈락 시 결정론 답이 최종본.
+                state.llm["degraded"] = True
+                state.llm["degraded_reason"] = "period_unbound"
+                state.llm["degraded_detail"] = period_fails[:5]
                 state.llm["degraded_answer"] = llm_answer
             else:
                 answer = llm_answer

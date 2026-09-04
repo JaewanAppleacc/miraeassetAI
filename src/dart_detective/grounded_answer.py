@@ -150,6 +150,14 @@ def _context_expressions(text: str) -> list[tuple[tuple, set[str]]]:
         if any(s <= m.start() < e for s, e in date_spans):
             continue                      # 날짜 안의 "3월"·"22일" 조각을 독립 표현으로 세지 않는다
         out.append((("ord", m.group(2), int(m.group(1))), set(numbers_in(m.group()))))
+    # 영문 분기/반기(Q1·1H)는 한글 표기(1분기·상반기)와 동치 키를 갖는다 — 질문 "Q1"을
+    # 답이 "1분기"로 되받아도 표현 재사용으로 인정한다(검수 7차 어휘 확장과 짝).
+    for m in re.finditer(r"(?i)(?<![a-z0-9])(?:q([1-4])|([1-4])q)(?![a-z0-9])", text or ""):
+        n = int(m.group(1) or m.group(2))
+        out.append((("ord", "분기", n), set(numbers_in(m.group()))))
+    for m in re.finditer(r"(?i)(?<![a-z0-9])(?:h([12])|([12])h)(?![a-z0-9])", text or ""):
+        n = int(m.group(1) or m.group(2))
+        out.append((("ord", "반기", n), set(numbers_in(m.group()))))
     return out
 
 
@@ -178,12 +186,19 @@ def _years_of(text: str) -> set[str]:
 _REL_PERIOD_RE = re.compile(r"(당기|전기|전전기)(말)?(?![가-힣])")
 _ORD_PERIOD_RE = re.compile(r"제\s*\d{1,3}\s*기(말)?(?![가-힣0-9])")
 _QTR_PERIOD_RE = re.compile(r"[1-4]\s*분기|(?:상|하)?반기(?![가-힣])")
+# 검수 7차 발견 2: 전년 동기·직전 사업연도·직전/이번 보고서·영문 Q/H도 기간이다.
+_YOY_PERIOD_RE = re.compile(r"전년\s*동기|전년도|전년(?![가-힣])|직전\s*사업\s*연도|직전\s*사업연도")
+_REPSEQ_PERIOD_RE = re.compile(r"(직전|이번)\s*보고서")
+_ENG_PERIOD_RE = re.compile(r"(?i)(?<![a-z0-9])(?:q[1-4]|[1-4]q|h[12]|[12]h)(?![a-z0-9])")
+
+_PERIOD_TOKEN_RES = (_REL_PERIOD_RE, _ORD_PERIOD_RE, _QTR_PERIOD_RE,
+                     _YOY_PERIOD_RE, _REPSEQ_PERIOD_RE, _ENG_PERIOD_RE)
 
 
 def _period_tokens(text: str) -> set[str]:
     toks = set(_years_of(text))
-    for rx in (_REL_PERIOD_RE, _ORD_PERIOD_RE, _QTR_PERIOD_RE):
-        toks |= {re.sub(r"\s+", "", m.group()) for m in rx.finditer(text or "")}
+    for rx in _PERIOD_TOKEN_RES:
+        toks |= {re.sub(r"\s+", "", m.group()).lower() for m in rx.finditer(text or "")}
     return toks
 
 
@@ -203,7 +218,7 @@ def _column_mismatch(quote: str, value: str, claim_years: set[str],
     located = _quote_table_columns(quote, chunk_texts, base_year)
     if located is None:
         return None
-    line, cols = located
+    line, cols, _ = located
     for y in claim_years:
         col = cols.get(int(y))
         if col is None:
@@ -217,12 +232,36 @@ def _column_mismatch(quote: str, value: str, claim_years: set[str],
     return None
 
 
+def _token_column_mismatch(quote: str, value: str, token: str,
+                           chunk_texts: Sequence[str],
+                           base_year: int | None) -> str | None:
+    """연도로 환산되지 않는 단일 기간 토큰(제N기·Q1·1H·전년 동기 등)의 열 결박(검수 7차 발견 2)."""
+    vnums = _claim_numbers(value) or list(numbers_in(value))
+    if not vnums:
+        return None
+    located = _quote_table_columns(quote, chunk_texts, base_year)
+    if located is None:
+        return None
+    line, _, token_cols = located
+    col = token_cols.get(tables._norm_period_token(token))
+    if col is None:
+        return None
+    cell = tables.value_at(line, col)
+    if cell is None:
+        return None
+    if not all(v in cell.replace(",", "") for v in vnums):
+        return f"period_bound:column_mismatch:{token}"
+    return None
+
+
 def _quote_table_columns(quote: str, chunk_texts: Sequence[str],
-                         base_year: int | None) -> tuple[str, dict[int, int]] | None:
-    """인용 줄이 다기간 표의 데이터 행일 때 (그 줄, 연도→열 매핑)을 돌려준다. 아니면 None.
+                         base_year: int | None
+                         ) -> tuple[str, dict[int, int], dict[str, int]] | None:
+    """인용 줄이 다기간 표의 데이터 행일 때 (그 줄, 연도→열, 토큰→열)을 돌려준다. 아니면 None.
 
     모호성은 "명시 연도 글자 수"가 아니라 해석된 기간 열 수(≥2)로 판단한다 — 당기/전기·제N기
-    표는 연도 글자 없이도 열이 2개다(검수 3차 발견 1: 종전 연도 카운트 가드가 우회를 허용).
+    표는 연도 글자 없이도 열이 2개다(검수 3차 발견 1). 연도로 환산되지 않는 머리글(Q1·1H·
+    전년 동기·제N기 단독)은 토큰 맵으로 결박한다(검수 7차 발견 2).
     """
     q = _squash(quote)
     for chunk in chunk_texts:
@@ -233,11 +272,80 @@ def _quote_table_columns(quote: str, chunk_texts: Sequence[str],
                      (len(_squash(ln)) >= 8 and _squash(ln) in q)), None)
         if line is None or line.count("|") < 2:
             return None
-        cols = tables.period_columns_of_lines(lines, base_year=base_year)
-        if len(cols) < 2:
+        year_cols = tables.period_columns_of_lines(lines, base_year=base_year)
+        token_cols = tables.period_token_columns(lines)
+        if len(year_cols) < 2 and len(token_cols) < 2:
             return None                   # 기간 열이 하나뿐(또는 판독 불가) — 오귀속이 성립하지 않는다
-        return line, cols
+        return line, year_cols, token_cols
     return None
+
+
+# 인라인 출처 "(공시명, 접수번호 …, 날짜)"는 코드가 붙인 것 — 문장 게이트 대상이 아니다.
+# 공시명에 "(2025.12)" 같은 괄호가 들어가므로 한 단계 중첩을 허용한다.
+_ATTRIBUTION_RE = re.compile(
+    r"\((?:[^()]|\([^()]*\)){0,160}?접수번호\s*\d{8,14}(?:[^()]|\([^()]*\)){0,40}\)")
+_SENT_SPLIT_RE = re.compile(r"(?<=다\.)\s+|\n")
+
+
+def check_generated_answer(answer: str, citations: Sequence[Mapping[str, Any]],
+                           doc_chunks: Mapping[str, Sequence[str]],
+                           doc_meta: Mapping[str, Mapping[str, Any]],
+                           question: str = "") -> list[str]:
+    """채택 후보 LLM 답변에 **문장 단위** 기간-값 결박을 건다(검수 7차 발견 1).
+
+    FC가 실패하면 JSON 경로 답변이 claim 게이트를 통째로 우회했다 — 스왑된 "2024년 매출액은
+    90"이 validator(숫자·연도가 근거 어딘가 존재)만 통과해 SUPPORTED로 나갔다. 여기서
+    claim 게이트와 같은 규칙을 문장에 적용한다:
+      · 기간 토큰 ≥2 + 숫자 ≥2 문장은 인용 원문 그대로가 아니면 실패(분리 강제와 동일)
+      · 단일 기간 문장은 그 숫자를 담은 인용의 표 열과 대조(연도·토큰 맵)
+    한 문장에 지표가 여럿이면 열 귀속을 특정할 수 없어 숫자 하나라도 기간 열에 있으면
+    통과시킨다(과잉 폐기 방지) — 지배적 실패 형태인 단일 값 스왑은 잡힌다.
+    반환: 실패 사유 목록(비면 통과). FC 조립 답변은 이미 claim 게이트를 통과한 문장들이라
+    인라인 출처 제거 후 추가 탈락이 드물다.
+    """
+    fails: list[str] = []
+    quotes_by_doc: dict[str, list[str]] = {}
+    all_quotes: list[str] = []
+    for c in citations or []:
+        q = str(c.get("quote_or_fact") or "")
+        if q:
+            quotes_by_doc.setdefault(str(c.get("document_id") or ""), []).append(q)
+            all_quotes.append(q)
+    body = _ATTRIBUTION_RE.sub(" ", answer or "")
+    for sent in _SENT_SPLIT_RE.split(body):
+        sent = sent.strip(" ·-—")
+        nums = _claim_numbers(sent)
+        if not nums:
+            continue
+        ptoks = _period_tokens(sent)
+        sq = _squash(sent.rstrip(". "))
+        if (len(ptoks) >= 2 and len(nums) >= 2
+                and not any(sq in _squash(q) for q in all_quotes)):
+            fails.append(f"multi_period_sentence:{sent[:40]}")
+            continue
+        years = _years_of(sent)
+        rel_toks = ptoks - years
+        for doc_id, quotes in quotes_by_doc.items():
+            chunks = doc_chunks.get(doc_id) or ()
+            meta = doc_meta.get(doc_id) or {}
+            try:
+                base = int(meta.get("base_year")) if meta.get("base_year") not in (None, "") else None
+            except (TypeError, ValueError):
+                base = None
+            for q in quotes:
+                if not (set(numbers_in(q)) & set(nums)):
+                    continue
+                per_num = []
+                for n in nums:
+                    if len(years) == 1:
+                        per_num.append(_column_mismatch(q, n, years, chunks, base))
+                    elif not years and len(rel_toks) == 1:
+                        per_num.append(_token_column_mismatch(q, n, next(iter(rel_toks)),
+                                                              chunks, base))
+                # 문장 숫자 전부가 기간 열과 어긋날 때만 실패(다지표 문장 과잉 폐기 방지).
+                if per_num and all(f is not None for f in per_num):
+                    fails.append(f"{per_num[0]}:{sent[:30]}")
+    return fails
 
 
 def validate_claim(claim: Mapping[str, Any], doc_text_squashed: Mapping[str, str],
@@ -319,6 +427,15 @@ def validate_claim(claim: Mapping[str, Any], doc_text_squashed: Mapping[str, str
                 fails.append(col_fail)
         elif multi_year_unsplit and _quote_table_columns(quote, chunks_of_doc, base) is not None:
             fails.append("period_bound:multi_year_value_unsplit")
+        elif not claim_years:
+            # 연도로 환산 못 하는 단일 기간 토큰(제49기·Q1·1H·전년 동기 등)은 머리글 토큰
+            # 맵으로 직접 결박한다(검수 7차 발견 2 — 종전엔 이 표들이 무검사였다).
+            toks = _period_tokens(text) - _years_of(text)
+            if len(toks) == 1:
+                tok_fail = _token_column_mismatch(quote, str(value), next(iter(toks)),
+                                                  chunks_of_doc, base)
+                if tok_fail:
+                    fails.append(tok_fail)
 
     return not fails, fails
 

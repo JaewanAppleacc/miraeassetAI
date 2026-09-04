@@ -100,6 +100,52 @@ def period_columns_of_lines(lines: Sequence[str],
     return mapping
 
 
+# 기간 머리글 셀로 인정하는 형태(정규화 후 fullmatch). 연도 표기는 period_columns_of_lines가
+# 따로 다루고, 여기는 연도로 환산되지 않는 토큰(제N기·분기·전년 동기·영문 Q/H 등)까지 —
+# 검수 7차 발견 2: 연도 매핑이 안 되는 표에서 단일 기간 claim의 열 결박이 없었다.
+_PERIOD_CELL_RES = tuple(re.compile(p) for p in (
+    r"(당기|전기|전전기)(말)?",
+    r"제?\d{1,3}기(말)?",
+    r"q[1-4]|[1-4]q|[1-4]분기",
+    r"h[12]|[12]h|상반기|하반기|반기",
+    r"전년동기|전년도|전년",
+    r"(직전|이번)보고서",
+    r"((?:19|20)\d{2})년?",
+))
+
+
+def _norm_period_token(s: str) -> str:
+    return re.sub(r"\s+", "", s).lower().rstrip("말")
+
+
+def period_token_columns(lines: Sequence[str]) -> dict[str, int]:
+    """머리글에서 {정규화 기간 토큰: 값 열 번호}를 만든다 — 연도 환산이 불가능한 표용.
+
+    한 줄에 기간형 셀이 2개 이상일 때만 머리글로 인정한다(연도 매핑과 같은 원칙).
+    같은 토큰이 두 열이면 애매하므로 포기한다.
+    """
+    for line in lines:
+        cells = [c.strip() for c in line.split("|")]
+        if _is_data_row(cells) or len(cells) < 2:
+            continue
+        mapping: dict[str, int] = {}
+        idx = 0
+        matched = 0
+        for cell in cells:
+            norm = _norm_period_token(cell)
+            if not norm:
+                continue
+            if any(rx.fullmatch(norm) for rx in _PERIOD_CELL_RES):
+                if norm in mapping:
+                    return {}
+                mapping[norm] = idx
+                matched += 1
+                idx += 1
+        if matched >= 2:
+            return mapping
+    return {}
+
+
 def value_at(line: str, column: int) -> str | None:
     """표 행에서 지정한 값 열의 숫자. 라벨 칸(첫 칸)은 세지 않는다."""
     cells = [c.strip() for c in line.split("|")]

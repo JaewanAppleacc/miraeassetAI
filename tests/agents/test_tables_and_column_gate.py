@@ -221,3 +221,42 @@ def test_relative_period_swap_and_single_relative_binding():
     assert ok, fails
     # "당기순이익"은 기간 토큰이 아니다 — 행 레이블 오탐 방지.
     assert "당기" not in grounded_answer._period_tokens("당기순이익은 100이다")
+
+
+def test_token_column_binding_for_non_year_headers():
+    """검수 7차 발견 2: 제N기·Q1·1H·전년 동기 머리글 표의 단일 기간 claim 열 결박."""
+    cases = (("제49기 매출액은 90이다", "구분 | 제 49 기 | 제 48 기"),
+             ("Q1 매출액은 90이다", "구분 | Q1 | Q2"),
+             ("1H 매출액은 90이다", "구분 | 1H | 2H"))
+    for text, header in cases:
+        chunk = f"{header}\n매출액 | 100 | 90"
+        ok, fails = grounded_answer.validate_claim(
+            {"text": text, "value": "90", "period": None, "doc_id": _DOC,
+             "quote": "매출액 | 100 | 90"},
+            {_DOC: grounded_answer._squash(chunk)}, {_DOC: {"base_year": 2024}}, set(),
+            question=text.split()[0] + " 매출은?", doc_chunks={_DOC: [chunk]})
+        assert not ok and any("column_mismatch" in f for f in fails), (text, fails)
+    # 전년 동기 다기간은 분리 강제.
+    chunk = "구분 | 당기 | 전년 동기\n매출액 | 100 | 90"
+    ok, fails = grounded_answer.validate_claim(
+        {"text": "당기 90, 전년 동기 100", "value": None, "period": None, "doc_id": _DOC,
+         "quote": "매출액 | 100 | 90"},
+        {_DOC: grounded_answer._squash(chunk)}, {_DOC: {"base_year": 2024}}, set(),
+        doc_chunks={_DOC: [chunk]})
+    assert not ok and "period_bound:multi_period_claim_unsplit" in fails
+
+
+def test_generated_answer_sentence_gate_catches_json_swap():
+    """검수 7차 발견 1: FC 실패 후 JSON 답변도 문장 단위 기간-값 결박을 통과해야 채택된다."""
+    table = "구분 | 2024년 | 2023년\n매출액 | 100 | 90"
+    cits = [{"document_id": _DOC, "quote_or_fact": "매출액 | 100 | 90"}]
+    fails = grounded_answer.check_generated_answer(
+        "2024년 매출액은 90이다.", cits, {_DOC: [table]}, {_DOC: {}}, question="2024년 매출액은?")
+    assert fails and "column_mismatch" in fails[0]
+    assert grounded_answer.check_generated_answer(
+        "2024년 매출액은 100이다.", cits, {_DOC: [table]}, {_DOC: {}},
+        question="2024년 매출액은?") == []
+    # FC 조립 답변(인라인 출처 포함)은 오탐 없이 통과해야 한다 — 중첩 괄호 공시명 포함.
+    ans = "2024년 매출액은 100이다 (사업보고서 (2024.12), 접수번호 20250318000001, 2025-03-18)."
+    assert grounded_answer.check_generated_answer(
+        ans, cits, {_DOC: [table]}, {_DOC: {}}, question="2024년 매출액은?") == []
