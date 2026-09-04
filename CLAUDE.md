@@ -134,6 +134,13 @@
   토큰화 오판 "03"≠"3"의 해소, 정당) · judge14 가중 55.0은 judge15 57.5(=judge13, churn 1↑/1↓)로 잡음
   판정 — 악화 5건은 전부 대량보유 계열 경로 혼합(결정론 발췌 full ↔ LLM 간결답 partial). 안전세트 28/28 ·
   테스트 517. judge summary에 llm_degraded_reason 분포 기록.
+- **A/C 검수 반영 — 공통 scorer vFINAL 14·16 정합(2026-09-04)**: row/col 명시 상이를 경미→**치명**으로
+  교정(원문 "다른 행/열 지시"=치명 — 종전은 오독) · text-method 매치(동일 근거 span, node/offset 상이)를
+  경미로 **보고**(종전 무기록) · 16번 Owner 판정 입력 구현(score.py --resolutions:
+  COMMON_SOURCE 공통 제외 한도 min(5,5%)·초과 BLOCKED·제외 전 리포트 보존·LOW<10 UNDERPOWERED,
+  ARM_SPECIFIC slot 실패 재계산+치명 확정 반영, UNKNOWN·무판정은 자동 분류 없이 보류).
+  B/D 재채점 실측: 치명 0 유지·지표/판정 완전 동일(D PROVISIONAL_WINNER)·결과 4파일 byte-identical·
+  신규 경미 B 17/D 13(보고용). 회귀 테스트 12케이스(test_fourarm_vfinal14_16.py). 검색 재실행 없음.
 - **vFINAL 21번 변경 승인(2026-09-04, Owner=팀 대표)**: "FC Native Function Calling 경로에 한해
   전송 maxTokens 최소 1024 적용을 승인한다. 사유는 서비스 앱 API가 1024 미만 요청을 40001로
   거부하기 때문이다. JSON 경로의 v4 §7 예산은 변경하지 않으며 requested/sent 값을 구분해

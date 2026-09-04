@@ -125,18 +125,20 @@ def test_check_locators_severities():
 
 
 def test_check_locators_no_text_is_unresolved_and_row_col_rules():
+    # vFINAL 14번 원문: 명시된 row/col 상이 = "다른 행/열 지시" = 치명 (A/C 검수 반영으로 교정 —
+    # 종전 '경미'는 오독. 경미는 동일 근거의 offset 차이에 한정).
     store = _Store({"d1": ["구분 | 값", "매출액 | 10"]})
     qs = fa.QuestionScore("q", "LOW", 3, False)
     qs.slot_matches = [
         {"slot_name": "a", "method": "node", "result": _res("d1", 1), "gold_row_col": None},          # text 없음 → 판정 불가
         {"slot_name": "b", "method": "node", "result": _res("d1", 1, text="매출액 | 10"), "gold_row_col": (1, 2)},   # 청크에 row/col 없음 → coarse
-        {"slot_name": "c", "method": "node", "result": _res("d1", 1, text="매출액 | 10", row=1, col=3), "gold_row_col": (1, 2)},  # 다름 → 경미
+        {"slot_name": "c", "method": "node", "result": _res("d1", 1, text="매출액 | 10", row=1, col=3), "gold_row_col": (1, 2)},  # 다름 → 치명
         {"slot_name": "d", "method": "node", "result": _res("d1", 1, text="매출액 | 10", row=1, col=2), "gold_row_col": (1, 2)},  # 같음 → 없음
     ]
     v = fa.check_locators(qs, store)
     got = sorted((x["slot_name"], x["severity"], x["reason"].split(":")[0]) for x in v)
     assert got == [("a", "unresolved", "no_text_to_verify"), ("b", "coarse", "no_row_col_in_chunk"),
-                   ("c", "minor", "row_col_differs")]
+                   ("c", "critical", "row_col_differs")]
 
 
 def test_unresolved_packets_are_arm_blind_and_unique_across_arms():

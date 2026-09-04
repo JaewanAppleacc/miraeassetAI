@@ -2,6 +2,9 @@
  "arm": "B",
  "locator_checked": true,
  "n_questions": 101,
+ "n_common_excluded": 0,
+ "common_excluded_qids": [],
+ "n_arm_specific_invalidated": 0,
  "n_excluded_zero_slot": 1,
  "n_missing_or_error": 0,
  "segments": {
@@ -65,10 +68,37 @@
  },
  "violations": {
   "critical": 0,
-  "minor": 0,
+  "minor": 17,
   "unresolved": 0,
   "coarse": 103,
   "items": [
+   {
+    "question_id": "author_14dfddbe1d41275533ae3945",
+    "slot_name": "evidence_1",
+    "doc_id": "periodic_20240321001029",
+    "node_index": 233,
+    "locator": "periodic_20240321001029/20240321001029.xml#node=233",
+    "severity": "minor",
+    "reason": "same_evidence_span_offset_differs"
+   },
+   {
+    "question_id": "author_a538b0e2240fe01d1a71ebb7",
+    "slot_name": "evidence_2",
+    "doc_id": "periodic_20250515001309",
+    "node_index": 152,
+    "locator": "periodic_20250515001309/20250515001309.xml#node=152",
+    "severity": "minor",
+    "reason": "same_evidence_span_offset_differs"
+   },
+   {
+    "question_id": "author_ed4a7d77528a8c5751e9a348",
+    "slot_name": "evidence_1",
+    "doc_id": "holding_20250605000220",
+    "node_index": 26,
+    "locator": "holding_20250605000220/20250605000220.xml#node=26",
+    "severity": "minor",
+    "reason": "same_evidence_span_offset_differs"
+   },
    {
     "question_id": "gold_b_034334dce8cb5eaaa6589096",
     "slot_name": "shares_before",
@@ -116,6 +146,15 @@
    },
    {
     "question_id": "gold_b_0e97c60a0d12c067d46a6f84",
+    "slot_name": "revenue_2023q1",
+    "doc_id": "periodic_20230515000336",
+    "node_index": 214,
+    "locator": "periodic_20230515000336/20230515000336.xml#node=214",
+    "severity": "minor",
+    "reason": "same_evidence_span_offset_differs"
+   },
+   {
+    "question_id": "gold_b_0e97c60a0d12c067d46a6f84",
     "slot_name": "revenue_2025q1",
     "doc_id": "periodic_20250515000678",
     "node_index": 235,
@@ -131,6 +170,33 @@
     "locator": "periodic_20250515000678/20250515000678.xml#node=235",
     "severity": "coarse",
     "reason": "no_row_col_in_chunk"
+   },
+   {
+    "question_id": "gold_b_137f1bfd5c69987d009ae50c",
+    "slot_name": "correction_new_company1",
+    "doc_id": "major_20241128001098",
+    "node_index": 9,
+    "locator": "major_20241128001098/20241128001098.xml#node=9",
+    "severity": "minor",
+    "reason": "same_evidence_span_offset_differs"
+   },
+   {
+    "question_id": "gold_b_137f1bfd5c69987d009ae50c",
+    "slot_name": "correction_new_company2",
+    "doc_id": "major_20241128001098",
+    "node_index": 9,
+    "locator": "major_20241128001098/20241128001098.xml#node=9",
+    "severity": "minor",
+    "reason": "same_evidence_span_offset_differs"
+   },
+   {
+    "question_id": "gold_b_137f1bfd5c69987d009ae50c",
+    "slot_name": "correction_new_company4",
+    "doc_id": "major_20241128001098",
+    "node_index": 9,
+    "locator": "major_20241128001098/20241128001098.xml#node=9",
+    "severity": "minor",
+    "reason": "same_evidence_span_offset_differs"
    },
    {
     "question_id": "gold_b_192fa6ea90c0cdefc2616fc0",
@@ -395,6 +461,15 @@
    },
    {
     "question_id": "gold_b_5271576ebada8221bcc3056a",
+    "slot_name": "revenue_2023h1",
+    "doc_id": "periodic_20230814001112",
+    "node_index": 215,
+    "locator": "periodic_20230814001112/20230814001112.xml#node=215",
+    "severity": "minor",
+    "reason": "same_evidence_span_offset_differs"
+   },
+   {
+    "question_id": "gold_b_5271576ebada8221bcc3056a",
     "slot_name": "revenue_2025h1",
     "doc_id": "periodic_20250814002944",
     "node_index": 218,
@@ -583,6 +658,33 @@
     "reason": "no_row_col_in_chunk"
    },
    {
+    "question_id": "gold_b_926d98d28ea51ea8bb8e6ea1",
+    "slot_name": "before_holding",
+    "doc_id": "holding_20240306000024",
+    "node_index": 1,
+    "locator": "holding_20240306000024/20240306000024.xml#node=1",
+    "severity": "minor",
+    "reason": "same_evidence_span_offset_differs"
+   },
+   {
+    "question_id": "gold_b_926d98d28ea51ea8bb8e6ea1",
+    "slot_name": "after_holding",
+    "doc_id": "holding_20240306000024",
+    "node_index": 1,
+    "locator": "holding_20240306000024/20240306000024.xml#node=1",
+    "severity": "minor",
+    "reason": "same_evidence_span_offset_differs"
+   },
+   {
+    "question_id": "gold_b_9498154347fd9a2ceef8aa63",
+    "slot_name": "reporter",
+    "doc_id": "holding_20251105000317",
+    "node_index": 33,
+    "locator": "holding_20251105000317/20251105000317.xml#node=33",
+    "severity": "minor",
+    "reason": "same_evidence_span_offset_differs"
+   },
+   {
     "question_id": "gold_b_9498154347fd9a2ceef8aa63",
     "slot_name": "issuer_relationship",
     "doc_id": "holding_20251105000317",
@@ -635,6 +737,51 @@
     "locator": "holding_20240904000440/20240904000440.xml#node=78",
     "severity": "coarse",
     "reason": "no_row_col_in_chunk"
+   },
+   {
+    "question_id": "gold_b_9d2e358034ea16bcee7d8edf",
+    "slot_name": "revenue_2023q1",
+    "doc_id": "periodic_20230512001099",
+    "node_index": 236,
+    "locator": "periodic_20230512001099/20230512001099.xml#node=236",
+    "severity": "minor",
+    "reason": "same_evidence_span_offset_differs"
+   },
+   {
+    "question_id": "gold_b_9d2e358034ea16bcee7d8edf",
+    "slot_name": "operating_income_2023q1",
+    "doc_id": "periodic_20230512001099",
+    "node_index": 236,
+    "locator": "periodic_20230512001099/20230512001099.xml#node=236",
+    "severity": "minor",
+    "reason": "same_evidence_span_offset_differs"
+   },
+   {
+    "question_id": "gold_b_9d2e358034ea16bcee7d8edf",
+    "slot_name": "revenue_2025q1",
+    "doc_id": "periodic_20250515002745",
+    "node_index": 152,
+    "locator": "periodic_20250515002745/20250515002745.xml#node=152",
+    "severity": "minor",
+    "reason": "same_evidence_span_offset_differs"
+   },
+   {
+    "question_id": "gold_b_9d2e358034ea16bcee7d8edf",
+    "slot_name": "operating_income_2025q1",
+    "doc_id": "periodic_20250515002745",
+    "node_index": 152,
+    "locator": "periodic_20250515002745/20250515002745.xml#node=152",
+    "severity": "minor",
+    "reason": "same_evidence_span_offset_differs"
+   },
+   {
+    "question_id": "gold_b_a534bc30d3414f2d094e7461",
+    "slot_name": "reporter",
+    "doc_id": "holding_20240111000046",
+    "node_index": 27,
+    "locator": "holding_20240111000046/20240111000046.xml#node=27",
+    "severity": "minor",
+    "reason": "same_evidence_span_offset_differs"
    },
    {
     "question_id": "gold_b_a534bc30d3414f2d094e7461",
@@ -887,6 +1034,15 @@
     "locator": "holding_20260311004186/20260311004186.xml#node=1",
     "severity": "coarse",
     "reason": "no_row_col_in_chunk"
+   },
+   {
+    "question_id": "gold_b_ec84639c43268bb42cc60c83",
+    "slot_name": "reporter",
+    "doc_id": "holding_20250106000284",
+    "node_index": 28,
+    "locator": "holding_20250106000284/20250106000284.xml#node=28",
+    "severity": "minor",
+    "reason": "same_evidence_span_offset_differs"
    },
    {
     "question_id": "gold_b_ec84639c43268bb42cc60c83",

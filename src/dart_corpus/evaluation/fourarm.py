@@ -10,8 +10,13 @@
   Recall@k       slots_found@k / slots_total (micro). 전체·HIGH·LOW 각각.
   all_found@k    문항의 required slot이 전부 found인 문항 수(vFINAL 2번 주 판정: LOW all-required-slots-found).
   제외           required slot이 0개인 문항(NOT_FOUND/답변가능성 문항)은 Recall 분모에서 뺀다. 수를 보고한다.
-  locator 검사   slot-match 청크만(vFINAL 14번). 문서 없음·node 범위 밖 = 치명. 텍스트가 node 원문과 대조
-                 불가 = UNRESOLVED(16번 패킷, arm 라벨 제거 export). row/col 차이 = 경미(탈락 사유 아님).
+  locator 검사   slot-match 청크만(vFINAL 14번). 문서 없음·node 범위 밖·**명시된 row/col 상이** = 치명.
+                 텍스트가 node 원문과 대조 불가 = UNRESOLVED(16번 패킷, arm 라벨 제거 export).
+                 text-method 매치(동일 근거 span, node/offset만 상이) = 경미(탈락 사유 아님, 보고만).
+                 Gold가 cell 지정·결과는 node-level뿐이면 coarse(본문 대조 통과 시 통과 가능).
+  16번 판정 입력  Owner의 arm-blind 패킷 판정(resolutions)을 받아 COMMON_SOURCE 공통 제외(한도
+                 min(5, 세트 5%), 초과 BLOCKED) · ARM_SPECIFIC slot 실패 재계산 · UNKNOWN 보류.
+                 판정 없는 패킷은 자동 분류하지 않는다(UNKNOWN 취급).
 
 판정 체인(judge): 20 pins → 14/16 UNRESOLVED 표시 → 12 Hard(치명 0) → 12 Quality(hard-safe 최고 대비
 −0.01, 전체·HIGH R@10) → 2 LOW all_found@10 비교(LOW ≥10 문항일 때) → 5 FINAL_TIE_SET(최고−1 이내)
@@ -154,9 +159,14 @@ def _result_nodes(r: Mapping[str, Any]) -> set[int]:
     return nodes
 
 
-def slot_found(slot: GoldSlot, results: Sequence[Mapping[str, Any]], k: int
+def slot_found(slot: GoldSlot, results: Sequence[Mapping[str, Any]], k: int,
+               banned: frozenset[tuple[str, int]] = frozenset()
                ) -> tuple[bool, Mapping[str, Any] | None, str]:
-    top = list(results)[:k]
+    """banned: 16번 B(ARM_SPECIFIC) 판정으로 무효화된 (doc_id, node_index) — 그 결과 행은
+    이 slot의 근거로 세지 않는다(spec: 해당 문항을 slots-found 실패로 계산)."""
+    def ok(r: Mapping[str, Any]) -> bool:
+        return (str(r.get("doc_id") or ""), int(r.get("node_index", -1))) not in banned
+    top = [r for r in list(results)[:k] if ok(r)]
     for r in top:
         nodes = _result_nodes(r)
         for src in slot.sources:
@@ -196,7 +206,10 @@ class QuestionScore:
 
 
 def score_question(gq: GoldQuestion, rec: Mapping[str, Any] | None, segment: str,
-                   ks: Sequence[int] = KS) -> QuestionScore:
+                   ks: Sequence[int] = KS,
+                   banned: Mapping[str, frozenset] | None = None) -> QuestionScore:
+    """banned: slot_name → 무효화된 {(doc_id, node_index)} (16번 B ARM_SPECIFIC 재계산)."""
+    banned = banned or {}
     n_slots = len(gq.slots)
     qs = QuestionScore(gq.question_id, segment, n_slots, excluded=(n_slots == 0))
     results = list((rec or {}).get("results") or [])
@@ -204,14 +217,14 @@ def score_question(gq: GoldQuestion, rec: Mapping[str, Any] | None, segment: str
     for k in ks:
         found = 0
         for slot in gq.slots:
-            ok, _, _ = slot_found(slot, results, k)
+            ok, _, _ = slot_found(slot, results, k, banned.get(slot.slot_name, frozenset()))
             found += int(ok)
         qs.found_at[k] = found
         qs.all_found_at[k] = (n_slots > 0 and found == n_slots)
         docs = {r.get("doc_id") for r in results[:k]}
         qs.doc_hit_at[k] = bool(gq.gold_docs & docs) if gq.gold_docs else False
     for slot in gq.slots:
-        ok, r, method = slot_found(slot, results, EVAL_K)
+        ok, r, method = slot_found(slot, results, EVAL_K, banned.get(slot.slot_name, frozenset()))
         if ok and r is not None:
             nodes = _result_nodes(r)
             src = next((x for x in slot.sources if x.doc_id == r.get("doc_id") and x.node_index in nodes), None)
@@ -263,15 +276,29 @@ def check_locators(qs: QuestionScore, store: Any) -> list[dict]:
             out.append({**base, "severity": "unresolved", "reason": "claim_text_not_in_node",
                         "chunk_text": r.get("text", "")[:400]})
             continue
-        # row/col: Gold가 (row, col)을 지정하고 청크도 (row, col)을 보고했는데 서로 다르면 경미(동일 근거·offset 차이).
-        # 청크에 row/col이 없는 것은 "상이"가 아니라 더 거친 locator다 → 위반이 아니라 coarse로만 센다.
+        # text-method 매치: doc은 같고 Gold evidence span이 본문에 있음이 확인됐지만 node가
+        # Gold 지정과 다르다(라인 윈도우 겹침 등) — "동일 근거, span offset/범위만 상이" = 경미
+        # (vFINAL 14번. 탈락 사유 아님, 건수·원인 보고).
+        if m.get("method") == "text":
+            out.append({**base, "severity": "minor", "reason": "same_evidence_span_offset_differs"})
+            continue
+        # row/col(vFINAL 14번, A/C 검수 반영으로 교정): Gold가 지정한 성분을 결과도 명시했는데
+        # 값이 다르면 "다른 행/열 지시" = **치명**이다. 종전의 '경미' 처리는 원문 오독 —
+        # 경미는 동일 근거의 offset 차이에 한정된다. 결과가 그 성분을 아예 안 밝힌 경우는
+        # 더 거친 locator(coarse)다 — 여기 도달했다는 것은 위의 본문 대조(claim_text_not_in_node)를
+        # 통과해 동일 근거임이 확인됐다는 뜻이므로 통과 가능으로 기록만 한다. locator 문법에는
+        # 기간 성분이 없어 "다른 기간 지시"는 검사 대상이 발생하지 않는다.
         gold_rc = m.get("gold_row_col")
         if gold_rc and gold_rc != (None, None):
             rc = (r.get("row"), r.get("col"))
-            if rc == (None, None):
+            differs = any(g is not None and c is not None and g != c
+                          for g, c in zip(gold_rc, rc))
+            missing = any(g is not None and c is None for g, c in zip(gold_rc, rc))
+            if differs:
+                out.append({**base, "severity": "critical",
+                            "reason": f"row_col_differs:{rc}!={gold_rc}"})
+            elif missing:
                 out.append({**base, "severity": "coarse", "reason": "no_row_col_in_chunk"})
-            elif rc != gold_rc:
-                out.append({**base, "severity": "minor", "reason": f"row_col_differs:{rc}!={gold_rc}"})
     return out
 
 
@@ -294,9 +321,16 @@ def _agg(qscores: Iterable[QuestionScore], gold: Mapping[str, GoldQuestion], ks:
 def score_arm(arm: str, results: Mapping[str, dict], gold: Mapping[str, GoldQuestion],
               segments: Mapping[str, str], run: Mapping[str, Any] | None = None,
               store: Any = None, ks: Sequence[int] = KS,
-              conditions_sha: str | None = None, gold_sha: str | None = None) -> dict[str, Any]:
-    qscores = [score_question(gq, results.get(qid), segments.get(qid, "?"), ks)
-               for qid, gq in gold.items()]
+              conditions_sha: str | None = None, gold_sha: str | None = None,
+              exclude_qids: frozenset[str] = frozenset(),
+              invalid: Mapping[tuple[str, str], frozenset] | None = None) -> dict[str, Any]:
+    """exclude_qids: 16번 A(COMMON_SOURCE) 공통 제외 문항 — 전 arm 동일 세트로 넘겨야 한다.
+    invalid: (question_id, slot_name) → 무효 {(doc_id, node_index)} — 16번 B(ARM_SPECIFIC)."""
+    invalid = invalid or {}
+    qscores = [score_question(gq, results.get(qid), segments.get(qid, "?"), ks,
+                              banned={s.slot_name: invalid.get((qid, s.slot_name), frozenset())
+                                      for s in gq.slots} if invalid else None)
+               for qid, gq in gold.items() if qid not in exclude_qids]
     by_seg = {
         "ALL": _agg(qscores, gold, ks),
         "HIGH": _agg([q for q in qscores if q.segment == "HIGH"], gold, ks),
@@ -322,6 +356,9 @@ def score_arm(arm: str, results: Mapping[str, dict], gold: Mapping[str, GoldQues
         "arm": arm,
         "locator_checked": store is not None,        # False면 Hard gate 미평가 — judge가 INVALID로 막는다
         "n_questions": len(qscores),
+        "n_common_excluded": len(exclude_qids),      # 16번 A 공통 제외(전 arm 동일)
+        "common_excluded_qids": sorted(exclude_qids),
+        "n_arm_specific_invalidated": len(invalid),  # 16번 B slot 무효화 건수(이 arm)
         "n_excluded_zero_slot": sum(1 for q in qscores if q.excluded),
         "n_missing_or_error": sum(1 for q in qscores if q.error),
         "segments": by_seg,
@@ -334,23 +371,98 @@ def score_arm(arm: str, results: Mapping[str, dict], gold: Mapping[str, GoldQues
     }
 
 
+def packet_id_of(v: Mapping[str, Any]) -> str:
+    """UNRESOLVED 위반 → arm 무관 패킷 ID. export와 16번 판정 적용이 같은 계산을 쓴다."""
+    import hashlib
+    key = "|".join(str(v.get(k, "")) for k in ("question_id", "slot_name", "doc_id", "node_index", "reason", "chunk_text"))
+    return "u-" + hashlib.sha256(key.encode("utf-8")).hexdigest()[:12]
+
+
 def unresolved_packets(report: Mapping[str, Any]) -> list[dict]:
     """vFINAL 16번: arm 라벨을 뺀 UNRESOLVED 패킷. Owner가 arm-blind로 원인만 판정한다.
 
     packet_id는 (question_id, slot, doc_id, node_index, reason, chunk_text)의 해시 — arm과 무관하고
     arm 간에 충돌하지 않는다. 두 arm이 같은 청크를 같은 사유로 올리면 같은 패킷 하나가 된다."""
-    import hashlib
     packets = []
     for v in report["violations"]["items"]:
         if v["severity"] != "unresolved":
             continue
-        key = "|".join(str(v.get(k, "")) for k in ("question_id", "slot_name", "doc_id", "node_index", "reason", "chunk_text"))
-        pid = "u-" + hashlib.sha256(key.encode("utf-8")).hexdigest()[:12]
-        packets.append({"packet_id": pid,
+        packets.append({"packet_id": packet_id_of(v),
                         "question_id": v["question_id"], "slot_name": v["slot_name"],
                         "doc_id": v["doc_id"], "node_index": v["node_index"],
                         "chunk_text": v.get("chunk_text", ""), "reason": v["reason"]})
     return packets
+
+
+# ---------- vFINAL 16번: Owner 판정(resolutions) 적용 ----------
+
+RESOLUTION_CLASSES = ("COMMON_SOURCE", "ARM_SPECIFIC", "UNKNOWN")
+
+
+def load_resolutions(path: Path | str) -> dict[str, dict]:
+    """Owner의 패킷 판정 파일: {packet_id: {"classification": ..., "note": ..., "critical": bool}}.
+
+    classification은 RESOLUTION_CLASSES만 허용한다. "critical"은 ARM_SPECIFIC에서만 의미가
+    있다(16번 B "치명 확정 시 Hard 탈락"). 파일에 없는 패킷은 UNKNOWN으로 남는다 —
+    코드가 자동으로 COMMON_SOURCE를 부여하는 일은 없다(16번 A: Owner 판정 전제)."""
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    out: dict[str, dict] = {}
+    for pid, r in data.items():
+        cls = str((r or {}).get("classification") or "").upper()
+        if cls not in RESOLUTION_CLASSES:
+            raise ValueError(f"resolutions[{pid}].classification={cls!r} — {RESOLUTION_CLASSES} 중 하나여야 한다")
+        out[pid] = {"classification": cls, "note": str((r or {}).get("note") or ""),
+                    "critical": bool((r or {}).get("critical"))}
+    return out
+
+
+def common_exclusion_limit(n_set: int) -> int:
+    """16번 A 한도: min(5문항, 세트 5%)."""
+    return min(5, int(n_set * 0.05))
+
+
+def adjudication_plan(reports: Mapping[str, dict], resolutions: Mapping[str, dict],
+                      n_set: int) -> dict[str, Any]:
+    """arm별 UNRESOLVED 위반에 Owner 판정을 대응시켜 재채점 계획을 만든다.
+
+    반환:
+      common_qids        COMMON_SOURCE 판정 패킷의 문항 — 전 arm 공통 제외 대상
+      over_limit         공통 제외가 min(5, 세트 5%) 초과 → BLOCKED(16번 A)
+      per_arm_invalid    arm → {(question_id, slot_name): {(doc_id, node_index)}} — ARM_SPECIFIC 무효화
+      per_arm_critical   arm → [packet_id] — Owner가 치명 확정한 ARM_SPECIFIC(Hard 탈락 반영)
+      unknown_per_arm    arm → 판정 없음/UNKNOWN으로 남는 패킷 수(관련 arm 보류 사유)
+    """
+    common_qids: set[str] = set()
+    per_arm_invalid: dict[str, dict[tuple[str, str], set]] = {}
+    per_arm_critical: dict[str, list[str]] = {}
+    unknown_per_arm: dict[str, int] = {}
+    for arm, rep in reports.items():
+        for v in rep["violations"]["items"]:
+            if v["severity"] != "unresolved":
+                continue
+            pid = packet_id_of(v)
+            res = resolutions.get(pid)
+            cls = (res or {}).get("classification", "UNKNOWN")
+            if cls == "COMMON_SOURCE":
+                common_qids.add(v["question_id"])
+            elif cls == "ARM_SPECIFIC":
+                key = (v["question_id"], v["slot_name"])
+                per_arm_invalid.setdefault(arm, {}).setdefault(key, set()).add(
+                    (str(v["doc_id"]), int(v["node_index"] if v["node_index"] is not None else -1)))
+                if res.get("critical"):
+                    per_arm_critical.setdefault(arm, []).append(pid)
+            else:
+                unknown_per_arm[arm] = unknown_per_arm.get(arm, 0) + 1
+    limit = common_exclusion_limit(n_set)
+    return {
+        "common_qids": sorted(common_qids),
+        "limit": limit,
+        "over_limit": len(common_qids) > limit,
+        "per_arm_invalid": {a: {k: frozenset(s) for k, s in m.items()}
+                            for a, m in per_arm_invalid.items()},
+        "per_arm_critical": per_arm_critical,
+        "unknown_per_arm": unknown_per_arm,
+    }
 
 
 # ---------- 판정 체인 ----------
@@ -393,7 +505,8 @@ def _cd_tiebreak(reports: Mapping[str, dict], cands: Sequence[str], chain: list)
 
 def judge(reports: Mapping[str, dict], *, deployable: Mapping[str, bool] | None = None,
           paraphrase_all_found: Mapping[str, int] | None = None,
-          require_arms: set[str] | frozenset[str] | None = None) -> dict[str, Any]:
+          require_arms: set[str] | frozenset[str] | None = None,
+          adjudication: Mapping[str, Any] | None = None) -> dict[str, Any]:
     """reports: arm -> score_arm() 결과. deployable: vFINAL 19번 최소 배포 가능성(arm별).
     paraphrase_all_found: LOW_UNDERPOWERED일 때 의역 세트 all_found 수(arm별, vFINAL 8·9번).
     require_arms: 최종 판정에서 {"A","B","C","D"}를 넘겨 완비를 강제한다 — 부분 arm으로도
@@ -402,6 +515,21 @@ def judge(reports: Mapping[str, dict], *, deployable: Mapping[str, bool] | None 
     chain: list[dict] = []
     arms = sorted(reports)
     deployable = deployable or {}
+
+    if adjudication is not None:
+        # 16번 판정 적용 내역(공통 제외·arm별 무효화·잔여 UNKNOWN)을 체인 맨 앞에 남긴다.
+        chain.append({"step": "16 adjudication",
+                      "common_excluded": adjudication.get("common_qids", []),
+                      "limit": adjudication.get("limit"),
+                      "arm_specific": {a: len(m) for a, m in
+                                       (adjudication.get("per_arm_invalid") or {}).items()},
+                      "arm_specific_critical": adjudication.get("per_arm_critical", {}),
+                      "unknown_remaining": adjudication.get("unknown_per_arm", {})})
+        if adjudication.get("over_limit"):
+            return {"status": "BLOCKED",
+                    "reason": (f"COMMON_SOURCE 공통 제외 {len(adjudication.get('common_qids', []))}건 > "
+                               f"한도 {adjudication.get('limit')} (vFINAL 16번 A)"),
+                    "chain": chain}
 
     if require_arms is not None:
         missing_arms = sorted(set(require_arms) - set(arms))

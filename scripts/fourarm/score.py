@@ -60,6 +60,10 @@ def main(argv: list[str] | None = None) -> int:
                    help="arm별 사전 등록 SHA(config·code·results) — 결과 디렉터리 밖(git 추적)의 "
                         "allowlist. 디렉터리 안 값끼리의 정합만으로는 완전 바꿔치기를 판별할 수 없다"
                         "(검수 8차 발견 3).")
+    p.add_argument("--resolutions", type=Path, default=None,
+                   help="vFINAL 16번 Owner 패킷 판정 파일({packet_id: {classification, note, critical}}). "
+                        "주면 COMMON_SOURCE 공통 제외(한도 min(5, 세트 5%%))·ARM_SPECIFIC slot 실패 "
+                        "재계산 후 판정한다. 제외 전 리포트는 score.{arm}.pre_adjudication.json으로 보존.")
     args = p.parse_args(argv)
     if args.final and sorted(args.arms) != ["A", "B", "C", "D"]:
         print("--final은 --arms A B C D 전부를 요구한다", file=sys.stderr)
@@ -86,6 +90,8 @@ def main(argv: list[str] | None = None) -> int:
 
     reports = {}
     packets: dict[str, dict] = {}                      # packet_id → 패킷 (arm 간 동일 패킷은 하나로)
+    all_results: dict[str, dict] = {}
+    all_runs: dict[str, dict] = {}
     if args.no_locator_check:
         print("경고: --no-locator-check — Hard gate 미평가. judge는 INVALID를 돌려준다.", file=sys.stderr)
     for arm in args.arms:
@@ -99,6 +105,7 @@ def main(argv: list[str] | None = None) -> int:
             continue
         results = fourarm.load_results(rpath)
         run = json.loads(runpath.read_text(encoding="utf-8")) if runpath.exists() else {}
+        all_results[arm], all_runs[arm] = results, run
         rep = fourarm.score_arm(arm, results, gold, segments, run=run, store=store,
                                 conditions_sha=cond_sha, gold_sha=gold_sha)
         reports[arm] = rep
@@ -108,6 +115,40 @@ def main(argv: list[str] | None = None) -> int:
         for pk in arm_packets:
             packets.setdefault(pk["packet_id"], pk)
         print(f"[{arm}] 채점 완료 · 미해결 {len(arm_packets)}", file=sys.stderr)
+
+    # vFINAL 16번: Owner 판정 적용 — 공통 제외·ARM_SPECIFIC 무효화 후 재채점(결과 파일 불변).
+    plan = None
+    if args.resolutions is not None:
+        resolutions = fourarm.load_resolutions(args.resolutions)
+        plan = fourarm.adjudication_plan(reports, resolutions, n_set=len(gold))
+        (args.results_dir / "adjudication.json").write_text(
+            json.dumps({**plan, "per_arm_invalid": {
+                a: {f"{q}|{s}": sorted(map(list, v)) for (q, s), v in m.items()}
+                for a, m in plan["per_arm_invalid"].items()}}, ensure_ascii=False, indent=1),
+            encoding="utf-8")
+        if plan["over_limit"]:
+            print(f"공통 제외 {len(plan['common_qids'])}건 > 한도 {plan['limit']} — BLOCKED(16번 A)",
+                  file=sys.stderr)
+        else:
+            exclude = frozenset(plan["common_qids"])
+            for arm in list(reports):
+                (args.results_dir / f"score.{arm}.pre_adjudication.json").write_text(
+                    json.dumps(reports[arm], ensure_ascii=False, indent=1), encoding="utf-8")
+                rep = fourarm.score_arm(
+                    arm, all_results[arm], gold, segments, run=all_runs[arm], store=store,
+                    conditions_sha=cond_sha, gold_sha=gold_sha, exclude_qids=exclude,
+                    invalid=plan["per_arm_invalid"].get(arm))
+                # 16번 B "치명 확정": Owner가 치명으로 판정한 ARM_SPECIFIC은 Hard gate에 반영.
+                for pid in plan["per_arm_critical"].get(arm, []):
+                    rep["violations"]["critical"] += 1
+                    rep["violations"]["items"].append(
+                        {"severity": "critical", "reason": f"arm_specific_adjudicated_critical:{pid}"})
+                reports[arm] = rep
+                (args.results_dir / f"score.{arm}.json").write_text(
+                    json.dumps(rep, ensure_ascii=False, indent=1), encoding="utf-8")
+            print(f"16번 적용: 공통 제외 {len(exclude)}건(한도 {plan['limit']}) · "
+                  f"ARM_SPECIFIC {sum(len(m) for m in plan['per_arm_invalid'].values())}건 무효화 · "
+                  f"UNKNOWN 잔여 {plan['unknown_per_arm']}", file=sys.stderr)
 
     if store is not None:
         store.close()
@@ -226,7 +267,8 @@ def main(argv: list[str] | None = None) -> int:
     judgement = None
     if len(reports) >= 2:
         judgement = fourarm.judge(reports, deployable={a: True for a in args.deployable},
-                                  require_arms={"A", "B", "C", "D"} if args.final else None)
+                                  require_arms={"A", "B", "C", "D"} if args.final else None,
+                                  adjudication=plan)
         (args.results_dir / "judgement.json").write_text(
             json.dumps(judgement, ensure_ascii=False, indent=1), encoding="utf-8")
         head = f"## 판정: {judgement['status']}"
