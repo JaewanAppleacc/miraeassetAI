@@ -761,8 +761,16 @@ def describe(derived: Sequence[Derived]) -> str:
     for d in derived:
         unit = f" {d.unit}" if d.unit else ""
         if d.kind == "increase_rate":
-            lines.append(f"- {d.metric}: {d.source_values[0]} → {d.source_values[1]} "
-                         f"({display_value(d)}% 변동)")
+            # holding_change와 같은 형식(§3-6): …에서 …로 N% 증가/감소 + signed 병기.
+            n = parse_number(d.value)
+            disp = display_value(d)
+            if n == 0:
+                lines.append(f"- {d.metric}: {d.source_values[0]}에서 "
+                             f"{d.source_values[1]}로 변동 없음(증감률 0%)")
+            else:
+                word = "증가" if n is not None and n > 0 else "감소"
+                lines.append(f"- {d.metric}: {d.source_values[0]}에서 {d.source_values[1]}로 "
+                             f"{disp.lstrip('-')}% {word}(증감률 {disp}%)")
         elif d.kind == "difference":
             a_slot, b_slot = d.source_slots
             a_corp = a_slot.rsplit("@", 1)[-1]
@@ -783,8 +791,15 @@ def describe(derived: Sequence[Derived]) -> str:
                 lines.append(f"- {d.metric}: {prev_v}에서 {cur_v}로 "
                              f"{d.value.lstrip('-')}{u} {word}(증감 {signed})")
         elif d.kind == "pair_change":
-            lines.append(f"- {d.metric}: {d.source_values[0]} → {d.source_values[1]} "
-                         f"({'+' if not d.value.startswith('-') else ''}{d.value}{unit.strip() or ''} 변동)")
+            n = parse_number(d.value)
+            u = (d.unit or "").strip()
+            if n == 0:
+                lines.append(f"- {d.metric}: {d.source_values[0]}에서 "
+                             f"{d.source_values[1]}로 변동 없음(증감 0{u})")
+            else:
+                word = "증가" if n is not None and n > 0 else "감소"
+                lines.append(f"- {d.metric}: {d.source_values[0]}에서 {d.source_values[1]}로 "
+                             f"{d.value.lstrip('-')}{u} {word}(증감 {d.value}{u})")
         elif d.kind == "percent_of":
             lines.append(f"- {d.metric} × 질문의 비율({d.formula.split('×')[-1].strip()}): "
                          f"{d.value}{unit}")

@@ -140,7 +140,8 @@ def test_percent_display_is_two_decimals_but_value_stays_three():
     rate = next(d for d in got if d.kind == "increase_rate")
     assert rate.value == "3.145"                       # 채점·API용 원값
     assert calculator.display_value(rate) == "3.15"    # 사람이 읽는 표기
-    assert "3.15% 변동" in calculator.describe(got)
+    # 표시층 통일(판 §3-6): "…에서 …로 N% 증가/감소" + 표시값 병기.
+    assert "3.15% 증가(증감률 3.15%)" in calculator.describe(got)
 
 
 def test_both_display_and_raw_forms_are_allowed_numbers():

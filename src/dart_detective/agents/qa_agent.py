@@ -20,7 +20,7 @@ import hashlib
 import inspect
 import re
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Iterable, Mapping, Sequence
 
 from dart_corpus.retrieval.chunk_index import infer_metrics, row_label_of
@@ -643,8 +643,13 @@ def slot_label(slot: str) -> str:
     return " ".join(parts)
 
 
-def fallback_answer(matches: Sequence[EvidenceMatch]) -> tuple[str, str]:
+def fallback_answer(matches: Sequence[EvidenceMatch],
+                    exclude_texts: frozenset[str] = frozenset()) -> tuple[str, str]:
     """LLM 없이 만드는 답변. 값과 인용 전부 원문 그대로라 항상 grounded다.
+
+    exclude_texts: 대량보유 파서가 소비한 행(공백 정규화) — 그 행의 값은 '공시에서 확인한
+    값' 문장으로 이미 나가므로 원문 덤프에서만 숨긴다. 덤프 전체를 끄지 않는 이유(§3-5):
+    보유목적·보고사유처럼 파서가 다루지 않는 slot의 근거가 사라지면 안 된다.
 
     값까지 확정한 자리(picked_value)는 "항목: 값" 문장으로 정리한다 — 발췌 줄만
     나열하면 표 머리글 조각이 섞여 읽기 어렵다(Phase 10 실측: LLM 답변이 폐기된
@@ -663,7 +668,8 @@ def fallback_answer(matches: Sequence[EvidenceMatch]) -> tuple[str, str]:
                 "그 조건으로 다시 확인해 답하겠다.",
                 "질문을 좁히거나 기간·기업 조건을 명시해야 한다.")
     valued = [m for m in matches if m.picked_value and m.slot != ANSWER_SLOT]
-    rest = [m for m in matches if m not in valued]
+    rest = [m for m in matches if m not in valued
+            and "".join(m.evidence_text.split()) not in exclude_texts]
     parts: list[str] = []
     if valued:
         parts.append("공시에서 확인한 값:")
@@ -681,6 +687,58 @@ def fallback_answer(matches: Sequence[EvidenceMatch]) -> tuple[str, str]:
         parts.append("(위 줄은 공시 원문 표기 그대로이며, '|'는 표의 칸 구분이다.)")
     return ("\n".join(parts),
             "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.")
+
+
+# ---------- 3-1. 대량보유 서식 파서 배선 (docs/plans/2026-09-05-holding-parser.md) ----------
+
+def _holding_parse(question: str, state: AgentState,
+                   docs_by_id: Mapping[str, dict]) -> "calculator.HoldingParseResult | None":
+    """대량보유 문항이면 서식 파서를 시도한다. 어떤 실패든 미발동과 같다(덤프 유지).
+
+    파싱 대상은 매치된 문서의 검색 청크 + 같은 문서의 원문 노드(§3-3) — 요약표·직전 행이
+    검색 상위에 안 뽑혔어도 같은 문서면 값 소스로 쓴다(쓰면 근거 승격이 뒤따른다)."""
+    if "대량보유" not in question and not any(
+            m.doc_id.startswith("holding") for m in state.evidence_matches):
+        return None
+    cand_docs = {m.doc_id for m in state.evidence_matches}
+    if not cand_docs:
+        return None
+    pool = [c for c in state.retrieval_results if c.doc_id in cand_docs]
+    doc_nodes = {
+        doc_id: [(node.get("node_index"), node.get("text") or "")
+                 for node in (docs_by_id.get(doc_id) or {}).get("nodes") or []]
+        for doc_id in cand_docs}
+    try:
+        return calculator.parse_holding_report(
+            question, pool, doc_nodes=doc_nodes,
+            doc_meta={c.doc_id: dict(c.metadata) for c in pool})
+    except Exception:  # noqa: BLE001 — 파서 결함이 응답 의무를 깨면 안 된다. 미발동으로.
+        return None
+
+
+def _promote_holding_matches(state: AgentState,
+                             holding: "calculator.HoldingParseResult") -> None:
+    """파서가 값을 뽑은 행을 evidence_matches로 승격한다(§3-2 감사 가능성).
+
+    retrieved_context와 citations는 evidence_matches만 직렬화하므로, 승격하지 않으면
+    답의 숫자가 근거 없는 감사 불가 답변이 된다. 같은 행이 이미 자유 자리로 뽑혀 있으면
+    그 매치의 slot·picked_value만 갱신하고, 없으면 추가한다."""
+    index = {(m.doc_id, "".join(m.evidence_text.split())): i
+             for i, m in enumerate(state.evidence_matches)}
+    for ex in holding.values:
+        key = (ex.doc_id, "".join(ex.line.split()))
+        i = index.pop(key, None)
+        if i is not None and state.evidence_matches[i].slot == ANSWER_SLOT:
+            m = state.evidence_matches[i]
+            state.evidence_matches[i] = replace(
+                m, slot=ex.slot, picked_value=ex.value,
+                reason=f"{m.reason} · 대량보유 서식 파서")
+        else:
+            state.evidence_matches.append(EvidenceMatch(
+                slot=ex.slot, chunk_id=ex.chunk_id, doc_id=ex.doc_id,
+                evidence_text=ex.line, section_path=ex.section_path,
+                confidence=0.9, reason="대량보유 서식 파서(기준일·보고자 결박)",
+                picked_value=ex.value, node_index=ex.node_index, rcept_no=ex.rcept_no))
 
 
 def llm_context(chunks: Sequence[RetrievedChunk],
@@ -991,6 +1049,11 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
     state.evidence_matches = match_evidence(
         state.slots, state.retrieval_results, limit=max_evidence, question=question,
         drop=corp_tokens(sorted(state.conditions.corps)), scopes=scopes)
+    docs_by_id = getattr(retriever, "docs_by_id", None) or {}
+    # 대량보유 서식 파서 — 값을 뽑으면 근거로 승격한다(프롬프트·검증·발췌 모두가 본다).
+    holding = _holding_parse(question, state, docs_by_id)
+    if holding:
+        _promote_holding_matches(state, holding)
     # LLM 유무와 무관하게 기록한다 — 키가 없어도 "무엇을 얼마나 넘길 것인가"를 알아야
     # 크레딧을 쓰기 전에 비용과 문맥 크기를 가늠할 수 있다.
     n_context = (llm_context_chunks if llm_context_chunks is not None
@@ -1018,19 +1081,36 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
         question,
         {m.slot: m.picked_value for m in state.evidence_matches if m.picked_value},
         {m.slot: m.evidence_text for m in state.evidence_matches})
+    if holding:
+        state.derived += list(holding.derived)
 
     sources = [c.as_source() for c in state.retrieval_results]
+    if holding:
+        # 승격 행이 검색 청크 밖(같은 문서의 원문 node)에서 왔으면 검증 소스에도 넣는다 —
+        # 원문 그대로의 행이고, 없으면 validator가 그 값을 '원문에 없는 숫자'로 오폭한다.
+        for ex in holding.values:
+            if ex.from_node and not any(ex.line in c.evidence_text
+                                        for c in state.retrieval_results):
+                sources.append({"document_id": ex.doc_id, "text": ex.line,
+                                "chunk_id": ex.chunk_id, "score": 0.0})
     sources_by_doc: dict[str, list[str]] = {}
     for s in sources:
         sources_by_doc.setdefault(str(s.get("document_id") or ""), []).append(str(s.get("text") or ""))
     doc_meta_all = {c.doc_id: dict(c.metadata) for c in state.retrieval_results}
-    answer, uncertainty = fallback_answer(state.evidence_matches)
+    holding_excl = holding.consumed_texts if holding else frozenset()
+    answer, uncertainty = fallback_answer(state.evidence_matches,
+                                          exclude_texts=holding_excl)
+    if holding and holding.missing_slots:
+        # §3-5 부분 답변: 확인된 값은 위 문장으로 나가고, 없는 자리는 명시한다 —
+        # 다른 보고자의 행으로 빈자리를 채우지 않는다.
+        answer = (f"{answer}\n\n다음 항목은 검색된 근거에서 확인하지 못했다: "
+                  + ", ".join(holding.missing_slots) + ".")
+    det_template = (answer, uncertainty)     # ⑨ 폴백 ②단(템플릿)도 같은 결정론 답을 쓴다
     if state.derived:
         answer = calculator.describe(state.derived) + "\n\n" + answer
     citations = [{"document_id": m.doc_id, "quote_or_fact": m.evidence_text}
                  for m in state.evidence_matches]
 
-    docs_by_id = getattr(retriever, "docs_by_id", None) or {}
     doc_lines = {doc_id: [ln for node in (docs_by_id.get(doc_id) or {}).get("nodes") or []
                           for ln in (node.get("text") or "").split("\n")]
                  for doc_id in {m.doc_id for m in state.evidence_matches}}
@@ -1173,7 +1253,7 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
         resolved = fallback_chain.resolve(
             matches=state.evidence_matches, sources=sources, derived=state.derived,
             llm=llm, system_prompt=SYSTEM_PROMPT, user_prompt=user_prompt,
-            template=fallback_answer(state.evidence_matches), answer_schema=ANSWER_SCHEMA)
+            template=det_template, answer_schema=ANSWER_SCHEMA)
         state.answer = answer = resolved["answer"]
         state.uncertainty = uncertainty = resolved["uncertainty"]
         state.fallback_stage = resolved["stage"]
