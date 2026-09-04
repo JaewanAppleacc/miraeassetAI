@@ -39,6 +39,10 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--final", action="store_true",
                    help="최종 판정 모드: A/B/C/D 완비·문항 누락 0·arm 간 입력 pin 일치를 강제한다. "
                         "결과 파일이 없으면 건너뛰지 않고 실패한다(검수 3차 발견 6).")
+    p.add_argument("--registry", type=Path, default=REPO / "results" / "fourarm" / "arm_registry.json",
+                   help="arm별 사전 등록 SHA(config·code·results) — 결과 디렉터리 밖(git 추적)의 "
+                        "allowlist. 디렉터리 안 값끼리의 정합만으로는 완전 바꿔치기를 판별할 수 없다"
+                        "(검수 8차 발견 3).")
     args = p.parse_args(argv)
     if args.final and sorted(args.arms) != ["A", "B", "C", "D"]:
         print("--final은 --arms A B C D 전부를 요구한다", file=sys.stderr)
@@ -90,6 +94,25 @@ def main(argv: list[str] | None = None) -> int:
     table = fourarm.summary_table(reports)
     out = [f"# 4-arm 채점 요약 (k={fourarm.EVAL_K} 평가 · Gold {gold_sha[:8]} · conditions {cond_sha[:8]})", "", table]
     if args.final:
+        # 외부 allowlist 대조(검수 8차 발견 3): 등록된 config/code/results SHA와 run.json이 전부
+        # 일치해야 한다. 등록은 각 arm 실행 직후 git에 커밋한다(A/C는 팀원1 run.json 값을 등록).
+        if not args.registry.exists():
+            print(f"최종 판정 불가 — arm registry 없음: {args.registry}", file=sys.stderr)
+            return 1
+        registry = json.loads(args.registry.read_text(encoding="utf-8"))
+        for arm in args.arms:
+            reg = registry.get(arm)
+            runpath = args.results_dir / f"{arm}.run.json"
+            run = (json.loads(runpath.read_text(encoding="utf-8")) if runpath.exists() else {})
+            if not reg:
+                print(f"최종 판정 불가 — registry에 {arm} 미등록", file=sys.stderr)
+                return 1
+            for key in ("config_sha256", "code_sha256", "results_sha256"):
+                if reg.get(key) != run.get(key):
+                    print(f"최종 판정 불가 — {arm} {key}가 registry와 다름 "
+                          f"(등록 {str(reg.get(key))[:12]}… ≠ run {str(run.get(key))[:12]}…)",
+                          file=sys.stderr)
+                    return 1
         # arm 간 입력 pin 일치(같은 Gold·conditions·코퍼스를 봤는가) — run.json(§1-3) 실키로 대조.
         # code_sha는 스택이 달라 arm별로 다를 수 있으므로 존재만 요구하고 일치는 강제하지 않는다.
         shared: dict[str, dict] = {}

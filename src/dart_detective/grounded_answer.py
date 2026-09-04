@@ -187,7 +187,8 @@ _REL_PERIOD_RE = re.compile(r"(당기|전기|전전기)(말)?(?![가-힣])")
 _ORD_PERIOD_RE = re.compile(r"제\s*\d{1,3}\s*기(말)?(?![가-힣0-9])")
 _QTR_PERIOD_RE = re.compile(r"[1-4]\s*분기|(?:상|하)?반기(?![가-힣])")
 # 검수 7차 발견 2: 전년 동기·직전 사업연도·직전/이번 보고서·영문 Q/H도 기간이다.
-_YOY_PERIOD_RE = re.compile(r"전년\s*동기|전년도|전년(?![가-힣])|직전\s*사업\s*연도|직전\s*사업연도")
+_YOY_PERIOD_RE = re.compile(
+    r"전년\s*동기|전년도|전년(?![가-힣])|(?:이번|당해|직전|전)\s*사업\s*연도|금기(?![가-힣])")
 _REPSEQ_PERIOD_RE = re.compile(r"(직전|이번)\s*보고서")
 _ENG_PERIOD_RE = re.compile(r"(?i)(?<![a-z0-9])(?:q[1-4]|[1-4]q|h[12]|[12]h)(?![a-z0-9])")
 
@@ -303,13 +304,19 @@ def _token_column_mismatch(quote: str, value: str, token: str,
     located = _quote_table_columns(quote, chunk_texts, base_year)
     if located is None:
         return None
-    line, _, token_cols = located
-    col = token_cols.get(tables._norm_period_token(token))
+    line, year_cols, token_cols = located
+    norm = tables._norm_period_token(token)
+    col = token_cols.get(norm)
+    if col is None and norm.isdigit():
+        col = year_cols.get(int(norm))
     if col is None:
-        return None
+        # 다기간 표인데 claim의 기간 토큰이 어느 열에도 안 붙는다 — 검증 불가를 통과로
+        # 두면 "직전 사업연도 매출액은 100(이번 사업연도 값)"이 그대로 나간다(검수 8차
+        # 발견 2). fail-closed로 폐기한다.
+        return f"period_bound:period_unbound:{token}"
     cell = tables.value_at(line, col)
     if cell is None:
-        return None
+        return f"period_bound:period_unbound:{token}"
     if not all(v in cell.replace(",", "") for v in vnums):
         return f"period_bound:column_mismatch:{token}"
     return None
@@ -397,28 +404,41 @@ def check_generated_answer(answer: str, citations: Sequence[Mapping[str, Any]],
             if not verified:
                 fails.append(f"multi_period_sentence:{sent[:40]}")
             continue
+        if not ptoks:
+            continue                      # 기간 없는 수치 문장은 validator(원문 존재)가 맡는다
         years = _years_of(sent)
         rel_toks = ptoks - years
-        for doc_id, quotes in quotes_by_doc.items():
-            chunks = doc_chunks.get(doc_id) or ()
-            meta = doc_meta.get(doc_id) or {}
-            try:
-                base = int(meta.get("base_year")) if meta.get("base_year") not in (None, "") else None
-            except (TypeError, ValueError):
-                base = None
-            for q in quotes:
-                if not (set(numbers_in(q)) & set(nums)):
-                    continue
-                per_num = []
-                for n in nums:
+        # 기간 수치 문장의 **숫자마다** 인용 결박을 요구한다(검수 8차 발견 1): 숫자 없는
+        # 인용만 대면 검사를 건너뛰던 구멍, 정답 숫자를 하나 섞으면("90 또는 100") 통과하던
+        # 구멍을 모두 막는다 — 각 숫자는 (i) 그 숫자를 담은 인용이 있어야 하고, (ii) 그
+        # 인용이 다기간 표 행이면 문장의 기간 열에 그 숫자가 있어야 한다.
+        for n in nums:
+            bound = False
+            mismatch: str | None = None
+            for doc_id, quotes in quotes_by_doc.items():
+                chunks = doc_chunks.get(doc_id) or ()
+                meta = doc_meta.get(doc_id) or {}
+                try:
+                    base = int(meta.get("base_year")) if meta.get("base_year") not in (None, "") else None
+                except (TypeError, ValueError):
+                    base = None
+                for q in quotes:
+                    if n not in set(numbers_in(q)):
+                        continue
                     if len(years) == 1:
-                        per_num.append(_column_mismatch(q, n, years, chunks, base))
+                        f = _column_mismatch(q, n, years, chunks, base)
                     elif not years and len(rel_toks) == 1:
-                        per_num.append(_token_column_mismatch(q, n, next(iter(rel_toks)),
-                                                              chunks, base))
-                # 문장 숫자 전부가 기간 열과 어긋날 때만 실패(다지표 문장 과잉 폐기 방지).
-                if per_num and all(f is not None for f in per_num):
-                    fails.append(f"{per_num[0]}:{sent[:30]}")
+                        f = _token_column_mismatch(q, n, next(iter(rel_toks)), chunks, base)
+                    else:
+                        f = None
+                    if f is None:
+                        bound = True
+                        break
+                    mismatch = f
+                if bound:
+                    break
+            if not bound:
+                fails.append(f"{mismatch or 'period_bound:number_uncited:' + n}:{sent[:30]}")
     return fails
 
 

@@ -201,7 +201,18 @@ def _cache_store(key: str, response: dict[str, str]) -> None:
 # ---------- 앱 ----------
 
 app = FastAPI(title="DART QA ops", version="1.1")
-_gate = asyncio.Semaphore(1)          # 세마포어 1 — 동시 실행 금지(§2-2)
+_gates: dict[int, asyncio.Semaphore] = {}   # 세마포어 1 — 동시 실행 금지(§2-2). 루프별 1개.
+
+
+def _gate() -> asyncio.Semaphore:
+    """실행 중 이벤트 루프의 세마포어. 운영(uvicorn 단일 루프)에서는 하나뿐이다 — 전역 객체를
+    쓰면 다른 루프(테스트·재기동)에서 'bound to a different event loop'로 죽는다."""
+    loop_id = id(asyncio.get_running_loop())
+    g = _gates.get(loop_id)
+    if g is None:
+        g = asyncio.Semaphore(1)
+        _gates[loop_id] = g
+    return g
 
 
 @app.on_event("startup")
@@ -271,7 +282,17 @@ async def answer_endpoint(request: Request) -> JSONResponse:
 
     meta: dict[str, Any] = {"cacheable": False}
     disconnected = False
-    await _gate.acquire()
+    # 세마포어 대기도 데드라인 안에서만(검수 8차 발견 4): 대기로 예산을 다 쓴 요청이 새 계산을
+    # 시작하면 응답은 어차피 늦고 뒤 요청만 밀린다. 대기 초과면 계산 없이 데드라인 폴백.
+    wait_budget = deadline_budget() - (time.perf_counter() - t0)
+    try:
+        gate = _gate()
+        await asyncio.wait_for(gate.acquire(), timeout=max(0.0, wait_budget))
+    except asyncio.TimeoutError:
+        logger.warning("answer deadline(세마포어 대기 초과) qid=%s", question_id)
+        response = {k: str(_fallback_wire(question_id, question, "deadline").get(k, ""))
+                    for k in WIRE_KEYS}
+        return JSONResponse(content=response)
     gate_owned = True                     # 데드라인 시 janitor에게 소유권을 넘긴다(아래)
     try:
         # 세마포어 획득 후 캐시 재확인(검수 4차 발견 4): 단절된 선행 요청이 방금 계산을 끝내고
@@ -282,6 +303,11 @@ async def answer_endpoint(request: Request) -> JSONResponse:
                         question_id, int((time.perf_counter() - t0) * 1000))
             return JSONResponse(content=hit)
         remaining = deadline_budget() - (time.perf_counter() - t0)
+        if remaining <= 0:
+            logger.warning("answer deadline(획득 후 잔여 0) qid=%s", question_id)
+            response = {k: str(_fallback_wire(question_id, question, "deadline").get(k, ""))
+                        for k in WIRE_KEYS}
+            return JSONResponse(content=response)
         task = asyncio.create_task(
             asyncio.to_thread(_call, question_id, question, deadline_s=remaining))
         try:
@@ -311,7 +337,7 @@ async def answer_endpoint(request: Request) -> JSONResponse:
                 except Exception:  # noqa: BLE001 — 결과는 버린다, 자리만 지킨다
                     pass
                 finally:
-                    _gate.release()
+                    gate.release()
                     logger.info("answer janitor released qid=%s", qid)
 
             asyncio.create_task(_janitor())
@@ -322,7 +348,7 @@ async def answer_endpoint(request: Request) -> JSONResponse:
             response = _fallback_wire(question_id, question, type(exc).__name__)
     finally:
         if gate_owned:
-            _gate.release()
+            gate.release()
 
     try:
         # dict가 아닌 반환(None 등)도 여기서 잡는다(검수 4차 발견 3 — 정규화 자체가 예외였다).

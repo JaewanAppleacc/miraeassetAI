@@ -261,3 +261,49 @@ def test_generated_answer_sentence_gate_catches_json_swap():
     ans = "2024년 매출액은 100이다 (사업보고서 (2024.12), 접수번호 20250318000001, 2025-03-18)."
     assert grounded_answer.check_generated_answer(
         ans, cits, {_DOC: [table]}, {_DOC: {}}, question="2024년 매출액은?") == []
+
+
+def test_period_token_canonicalization():
+    """검수 8차 발견 2: 머리글 '직전 사업연도'와 claim '전기', 'Q1'과 '1분기'는 같은 기간."""
+    n = tables._norm_period_token
+    assert n("직전 사업연도") == n("전기") == "전기"
+    assert n("이번사업연도") == n("당기") == n("당기말") == "당기"
+    assert n("1분기") == n("Q1") == n("1Q") == "q1"
+    assert n("상반기") == n("1H") == "h1" and n("하반기") == "h2"
+    assert n("제 49 기") == "제49기" and n("2024년") == "2024"
+
+
+def test_single_token_claim_fails_closed_when_column_unresolved():
+    """검수 8차 발견 2: 다기간 표인데 토큰이 어느 열에도 안 붙으면 통과가 아니라 폐기."""
+    t2 = "구분 | 이번 사업연도 | 직전 사업연도\n매출액 | 100 | 90"
+    ok, fails = grounded_answer.validate_claim(
+        {"text": "직전 사업연도 매출액은 100이다", "value": "100", "period": None,
+         "doc_id": _DOC, "quote": "매출액 | 100 | 90"},
+        {_DOC: grounded_answer._squash(t2)}, {_DOC: {}}, set(), doc_chunks={_DOC: [t2]})
+    assert not ok and any("column_mismatch" in f for f in fails)
+    ok, fails = grounded_answer.validate_claim(
+        {"text": "직전 사업연도 매출액은 90이다", "value": "90", "period": None,
+         "doc_id": _DOC, "quote": "매출액 | 100 | 90"},
+        {_DOC: grounded_answer._squash(t2)}, {_DOC: {}}, set(), doc_chunks={_DOC: [t2]})
+    assert ok, fails
+    # 인식된 토큰이 표의 어떤 열도 아니면 fail-closed.
+    t3 = "구분 | Q1 | Q2\n매출액 | 100 | 90"
+    ok, fails = grounded_answer.validate_claim(
+        {"text": "전년동기 매출액은 100이다", "value": "100", "period": None,
+         "doc_id": _DOC, "quote": "매출액 | 100 | 90"},
+        {_DOC: grounded_answer._squash(t3)}, {_DOC: {}}, set(), doc_chunks={_DOC: [t3]})
+    assert not ok and any("period_unbound" in f for f in fails)
+
+
+def test_sentence_gate_requires_per_number_citation_binding():
+    """검수 8차 발견 1: 숫자 없는 인용·정답 숫자 섞기로 문장 게이트를 우회할 수 없다."""
+    table = "구분 | 2024년 | 2023년\n매출액 | 100 | 90\n회사명 | HMM"
+    assert grounded_answer.check_generated_answer(
+        "2024년 매출액은 90이다.", [{"document_id": _DOC, "quote_or_fact": "회사명 | HMM"}],
+        {_DOC: [table]}, {_DOC: {}})
+    assert grounded_answer.check_generated_answer(
+        "2024년 매출액은 90 또는 100이다.",
+        [{"document_id": _DOC, "quote_or_fact": "매출액 | 100 | 90"}], {_DOC: [table]}, {_DOC: {}})
+    assert grounded_answer.check_generated_answer(
+        "2024년 매출액은 100이다.",
+        [{"document_id": _DOC, "quote_or_fact": "매출액 | 100 | 90"}], {_DOC: [table]}, {_DOC: {}}) == []

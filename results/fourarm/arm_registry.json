@@ -1,0 +1,15 @@
+{
+ "B": {
+  "config_sha256": "fd23dd8be268a694465a97b4e73bfb48b36bbbb1dfcaa73d97e152a8641fb6b8",
+  "code_sha256": "04b847c4a2e61042da9f025735af8b2e2e56311e",
+  "results_sha256": "de661a1cbd20d8de268e24b84ccac8ab41feeace0af2502891d401a2c0898985",
+  "registered_from": "B.run.json finished_at=2026-09-04T16:57:13"
+ },
+ "D": {
+  "config_sha256": "f4914226620b425dbe1e13da5c2c6921391fe2afbf33ae83e80f9bc9146389b2",
+  "code_sha256": "04b847c4a2e61042da9f025735af8b2e2e56311e",
+  "results_sha256": "0f1112219d28442115f0bc07924d580320c40303b365ef1f2325fc5afa29cf6b",
+  "registered_from": "D.run.json finished_at=2026-09-04T16:47:06"
+ },
+ "_note": "arm별 사전 등록 SHA allowlist — 각 arm 실행 직후 run.json 값을 여기 등록하고 git에 커밋한다. score.py --final은 결과 디렉터리의 run.json이 이 값과 전부 일치해야 진행한다(검수 8차 발견 3: 디렉터리 안 값끼리의 정합만으로는 바꿔치기 판별 불가). A/C는 팀원1 run.json 도착 시 등록."
+}

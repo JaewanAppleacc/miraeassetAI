@@ -213,3 +213,40 @@ def test_answer_replaces_invalid_fresh_wire_with_fallback(monkeypatch):
         body = r.json()
         assert set(body) == set(ops.WIRE_KEYS)
         assert all(isinstance(v, str) for v in body.values()) and body["answer"]
+
+
+def test_deadline_janitor_serializes_and_waiting_request_respects_deadline(monkeypatch):
+    """검수 7·8차 발견 4: 데드라인 후에도 provider가 겹치지 않고, 세마포어 대기로 예산을
+    넘긴 요청은 새 계산 없이 즉시 데드라인 폴백을 받는다."""
+    import asyncio, threading, time
+    import httpx
+    from dart_detective import ops_service as ops
+    monkeypatch.setenv("DART_QA_DEADLINE_S", "0.1")
+    live = {"n": 0, "max": 0, "calls": 0}
+    lock = threading.Lock()
+
+    def slow_call(qid, q, deadline_s=None):
+        with lock:
+            live["n"] += 1; live["max"] = max(live["max"], live["n"]); live["calls"] += 1
+        time.sleep(0.6)
+        with lock:
+            live["n"] -= 1
+        return {"question_id": qid, "question": q, "retrieved_context": "", "think_trace": "{}",
+                "answer": "느린 답"}, {"cacheable": False}
+
+    ops.configure(call_fn=slow_call, readiness_fn=lambda: {"ready": True, "pins": {}})
+    ops._cache.clear()
+
+    async def run():
+        transport = httpx.ASGITransport(app=ops.app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://t") as c:
+            r1, r2 = await asyncio.gather(
+                c.get("/answer", params={"question_id": "j1", "question": "q"}),
+                c.get("/answer", params={"question_id": "j2", "question": "q"}))
+            await asyncio.sleep(0.8)
+            return r1, r2
+    r1, r2 = asyncio.run(run())
+    assert r1.status_code == 200 and r2.status_code == 200
+    assert live["max"] == 1                      # 겹침 없음
+    assert live["calls"] == 1                    # 대기 중 데드라인 초과 요청은 계산을 시작하지 않음
+    assert all(isinstance(v, str) for v in r2.json().values()) and r2.json()["answer"]

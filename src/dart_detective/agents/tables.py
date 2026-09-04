@@ -104,18 +104,40 @@ def period_columns_of_lines(lines: Sequence[str],
 # 따로 다루고, 여기는 연도로 환산되지 않는 토큰(제N기·분기·전년 동기·영문 Q/H 등)까지 —
 # 검수 7차 발견 2: 연도 매핑이 안 되는 표에서 단일 기간 claim의 열 결박이 없었다.
 _PERIOD_CELL_RES = tuple(re.compile(p) for p in (
-    r"(당기|전기|전전기)(말)?",
-    r"제?\d{1,3}기(말)?",
-    r"q[1-4]|[1-4]q|[1-4]분기",
-    r"h[12]|[12]h|상반기|하반기|반기",
-    r"전년동기|전년도|전년",
+    r"(당기|전기|전전기|금기)",
+    r"(이번|당해|직전|전)사업연도",
+    r"제?\d{1,3}기",
+    r"q[1-4]",
+    r"h[12]",
+    r"전년동기",
     r"(직전|이번)보고서",
     r"((?:19|20)\d{2})년?",
 ))
 
+# 표기 통일(검수 8차 발견 2): 머리글 "직전 사업연도"와 claim "전기", 머리글 "Q1"과 claim
+# "1분기"는 같은 기간이다. 양쪽을 같은 정규형으로 맞춰야 열 결박이 성립한다.
+_CANON_RULES = (
+    (re.compile(r"^(?:q([1-4])|([1-4])q|([1-4])분기)$"), lambda m: f"q{m.group(1) or m.group(2) or m.group(3)}"),
+    (re.compile(r"^(?:h([12])|([12])h)$"), lambda m: f"h{m.group(1) or m.group(2)}"),
+    (re.compile(r"^상반기$|^반기$"), lambda m: "h1"),
+    (re.compile(r"^하반기$"), lambda m: "h2"),
+    (re.compile(r"^(?:당기|금기|이번사업연도|당해사업연도)$"), lambda m: "당기"),
+    (re.compile(r"^(?:전기|직전사업연도|전사업연도)$"), lambda m: "전기"),
+    (re.compile(r"^(?:전년동기|전년도|전년)$"), lambda m: "전년동기"),
+    (re.compile(r"^제(\d{1,3})기$"), lambda m: f"제{int(m.group(1))}기"),
+    (re.compile(r"^((?:19|20)\d{2})년?$"), lambda m: m.group(1)),
+)
+
 
 def _norm_period_token(s: str) -> str:
-    return re.sub(r"\s+", "", s).lower().rstrip("말")
+    t = re.sub(r"\s+", "", s or "").lower()
+    if t.endswith("말"):
+        t = t[:-1]
+    for rx, fn in _CANON_RULES:
+        m = rx.match(t)
+        if m:
+            return fn(m)
+    return t
 
 
 def period_token_columns(lines: Sequence[str]) -> dict[str, int]:

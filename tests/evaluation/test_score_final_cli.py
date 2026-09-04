@@ -74,3 +74,25 @@ def test_final_detects_full_forgery_with_recomputed_hashes(tmp_path):
     rc = score.main(["--arms", "A", "B", "C", "D", "--final", "--no-locator-check",
                      "--results-dir", str(d)])
     assert rc == 1
+
+
+def test_final_requires_registered_shas_for_every_arm(tmp_path):
+    """검수 8차 발견 3: 디렉터리 안 값을 전부 자기일관되게 고쳐 써도 외부 registry와 어긋나면 거부."""
+    import hashlib, json
+    d = _copy_bd_as_abcd(tmp_path)
+    for arm, origin in (("A", "B"), ("C", "D")):
+        rows = [json.loads(l) for l in (d / f"{arm}.results.jsonl").open(encoding="utf-8")]
+        run = json.loads((d / f"{arm}.run.json").read_text(encoding="utf-8"))
+        cfg = dict(run["config"]); cfg["arm"] = arm; cfg["label"] = score.fourarm.ARM_LABELS[arm]
+        cfg["strategy"] = "fixed"; cfg["dense"] = "present" if arm == "A" else "off"
+        csha = hashlib.sha256(json.dumps(cfg, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+        for r in rows:
+            r["arm"] = arm; r["config_sha256"] = csha
+        body = "\n".join(json.dumps(r, ensure_ascii=False) for r in rows) + "\n"
+        (d / f"{arm}.results.jsonl").write_text(body, encoding="utf-8")
+        run.update({"arm": arm, "config": cfg, "config_sha256": csha,
+                    "results_sha256": hashlib.sha256(body.encode("utf-8")).hexdigest()})
+        (d / f"{arm}.run.json").write_text(json.dumps(run, ensure_ascii=False), encoding="utf-8")
+    rc = score.main(["--arms", "A", "B", "C", "D", "--final", "--no-locator-check",
+                     "--results-dir", str(d)])
+    assert rc == 1        # registry(git 추적)에 A/C 미등록 → 거부
