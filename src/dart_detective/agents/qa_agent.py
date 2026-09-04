@@ -696,29 +696,35 @@ def fallback_answer(matches: Sequence[EvidenceMatch],
 
 # ---------- 3-1. 대량보유 서식 파서 배선 (docs/plans/2026-09-05-holding-parser.md) ----------
 
-def _holding_parse(question: str, state: AgentState,
-                   docs_by_id: Mapping[str, dict]) -> "calculator.HoldingParseResult | None":
+def _holding_parse(question: str, state: AgentState, docs_by_id: Mapping[str, dict],
+                   ) -> tuple["calculator.HoldingParseResult | None", frozenset[str]]:
     """대량보유 문항이면 서식 파서를 시도한다. 어떤 실패든 미발동과 같다(덤프 유지).
 
     파싱 대상은 매치된 문서의 검색 청크 + 같은 문서의 원문 노드(§3-3) — 요약표·직전 행이
-    검색 상위에 안 뽑혔어도 같은 문서면 값 소스로 쓴다(쓰면 근거 승격이 뒤따른다)."""
+    검색 상위에 안 뽑혔어도 같은 문서면 값 소스로 쓴다(쓰면 근거 승격이 뒤따른다).
+    반환 (파서 결과, 결박 문서 집합): 파서가 유일 문서를 못 정해도 질문 기준일에 맞는 후보
+    집합은 돌려준다 — 그 밖의 보고서는 발췌·인용·검증 어디에도 쓰지 않는다."""
     if "대량보유" not in question and not any(
             m.doc_id.startswith("holding") for m in state.evidence_matches):
-        return None
+        return None, frozenset()
     cand_docs = {m.doc_id for m in state.evidence_matches}
     if not cand_docs:
-        return None
+        return None, frozenset()
     pool = [c for c in state.retrieval_results if c.doc_id in cand_docs]
     doc_nodes = {
         doc_id: [(node.get("node_index"), node.get("text") or "")
                  for node in (docs_by_id.get(doc_id) or {}).get("nodes") or []]
         for doc_id in cand_docs}
+    doc_meta = {c.doc_id: dict(c.metadata) for c in pool}
     try:
-        return calculator.parse_holding_report(
-            question, pool, doc_nodes=doc_nodes,
-            doc_meta={c.doc_id: dict(c.metadata) for c in pool})
+        holding = calculator.parse_holding_report(question, pool, doc_nodes=doc_nodes,
+                                                  doc_meta=doc_meta)
+        if holding:
+            return holding, frozenset({holding.doc_id})
+        return None, calculator.holding_candidate_docs(question, pool, doc_nodes=doc_nodes,
+                                                       doc_meta=doc_meta)
     except Exception:  # noqa: BLE001 — 파서 결함이 응답 의무를 깨면 안 된다. 미발동으로.
-        return None
+        return None, frozenset()
 
 
 def _promote_holding_matches(state: AgentState,
@@ -1193,22 +1199,24 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
         drop=corp_tokens(sorted(state.conditions.corps)), scopes=scopes)
     docs_by_id = getattr(retriever, "docs_by_id", None) or {}
     # 대량보유 서식 파서 — 값을 뽑으면 근거로 승격한다(프롬프트·검증·발췌 모두가 본다).
-    holding = _holding_parse(question, state, docs_by_id)
+    holding, bound_docs = _holding_parse(question, state, docs_by_id)
     if holding:
         _promote_holding_matches(state, holding)
-        # 대상 보고서가 확정됐다 — 다른 보고서의 근거는 프롬프트(wanted)·인용·
-        # retrieved_context 어디에도 싣지 않는다(재검수 BLOCKER 1 + v4 "실제 사용 근거만").
+    if bound_docs:
+        # 대상 보고서(또는 기준일이 맞는 후보 집합)가 정해졌다 — 그 밖의 보고서 근거는
+        # 프롬프트(wanted)·인용·retrieved_context 어디에도 싣지 않는다(재검수 BLOCKER 1 +
+        # v4 "실제 사용 근거만"). 후보가 둘이면 파서는 미발동이지만 결박은 유지한다.
         state.evidence_matches = [m for m in state.evidence_matches
-                                  if m.doc_id == holding.doc_id]
+                                  if m.doc_id in bound_docs]
     # LLM 유무와 무관하게 기록한다 — 키가 없어도 "무엇을 얼마나 넘길 것인가"를 알아야
     # 크레딧을 쓰기 전에 비용과 문맥 크기를 가늠할 수 있다.
     n_context = (llm_context_chunks if llm_context_chunks is not None
                  else state.route.budget.context_chunks)
     context_pool = state.retrieval_results
-    if holding:
-        # 파서가 대상 문서를 확정했다 — LLM 발췌도 그 문서로 제한한다(최종 검수 2:
-        # 다른 날짜·다른 보고자 보고서의 값이 claim으로 섞이는 것을 원천 차단).
-        bound_chunks = [c for c in state.retrieval_results if c.doc_id == holding.doc_id]
+    if bound_docs:
+        # 대상 문서(집합)로 LLM 발췌도 제한한다(최종 검수 2: 다른 날짜·다른 보고자 보고서의
+        # 값이 claim으로 섞이는 것을 원천 차단).
+        bound_chunks = [c for c in state.retrieval_results if c.doc_id in bound_docs]
         context_pool = bound_chunks or state.retrieval_results
     context = llm_context(context_pool, n_context)
     state.llm_context_chunk_ids = tuple(c.chunk_id for c in context)
@@ -1239,8 +1247,8 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
     # 대상 문서가 확정되면 검증 소스도 그 문서로 제한한다(재검수 BLOCKER 1: 다른 보고서의
     # 숫자를 답하면서 대상 문서의 무해한 문장만 인용해도 SUPPORTED가 되던 구멍 — FC claim
     # 게이트·최종 validator·문장 게이트가 전부 이 sources를 본다).
-    source_chunks = (state.retrieval_results if not holding else
-                     [c for c in state.retrieval_results if c.doc_id == holding.doc_id])
+    source_chunks = (state.retrieval_results if not bound_docs else
+                     [c for c in state.retrieval_results if c.doc_id in bound_docs])
     sources = [c.as_source() for c in source_chunks]
     if holding:
         # 승격 행이 검색 청크 밖(같은 문서의 원문 node)에서 왔으면 검증 소스에도 넣는다 —
@@ -1314,11 +1322,14 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
     # 예외(최종 검수 3): 대량보유 질문이 파서가 못 채우는 항목(보유목적·보고사유·보고자)을
     # 함께 물으면, 계산이 있어도 그 항목을 위해 LLM을 부른다 — 발췌는 대상 문서로 제한돼 있다.
     llm_topics = _holding_llm_topics(question, holding) if holding else ()
-    if llm is not None and ((holding and not llm_topics) or (not holding and state.derived)):
+    if llm is not None and (binary or (holding and not llm_topics)
+                            or (not holding and state.derived)):
         # 대량보유: 질문의 요구 항목을 파서가 전부 채웠으면 계산이 없어도 LLM을 부르지 않는다 —
         # 같은 문서의 과거 연혁값을 직전값으로 재주장하는 경로 자체를 없앤다(재검수 BLOCKER 1-a).
-        state.llm = {"used": False, "skipped": ("deterministic_calculation" if state.derived
-                                                else "holding_all_slots_filled")}
+        # 이분 판정(신청/승인)이 서식 필드로 확정된 질문도 LLM이 더할 것이 없다(자체 검증).
+        state.llm = {"used": False, "skipped": (
+            "binary_verdict" if binary else
+            "deterministic_calculation" if state.derived else "holding_all_slots_filled")}
         llm = None
 
     if llm is not None and state.evidence_matches:
@@ -1365,9 +1376,9 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
                 state.llm["degraded"] = True
                 state.llm["degraded_reason"] = "unsupported"
                 state.llm["degraded_answer"] = llm_answer
-            elif holding and any(
+            elif bound_docs and any(
                     (c.get("document_id") or "").startswith("holding")
-                    and c.get("document_id") != holding.doc_id
+                    and c.get("document_id") not in bound_docs
                     for c in llm_citations):
                 # 파서가 대상 보고서를 확정했는데 LLM이 **다른** 대량보유 보고서를 인용했다 —
                 # 다른 날짜·다른 보고자의 값이 한 답변에 섞이는 경로(최종 검수 1, 삼성전기

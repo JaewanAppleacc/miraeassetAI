@@ -379,29 +379,47 @@ def _dates_in(text: str) -> list[tuple[int, int, int]]:
             for y, m, d in _HOLDING_DATE_RE.findall(text or "")]
 
 
-def question_report_dates(question: str) -> frozenset[tuple[int, int, int]]:
-    """질문이 지목한 보고서작성기준일 후보.
+def question_report_dates_ex(question: str) -> tuple[frozenset[tuple[int, int, int]], bool]:
+    """(질문이 지목한 보고서 날짜 후보, 작성기준일로 명시됐는가).
 
-    앵커 우선: '기준일' 직전 표기 → '이번보고서(날짜)' → 질문에 날짜가 하나뿐이면 그것.
-    여러 날짜가 앵커 없이 섞이면 결박 불가 — 빈 집합(파서는 유일 문서일 때만 진행)."""
+    앵커 우선: '기준일' 표기(앞뒤) → '이번보고서(날짜)' → 질문에 날짜가 하나뿐이면 그것.
+    여러 날짜가 앵커 없이 섞이면 결박 불가 — 빈 집합(파서는 유일 문서일 때만 진행).
+    기준일로 명시되지 않은 날짜("2024-12-19 대량보유상황보고서")는 접수일일 수 있다 — 실측:
+    gold 문형의 날짜는 접수일이고 작성기준일은 하루 전이라 결박이 비었다(고려아연·효성중공업)."""
     anchored: list[tuple[int, int, int]] = []
     cur_anchored: list[tuple[int, int, int]] = []
     all_dates: list[tuple[int, int, int]] = []
     for m in _HOLDING_DATE_RE.finditer(question or ""):
         date = (int(m.group(1)), int(m.group(2)), int(m.group(3)))
         all_dates.append(date)
-        window = _squash(question[max(0, m.start() - 15):m.start()])
-        if "기준일" in window:
+        before = _squash(question[max(0, m.start() - 15):m.start()])
+        after = _squash(question[m.end():m.end() + 12])
+        if "기준일" in before or after.startswith("보고서작성기준일") or after.startswith("작성기준일"):
             anchored.append(date)
-        elif "이번보고서" in window:
+        elif "이번보고서" in before:
             cur_anchored.append(date)
     if anchored:
-        return frozenset(anchored)
+        return frozenset(anchored), True
     if cur_anchored:
-        return frozenset(cur_anchored)
+        return frozenset(cur_anchored), True
     if len(all_dates) == 1:
-        return frozenset(all_dates)
-    return frozenset()
+        return frozenset(all_dates), False
+    return frozenset(), False
+
+
+def question_report_dates(question: str) -> frozenset[tuple[int, int, int]]:
+    return question_report_dates_ex(question)[0]
+
+
+def _rcept_date(doc_id: str, meta: Mapping[str, Any]) -> tuple[int, int, int] | None:
+    """접수일 — 메타데이터 rcept_dt(YYYYMMDD), 없으면 doc_id 접수번호 앞 8자리."""
+    raw = str(meta.get("rcept_dt") or "")
+    if not (len(raw) >= 8 and raw[:8].isdigit()):
+        tail = str(doc_id).rsplit("_", 1)[-1]
+        raw = tail if len(tail) >= 8 and tail[:8].isdigit() else ""
+    if not raw:
+        return None
+    return int(raw[:4]), int(raw[4:6]), int(raw[6:8])
 
 
 def _question_reporter(question: str) -> str:
@@ -746,6 +764,7 @@ def _doc_profile(doc_id: str, line_groups: Sequence[Sequence[tuple[str, dict]]],
     all_lines = [pair for lines in line_groups for pair in lines]
     return {
         "doc_id": doc_id, "resolved": resolved, "conflict": conflict, "date": date,
+        "rcept_date": _rcept_date(doc_id, meta),
         "filer_row": filer_row, "meta_filer": meta_filer,
         "filer_norms": {n for n in (_norm_name(filer_row), _norm_name(meta_filer),
                                     _norm_name(cover_name)) if n},
@@ -768,17 +787,45 @@ def _extract(slot: str, row: Mapping[str, Any], value: str, doc_id: str) -> Hold
         rcept_no=str(src.get("rcept_no") or ""), from_node=bool(src.get("from_node")))
 
 
-def parse_holding_report(question: str, chunks: Sequence[Any],
-                         doc_nodes: Mapping[str, Sequence[tuple[int | None, str]]] | None = None,
-                         doc_meta: Mapping[str, Mapping[str, Any]] | None = None,
-                         ) -> HoldingParseResult | None:
-    """대량보유상황보고서에서 직전/이번 보유주식등의 수·보유비율을 결정론으로 뽑는다.
+def _date_bound_profiles(question: str, profiles: list[dict]) -> list[dict]:
+    """질문 날짜와 맞는 문서 프로필만(§3-3 1~3단계: 날짜 → holding 우선). 보고자 결박 전.
 
-    chunks: 검색 청크(매치된 문서로 한정해 넘길 것). doc_nodes: 같은 문서의 원문 노드
-    [(node_index, text)] — 검색에 안 뽑힌 행도 값 소스로 쓴다(사용 시 호출자가 근거 승격).
-    반환 None = 미발동(문서를 유일하게 결박하지 못했거나 서식 판독 실패) — 덤프 유지."""
+    기준일로 명시된 날짜는 작성기준일만, 그렇지 않으면 작성기준일 또는 접수일과 대조한다."""
+    q_dates, anchored = question_report_dates_ex(question)
+    if q_dates:
+        profiles = [p for p in profiles
+                    if p["date"] in q_dates
+                    or (not anchored and p.get("rcept_date") in q_dates)]
+    holding_docs = [p for p in profiles if str(p["doc_id"]).startswith("holding")]
+    if holding_docs and len(holding_docs) < len(profiles):
+        profiles = holding_docs                 # 정기보고서 안 최대주주 표는 후순위(§3-3)
+    return profiles
+
+
+def holding_candidate_docs(question: str, chunks: Sequence[Any],
+                           doc_nodes: Mapping[str, Sequence[tuple[int | None, str]]] | None = None,
+                           doc_meta: Mapping[str, Mapping[str, Any]] | None = None,
+                           ) -> frozenset[str]:
+    """질문 기준일로 결박된 후보 문서 집합 — 파서가 유일 문서를 못 정해도(같은 날짜의 보고서가
+    둘) 이 집합 밖의 보고서는 답의 근거가 될 수 없다(자체 검증 발견: 고려아연 2024-12-19에
+    한국기업투자홀딩스·영풍 보고서가 공존 → 파서 fail-closed 후 LLM이 2024-03-15 보고서를 인용).
+    질문에 기준일이 없으면 결박 정보가 없으므로 빈 집합."""
+    if not question_report_dates(question):
+        return frozenset()
     doc_nodes = doc_nodes or {}
     doc_meta = doc_meta or {}
+    groups, chunk_meta = _line_groups(chunks, doc_nodes, doc_meta)
+    profiles = [p for p in (_doc_profile(d, gs, {**chunk_meta.get(d, {}),
+                                                 **(doc_meta.get(d) or {})})
+                            for d, gs in groups.items()) if p]
+    return frozenset(str(p["doc_id"]) for p in _date_bound_profiles(question, profiles))
+
+
+def _line_groups(chunks: Sequence[Any],
+                 doc_nodes: Mapping[str, Sequence[tuple[int | None, str]]],
+                 doc_meta: Mapping[str, Mapping[str, Any]],
+                 ) -> tuple[dict[str, list[list[tuple[str, dict]]]], dict[str, dict[str, Any]]]:
+    """문서별 (행, 출처) 그룹 — 검색 청크 + 같은 문서의 원문 노드."""
     groups: dict[str, list[list[tuple[str, dict]]]] = {}
     chunk_meta: dict[str, dict[str, Any]] = {}
     for c in chunks:
@@ -799,16 +846,26 @@ def parse_holding_report(question: str, chunks: Sequence[Any],
             lines = [(ln.strip(), src) for ln in (text or "").split("\n") if ln.strip()]
             if lines:
                 groups.setdefault(doc_id, []).append(lines)
+    return groups, chunk_meta
+
+
+def parse_holding_report(question: str, chunks: Sequence[Any],
+                         doc_nodes: Mapping[str, Sequence[tuple[int | None, str]]] | None = None,
+                         doc_meta: Mapping[str, Mapping[str, Any]] | None = None,
+                         ) -> HoldingParseResult | None:
+    """대량보유상황보고서에서 직전/이번 보유주식등의 수·보유비율을 결정론으로 뽑는다.
+
+    chunks: 검색 청크(매치된 문서로 한정해 넘길 것). doc_nodes: 같은 문서의 원문 노드
+    [(node_index, text)] — 검색에 안 뽑힌 행도 값 소스로 쓴다(사용 시 호출자가 근거 승격).
+    반환 None = 미발동(문서를 유일하게 결박하지 못했거나 서식 판독 실패) — 덤프 유지."""
+    doc_nodes = doc_nodes or {}
+    doc_meta = doc_meta or {}
+    groups, chunk_meta = _line_groups(chunks, doc_nodes, doc_meta)
 
     profiles = [p for p in (_doc_profile(d, gs, {**chunk_meta.get(d, {}),
                                                  **(doc_meta.get(d) or {})})
                             for d, gs in groups.items()) if p]
-    q_dates = question_report_dates(question)
-    if q_dates:
-        profiles = [p for p in profiles if p["date"] in q_dates]
-    holding_docs = [p for p in profiles if str(p["doc_id"]).startswith("holding")]
-    if holding_docs and len(holding_docs) < len(profiles):
-        profiles = holding_docs                 # 정기보고서 안 최대주주 표는 후순위(§3-3)
+    profiles = _date_bound_profiles(question, profiles)
     reporter_q = _question_reporter(question)
     if reporter_q:
         rq = _norm_name(reporter_q)

@@ -280,6 +280,63 @@ def test_binary_verdict_is_not_overridden_by_withheld_misfire():
     assert state.validation["status"] == "SUPPORTED"
 
 
+def test_binary_verdict_skips_llm():
+    """이분 판정이 확정되면 LLM은 더할 것이 없다 — 호출하지 않고 캐시 가능 상태로 나간다."""
+    corp_dict = CorpDictionary.from_rows(
+        [{"corp_name": "알테오젠", "listed_name": "알테오젠", "stock_code": "196170"}])
+    doc = IndexedDocument(
+        doc_id="major_20240705900656", corp_name="알테오젠", corp_code="196170",
+        filer_name="알테오젠", doc_group="major", doc_subtype="",
+        report_nm="투자판단 관련 주요경영사항", rcept_dt="20240705", base_year=2024,
+        base_month=7, is_correction=False, text=APPROVAL_FIELD_ROW)
+    retriever = CorpusRetriever(
+        document_index=DocumentIndex([doc], corp_dict), corp_dict=corp_dict,
+        docs_by_id={doc.doc_id: {"doc_id": doc.doc_id, "doc_group": "major", "nodes": [
+            {"node_index": 3, "kind": "table", "section_hierarchy": [], "text": APPROVAL_FIELD_ROW}]}})
+    llm = FakeLLM({"answer": "무관", "evidence": [], "uncertainty": ""})
+    state = qa_agent.answer_question(BINARY_Q, retriever, llm=llm)
+    assert llm.calls == 0 and state.llm.get("skipped") == "binary_verdict"
+    assert "승인(허가) 사실을 알리는 공시다" in state.answer
+
+
+def test_ambiguous_same_date_reports_still_bind_llm_and_dump_to_candidates():
+    """자체 검증 발견(고려아연 2024-12-19): 같은 날짜 보고서가 둘이라 파서가 미발동해도
+    다른 날짜 보고서의 근거·숫자는 발췌·인용·덤프 어디에도 쓰지 않는다."""
+    q = "아모레퍼시픽의 2024-03-22 대량보유상황보고서에서 보고자와 보유주식등의 수 변동을 알려줘."
+    same_date = TRAP.replace("2024년 08월 16일", "2024년 03월 22일")
+    other_row = ("이번보고서 | 2024년 01월 10일 | 기타운용 | 1 | 9,111,111 | 15.57 | 9,111,111 | "
+                 "15.57 | 58,492,759")
+    other_doc = "holding_20240110000001"
+    nodes = [{"node_index": 0, "kind": "table", "section_hierarchy": ["표지"],
+              "text": BASIS_DATE_LINE},
+             {"node_index": 28, "kind": "table", "section_hierarchy": ["연혁"], "text": HISTORY}]
+    corp_dict = CorpDictionary.from_rows(
+        [{"corp_name": "아모레퍼시픽", "listed_name": "아모레퍼시픽", "stock_code": "090430"}])
+    specs = [(DOC_ID, "Massachusetts Financial Services Company", "\n".join(n["text"] for n in nodes), "20240403"),
+             (NPS_DOC, "국민연금공단", same_date, "20240325"),
+             (other_doc, "기타운용", other_row, "20240115")]
+    docs, docs_by_id = [], {}
+    for doc_id, filer, text, rcept in specs:
+        docs.append(IndexedDocument(
+            doc_id=doc_id, corp_name="아모레퍼시픽", corp_code="090430", filer_name=filer,
+            doc_group="holding", doc_subtype="일반", report_nm="주식등의대량보유상황보고서(일반)",
+            rcept_dt=rcept, base_year=2024, base_month=3, is_correction=False, text=text))
+        docs_by_id[doc_id] = {"doc_id": doc_id, "doc_group": "holding", "nodes": (
+            nodes if doc_id == DOC_ID else
+            [{"node_index": 28, "kind": "table", "section_hierarchy": ["연혁"], "text": text}])}
+    retriever = CorpusRetriever(document_index=DocumentIndex(docs, corp_dict),
+                                corp_dict=corp_dict, docs_by_id=docs_by_id)
+    llm = FakeLLM({"answer": "이번 보고서의 보유주식등의 수는 9,111,111주다.",
+                   "evidence": [{"document_id": other_doc, "quote_or_fact": other_row}],
+                   "uncertainty": ""})
+    state = qa_agent.answer_question(q, retriever, llm=llm)
+    assert not any(d.kind == "holding_change" for d in state.derived)   # 파서 미발동(보고자 미결박)
+    assert state.llm.get("degraded")                                     # 다른 날짜 문서 인용 폐기
+    assert "9,111,111" not in state.answer
+    wire = answer_wire.to_answer_wire("q", q, state.to_dict())
+    assert other_doc not in {e["document_id"] for e in _json.loads(wire["retrieved_context"])}
+
+
 def test_binary_question_fails_closed_on_ambiguity():
     q = "알테오젠 공시는 품목허가 신청 사실인가, 승인 사실인가?"   # 날짜 앵커 없음
     got = qa_agent.approval_or_application(

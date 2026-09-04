@@ -375,6 +375,36 @@ def test_no_question_date_with_unique_doc_still_parses():
     assert values_by_slot(got)["이번 보고서 보유주식등의 수"] == "2,263,085"
 
 
+def test_same_date_two_reporters_fail_closed_but_candidates_bound():
+    """자체 검증 발견: 같은 기준일 보고서가 둘이고 질문에 보고자가 없으면 파서는 미발동이지만,
+    기준일 결박 후보 집합은 돌려준다 — 그 밖의 날짜 보고서는 근거가 될 수 없다."""
+    q = "아모레퍼시픽의 2024-03-22 대량보유상황보고서에서 보고자와 보유주식등의 수 변동을 알려줘."
+    nps_same_date = TRAP.replace("2024년 08월 16일", "2024년 03월 22일")
+    other_date = TRAP.replace("2024년 08월 16일", "2024년 01월 10일").replace("3,744,240", "9,111,111")
+    chunks = [chunk(HISTORY, chunk_id="c-a"),
+              chunk(nps_same_date, doc_id=NPS_DOC, chunk_id="c-b", filer="국민연금공단"),
+              chunk(other_date, doc_id="holding_20240110000001", chunk_id="c-c", filer="기타")]
+    assert parse(question=q, chunks=chunks) is None
+    assert calculator.holding_candidate_docs(q, chunks) == frozenset({MFS_DOC, NPS_DOC})
+
+
+def test_unanchored_question_date_binds_by_filing_date_too():
+    """자체 검증 발견: gold 문형의 날짜는 접수일이고 작성기준일은 하루 전 — 기준일로 명시되지
+    않은 날짜는 접수일(doc_id 접수번호·rcept_dt)로도 결박한다."""
+    q = ("Massachusetts Financial Services Company이(가) 아모레퍼시픽에 대해 제출한 "
+         "2024-04-03 대량보유상황보고서에서 보유주식등의 수는 얼마나 변동되었는가?")
+    got = parse(question=q)                                # doc_id 접수 2024-04-03, 기준일 03-22
+    assert got is not None
+    assert values_by_slot(got)["이번 보고서 보유주식등의 수"] == "2,263,085"
+
+
+def test_anchored_basis_date_does_not_match_filing_date():
+    q = ("Massachusetts Financial Services Company이(가) 아모레퍼시픽에 대해 제출한 "
+         "대량보유상황보고서(보고서작성기준일 2024년 04월 03일)에서 보유주식등의 수는 "
+         "얼마나 변동되었는가?")
+    assert parse(question=q) is None                        # 기준일 명시 → 접수일로 대체하지 않음
+
+
 def test_no_question_date_two_docs_fail_closed():
     q = "아모레퍼시픽 대량보유상황보고서에서 보유주식등의 수는 얼마나 변동되었는가?"
     chunks = [chunk(HISTORY, chunk_id="c-a"),
