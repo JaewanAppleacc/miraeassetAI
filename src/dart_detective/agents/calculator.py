@@ -310,6 +310,431 @@ def report_pair_diffs(question: str, lines: Sequence[str]) -> list[Derived]:
     return out
 
 
+# ---------- 대량보유상황보고서 서식 파서 (docs/plans/2026-09-05-holding-parser.md §3) ----------
+# 실측(judge16): 대량보유 33문항 전부에서 위 report_pair_diffs가 미발동(0건).
+# 실제 서식은 ① 연혁표(라벨 '직전보고서' 붙은 표기, 날짜·보고자 섞인 9칸)와
+# ② 요약표(라벨이 둘째 칸, 첫 칸은 그룹 제목) 둘 다 완전일치 라벨에 걸리지 않는다.
+# 새 파서는 머리글 이름으로 열을 찾고(고정 인덱스 금지), 질문 기준일·보고자로 문서를
+# 결박하며, 유일하게 정해지지 않으면 미발동한다(fail-closed — 잘못된 쌍보다 덤프가 낫다).
+
+PREV_QTY_SLOT = "직전 보고서 보유주식등의 수"
+PREV_RATIO_SLOT = "직전 보고서 보유비율"
+CUR_QTY_SLOT = "이번 보고서 보유주식등의 수"
+CUR_RATIO_SLOT = "이번 보고서 보유비율"
+REPORTER_SLOT = "보고자"
+
+_HOLDING_CHANGE_WORDS = ("변동", "변했", "변화", "차이", "증감", "얼마나")
+_HOLDING_DATE_RE = re.compile(
+    r"((?:19|20)\d{2})\s*[.\-년/]\s*(\d{1,2})\s*[.\-월/]\s*(\d{1,2})\s*일?")
+# 값 칸 판정: 금액·비율만("-"·날짜·문장은 값이 아니다 → 그 행 미사용).
+_PURE_CELL_RE = re.compile(r"^\(?-?\d[\d,]*(?:\.\d+)?\)?%?$")
+# 질문의 보고자: "X이(가) Y에 대해 제출한" / "보고자: X" 문형만 신뢰한다.
+_Q_REPORTER_RE = re.compile(r"([^,.\n]{2,80}?)\s*이\(가\)")
+_Q_REPORTER_COLON_RE = re.compile(r"보고자\s*[::]\s*([^),\n]{2,60})")
+
+
+@dataclass(frozen=True)
+class HoldingExtract:
+    """파서가 원문에서 뽑은 값 하나 — 계산값(Derived)과 절대 섞지 않는다(조건 1)."""
+    slot: str
+    line: str                       # 값이 실린 원문 행 그대로
+    value: str                      # 셀 값 그대로
+    doc_id: str
+    chunk_id: str
+    node_index: int | None
+    section_path: tuple[str, ...]
+    rcept_no: str
+    from_node: bool                 # 검색 청크가 아니라 문서 원문(node)에서 온 행인가
+
+
+@dataclass(frozen=True)
+class HoldingParseResult:
+    values: tuple[HoldingExtract, ...]
+    derived: tuple[Derived, ...]            # 증감 2개까지 (kind "holding_change")
+    missing_slots: tuple[str, ...]
+    consumed_texts: frozenset[str]          # 소비한 행(공백 정규화) — 폴백 덤프에서 이 행만 숨김
+    doc_id: str
+    filer: str
+
+
+def _squash(text: str) -> str:
+    return "".join((text or "").split())
+
+
+def _norm_name(text: str) -> str:
+    t = _squash(text).casefold()
+    for token in ("주식회사", "(주)", "㈜"):
+        t = t.replace(token, "")
+    return t
+
+
+def _cells(line: str) -> list[str]:
+    return [c.strip() for c in line.split("|")]
+
+
+def _dates_in(text: str) -> list[tuple[int, int, int]]:
+    return [(int(y), int(m), int(d))
+            for y, m, d in _HOLDING_DATE_RE.findall(text or "")]
+
+
+def question_report_dates(question: str) -> frozenset[tuple[int, int, int]]:
+    """질문이 지목한 보고서작성기준일 후보.
+
+    앵커 우선: '기준일' 직전 표기 → '이번보고서(날짜)' → 질문에 날짜가 하나뿐이면 그것.
+    여러 날짜가 앵커 없이 섞이면 결박 불가 — 빈 집합(파서는 유일 문서일 때만 진행)."""
+    anchored: list[tuple[int, int, int]] = []
+    cur_anchored: list[tuple[int, int, int]] = []
+    all_dates: list[tuple[int, int, int]] = []
+    for m in _HOLDING_DATE_RE.finditer(question or ""):
+        date = (int(m.group(1)), int(m.group(2)), int(m.group(3)))
+        all_dates.append(date)
+        window = _squash(question[max(0, m.start() - 15):m.start()])
+        if "기준일" in window:
+            anchored.append(date)
+        elif "이번보고서" in window:
+            cur_anchored.append(date)
+    if anchored:
+        return frozenset(anchored)
+    if cur_anchored:
+        return frozenset(cur_anchored)
+    if len(all_dates) == 1:
+        return frozenset(all_dates)
+    return frozenset()
+
+
+def _question_reporter(question: str) -> str:
+    m = _Q_REPORTER_COLON_RE.search(question or "")
+    if m:
+        return m.group(1).strip()
+    m = _Q_REPORTER_RE.search(question or "")
+    return m.group(1).strip() if m else ""
+
+
+def _cell_if_value(cells: Sequence[str], col: int | None) -> str:
+    if col is None or col >= len(cells):
+        return ""
+    cell = cells[col].strip()
+    squashed = _squash(cell)
+    if _PURE_CELL_RE.fullmatch(squashed) and any(ch.isdigit() for ch in squashed):
+        return cell
+    return ""
+
+
+def _merge_header(hdr_lines: Sequence[str], width: int) -> list[str] | None:
+    """연속한 머리글 줄들을 셀 단위로 이어붙여 논리 머리글로(2행 머리글 병합)."""
+    rows = [_cells(l) for l in hdr_lines]
+    rows = [r for r in rows if len(r) == width]
+    if not rows:
+        return None
+    return [_squash("".join(r[i] for r in rows)) for i in range(width)]
+
+
+def _holding_columns(header: Sequence[str]) -> dict[str, int | None] | None:
+    """논리 머리글에서 열을 이름으로 확정한다. 못 찾으면 None(그 표 미발동).
+
+    비율 열은 '주권'·'의결권' 그룹 표식이 붙은 셀을 배제한다 — 열 순서가 뒤바뀐 표에서
+    "수량 열 오른쪽의 첫 비율"만 보면 주권 비율을 집는다(§3-4 변형 ④)."""
+    qty = next((i for i, c in enumerate(header)
+                if "주식등의수" in c and "및" not in c), None)
+    if qty is None:
+        return None
+    cands = [i for i, c in enumerate(header)
+             if "비율" in c and i != qty and "및" not in c
+             and "주권" not in c and "의결권" not in c]
+    if not cands:
+        return None
+    if len(cands) == 1:
+        ratio = cands[0]
+    else:
+        grp = [i for i in cands if "주식등" in header[i]]
+        if len(grp) == 1:
+            ratio = grp[0]
+        else:
+            right = [i for i in cands if i > qty]
+            if not right:
+                return None
+            ratio = right[0]
+    reporter = next((i for i, c in enumerate(header) if "본인성명" in c), None)
+    if reporter is None:
+        reporter = next((i for i, c in enumerate(header)
+                         if "보고자" in c and "특별관계자" not in c), None)
+    date = next((i for i, c in enumerate(header) if "기준일" in c), None)
+    return {"qty": qty, "ratio": ratio, "reporter": reporter, "date": date}
+
+
+_HISTORY_LABELS = ("직전보고서", "이번보고서")
+
+
+def _history_rows(lines: Sequence[tuple[str, dict]]) -> list[dict]:
+    """연혁표에서 직전/이번 행을 뽑는다. 머리글은 데이터 행 바로 위의 같은 셀 수 줄들."""
+    out: list[dict] = []
+    i, n = 0, len(lines)
+    while i < n:
+        cells = _cells(lines[i][0])
+        label = _squash(cells[0]) if cells else ""
+        if label not in _HISTORY_LABELS:
+            i += 1
+            continue
+        width = len(cells)
+        hdr_lines: list[str] = []
+        j = i - 1
+        while j >= 0:
+            cj = _cells(lines[j][0])
+            if len(cj) != width or _is_holding_data_row(cj):
+                break
+            hdr_lines.insert(0, lines[j][0])
+            j -= 1
+        header = _merge_header(hdr_lines, width)
+        cols = _holding_columns(header) if header else None
+        k = i
+        while k < n:
+            ck = _cells(lines[k][0])
+            lb = _squash(ck[0]) if ck else ""
+            if lb in _HISTORY_LABELS and len(ck) == width:
+                if cols:
+                    text, src = lines[k]
+                    date_cell = (ck[cols["date"]]
+                                 if cols["date"] is not None and cols["date"] < len(ck)
+                                 else text)
+                    dates = _dates_in(date_cell) or _dates_in(text)
+                    reporter_col = cols["reporter"]
+                    out.append({
+                        "label": lb, "line": text, "src": src,
+                        "qty": _cell_if_value(ck, cols["qty"]),
+                        "ratio": _cell_if_value(ck, cols["ratio"]),
+                        "date": dates[0] if dates else None,
+                        "reporter": (ck[reporter_col].strip()
+                                     if reporter_col is not None and reporter_col < len(ck)
+                                     else ""),
+                    })
+                k += 1
+                continue
+            if lb == "증감":                 # 증감 행은 표의 일부지만 소비하지 않는다(재계산)
+                k += 1
+                continue
+            break
+        i = k
+    return out
+
+
+def _is_holding_data_row(cells: Sequence[str]) -> bool:
+    """머리글 판정용 — tables._is_data_row와 같은 기준 + 직전/이번 라벨 행."""
+    from . import tables
+    if cells and _squash(cells[0]) in _HISTORY_LABELS:
+        return True
+    return tables._is_data_row(cells)
+
+
+def _summary_rows(lines: Sequence[tuple[str, dict]]) -> list[dict]:
+    """요약표: 데이터 행 = cell[0]에 '주식등' 포함(의결권 그룹 배제) AND cell[1]이 라벨."""
+    out: list[dict] = []
+    for idx, (text, src) in enumerate(lines):
+        cells = _cells(text)
+        if len(cells) < 3 or "주식등" not in _squash(cells[0]):
+            continue
+        label = _squash(cells[1]) if len(cells) > 1 else ""
+        if label not in _HISTORY_LABELS:
+            continue
+        header = None
+        for j in range(idx - 1, -1, -1):
+            cj = _cells(lines[j][0])
+            if len(cj) != len(cells):
+                continue                    # 사이에 다른 표 줄이 낄 수 있다 — 계속 위로
+            if _squash(cj[1]) in _HISTORY_LABELS:
+                continue                    # 위쪽 데이터 행
+            merged = [_squash(c) for c in cj]
+            if any("주식등의수" in c and "및" not in c for c in merged):
+                header = merged
+                break
+        cols = _holding_columns(header) if header else None
+        if cols is None:
+            continue                        # 머리글 없음 → 미발동(정렬 가드)
+        out.append({"label": label, "line": text, "src": src,
+                    "qty": _cell_if_value(cells, cols["qty"]),
+                    "ratio": _cell_if_value(cells, cols["ratio"])})
+    return out
+
+
+def _same_values(a: Mapping[str, Any], b: Mapping[str, Any]) -> bool:
+    for key in ("qty", "ratio"):
+        va, vb = parse_number(a.get(key) or ""), parse_number(b.get(key) or "")
+        if va is not None and vb is not None and va != vb:
+            return False
+    return True
+
+
+def _resolve_label(rows: list[dict]) -> tuple[dict | None, bool]:
+    """같은 라벨의 행들을 하나로. (행, 충돌 여부). 값이 다른 두 행이면 충돌."""
+    uniq: list[dict] = []
+    for row in rows:
+        hit = next((u for u in uniq if _same_values(u, row)), None)
+        if hit is None:
+            uniq.append(row)
+        else:
+            for key in ("qty", "ratio", "date", "reporter"):   # 빈 칸은 다른 행이 보충
+                if not hit.get(key) and row.get(key):
+                    hit[key] = row[key]
+    if not uniq:
+        return None, False
+    if len(uniq) > 1:
+        return None, True
+    return uniq[0], False
+
+
+def _doc_profile(doc_id: str, line_groups: Sequence[Sequence[tuple[str, dict]]],
+                 meta: Mapping[str, Any]) -> dict[str, Any] | None:
+    hist: dict[str, list[dict]] = {lb: [] for lb in _HISTORY_LABELS}
+    summ: dict[str, list[dict]] = {lb: [] for lb in _HISTORY_LABELS}
+    basis_dates: set[tuple[int, int, int]] = set()
+    seen_rows: set[str] = set()
+    for lines in line_groups:
+        for row in _history_rows(lines):
+            key = _squash(row["line"])
+            if key not in seen_rows:
+                seen_rows.add(key)
+                hist[row["label"]].append(row)
+        for row in _summary_rows(lines):
+            key = _squash(row["line"])
+            if key not in seen_rows:
+                seen_rows.add(key)
+                summ[row["label"]].append(row)
+        for text, _src in lines:
+            if "작성기준일" in _squash(text):
+                basis_dates.update(_dates_in(text))
+    conflict = False
+    resolved: dict[str, dict[str, dict | None]] = {"hist": {}, "summ": {}}
+    for label in _HISTORY_LABELS:
+        resolved["hist"][label], c1 = _resolve_label(hist[label])
+        resolved["summ"][label], c2 = _resolve_label(summ[label])
+        conflict = conflict or c1 or c2
+        h, s = resolved["hist"][label], resolved["summ"][label]
+        if h and s and not _same_values(h, s):
+            conflict = True                 # 연혁표와 요약표가 다른 값 — 판정 불가
+    if not any(resolved[f][lb] for f in ("hist", "summ") for lb in _HISTORY_LABELS):
+        return None
+    cur = resolved["hist"]["이번보고서"]
+    date = cur["date"] if cur and cur.get("date") else None
+    if date is None:
+        date = next(iter(basis_dates)) if len(basis_dates) == 1 else None
+    filer_row = (cur.get("reporter") or "") if cur else ""
+    meta_filer = str(meta.get("filer_name") or "")
+    return {
+        "doc_id": doc_id, "resolved": resolved, "conflict": conflict, "date": date,
+        "filer_row": filer_row, "meta_filer": meta_filer,
+        "filer_norms": {n for n in (_norm_name(filer_row), _norm_name(meta_filer)) if n},
+        "reporter_src": cur if cur and filer_row else None,
+    }
+
+
+def _extract(slot: str, row: Mapping[str, Any], value: str, doc_id: str) -> HoldingExtract:
+    src = row["src"]
+    return HoldingExtract(
+        slot=slot, line=row["line"], value=value, doc_id=doc_id,
+        chunk_id=str(src.get("chunk_id") or ""), node_index=src.get("node_index"),
+        section_path=tuple(src.get("section_path") or ()),
+        rcept_no=str(src.get("rcept_no") or ""), from_node=bool(src.get("from_node")))
+
+
+def parse_holding_report(question: str, chunks: Sequence[Any],
+                         doc_nodes: Mapping[str, Sequence[tuple[int | None, str]]] | None = None,
+                         doc_meta: Mapping[str, Mapping[str, Any]] | None = None,
+                         ) -> HoldingParseResult | None:
+    """대량보유상황보고서에서 직전/이번 보유주식등의 수·보유비율을 결정론으로 뽑는다.
+
+    chunks: 검색 청크(매치된 문서로 한정해 넘길 것). doc_nodes: 같은 문서의 원문 노드
+    [(node_index, text)] — 검색에 안 뽑힌 행도 값 소스로 쓴다(사용 시 호출자가 근거 승격).
+    반환 None = 미발동(문서를 유일하게 결박하지 못했거나 서식 판독 실패) — 덤프 유지."""
+    doc_nodes = doc_nodes or {}
+    doc_meta = doc_meta or {}
+    groups: dict[str, list[list[tuple[str, dict]]]] = {}
+    chunk_meta: dict[str, dict[str, Any]] = {}
+    for c in chunks:
+        meta = getattr(c, "metadata", {}) or {}
+        chunk_meta.setdefault(c.doc_id, dict(meta))
+        src = {"chunk_id": getattr(c, "chunk_id", ""), "node_index": getattr(c, "node_index", None),
+               "from_node": False, "section_path": tuple(getattr(c, "section_path", ()) or ()),
+               "rcept_no": str(meta.get("rcept_no") or "")}
+        lines = [(ln.strip(), src) for ln in (getattr(c, "evidence_text", "") or "").split("\n")
+                 if ln.strip()]
+        if lines:
+            groups.setdefault(c.doc_id, []).append(lines)
+    for doc_id, nodes in doc_nodes.items():
+        rcept = str((doc_meta.get(doc_id) or {}).get("rcept_no") or "")
+        for node_index, text in nodes or ():
+            src = {"chunk_id": f"{doc_id}#node{node_index}", "node_index": node_index,
+                   "from_node": True, "section_path": (), "rcept_no": rcept}
+            lines = [(ln.strip(), src) for ln in (text or "").split("\n") if ln.strip()]
+            if lines:
+                groups.setdefault(doc_id, []).append(lines)
+
+    profiles = [p for p in (_doc_profile(d, gs, {**chunk_meta.get(d, {}),
+                                                 **(doc_meta.get(d) or {})})
+                            for d, gs in groups.items()) if p]
+    q_dates = question_report_dates(question)
+    if q_dates:
+        profiles = [p for p in profiles if p["date"] in q_dates]
+    holding_docs = [p for p in profiles if str(p["doc_id"]).startswith("holding")]
+    if holding_docs and len(holding_docs) < len(profiles):
+        profiles = holding_docs                 # 정기보고서 안 최대주주 표는 후순위(§3-3)
+    reporter_q = _question_reporter(question)
+    if reporter_q:
+        rq = _norm_name(reporter_q)
+        profiles = [p for p in profiles
+                    if any(rq in f or f in rq for f in p["filer_norms"])]
+    if len(profiles) != 1:
+        return None                             # 유일하게 정해지지 않으면 미발동
+    profile = profiles[0]
+    if profile["conflict"]:
+        return None
+
+    resolved = profile["resolved"]
+    doc_id = profile["doc_id"]
+    values: list[HoldingExtract] = []
+    missing: list[str] = []
+    consumed: set[str] = set()
+    pair: dict[str, str] = {}
+    for label, period in (("직전보고서", "직전 보고서"), ("이번보고서", "이번 보고서")):
+        for kind, kind_label in (("qty", "보유주식등의 수"), ("ratio", "보유비율")):
+            slot = f"{period} {kind_label}"
+            row = next((resolved[f][label] for f in ("hist", "summ")
+                        if resolved[f][label] and resolved[f][label].get(kind)), None)
+            if row is None:
+                missing.append(slot)
+                continue
+            values.append(_extract(slot, row, row[kind], doc_id))
+            pair[f"{label}:{kind}"] = row[kind]
+            for fmt in ("hist", "summ"):
+                used = resolved[fmt][label]
+                if used and used.get(kind):
+                    consumed.add(_squash(used["line"]))
+    if not values:
+        return None
+    if profile["reporter_src"]:
+        values.append(_extract(REPORTER_SLOT, profile["reporter_src"],
+                               profile["filer_row"], doc_id))
+
+    derived: list[Derived] = []
+    if any(w in (question or "") for w in _HOLDING_CHANGE_WORDS):
+        specs = (("qty", "보유주식등의 수", "주", PREV_QTY_SLOT, CUR_QTY_SLOT),
+                 ("ratio", "보유비율", "%p", PREV_RATIO_SLOT, CUR_RATIO_SLOT))
+        for kind, metric, unit, prev_slot, cur_slot in specs:
+            prev_raw, cur_raw = pair.get(f"직전보고서:{kind}"), pair.get(f"이번보고서:{kind}")
+            if not prev_raw or not cur_raw:
+                continue                        # 쌍 미완비 — 부분 답변(다른 보고자로 채우지 않는다)
+            old, new = parse_number(prev_raw), parse_number(cur_raw)
+            if old is None or new is None:
+                continue
+            derived.append(Derived(
+                metric=metric, kind="holding_change",
+                formula=f"{cur_raw} - {prev_raw}", value=f"{new - old:,}", unit=unit,
+                source_slots=(prev_slot, cur_slot), source_values=(prev_raw, cur_raw)))
+
+    return HoldingParseResult(
+        values=tuple(values), derived=tuple(derived), missing_slots=tuple(missing),
+        consumed_texts=frozenset(consumed), doc_id=doc_id,
+        filer=profile["filer_row"] or profile["meta_filer"])
+
+
 def has_final_consonant(word: str) -> bool:
     """마지막 글자에 받침이 있나. 한글이 아니면 없는 것으로 본다."""
     if not word:
@@ -344,6 +769,19 @@ def describe(derived: Sequence[Derived]) -> str:
             b_corp = b_slot.rsplit("@", 1)[-1]
             lines.append(f"- {d.metric} 차이: {a_corp} {d.source_values[0]} vs "
                          f"{b_corp} {d.source_values[1]} → {d.value}{unit}")
+        elif d.kind == "holding_change":
+            # 자연어 서술 + signed 원값 병기(자동 채점 value_forms가 "-662,232"를 찾도록).
+            # 방향어는 부호로, 크기는 절댓값. 비율만 증감에 %p를 붙인다(§3-6).
+            prev_v, cur_v = d.source_values
+            n = parse_number(d.value)
+            u = d.unit or ""
+            if n == 0:
+                lines.append(f"- {d.metric}: {prev_v}에서 {cur_v}로 변동 없음(증감 0)")
+            else:
+                word = "증가" if n is not None and n > 0 else "감소"
+                signed = f"{d.value}{u if u == '%p' else ''}"
+                lines.append(f"- {d.metric}: {prev_v}에서 {cur_v}로 "
+                             f"{d.value.lstrip('-')}{u} {word}(증감 {signed})")
         elif d.kind == "pair_change":
             lines.append(f"- {d.metric}: {d.source_values[0]} → {d.source_values[1]} "
                          f"({'+' if not d.value.startswith('-') else ''}{d.value}{unit.strip() or ''} 변동)")
