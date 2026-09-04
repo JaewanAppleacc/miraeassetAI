@@ -148,8 +148,18 @@
   span+행열 결박이 커버(테스트 잠금). **기각 1건**: text-method(검증된 동일 근거 중복)를 일괄 치명 —
   경미 조항("동일 근거·범위 상이") 사문화 + 실측 B17·D13건 전부 치명 = 전 arm Hard 탈락이라 부적절,
   테스트에 의견 불일치 기록(Owner 재판정 대상). **재채점: B R@10 0.5944·LOW 11/19, D 0.5909·9/19 —
-  LOW 차이 2 > 동률 한계 1 → B = PROVISIONAL_WINNER(D에서 반전)**. B/D 결과 4파일 byte-identical 유지,
-  검색 재실행 없음. 서빙은 A/C 합류 최종 판정까지 D 유지(B 전환 시 서버에 KURE 스택 필요 — 별도 결정).
+  LOW 차이 2 > 동률 한계 1 → B 선두(D에서 반전)**. B/D 결과 4파일 byte-identical 유지,
+  검색 재실행 없음. 서빙은 A/C 합류 최종 판정까지 D 유지(B 전환 시 서버에 KURE 스택 필요 — 별도 decision).
+- **A/C 검수 3차 반영 — different-node 규칙·부분 집합 상태명(2026-09-04)**: 2차의 "text-method=경미" 자동
+  판정 철회 — "탈락하니까 완화"는 사전등록 실험에서 부적절한 논거였음(인정). 스펙 해석이 갈리는 다른-node
+  동일 텍스트는 scorer가 결정하지 않고 **UNRESOLVED(duplicate_evidence_different_node) → Owner arm-blind
+  판정**(14번 "판정 불가" 조항). Gold span 연도가 청크에 없고 청크가 다른 연도면 치명 확정. Owner 판정
+  클래스에 EQUIVALENT_EVIDENCE 추가(동등 근거 확정 → 매치 유지·경미 강등; Gold 동결이라 source 추가 불가).
+  동일 node·동일 셀의 정규화-only 일치는 경미 보고. **부분 집합 판정은 PARTIAL_SET_LEADER('leader', winner
+  키 없음)** — PROVISIONAL_WINNER/OPERATIONAL_FALLBACK은 A/B/C/D 완비 시에만(vFINAL 17).
+  재채점: B unresolved 17·D 13(전부 duplicate-node), arm-blind 패킷 17건, 판정 **PENDING_UNRESOLVED(후보 B)**.
+  → Owner(팀 대표)가 results/fourarm/unresolved/resolutions.template.json을 채워 `score.py --resolutions`로
+  재실행해야 B/D 진단이 닫힌다(COMMON_SOURCE 한도 5). 테스트 545 통과.
 - **vFINAL 21번 변경 승인(2026-09-04, Owner=팀 대표)**: "FC Native Function Calling 경로에 한해
   전송 maxTokens 최소 1024 적용을 승인한다. 사유는 서비스 앱 API가 1024 미만 요청을 40001로
   거부하기 때문이다. JSON 경로의 v4 §7 예산은 변경하지 않으며 requested/sent 값을 구분해

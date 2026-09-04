@@ -2,10 +2,10 @@
 
 arm | Recall@5 | Recall@10 | Recall@20 | HIGH R@10 | LOW R@10 | LOW all_found@10 | 치명 | 경미 | 미해결 | coarse | p95(ms) | RSS(MB)
 ---|---|---|---|---|---|---|---|---|---|---|---|---
-B | 0.479 | 0.5944 | 0.6713 | 0.584 | 0.6667 | 11/19 | 0 | 17 | 0 | 99 | 22739 | 1423.0
-D | 0.486 | 0.5909 | 0.6678 | 0.584 | 0.6389 | 9/19 | 0 | 13 | 0 | 103 | 4077 | 1260.2
+B | 0.479 | 0.5944 | 0.6713 | 0.584 | 0.6667 | 11/19 | 0 | 0 | 17 | 99 | 22739 | 1423.0
+D | 0.486 | 0.5909 | 0.6678 | 0.584 | 0.6389 | 9/19 | 0 | 0 | 13 | 103 | 4077 | 1260.2
 
-## 판정: PROVISIONAL_WINNER → B (PERFORMANCE_WINNER)
+## 판정: PENDING_UNRESOLVED — 후보 B (Owner UNRESOLVED 판정 후 재실행)
 
 ```json
 [
@@ -20,8 +20,8 @@ D | 0.486 | 0.5909 | 0.6678 | 0.584 | 0.6389 | 9/19 | 0 | 13 | 0 | 103 | 4077 | 
  {
   "step": "16 unresolved",
   "counts": {
-   "B": 0,
-   "D": 0
+   "B": 17,
+   "D": 13
   }
  },
  {
@@ -66,10 +66,9 @@ D | 0.486 | 0.5909 | 0.6678 | 0.584 | 0.6389 | 9/19 | 0 | 13 | 0 | 103 | 4077 | 
   ]
  },
  {
-  "step": "winner",
-  "winner": "B",
-  "selection_type": "PERFORMANCE_WINNER",
-  "status": "PROVISIONAL_WINNER"
+  "step": "16C selection held",
+  "candidate": "B",
+  "selection_type": "PERFORMANCE_WINNER"
  }
 ]
 ```

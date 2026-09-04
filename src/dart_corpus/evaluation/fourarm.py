@@ -25,7 +25,13 @@
 → 10 B fallback 조건 → 불성립 BLOCKED. 승자는 PROVISIONAL_WINNER(17번 DEV_CHECK 전).
 
 상태 라벨(혼용 금지): INVALID · BLOCKED · NO_SELECTION · PENDING_UNRESOLVED(후보만, 승자 없음 — 16C)
-· PROVISIONAL_WINNER · OPERATIONAL_FALLBACK.
+· PARTIAL_SET_LEADER(A/B/C/D 미완비 집합의 선두 — 비공식 진단, 'winner' 없음)
+· PROVISIONAL_WINNER · OPERATIONAL_FALLBACK (뒤 둘은 4-arm 완비 시에만).
+
+different-node 규칙(A/C 검수 3차): Gold acceptable source에 없는 node의 동일 텍스트 매치는
+scorer가 경미/치명을 자동 결정하지 않는다 — UNRESOLVED(duplicate_evidence_different_node)로
+Owner arm-blind 판정에 넘기고, Owner의 EQUIVALENT_EVIDENCE 판정 시에만 경미로 강등한다.
+다른 기간이 확정되는 경우(Gold span 연도가 청크에 없고 청크는 다른 연도)는 치명.
 """
 from __future__ import annotations
 
@@ -43,11 +49,13 @@ LOW_MIN = 10
 TIE_MAX_DIFF = 1
 REL_TIE = 0.05
 DENSE_OFF = ("C", "D")
+FULL_ARM_SET = frozenset({"A", "B", "C", "D"})   # 이 집합이 아니면 공식 승자 상태를 내지 않는다(vFINAL 17)
 # vFINAL 후보 정의 라벨 — --final의 config 결박(arm 바꿔치기 검출)에 쓴다.
 ARM_LABELS = {"A": "FIXED+FULL_DENSE", "B": "LINE_WINDOW+LOW_ONLY_DENSE",
               "C": "FIXED+DENSE_OFF", "D": "LINE_WINDOW+DENSE_OFF"}
 LINE_WINDOW = ("B", "D")
 
+_YEAR_RE = re.compile(r"(?:19|20)\d{2}")
 _LOC_RE = re.compile(
     r"^(?P<doc>[a-z]+_\d+)"
     r"(?:/\d+\.xml#node=(?P<n1>\d+)(?:&row=(?P<row>\d+)&col=(?P<col>\d+))?"
@@ -265,9 +273,17 @@ def score_question(gq: GoldQuestion, rec: Mapping[str, Any] | None, segment: str
         ok, r, method, src, span_state = slot_found(
             slot, results, EVAL_K, banned.get(slot.slot_name, frozenset()), store)
         if ok and r is not None:
+            # norm_only: Gold span 줄이 원문 그대로는 청크에 없고 정규화(공백·구두점 제거)로만
+            # 일치 — "동일 근거, offset/정규화만 상이" = 경미 보고 대상(vFINAL 14).
+            raw_text = str(r.get("text") or "")
+            raw_lines = [ln.strip() for ln in (src.span if src else "").split("\n") if ln.strip()]
+            norm_only = (span_state == "verified" and method == "node" and bool(raw_lines)
+                         and not any(ln in raw_text for ln in raw_lines))
             qs.slot_matches.append({"slot_name": slot.slot_name, "method": method, "result": dict(r),
                                     "gold_row_col": (src.row, src.col) if src else None,
-                                    "span_state": span_state})
+                                    "gold_span": src.span if src else "",
+                                    "gold_node": src.node_index if src else None,
+                                    "span_state": span_state, "norm_only": norm_only})
     return qs
 
 
@@ -320,14 +336,27 @@ def check_locators(qs: QuestionScore, store: Any) -> list[dict]:
             out.append({**base, "severity": "unresolved", "reason": "gold_span_not_verifiable",
                         "chunk_text": r.get("text", "")[:400]})
             continue
-        # text-method 매치: doc은 같고 Gold evidence span이 청크 본문에 실재하며, 위의 본문
-        # 대조로 그 청크가 자기 locator의 node에서 온 것도 확인됐다 — 같은 문서 안에 동일
-        # 근거가 반복 수록된 경우다(DART 정기보고서의 표 반복). vFINAL 14번 경미 조항
-        # "동일 근거, span offset만 상이(…·범위)"에 해당 = 경미. 다른-node를 일괄 치명으로
-        # 보면 이 조항의 '범위'가 사문화되고, 실측(B 17·D 13건)상 전 arm이 Hard 탈락한다.
+        # text-method 매치 = Gold acceptable source에 없는 **다른 node**를 지시(vFINAL 14 치명
+        # 열거 항목). 다만 청크가 자기 node에서 온 것이 본문 대조로 확인됐고 Gold span 줄이 그
+        # 안에 실재하므로 "동등 근거의 반복 수록"일 가능성이 있다 — scorer가 경미/치명을 자동
+        # 결정하지 않고(A/C 검수 3차: 결과를 본 뒤의 완화 금지) UNRESOLVED로 Owner arm-blind
+        # 판정에 넘긴다(16번). 단, Gold span의 기간(연도)이 청크에 하나도 없고 청크가 다른
+        # 연도를 담고 있으면 다른 기간 근거가 확정 → 치명.
         if m.get("method") == "text":
-            out.append({**base, "severity": "minor", "reason": "same_evidence_span_offset_differs"})
+            gold_years = {y.group() for y in _YEAR_RE.finditer(m.get("gold_span") or "")}
+            chunk_years = {y.group() for y in _YEAR_RE.finditer(str(r.get("text") or ""))}
+            if gold_years and chunk_years and not (gold_years & chunk_years):
+                out.append({**base, "severity": "critical",
+                            "reason": f"different_node_different_period:{sorted(chunk_years)}"})
+            else:
+                out.append({**base, "severity": "unresolved",
+                            "reason": "duplicate_evidence_different_node",
+                            "chunk_text": r.get("text", "")[:400],
+                            "gold_node": m.get("gold_node")})
             continue
+        # 동일 node·동일 근거인데 원문 그대로가 아니라 정규화(공백·구두점)로만 일치 = 경미(보고만).
+        if m.get("norm_only"):
+            out.append({**base, "severity": "minor", "reason": "same_evidence_offset_or_normalization"})
         # row/col(vFINAL 14번, A/C 검수 반영으로 교정): Gold가 지정한 성분을 결과도 명시했는데
         # 값이 다르면 "다른 행/열 지시" = **치명**이다. 종전의 '경미' 처리는 원문 오독 —
         # 경미는 동일 근거의 offset 차이에 한정된다. 결과가 그 성분을 아예 안 밝힌 경우는
@@ -443,7 +472,10 @@ def unresolved_packets(report: Mapping[str, Any]) -> list[dict]:
 
 # ---------- vFINAL 16번: Owner 판정(resolutions) 적용 ----------
 
-RESOLUTION_CLASSES = ("COMMON_SOURCE", "ARM_SPECIFIC", "UNKNOWN")
+# EQUIVALENT_EVIDENCE: Owner가 "동등 근거 맞음"으로 판정한 패킷(다른 node의 동일 근거 반복 등) —
+# 위반이 아니었던 것으로 확정, 매치는 유지하고 경미로 강등 기록. Gold는 동결이라 acceptable
+# source를 추가할 수 없으므로 16번 판정 결과로만 표현한다.
+RESOLUTION_CLASSES = ("COMMON_SOURCE", "ARM_SPECIFIC", "EQUIVALENT_EVIDENCE", "UNKNOWN")
 
 
 def load_resolutions(path: Path | str) -> dict[str, dict]:
@@ -482,6 +514,7 @@ def adjudication_plan(reports: Mapping[str, dict], resolutions: Mapping[str, dic
     common_qids: set[str] = set()
     per_arm_invalid: dict[str, dict[tuple[str, str], set]] = {}
     per_arm_critical: dict[str, list[str]] = {}
+    per_arm_equivalent: dict[str, list[str]] = {}
     unknown_per_arm: dict[str, int] = {}
     for arm, rep in reports.items():
         for v in rep["violations"]["items"]:
@@ -498,6 +531,8 @@ def adjudication_plan(reports: Mapping[str, dict], resolutions: Mapping[str, dic
                     (str(v["doc_id"]), int(v["node_index"] if v["node_index"] is not None else -1)))
                 if res.get("critical"):
                     per_arm_critical.setdefault(arm, []).append(pid)
+            elif cls == "EQUIVALENT_EVIDENCE":
+                per_arm_equivalent.setdefault(arm, []).append(pid)
             else:
                 unknown_per_arm[arm] = unknown_per_arm.get(arm, 0) + 1
     limit = common_exclusion_limit(n_set)
@@ -508,8 +543,27 @@ def adjudication_plan(reports: Mapping[str, dict], resolutions: Mapping[str, dic
         "per_arm_invalid": {a: {k: frozenset(s) for k, s in m.items()}
                             for a, m in per_arm_invalid.items()},
         "per_arm_critical": per_arm_critical,
+        "per_arm_equivalent": per_arm_equivalent,
         "unknown_per_arm": unknown_per_arm,
     }
+
+
+def apply_equivalent_evidence(report: dict, packet_ids: Sequence[str]) -> int:
+    """Owner가 EQUIVALENT_EVIDENCE로 판정한 UNRESOLVED 위반을 경미로 강등한다(매치 유지).
+
+    재채점 리포트에 제자리 적용. 반환: 강등 건수. 위반 카운트를 다시 센다."""
+    wanted = set(packet_ids)
+    n = 0
+    for v in report["violations"]["items"]:
+        if v["severity"] == "unresolved" and packet_id_of(v) in wanted:
+            v["severity"] = "minor"
+            v["reason"] = f"{v['reason']}:owner_equivalent_evidence"
+            n += 1
+    sev = {"critical": 0, "minor": 0, "unresolved": 0, "coarse": 0}
+    for v in report["violations"]["items"]:
+        sev[v["severity"]] += 1
+    report["violations"].update(sev)
+    return n
 
 
 # ---------- 판정 체인 ----------
@@ -646,8 +700,12 @@ def judge(reports: Mapping[str, dict], *, deployable: Mapping[str, bool] | None 
         chain.append({"step": "3 LOW_UNDERPOWERED", "n_low": n_low})
         if "B" in quality and deployable.get("B"):
             chain.append({"step": "10 B operational fallback", "selected": "B"})
+            if set(arms) != FULL_ARM_SET:
+                return {"status": "PARTIAL_SET_LEADER", "leader": "B",
+                        "selection_basis": "OPERATIONAL_FALLBACK", "arm_set": arms, "chain": chain,
+                        "note": "비공식 진단 — A/B/C/D 완비 전에는 공식 선택을 선언하지 않는다"}
             return {"status": "OPERATIONAL_FALLBACK", "winner": "B", "selection_type": "OPERATIONAL_FALLBACK",
-                    "chain": chain}
+                    "arm_set": arms, "chain": chain}
         return {"status": "BLOCKED", "reason": "LOW underpowered, no paraphrase set, B fallback not eligible",
                 "chain": chain}
     best = max(counts.values())
@@ -672,10 +730,17 @@ def judge(reports: Mapping[str, dict], *, deployable: Mapping[str, bool] | None 
         # 16C: 관련 arm 선택 보류 — 승자가 아니라 후보로만 기록한다. Owner 판정 후 재실행.
         chain.append({"step": "16C selection held", "candidate": winner, "selection_type": sel})
         return {"status": "PENDING_UNRESOLVED", "candidate": winner, "selection_type": sel,
-                "tie_set": tie_set, "counts": counts, "chain": chain}
+                "tie_set": tie_set, "counts": counts, "arm_set": arms, "chain": chain}
+    if set(arms) != FULL_ARM_SET:
+        # vFINAL 17: PROVISIONAL_WINNER는 4-arm 실험의 결과다. 부분 집합(B/D 중간 비교 등)의
+        # 선두는 비공식 진단 상태로만 기록한다(A/C 검수 3차) — 'winner' 키를 내지 않는다.
+        chain.append({"step": "17 partial set", "arm_set": arms, "leader": winner, "basis": sel})
+        return {"status": "PARTIAL_SET_LEADER", "leader": winner, "selection_basis": sel,
+                "arm_set": arms, "tie_set": tie_set, "counts": counts, "chain": chain,
+                "note": "비공식 진단 — A/B/C/D 완비 전에는 공식 PROVISIONAL_WINNER를 선언하지 않는다"}
     chain.append({"step": "winner", "winner": winner, "selection_type": sel, "status": "PROVISIONAL_WINNER"})
     return {"status": "PROVISIONAL_WINNER", "winner": winner, "selection_type": sel, "tie_set": tie_set,
-            "counts": counts, "chain": chain}
+            "counts": counts, "arm_set": arms, "chain": chain}
 
 
 def summary_table(reports: Mapping[str, dict]) -> str:

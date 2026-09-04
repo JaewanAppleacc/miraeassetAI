@@ -143,6 +143,8 @@ def main(argv: list[str] | None = None) -> int:
                     rep["violations"]["critical"] += 1
                     rep["violations"]["items"].append(
                         {"severity": "critical", "reason": f"arm_specific_adjudicated_critical:{pid}"})
+                # Owner "동등 근거" 판정: 위반 아님 확정 → 매치 유지, 경미로 강등 기록.
+                fourarm.apply_equivalent_evidence(rep, plan["per_arm_equivalent"].get(arm, []))
                 reports[arm] = rep
                 (args.results_dir / f"score.{arm}.json").write_text(
                     json.dumps(rep, ensure_ascii=False, indent=1), encoding="utf-8")
@@ -160,7 +162,14 @@ def main(argv: list[str] | None = None) -> int:
         for pid, pk in sorted(packets.items()):
             (udir / f"{pid}.json").write_text(json.dumps(pk, ensure_ascii=False, indent=1), encoding="utf-8")
         (udir / "index.json").write_text(json.dumps(sorted(packets), ensure_ascii=False, indent=1), encoding="utf-8")
-        print(f"UNRESOLVED 패킷 {len(packets)}건 → {udir} (arm 라벨 없음)", file=sys.stderr)
+        # Owner 판정 템플릿(전부 UNKNOWN) — 기존 resolutions.json은 덮어쓰지 않는다.
+        tmpl = udir / "resolutions.template.json"
+        tmpl.write_text(json.dumps(
+            {pid: {"classification": "UNKNOWN", "note": "",
+                   "_question_id": pk["question_id"], "_slot": pk["slot_name"], "_reason": pk["reason"]}
+             for pid, pk in sorted(packets.items())}, ensure_ascii=False, indent=1), encoding="utf-8")
+        print(f"UNRESOLVED 패킷 {len(packets)}건 → {udir} (arm 라벨 없음) · 판정 템플릿 {tmpl.name}",
+              file=sys.stderr)
 
     table = fourarm.summary_table(reports)
     out = [f"# 4-arm 채점 요약 (k={fourarm.EVAL_K} 평가 · Gold {gold_sha[:8]} · conditions {cond_sha[:8]})", "", table]
@@ -274,6 +283,9 @@ def main(argv: list[str] | None = None) -> int:
         head = f"## 판정: {judgement['status']}"
         if judgement.get("winner"):
             head += f" → {judgement['winner']} ({judgement.get('selection_type')})"
+        elif judgement.get("leader"):
+            head += (f" — 부분 집합 {judgement.get('arm_set')} 선두 {judgement['leader']} "
+                     f"({judgement.get('selection_basis')}) · 비공식 진단, 공식 승자 아님")
         elif judgement.get("candidate"):
             head += f" — 후보 {judgement['candidate']} (Owner UNRESOLVED 판정 후 재실행)"
         elif judgement.get("reason"):

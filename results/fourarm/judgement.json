@@ -1,6 +1,6 @@
 {
- "status": "PROVISIONAL_WINNER",
- "winner": "B",
+ "status": "PENDING_UNRESOLVED",
+ "candidate": "B",
  "selection_type": "PERFORMANCE_WINNER",
  "tie_set": [
   "B"
@@ -9,6 +9,10 @@
   "B": 11,
   "D": 9
  },
+ "arm_set": [
+  "B",
+  "D"
+ ],
  "chain": [
   {
    "step": "14 locator checked",
@@ -21,8 +25,8 @@
   {
    "step": "16 unresolved",
    "counts": {
-    "B": 0,
-    "D": 0
+    "B": 17,
+    "D": 13
    }
   },
   {
@@ -67,10 +71,9 @@
    ]
   },
   {
-   "step": "winner",
-   "winner": "B",
-   "selection_type": "PERFORMANCE_WINNER",
-   "status": "PROVISIONAL_WINNER"
+   "step": "16C selection held",
+   "candidate": "B",
+   "selection_type": "PERFORMANCE_WINNER"
   }
  ]
 }

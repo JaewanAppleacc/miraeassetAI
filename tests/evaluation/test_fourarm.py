@@ -155,12 +155,22 @@ def test_unresolved_packets_are_arm_blind_and_unique_across_arms():
 
 
 # ---------- judge (판정 체인) ----------
+# 아래 체인 테스트는 2~3 arm 부분 집합으로 규칙을 검증한다 — 부분 집합의 선두는 공식 승자가
+# 아니라 PARTIAL_SET_LEADER('leader')다(vFINAL 17, A/C 검수 3차). 4-arm 완비 시에만 'winner'.
+
+def _lead(j):
+    return j.get("winner") or j.get("leader")
+
+
+def _basis(j):
+    return j.get("selection_type") or j.get("selection_basis")
+
 
 def test_hard_gate_removes_critical_arm_and_blocks_when_none():
     reps = {"A": _report("A", r_all=0.9, r_high=0.9, low_all_found=10, critical=1),
             "D": _report("D", r_all=0.85, r_high=0.85, low_all_found=9)}
     j = fa.judge(reps)
-    assert j["winner"] == "D" and j["status"] == "PROVISIONAL_WINNER"
+    assert _lead(j) == "D" and j["status"] == "PARTIAL_SET_LEADER" and "winner" not in j
     assert fa.judge({"A": reps["A"]})["status"] == "BLOCKED"
 
 
@@ -168,11 +178,11 @@ def test_quality_gate_margin_and_no_selection():
     reps = {"A": _report("A", r_all=0.90, r_high=0.90, low_all_found=8),
             "D": _report("D", r_all=0.88, r_high=0.90, low_all_found=12)}      # ALL 0.02 낮음 → 탈락
     j = fa.judge(reps)
-    assert j["winner"] == "A"
+    assert _lead(j) == "A"
     reps["D"]["segments"]["ALL"]["recall@10"] = 0.89                             # 정확히 0.01 낮음 → "0.01 이상" 탈락
-    assert fa.judge(reps)["winner"] == "A"
+    assert _lead(fa.judge(reps)) == "A"
     reps["D"]["segments"]["ALL"]["recall@10"] = 0.895                            # 0.005 낮음 → 통과, LOW 12 vs 8 → D
-    assert fa.judge(reps)["winner"] == "D"
+    assert _lead(fa.judge(reps)) == "D"
 
 
 def test_final_tie_set_prefers_dense_off_and_cd_tiebreak_by_latency():
@@ -181,7 +191,7 @@ def test_final_tie_set_prefers_dense_off_and_cd_tiebreak_by_latency():
             "D": _report("D", r_all=0.9, r_high=0.9, low_all_found=10, p95=1000)}
     j = fa.judge(reps)
     assert set(j["tie_set"]) == {"A", "C", "D"}
-    assert j["winner"] == "D" and j["selection_type"] == "PERFORMANCE_TIE_BREAK_SELECTION"
+    assert _lead(j) == "D" and _basis(j) == "PERFORMANCE_TIE_BREAK_SELECTION"
     assert any(s["step"].startswith("18 latency") for s in j["chain"])
 
 
@@ -190,8 +200,8 @@ def test_two_below_best_is_dropped_and_ab_tie_goes_to_b():
             "B": _report("B", r_all=0.9, r_high=0.9, low_all_found=10),
             "D": _report("D", r_all=0.9, r_high=0.9, low_all_found=8)}          # 최고−2 → 탈락
     j = fa.judge(reps)
-    assert j["tie_set"] == ["A", "B"] and j["winner"] == "B"
-    assert j["selection_type"] == "PERFORMANCE_TIE_BREAK_SELECTION"
+    assert j["tie_set"] == ["A", "B"] and _lead(j) == "B"
+    assert _basis(j) == "PERFORMANCE_TIE_BREAK_SELECTION"
 
 
 def test_low_underpowered_paths():
@@ -199,9 +209,15 @@ def test_low_underpowered_paths():
             "D": _report("D", r_all=0.9, r_high=0.9, low_all_found=4, low_q=5)}
     assert fa.judge(reps)["status"] == "BLOCKED"                                    # 의역 세트 없음·B 배포성 미확인
     j = fa.judge(reps, deployable={"B": True})
-    assert j["status"] == "OPERATIONAL_FALLBACK" and j["winner"] == "B"
+    assert j["status"] == "PARTIAL_SET_LEADER" and _lead(j) == "B" and _basis(j) == "OPERATIONAL_FALLBACK"
     j = fa.judge(reps, paraphrase_all_found={"B": 12, "D": 15})
-    assert j["winner"] == "D" and j["status"] == "PROVISIONAL_WINNER"
+    assert _lead(j) == "D" and j["status"] == "PARTIAL_SET_LEADER"
+
+
+def test_full_four_arm_set_yields_official_provisional_winner():
+    reps = {a: _report(a, r_all=0.9, r_high=0.9, low_all_found=10) for a in "ABCD"}
+    j = fa.judge(reps)
+    assert j["status"] == "PROVISIONAL_WINNER" and j["winner"] == "D" and j["arm_set"] == ["A", "B", "C", "D"]
 
 
 def test_pins_mismatch_is_invalid_and_unresolved_marks_pending():
@@ -225,8 +241,8 @@ def test_judge_refuses_reports_without_locator_check():
 def test_judge_require_arms_blocks_partial_sets():
     """검수 발견 2: 최종 판정은 A/B/C/D 완비 + 문항 누락 0을 강제할 수 있어야 한다."""
     reps = {a: _report(a, r_all=0.9, r_high=0.9, low_all_found=10) for a in ("B", "D")}
-    # 잠정 판정(require 없음)은 그대로 돈다 — B/D 중간 판정 호환.
-    assert fa.judge(reps)["status"] == "PROVISIONAL_WINNER"
+    # 부분 집합 판정(require 없음)은 돌되 비공식 선두 상태만 낸다 — B/D 중간 비교 호환.
+    assert fa.judge(reps)["status"] == "PARTIAL_SET_LEADER"
     j = fa.judge(reps, require_arms={"A", "B", "C", "D"})
     assert j["status"] == "INVALID" and "missing=['A', 'C']" in j["reason"]
     reps4 = {a: _report(a, r_all=0.9, r_high=0.9, low_all_found=10) for a in "ABCD"}

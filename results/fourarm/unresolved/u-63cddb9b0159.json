@@ -1,0 +1,9 @@
+{
+ "packet_id": "u-63cddb9b0159",
+ "question_id": "author_ed4a7d77528a8c5751e9a348",
+ "slot_name": "evidence_1",
+ "doc_id": "holding_20250605000220",
+ "node_index": 26,
+ "chunk_text": "| 보고서작성기준일 | 보고자 | 보고자 | 주식등 | 주식등 | 주권 | 주권 | 의결권 있는 발행주식총수(주)\n | 보고서작성기준일 | 본인 성명 | 특별관계자수 | 주식등의 수(주) | 비율(%) | 주식수(주) | 비율(%) | 의결권 있는 발행주식총수(주)\n직전보고서 | - | - | - | - | - | - | - | -\n이번보고서 | 2025년 06월 05일 | Tencent Music Entertainment Hong Kong Limited | - | 2,212,237 | 9.66 | 2,212,237 | 9.66 | 22,894,690\n증    감 | 증    감 | 증    감 | 증    감 | 2,212,237 | 9.66 | 2,212,237 | 9.66 | 22,894,690",
+ "reason": "duplicate_evidence_different_node"
+}

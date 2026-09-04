@@ -68,8 +68,8 @@
  },
  "violations": {
   "critical": 0,
-  "minor": 17,
-  "unresolved": 0,
+  "minor": 0,
+  "unresolved": 17,
   "coarse": 99,
   "items": [
    {
@@ -78,8 +78,10 @@
     "doc_id": "periodic_20240321001029",
     "node_index": 233,
     "locator": "periodic_20240321001029/20240321001029.xml#node=233",
-    "severity": "minor",
-    "reason": "same_evidence_span_offset_differs"
+    "severity": "unresolved",
+    "reason": "duplicate_evidence_different_node",
+    "chunk_text": "자본총계 | 131,667,154 | 61,478,083 | 47,856,646\n구분 | 2023년 1월~12월 | 2022년 1월~12월 | 2021년 1월~12월\n매출액 | 16,368,185 | 13,615,412 | 8,969,575\n영업이익 | (43,932,239) | 1,310,479 | (1,021,746)\n당기순이익 | 109,139 | 5,775,822 | (7,843,397)\n주당순이익(기본) | 6 | 356 | (497)",
+    "gold_node": 230
    },
    {
     "question_id": "author_a538b0e2240fe01d1a71ebb7",
@@ -87,8 +89,10 @@
     "doc_id": "periodic_20250515001309",
     "node_index": 152,
     "locator": "periodic_20250515001309/20250515001309.xml#node=152",
-    "severity": "minor",
-    "reason": "same_evidence_span_offset_differs"
+    "severity": "unresolved",
+    "reason": "duplicate_evidence_different_node",
+    "chunk_text": "[이익잉여금] | 4,445,534 | 4,242,212 | 4,230,100\n[기타포괄손익누계액] | (3,219) | (3,153) | (2,732)\n[기타자본항목] | 24,872 | 24,872 | 24,872\n자본총계 | 4,653,102 | 4,449,846 | 4,438,155\n자본과 부채총계 | 5,452,238 | 5,171,611 | 5,057,410\n종속ㆍ관계ㆍ공동기업\n투자주식의 평가방법 | 원가법 | 원가법 | 원가법\n | 2025.01.01~ 2025.03.31 | 2024.01.01~ 2024.12.31 | 2023.01.01~ 2023.12.31\n매출액 | 892,729 | 3,534,850 | 3,500,214\n영업이익 | 72,950 | 228,883 | 217,117\n당기순이",
+    "gold_node": 149
    },
    {
     "question_id": "author_ed4a7d77528a8c5751e9a348",
@@ -96,8 +100,10 @@
     "doc_id": "holding_20250605000220",
     "node_index": 26,
     "locator": "holding_20250605000220/20250605000220.xml#node=26",
-    "severity": "minor",
-    "reason": "same_evidence_span_offset_differs"
+    "severity": "unresolved",
+    "reason": "duplicate_evidence_different_node",
+    "chunk_text": "| 보고서작성기준일 | 보고자 | 보고자 | 주식등 | 주식등 | 주권 | 주권 | 의결권 있는 발행주식총수(주)\n | 보고서작성기준일 | 본인 성명 | 특별관계자수 | 주식등의 수(주) | 비율(%) | 주식수(주) | 비율(%) | 의결권 있는 발행주식총수(주)\n직전보고서 | - | - | - | - | - | - | - | -\n이번보고서 | 2025년 06월 05일 | Tencent Music Entertainment Hong Kong Limited | - | 2,212,237 | 9.66 | 2,212,237 | 9.66 | 22,894,690\n증    감 | 증    감 | 증    감 | 증    감 | 2,212,237 | 9.66 | 2,212,237 | 9.66 | 22,894,690",
+    "gold_node": 0
    },
    {
     "question_id": "gold_b_034334dce8cb5eaaa6589096",
@@ -150,8 +156,10 @@
     "doc_id": "periodic_20230515000336",
     "node_index": 214,
     "locator": "periodic_20230515000336/20230515000336.xml#node=214",
-    "severity": "minor",
-    "reason": "same_evidence_span_offset_differs"
+    "severity": "unresolved",
+    "reason": "duplicate_evidence_different_node",
+    "chunk_text": "연결 포괄손익계산서 |  |  |  | \n제 22 기 1분기 2023.01.01 부터 2023.03.31 까지 |  |  |  | \n제 21 기 1분기 2022.01.01 부터 2022.03.31 까지 |  |  |  | \n(단위 : 원) |  |  |  | \n | 제 22 기 1분기 | 제 22 기 1분기 | 제 21 기 1분기 | 제 21 기 1분기\n | 3개월 | 누적 | 3개월 | 누적\n수익(매출액) | 546,799,032,026 | 546,799,032,026 | 427,155,003,405 | 427,155,003,405\n매출원가 | 441,550,817,977 | 441,550,817,977 | 348,005,531,112 | 348,005,531,112\n매출총이익 | 105,248,214,0",
+    "gold_node": 209
    },
    {
     "question_id": "gold_b_0e97c60a0d12c067d46a6f84",
@@ -177,8 +185,10 @@
     "doc_id": "major_20241128001098",
     "node_index": 9,
     "locator": "major_20241128001098/20241128001098.xml#node=9",
-    "severity": "minor",
-    "reason": "same_evidence_span_offset_differs"
+    "severity": "unresolved",
+    "reason": "duplicate_evidence_different_node",
+    "chunk_text": "·물적분할 방식으로 분할합니다. 분할 후 분할회사는 상장법인으로 존속하고 각 신설회사는 비상장법인으로 합니다.<분할의 개요>1) 분할회사(분할존속회사)- 상호: 주식회사 엔씨소프트- 사업부문: 분할대상 사업부문을 제외한 모든 사업부문- 비고: 상장법인2) 신설회사1(분할신설회사1)- 상호: 주식회사 퍼스트스파크게임즈           (이하 \"TL사업부 신설회사\")- 사업부문: TL 사업부문- 비고: 비상장법인3) 신설회사2(분할신설회사2)- 상호: 주식회사 빅파이어게임즈           (이하 \"LLL사업부 신설회사\")- 사업부문: LLL 사업부문- 비고: 비상장법인4) 신설회사3(분할신설회사3)- 상호: 주식회사 엔씨에이아이           (이하 \"AI서비스연구사업부 신설회사\")- 사업부문: AI서",
+    "gold_node": 5
    },
    {
     "question_id": "gold_b_137f1bfd5c69987d009ae50c",
@@ -186,8 +196,10 @@
     "doc_id": "major_20241128001098",
     "node_index": 9,
     "locator": "major_20241128001098/20241128001098.xml#node=9",
-    "severity": "minor",
-    "reason": "same_evidence_span_offset_differs"
+    "severity": "unresolved",
+    "reason": "duplicate_evidence_different_node",
+    "chunk_text": "·물적분할 방식으로 분할합니다. 분할 후 분할회사는 상장법인으로 존속하고 각 신설회사는 비상장법인으로 합니다.<분할의 개요>1) 분할회사(분할존속회사)- 상호: 주식회사 엔씨소프트- 사업부문: 분할대상 사업부문을 제외한 모든 사업부문- 비고: 상장법인2) 신설회사1(분할신설회사1)- 상호: 주식회사 퍼스트스파크게임즈           (이하 \"TL사업부 신설회사\")- 사업부문: TL 사업부문- 비고: 비상장법인3) 신설회사2(분할신설회사2)- 상호: 주식회사 빅파이어게임즈           (이하 \"LLL사업부 신설회사\")- 사업부문: LLL 사업부문- 비고: 비상장법인4) 신설회사3(분할신설회사3)- 상호: 주식회사 엔씨에이아이           (이하 \"AI서비스연구사업부 신설회사\")- 사업부문: AI서",
+    "gold_node": 5
    },
    {
     "question_id": "gold_b_137f1bfd5c69987d009ae50c",
@@ -195,8 +207,10 @@
     "doc_id": "major_20241128001098",
     "node_index": 9,
     "locator": "major_20241128001098/20241128001098.xml#node=9",
-    "severity": "minor",
-    "reason": "same_evidence_span_offset_differs"
+    "severity": "unresolved",
+    "reason": "duplicate_evidence_different_node",
+    "chunk_text": "·물적분할 방식으로 분할합니다. 분할 후 분할회사는 상장법인으로 존속하고 각 신설회사는 비상장법인으로 합니다.<분할의 개요>1) 분할회사(분할존속회사)- 상호: 주식회사 엔씨소프트- 사업부문: 분할대상 사업부문을 제외한 모든 사업부문- 비고: 상장법인2) 신설회사1(분할신설회사1)- 상호: 주식회사 퍼스트스파크게임즈           (이하 \"TL사업부 신설회사\")- 사업부문: TL 사업부문- 비고: 비상장법인3) 신설회사2(분할신설회사2)- 상호: 주식회사 빅파이어게임즈           (이하 \"LLL사업부 신설회사\")- 사업부문: LLL 사업부문- 비고: 비상장법인4) 신설회사3(분할신설회사3)- 상호: 주식회사 엔씨에이아이           (이하 \"AI서비스연구사업부 신설회사\")- 사업부문: AI서",
+    "gold_node": 5
    },
    {
     "question_id": "gold_b_192fa6ea90c0cdefc2616fc0",
@@ -465,8 +479,10 @@
     "doc_id": "periodic_20230814001112",
     "node_index": 215,
     "locator": "periodic_20230814001112/20230814001112.xml#node=215",
-    "severity": "minor",
-    "reason": "same_evidence_span_offset_differs"
+    "severity": "unresolved",
+    "reason": "duplicate_evidence_different_node",
+    "chunk_text": "연결 포괄손익계산서 |  |  |  | \n제 59 기 반기 2023.01.01 부터 2023.06.30 까지 |  |  |  | \n제 58 기 반기 2022.01.01 부터 2022.06.30 까지 |  |  |  | \n(단위 : 원) |  |  |  | \n | 제 59 기 반기 | 제 59 기 반기 | 제 58 기 반기 | 제 58 기 반기\n | 3개월 | 누적 | 3개월 | 누적\n매출액 | 7,138,316,741,671 | 13,527,367,230,976 | 7,381,002,219,917 | 14,360,689,644,723\n매출원가 | 6,348,137,182,519 | 12,104,146,143,570 | 6,262,693,237,050 | 12,259,191,309,673\n매출총이익 | 790",
+    "gold_node": 210
    },
    {
     "question_id": "gold_b_5271576ebada8221bcc3056a",
@@ -663,8 +679,10 @@
     "doc_id": "holding_20240306000024",
     "node_index": 1,
     "locator": "holding_20240306000024/20240306000024.xml#node=1",
-    "severity": "minor",
-    "reason": "same_evidence_span_offset_differs"
+    "severity": "unresolved",
+    "reason": "duplicate_evidence_different_node",
+    "chunk_text": "요약정보 | 요약정보 | 요약정보 | 요약정보\n발행회사명 | 한미반도체(주) | 발행회사와의 관계 | 최대주주\n보고구분 | 변동ㆍ변경 | 변동ㆍ변경 | 변동ㆍ변경\n보유주식등의 수 및 보유비율 |  | 보유주식등의 수 | 보유비율\n보유주식등의 수 및 보유비율 | 직전 보고서 | 53,541,672 | 55.01\n보유주식등의 수 및 보유비율 | 이번 보고서 | 53,569,672 | 55.03\n주요계약체결 주식등의 수 및 비율 |  | 주식등의 수 | 비율\n주요계약체결 주식등의 수 및 비율 | 직전 보고서 | 9,964,535 | 10.24\n주요계약체결 주식등의 수 및 비율 | 이번 보고서 | 3,355,076 | 3.45\n의결권의 수 및 보유비율 |  | 의결권의 수 | 보유비율\n의결권의 수 및 보유비율 | ",
+    "gold_node": 21
    },
    {
     "question_id": "gold_b_926d98d28ea51ea8bb8e6ea1",
@@ -672,8 +690,10 @@
     "doc_id": "holding_20240306000024",
     "node_index": 1,
     "locator": "holding_20240306000024/20240306000024.xml#node=1",
-    "severity": "minor",
-    "reason": "same_evidence_span_offset_differs"
+    "severity": "unresolved",
+    "reason": "duplicate_evidence_different_node",
+    "chunk_text": "요약정보 | 요약정보 | 요약정보 | 요약정보\n발행회사명 | 한미반도체(주) | 발행회사와의 관계 | 최대주주\n보고구분 | 변동ㆍ변경 | 변동ㆍ변경 | 변동ㆍ변경\n보유주식등의 수 및 보유비율 |  | 보유주식등의 수 | 보유비율\n보유주식등의 수 및 보유비율 | 직전 보고서 | 53,541,672 | 55.01\n보유주식등의 수 및 보유비율 | 이번 보고서 | 53,569,672 | 55.03\n주요계약체결 주식등의 수 및 비율 |  | 주식등의 수 | 비율\n주요계약체결 주식등의 수 및 비율 | 직전 보고서 | 9,964,535 | 10.24\n주요계약체결 주식등의 수 및 비율 | 이번 보고서 | 3,355,076 | 3.45\n의결권의 수 및 보유비율 |  | 의결권의 수 | 보유비율\n의결권의 수 및 보유비율 | ",
+    "gold_node": 21
    },
    {
     "question_id": "gold_b_9498154347fd9a2ceef8aa63",
@@ -681,8 +701,10 @@
     "doc_id": "holding_20251105000317",
     "node_index": 33,
     "locator": "holding_20251105000317/20251105000317.xml#node=33",
-    "severity": "minor",
-    "reason": "same_evidence_span_offset_differs"
+    "severity": "unresolved",
+    "reason": "duplicate_evidence_different_node",
+    "chunk_text": "| 보고서작성기준일 | 보고자 | 보고자 | 주식등 | 주식등 | 주권 | 주권 | 의결권 있는 발행주식총수(주)\n | 보고서작성기준일 | 본인 성명 | 특별관계자수 | 주식등의 수(주) | 비율(%) | 주식수(주) | 비율(%) | 의결권 있는 발행주식총수(주)\n직전보고서 | 2025년 08월 06일 | 크리스탈코리아 유한회사 | 3 | 15,430,479 | 15.93 | 15,430,479 | 15.93 | 96,885,948\n이번보고서 | 2025년 11월 05일 | 크리스탈코리아 유한회사 | 3 | 8,026,799 | 8.28 | 8,026,799 | 8.28 | 96,885,948\n증    감 | 증    감 | 증    감 | 증    감 | -7,403,680 | -7.65 | -7,403",
+    "gold_node": 0
    },
    {
     "question_id": "gold_b_9498154347fd9a2ceef8aa63",
@@ -744,8 +766,10 @@
     "doc_id": "periodic_20230512001099",
     "node_index": 236,
     "locator": "periodic_20230512001099/20230512001099.xml#node=236",
-    "severity": "minor",
-    "reason": "same_evidence_span_offset_differs"
+    "severity": "unresolved",
+    "reason": "duplicate_evidence_different_node",
+    "chunk_text": "연결 손익계산서 |  |  |  | \n제 33 기 1분기 2023.01.01 부터 2023.03.31 까지 |  |  |  | \n제 32 기 1분기 2022.01.01 부터 2022.03.31 까지 |  |  |  | \n(단위 : 원) |  |  |  | \n | 제 33 기 1분기 | 제 33 기 1분기 | 제 32 기 1분기 | 제 32 기 1분기\n | 3개월 | 누적 | 3개월 | 누적\n매출액 | 597,564,003,593 | 597,564,003,593 | 531,461,262,868 | 531,461,262,868\n매출원가 | 333,386,911,754 | 333,386,911,754 | 299,104,601,710 | 299,104,601,710\n매출총이익 | 264,177,091,839 | 2",
+    "gold_node": 228
    },
    {
     "question_id": "gold_b_9d2e358034ea16bcee7d8edf",
@@ -753,8 +777,10 @@
     "doc_id": "periodic_20230512001099",
     "node_index": 236,
     "locator": "periodic_20230512001099/20230512001099.xml#node=236",
-    "severity": "minor",
-    "reason": "same_evidence_span_offset_differs"
+    "severity": "unresolved",
+    "reason": "duplicate_evidence_different_node",
+    "chunk_text": "연결 손익계산서 |  |  |  | \n제 33 기 1분기 2023.01.01 부터 2023.03.31 까지 |  |  |  | \n제 32 기 1분기 2022.01.01 부터 2022.03.31 까지 |  |  |  | \n(단위 : 원) |  |  |  | \n | 제 33 기 1분기 | 제 33 기 1분기 | 제 32 기 1분기 | 제 32 기 1분기\n | 3개월 | 누적 | 3개월 | 누적\n매출액 | 597,564,003,593 | 597,564,003,593 | 531,461,262,868 | 531,461,262,868\n매출원가 | 333,386,911,754 | 333,386,911,754 | 299,104,601,710 | 299,104,601,710\n매출총이익 | 264,177,091,839 | 2",
+    "gold_node": 228
    },
    {
     "question_id": "gold_b_9d2e358034ea16bcee7d8edf",
@@ -762,8 +788,10 @@
     "doc_id": "periodic_20250515002745",
     "node_index": 152,
     "locator": "periodic_20250515002745/20250515002745.xml#node=152",
-    "severity": "minor",
-    "reason": "same_evidence_span_offset_differs"
+    "severity": "unresolved",
+    "reason": "duplicate_evidence_different_node",
+    "chunk_text": "2-2. 연결 손익계산서\n연결 손익계산서 |  |  |  | \n제 35 기 1분기 2025.01.01 부터 2025.03.31 까지 |  |  |  | \n제 34 기 1분기 2024.01.01 부터 2024.03.31 까지 |  |  |  | \n(단위 : 원) |  |  |  | \n | 제 35 기 1분기 | 제 35 기 1분기 | 제 34 기 1분기 | 제 34 기 1분기\n | 3개월 | 누적 | 3개월 | 누적\n매출액 (주14,21,22) | 841,911,660,218 | 841,911,660,218 | 736,980,406,827 | 736,980,406,827\n매출원가 (주18,22) | (399,039,503,500) | (399,039,503,500) | (430,311,013,326) | (4",
+    "gold_node": 144
    },
    {
     "question_id": "gold_b_9d2e358034ea16bcee7d8edf",
@@ -771,8 +799,10 @@
     "doc_id": "periodic_20250515002745",
     "node_index": 152,
     "locator": "periodic_20250515002745/20250515002745.xml#node=152",
-    "severity": "minor",
-    "reason": "same_evidence_span_offset_differs"
+    "severity": "unresolved",
+    "reason": "duplicate_evidence_different_node",
+    "chunk_text": "2-2. 연결 손익계산서\n연결 손익계산서 |  |  |  | \n제 35 기 1분기 2025.01.01 부터 2025.03.31 까지 |  |  |  | \n제 34 기 1분기 2024.01.01 부터 2024.03.31 까지 |  |  |  | \n(단위 : 원) |  |  |  | \n | 제 35 기 1분기 | 제 35 기 1분기 | 제 34 기 1분기 | 제 34 기 1분기\n | 3개월 | 누적 | 3개월 | 누적\n매출액 (주14,21,22) | 841,911,660,218 | 841,911,660,218 | 736,980,406,827 | 736,980,406,827\n매출원가 (주18,22) | (399,039,503,500) | (399,039,503,500) | (430,311,013,326) | (4",
+    "gold_node": 144
    },
    {
     "question_id": "gold_b_a534bc30d3414f2d094e7461",
@@ -780,8 +810,10 @@
     "doc_id": "holding_20240111000046",
     "node_index": 27,
     "locator": "holding_20240111000046/20240111000046.xml#node=27",
-    "severity": "minor",
-    "reason": "same_evidence_span_offset_differs"
+    "severity": "unresolved",
+    "reason": "duplicate_evidence_different_node",
+    "chunk_text": "| 보고서작성기준일 | 보고자 | 보고자 | 주식등 | 주식등 | 주권 | 주권 | 의결권 있는 발행주식총수(주)\n | 보고서작성기준일 | 본인 성명 | 특별관계자수 | 주식등의 수(주) | 비율(%) | 주식수(주) | 비율(%) | 의결권 있는 발행주식총수(주)\n직전보고서 | - | - | - | - | - | - | - | -\n이번보고서 | 2024년 01월 08일 | KopernikGlobalInvestors,LLC | - | 22,272,289 | 5.10 | 22,272,289 | 5.10 | 436,611,361\n증    감 | 증    감 | 증    감 | 증    감 | 22,272,289 | 5.10 | 22,272,289 | 5.10 | 436,611,361",
+    "gold_node": 0
    },
    {
     "question_id": "gold_b_a534bc30d3414f2d094e7461",
@@ -1005,8 +1037,10 @@
     "doc_id": "holding_20250106000284",
     "node_index": 28,
     "locator": "holding_20250106000284/20250106000284.xml#node=28",
-    "severity": "minor",
-    "reason": "same_evidence_span_offset_differs"
+    "severity": "unresolved",
+    "reason": "duplicate_evidence_different_node",
+    "chunk_text": "| 보고서작성기준일 | 보고자 | 보고자 | 주식등 | 주식등 | 주권 | 주권 | 의결권 있는 발행주식총수(주)\n | 보고서작성기준일 | 본인 성명 | 특별관계자수 | 주식등의 수(주) | 비율(%) | 주식수(주) | 비율(%) | 의결권 있는 발행주식총수(주)\n직전보고서 | 2024년 06월 27일 | 국민연금공단 | 1 | 603,804 | 5.80 | 603,804 | 5.80 | 10,413,023\n이번보고서 | 2024년 11월 07일 | 국민연금공단 | 1 | 550,225 | 4.71 | 550,225 | 4.71 | 11,685,247\n증    감 | 증    감 | 증    감 | 증    감 | -53,579 | -1.09 | -53,579 | -1.09 | 1,272,224",
+    "gold_node": 0
    },
    {
     "question_id": "gold_b_ec84639c43268bb42cc60c83",

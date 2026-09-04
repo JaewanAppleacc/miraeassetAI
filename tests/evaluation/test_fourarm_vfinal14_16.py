@@ -80,10 +80,12 @@ def test_case5_cell_gold_node_only_result_unverifiable_is_unresolved():
 
 
 def test_case6_same_evidence_span_offset_only_is_minor():
-    # text-method: 결과 locator는 자기 node에 정직하고(본문 대조 통과) Gold span도 그 본문에
-    # 있지만 Gold 지정 node와는 다른 node/범위 → 경미(보고만, 탈락 아님).
-    got = _sev([_match("s", "text", _res("d1", 1, text="매출액 | 100 | 90"), None)])
-    assert got == [("minor", "same_evidence_span_offset_differs")]
+    # 동일 node·동일 셀·동일 근거인데 원문 그대로가 아니라 정규화로만 일치(offset/공백/구두점)
+    # → 경미 보고(탈락 아님). 다른 node의 동일 텍스트는 여기 해당 없음(→ UNRESOLVED, 아래 r3).
+    m = _match("s", "node", _res("d1", 1, text="매출액 | 100 | 90", row=1, col=1), (1, 1))
+    m["span_state"], m["norm_only"] = "verified", True
+    got = _sev([m])
+    assert got == [("minor", "same_evidence_offset_or_normalization")]
 
 
 def test_exact_cell_match_yields_no_violation():
@@ -242,21 +244,89 @@ def test_r2_whitespace_only_difference_is_verified_not_violation():
     assert ok and state == "verified"
 
 
-def test_r2_verified_duplicate_at_other_node_stays_minor():
-    # [의견 불일치 기록] 다른 node의 '동일 문자열': 청크가 자기 locator의 node에서 온 것이
-    # 본문 대조로 확인되면(=그 위치에 근거가 실재) vFINAL 14 경미 조항 "동일 근거, span
-    # offset만 상이(…·범위)"로 본다. 일괄 치명이면 이 조항이 사문화되고 실측상
-    # (B 17·D 13건) 전 arm이 Hard 탈락한다. Owner 재판정 대상이면 이 테스트를 바꾼다.
-    store = _Store({"d1": ["매출액 | 100 | 90", "매출액 | 100 | 90"]})
-    slot = fa.GoldSlot("s", [fa.GoldSource("d1", 0, "매출액 | 100 | 90")])
-    r = {"rank": 1, "doc_id": "d1", "node_index": 1, "text": "매출액 | 100 | 90"}
-    ok, _, how, _, _ = fa.slot_found(slot, [r], k=10, store=store)
-    assert ok and how == "text"
-    qs = fa.QuestionScore("q", "LOW", 1, False)
-    qs.slot_matches = [{"slot_name": "s", "method": "text", "span_state": "verified",
-                        "result": dict(r), "gold_row_col": None}]
-    v = fa.check_locators(qs, store)
-    assert [(x["severity"], x["reason"]) for x in v] == [("minor", "same_evidence_span_offset_differs")]
+# ---------- 검수 3차: different-node 규칙 (자동 경미 금지 → Owner 판정) ----------
+
+_DUP_STORE = _Store({"d1": ["매출액 | 100 | 90 (2024년)", "매출액 | 100 | 90 (2024년)",
+                            "매출액 | 100 | 90 (2023년)"]})
+
+
+def _text_match(node, text, gold_node=0, gold_span="매출액 | 100 | 90 (2024년)"):
+    return {"slot_name": "s", "method": "text", "span_state": "verified", "gold_node": gold_node,
+            "gold_span": gold_span, "gold_row_col": None,
+            "result": {"rank": 1, "doc_id": "d1", "node_index": node, "text": text}}
+
+
+def _sev_dup(matches):
+    qs = fa.QuestionScore("q", "LOW", len(matches), False)
+    qs.slot_matches = matches
+    return [(x["severity"], x["reason"].split(":")[0]) for x in fa.check_locators(qs, _DUP_STORE)]
+
+
+def test_r3_case1_same_node_same_cell_offset_only_is_minor():
+    r = {"rank": 1, "doc_id": "d1", "node_index": 1, "text": "매출액 |  100 |  90  (2024년)",
+         "row": 1, "col": 1}
+    slot = fa.GoldSlot("s", [fa.GoldSource("d1", 1, "매출액 | 100 | 90 (2024년)", 1, 1)])
+    ok, _, how, _, state = fa.slot_found(slot, [r], k=10, store=_DUP_STORE)
+    assert ok and how == "node" and state == "verified"
+    gq = fa.GoldQuestion("q", {"d1"}, [slot])
+    qs = fa.score_question(gq, {"results": [r]}, "LOW", ks=(10,), store=_DUP_STORE)
+    assert qs.slot_matches[0]["norm_only"] is True
+    v = fa.check_locators(qs, _DUP_STORE)
+    assert [(x["severity"], x["reason"]) for x in v] == [("minor", "same_evidence_offset_or_normalization")]
+
+
+def test_r3_case2_other_node_not_acceptable_same_text_is_unresolved():
+    # 다른 node의 동일 문자열, Gold acceptable source 아님 → scorer가 경미/치명을 정하지 않고
+    # UNRESOLVED(duplicate_evidence_different_node)로 Owner arm-blind 판정에 넘긴다.
+    got = _sev_dup([_text_match(1, "매출액 | 100 | 90 (2024년)")])
+    assert got == [("unresolved", "duplicate_evidence_different_node")]
+
+
+def test_r3_case3_other_node_other_period_is_critical():
+    # Gold span 연도(2024)가 청크에 없고 청크는 다른 연도(2023)를 담음 → 다른 기간 근거 확정 = 치명.
+    got = _sev_dup([_text_match(2, "매출액 | 100 | 90 (2023년)")])
+    assert got == [("critical", "different_node_different_period")]
+
+
+def test_r3_case4_other_node_registered_as_acceptable_source_is_clean():
+    # Gold acceptable source에 등록된 node면 node-method 매치 = 위반 없음.
+    slot = fa.GoldSlot("s", [fa.GoldSource("d1", 0, "매출액 | 100 | 90 (2024년)"),
+                             fa.GoldSource("d1", 1, "매출액 | 100 | 90 (2024년)")])
+    r = {"rank": 1, "doc_id": "d1", "node_index": 1, "text": "매출액 | 100 | 90 (2024년)"}
+    ok, _, how, src, state = fa.slot_found(slot, [r], k=10, store=_DUP_STORE)
+    assert ok and how == "node" and src.node_index == 1 and state == "verified"
+    gq = fa.GoldQuestion("q", {"d1"}, [slot])
+    qs = fa.score_question(gq, {"results": [r]}, "LOW", ks=(10,), store=_DUP_STORE)
+    assert fa.check_locators(qs, _DUP_STORE) == []
+
+
+def test_r3_case5_partial_set_never_returns_official_winner():
+    def rep(arm, low):
+        seg = lambda q, f: {"questions": q, "recall@10": 0.9, "all_found@10": f}  # noqa: E731
+        return {"arm": arm, "locator_checked": True, "pins": {"conditions_sha_matches": True},
+                "violations": {"critical": 0, "minor": 0, "unresolved": 0, "coarse": 0, "items": []},
+                "segments": {"ALL": seg(50, 40), "HIGH": seg(31, 25), "LOW": seg(19, low)},
+                "latency_ms": {}, "peak_rss_mb": 1, "external_services": []}
+    j = fa.judge({"B": rep("B", 11), "D": rep("D", 9)})
+    assert j["status"] == "PARTIAL_SET_LEADER" and j["leader"] == "B" and "winner" not in j
+    assert j["arm_set"] == ["B", "D"]
+    j4 = fa.judge({a: rep(a, 10) for a in "ABCD"})
+    assert j4["status"] == "PROVISIONAL_WINNER" and "winner" in j4
+
+
+def test_r3_owner_equivalent_evidence_downgrades_to_minor():
+    item = {"severity": "unresolved", "question_id": "q1", "slot_name": "s", "doc_id": "d1",
+            "node_index": 1, "reason": "duplicate_evidence_different_node", "chunk_text": "t"}
+    rep = {"violations": {"critical": 0, "minor": 0, "unresolved": 1, "coarse": 0, "items": [item]}}
+    plan = fa.adjudication_plan({"B": rep}, {fa.packet_id_of(item): {"classification": "EQUIVALENT_EVIDENCE"}},
+                                n_set=101)
+    assert plan["per_arm_equivalent"] == {"B": [fa.packet_id_of(item)]} and plan["unknown_per_arm"] == {}
+    assert fa.apply_equivalent_evidence(rep, plan["per_arm_equivalent"]["B"]) == 1
+    assert rep["violations"]["minor"] == 1 and rep["violations"]["unresolved"] == 0
+    # 판정이 없으면 자동 강등 없음 — UNKNOWN 그대로(위 apply가 item을 제자리 수정했으므로 새로 만든다).
+    fresh = {**item, "severity": "unresolved", "reason": "duplicate_evidence_different_node"}
+    plan2 = fa.adjudication_plan({"B": {"violations": {"items": [fresh]}}}, {}, n_set=101)
+    assert plan2["unknown_per_arm"] == {"B": 1}
 
 
 @pytest.mark.skipif(not (REPO / "results/fourarm/B.results.jsonl").exists(),

@@ -1,0 +1,121 @@
+{
+ "u-0242ed257328": {
+  "classification": "UNKNOWN",
+  "note": "",
+  "_question_id": "gold_b_a534bc30d3414f2d094e7461",
+  "_slot": "reporter",
+  "_reason": "duplicate_evidence_different_node"
+ },
+ "u-0f63a81df003": {
+  "classification": "UNKNOWN",
+  "note": "",
+  "_question_id": "gold_b_926d98d28ea51ea8bb8e6ea1",
+  "_slot": "after_holding",
+  "_reason": "duplicate_evidence_different_node"
+ },
+ "u-192d06b044ea": {
+  "classification": "UNKNOWN",
+  "note": "",
+  "_question_id": "gold_b_9d2e358034ea16bcee7d8edf",
+  "_slot": "operating_income_2025q1",
+  "_reason": "duplicate_evidence_different_node"
+ },
+ "u-1b6cd184a87f": {
+  "classification": "UNKNOWN",
+  "note": "",
+  "_question_id": "author_14dfddbe1d41275533ae3945",
+  "_slot": "evidence_1",
+  "_reason": "duplicate_evidence_different_node"
+ },
+ "u-306d35a3890d": {
+  "classification": "UNKNOWN",
+  "note": "",
+  "_question_id": "gold_b_137f1bfd5c69987d009ae50c",
+  "_slot": "correction_new_company4",
+  "_reason": "duplicate_evidence_different_node"
+ },
+ "u-563f0c29d422": {
+  "classification": "UNKNOWN",
+  "note": "",
+  "_question_id": "gold_b_9498154347fd9a2ceef8aa63",
+  "_slot": "reporter",
+  "_reason": "duplicate_evidence_different_node"
+ },
+ "u-63cddb9b0159": {
+  "classification": "UNKNOWN",
+  "note": "",
+  "_question_id": "author_ed4a7d77528a8c5751e9a348",
+  "_slot": "evidence_1",
+  "_reason": "duplicate_evidence_different_node"
+ },
+ "u-63efc7b71368": {
+  "classification": "UNKNOWN",
+  "note": "",
+  "_question_id": "gold_b_0e97c60a0d12c067d46a6f84",
+  "_slot": "revenue_2023q1",
+  "_reason": "duplicate_evidence_different_node"
+ },
+ "u-6ebd6ff8de67": {
+  "classification": "UNKNOWN",
+  "note": "",
+  "_question_id": "gold_b_9d2e358034ea16bcee7d8edf",
+  "_slot": "operating_income_2023q1",
+  "_reason": "duplicate_evidence_different_node"
+ },
+ "u-8564414f6080": {
+  "classification": "UNKNOWN",
+  "note": "",
+  "_question_id": "author_a538b0e2240fe01d1a71ebb7",
+  "_slot": "evidence_2",
+  "_reason": "duplicate_evidence_different_node"
+ },
+ "u-893641aa1791": {
+  "classification": "UNKNOWN",
+  "note": "",
+  "_question_id": "gold_b_9d2e358034ea16bcee7d8edf",
+  "_slot": "revenue_2025q1",
+  "_reason": "duplicate_evidence_different_node"
+ },
+ "u-896a2a3163e6": {
+  "classification": "UNKNOWN",
+  "note": "",
+  "_question_id": "gold_b_926d98d28ea51ea8bb8e6ea1",
+  "_slot": "before_holding",
+  "_reason": "duplicate_evidence_different_node"
+ },
+ "u-aa1e331b4d22": {
+  "classification": "UNKNOWN",
+  "note": "",
+  "_question_id": "gold_b_ec84639c43268bb42cc60c83",
+  "_slot": "reporter",
+  "_reason": "duplicate_evidence_different_node"
+ },
+ "u-bb1d59b61b69": {
+  "classification": "UNKNOWN",
+  "note": "",
+  "_question_id": "gold_b_9d2e358034ea16bcee7d8edf",
+  "_slot": "revenue_2023q1",
+  "_reason": "duplicate_evidence_different_node"
+ },
+ "u-c55cdd9aa429": {
+  "classification": "UNKNOWN",
+  "note": "",
+  "_question_id": "gold_b_5271576ebada8221bcc3056a",
+  "_slot": "revenue_2023h1",
+  "_reason": "duplicate_evidence_different_node"
+ },
+ "u-cdf167178203": {
+  "classification": "UNKNOWN",
+  "note": "",
+  "_question_id": "gold_b_137f1bfd5c69987d009ae50c",
+  "_slot": "correction_new_company2",
+  "_reason": "duplicate_evidence_different_node"
+ },
+ "u-f49512b5641c": {
+  "classification": "UNKNOWN",
+  "note": "",
+  "_question_id": "gold_b_137f1bfd5c69987d009ae50c",
+  "_slot": "correction_new_company1",
+  "_reason": "duplicate_evidence_different_node"
+ }
+}
