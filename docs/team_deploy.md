@@ -50,6 +50,10 @@ Environment=PYTHONPATH=/home/ubuntu/dart-qa/src
 Environment=PYTHONIOENCODING=utf-8
 Environment=DART_QA_DEADLINE_S=290
 Environment=DART_QA_CACHE_DIR=/home/ubuntu/dart-qa/.cache
+# 평가 프로필(검수 3·4차): HCX-005 실연결 + 코드 식별자 없이는 /ready가 503이 된다.
+# DART_QA_CODE_SHA는 배포한 커밋의 짧은 SHA로 채운다(예: git rev-parse --short HEAD).
+Environment=DART_QA_EVAL_PROFILE=1
+Environment=DART_QA_CODE_SHA=<배포 커밋 SHA>
 ExecStart=/home/ubuntu/dart-qa/.venv/bin/uvicorn dart_detective.ops_service:app --host 0.0.0.0 --port 80 --workers 1
 Restart=always
 RestartSec=3

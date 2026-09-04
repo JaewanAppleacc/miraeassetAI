@@ -142,6 +142,30 @@ def _column_mismatch(quote: str, value: str, claim_years: set[str],
     vnums = _claim_numbers(value) or list(numbers_in(value))
     if not vnums:
         return None
+    located = _quote_table_columns(quote, chunk_texts, base_year)
+    if located is None:
+        return None
+    line, cols = located
+    for y in claim_years:
+        col = cols.get(int(y))
+        if col is None:
+            continue
+        cell = tables.value_at(line, col)
+        if cell is None:
+            continue
+        cell_norm = cell.replace(",", "")
+        if not all(v in cell_norm for v in vnums):
+            return f"period_bound:column_mismatch:{y}"
+    return None
+
+
+def _quote_table_columns(quote: str, chunk_texts: Sequence[str],
+                         base_year: int | None) -> tuple[str, dict[int, int]] | None:
+    """인용 줄이 다기간 표의 데이터 행일 때 (그 줄, 연도→열 매핑)을 돌려준다. 아니면 None.
+
+    모호성은 "명시 연도 글자 수"가 아니라 해석된 기간 열 수(≥2)로 판단한다 — 당기/전기·제N기
+    표는 연도 글자 없이도 열이 2개다(검수 3차 발견 1: 종전 연도 카운트 가드가 우회를 허용).
+    """
     q = _squash(quote)
     for chunk in chunk_texts:
         if q not in _squash(chunk):
@@ -154,19 +178,7 @@ def _column_mismatch(quote: str, value: str, claim_years: set[str],
         cols = tables.period_columns_of_lines(lines, base_year=base_year)
         if len(cols) < 2:
             return None                   # 기간 열이 하나뿐(또는 판독 불가) — 오귀속이 성립하지 않는다
-        # 모호성은 "명시 연도 글자 수"가 아니라 해석된 기간 열 수로 판단한다 — 당기/전기·제N기
-        # 표는 연도 글자 없이도 열이 2개다(검수 3차 발견 1: 종전 연도 카운트 가드가 우회를 허용).
-        for y in claim_years:
-            col = cols.get(int(y))
-            if col is None:
-                continue
-            cell = tables.value_at(line, col)
-            if cell is None:
-                continue
-            cell_norm = cell.replace(",", "")
-            if not all(v in cell_norm for v in vnums):
-                return f"period_bound:column_mismatch:{y}"
-        return None
+        return line, cols
     return None
 
 
@@ -187,8 +199,13 @@ def validate_claim(claim: Mapping[str, Any], doc_text_squashed: Mapping[str, str
         fails.append("quote_grounded")
 
     quote_nums = set(numbers_in(quote))
+    # 질문 날짜·기수 숫자는 claim 안에서도 같은 문맥(날짜·기수 표현)으로 쓰일 때만 허용한다.
+    # "2024년 3월 22일 매출액은?" → "매출액은 22이다"처럼 날짜 토큰을 값으로 전용하는
+    # 우회를 막는다(검수 4차 발견 1 재현).
+    claim_ctx = question_context_numbers(text)
     for n in _claim_numbers(text):
-        if n not in quote_nums and n not in derived_allowed and n not in question_numbers:
+        if (n not in quote_nums and n not in derived_allowed
+                and not (n in question_numbers and n in claim_ctx)):
             fails.append(f"numbers_bound:{n}")
     value = claim.get("value")
     if value not in (None, ""):
@@ -198,12 +215,19 @@ def validate_claim(claim: Mapping[str, Any], doc_text_squashed: Mapping[str, str
             fails.append(f"numbers_bound:value:{value}")
 
     period = str(claim.get("period") or "")
-    # 열 대조에 쓸 연도: period 우선. period가 비면 text의 연도가 하나일 때만 쓴다 —
-    # 비교 문장("2024년은 2023년보다…")의 값은 어느 연도 소속인지 특정할 수 없다.
+    # 열 대조에 쓸 연도: period 우선. period가 비면 text의 연도가 하나일 때만 쓴다.
     claim_years = _years_of(period)
+    multi_year_unsplit = False
     if not claim_years and value not in (None, ""):
         text_years = _years_of(text)
-        claim_years = text_years if len(text_years) == 1 else set()
+        if len(text_years) == 1:
+            claim_years = text_years
+        elif len(text_years) >= 2:
+            # 비교 문장("2024년 90은 2023년 100보다…")은 값의 연도 소속을 구문 없이 특정할 수
+            # 없다. 통과시키면 스왑 오귀속이 그대로 나간다(검수 4차 발견 2) — 다기간 표에서
+            # 왔다면 폐기해서 분리 claim(프롬프트 규칙)을 강제한다. 값별 claim이 따로 오면
+            # 각각 단일 연도 검사로 통과한다.
+            multi_year_unsplit = True
     for year in _years_of(period):
         meta = doc_meta.get(doc_id) or {}
         meta_text = f"{meta.get('report_nm', '')} {meta.get('rcept_dt', '')} {meta.get('base_year', '')}"
@@ -212,17 +236,20 @@ def validate_claim(claim: Mapping[str, Any], doc_text_squashed: Mapping[str, str
 
     # 기간-열 결합(검수 발견 1): "2024년 매출액은 90"이 2023년 열의 90을 인용해도
     # 기존 검사(연도가 문서 어딘가 존재)는 통과한다. 값 claim은 연도 열까지 대조한다.
-    if value not in (None, "") and len(claim_years) == 1 and doc_chunks:
+    if value not in (None, "") and doc_chunks:
         meta = doc_meta.get(doc_id) or {}
         base = meta.get("base_year")
         try:
             base = int(base) if base not in (None, "") else None
         except (TypeError, ValueError):
             base = None
-        col_fail = _column_mismatch(quote, str(value), claim_years,
-                                    doc_chunks.get(doc_id) or (), base)
-        if col_fail:
-            fails.append(col_fail)
+        chunks_of_doc = doc_chunks.get(doc_id) or ()
+        if len(claim_years) == 1:
+            col_fail = _column_mismatch(quote, str(value), claim_years, chunks_of_doc, base)
+            if col_fail:
+                fails.append(col_fail)
+        elif multi_year_unsplit and _quote_table_columns(quote, chunks_of_doc, base) is not None:
+            fails.append("period_bound:multi_year_value_unsplit")
 
     return not fails, fails
 

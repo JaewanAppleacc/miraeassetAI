@@ -98,12 +98,26 @@ def main(argv: list[str] | None = None) -> int:
             run = (json.loads(runpath.read_text(encoding="utf-8")) if runpath.exists() else {})
             inp = run.get("input_sha256") or {}
             # gold는 없어야 정상이다 — 러너는 Gold를 열지 않는다(vFINAL 20번 비유출).
+            # doc_index는 B/D 스택 전용 입력이라 arm 간 대조 대상이 아니다(A/C는 pgvector).
             shared[arm] = {"conditions": inp.get("conditions"),
-                           "document_ir": inp.get("document_ir")}
-            if not run.get("code_sha256"):
-                print(f"최종 판정 불가 — {arm}.run.json에 code_sha256 없음", file=sys.stderr)
+                           "document_ir": inp.get("document_ir"),
+                           "universe": inp.get("universe")}
+            if run.get("arm") and run["arm"] != arm:
+                print(f"최종 판정 불가 — {arm}.run.json의 arm={run['arm']} (파일명과 불일치)",
+                      file=sys.stderr)
                 return 1
-        keys = ("conditions", "document_ir")
+            if not run.get("code_sha256") or not run.get("config_sha256"):
+                print(f"최종 판정 불가 — {arm}.run.json에 code_sha256/config_sha256 없음",
+                      file=sys.stderr)
+                return 1
+            rpath = args.results_dir / f"{arm}.results.jsonl"
+            bad_rows = sum(1 for line in rpath.open(encoding="utf-8") if line.strip()
+                           and json.loads(line).get("arm") not in (None, arm))
+            if bad_rows:
+                print(f"최종 판정 불가 — {arm}.results.jsonl에 다른 arm 행 {bad_rows}건",
+                      file=sys.stderr)
+                return 1
+        keys = ("conditions", "document_ir", "universe")
         missing_pins = {a: [k for k in keys if not shared[a].get(k)] for a in args.arms
                         if any(not shared[a].get(k) for k in keys)}
         if missing_pins:

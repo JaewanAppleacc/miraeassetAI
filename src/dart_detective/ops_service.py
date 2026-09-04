@@ -272,6 +272,13 @@ async def answer_endpoint(request: Request) -> JSONResponse:
     meta: dict[str, Any] = {"cacheable": False}
     disconnected = False
     async with _gate:
+        # 세마포어 획득 후 캐시 재확인(검수 4차 발견 4): 단절된 선행 요청이 방금 계산을 끝내고
+        # 캐시에 넣었을 수 있다 — 없으면 이 재시도가 같은 계산을 처음부터 반복한다.
+        hit = _cache_load(key)
+        if hit is not None:
+            logger.info("answer cache=hit(after-wait) qid=%s ms=%d",
+                        question_id, int((time.perf_counter() - t0) * 1000))
+            return JSONResponse(content=hit)
         remaining = deadline_budget() - (time.perf_counter() - t0)
         task = asyncio.create_task(
             asyncio.to_thread(_call, question_id, question, deadline_s=remaining))
@@ -300,10 +307,13 @@ async def answer_endpoint(request: Request) -> JSONResponse:
             logger.error("answer error qid=%s err=%s", question_id, type(exc).__name__)
             response = _fallback_wire(question_id, question, type(exc).__name__)
 
-    response = {k: str(response.get(k, "")) for k in WIRE_KEYS}
-    if not _valid_wire(response):
-        # 새로 계산한 응답도 5-string 계약을 검증한다(검수 3차 발견 3 — 캐시 hit만 검증했었다).
-        logger.error("answer invalid wire qid=%s — 폴백으로 대체", question_id)
+    try:
+        # dict가 아닌 반환(None 등)도 여기서 잡는다(검수 4차 발견 3 — 정규화 자체가 예외였다).
+        response = {k: str(response.get(k, "")) for k in WIRE_KEYS}
+        assert _valid_wire(response)
+    except Exception:  # noqa: BLE001 — 절대 무예외: 어떤 모양이 와도 유효 5필드로 대체
+        logger.error("answer invalid wire qid=%s type=%s — 폴백으로 대체",
+                     question_id, type(response).__name__)
         response = {k: str(_fallback_wire(question_id, question, "invalid_wire").get(k, ""))
                     for k in WIRE_KEYS}
         meta = {"cacheable": False}

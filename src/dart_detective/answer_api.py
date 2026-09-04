@@ -217,8 +217,18 @@ def readiness() -> dict[str, Any]:
         store = _store
         pins = dict(store.readiness()["pins"]) if store is not None else {}
         llm = get_llm()
+        ready = True
+        profile_error = ""
+        if os.environ.get("DART_QA_EVAL_PROFILE", "").lower() in ("1", "true", "on"):
+            # 평가 프로필(배포 env에서 켠다): HCX-005 실연결·코드 식별자 없이는 ready가 아니다
+            # (검수 3·4차 발견 — 대회 규정 'HCX만'을 런타임에서 강제). 로컬 테스트 기본값은 off.
+            if getattr(llm, "provider", None) != "clova" or getattr(llm, "model", None) != "HCX-005":
+                ready, profile_error = False, f"eval_profile: LLM이 HCX-005가 아니다 ({getattr(llm, 'provider', None)}:{getattr(llm, 'model', None)})"
+            elif not _get_code_sha():
+                ready, profile_error = False, "eval_profile: code_sha 없음 (DART_QA_CODE_SHA 설정 필요)"
         return {
-            "ready": True,
+            "ready": ready,
+            **({"error": profile_error} if profile_error else {}),
             "mode": "real",
             # env 문자열이 아니라 실제 구성된 arm(검수 발견 3) — 주입 테스트 등 arm 미구성 시 기본값.
             "arm": _arm or os.environ.get("DART_QA_ARM", DEFAULT_ARM),

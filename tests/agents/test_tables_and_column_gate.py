@@ -73,10 +73,43 @@ def test_single_year_chunk_skips_column_check():
     assert ok, fails
 
 
-def test_two_year_comparison_text_not_dropped():
-    # 비교 문장은 값의 연도 소속을 특정할 수 없다 — period 없으면 열 대조를 걸지 않는다.
-    ok, fails = _validate({"text": "2024년 매출 100은 2023년 90보다 크다", "value": "100",
-                           "period": None, "doc_id": _DOC, "quote": "매출액 | 100 | 90"})
+def test_two_year_value_claim_in_mapped_table_is_dropped():
+    """검수 4차 발견 2: 다연도 값 claim은 연도-값 결속을 구문 없이 특정할 수 없다 —
+    다기간 표에서 왔다면 폐기해 분리 claim(프롬프트 규칙)을 강제한다. 스왑도 여기 걸린다."""
+    for text in ("2024년 매출 100은 2023년 90보다 크다",          # 옳은 결속
+                 "2024년 매출액 90은 2023년 매출액 100보다 작다"):  # 스왑
+        ok, fails = _validate({"text": text, "value": text.split()[2].rstrip("은"),
+                               "period": None, "doc_id": _DOC, "quote": "매출액 | 100 | 90"})
+        assert not ok, text
+        assert "period_bound:multi_year_value_unsplit" in fails, (text, fails)
+
+
+def test_two_year_value_claim_outside_table_is_kept():
+    # 다기간 표로 특정되지 않으면(문단 인용 등) 기존 검사만 남는다 — 과잉 폐기 방지.
+    chunk = "2024년 매출은 100이고 2023년 매출은 90이었다."
+    squashed = {_DOC: grounded_answer._squash(chunk)}
+    ok, fails = grounded_answer.validate_claim(
+        {"text": "2024년 매출 100은 2023년 90보다 크다", "value": "100", "period": None,
+         "doc_id": _DOC, "quote": chunk},
+        squashed, {_DOC: {}}, set(), doc_chunks={_DOC: [chunk]})
+    assert ok, fails
+
+
+def test_question_date_token_cannot_become_a_value():
+    """검수 4차 발견 1: 질문의 날짜 숫자(3·22)를 값으로 전용하면 날조로 잡아야 한다."""
+    q_nums = grounded_answer.question_context_numbers("2024년 3월 22일 매출액은?")
+    ok, fails = grounded_answer.validate_claim(
+        {"text": "매출액은 22이다", "value": None, "period": None,
+         "doc_id": _DOC, "quote": "매출액 | 100"},
+        {_DOC: grounded_answer._squash("매출액 | 100")}, {_DOC: {}}, set(),
+        question_numbers=q_nums)
+    assert not ok and any(f.startswith("numbers_bound:22") for f in fails)
+    # 같은 숫자라도 claim 안에서 날짜 문맥이면 허용(원래 오탐 교정 취지 유지).
+    ok, fails = grounded_answer.validate_claim(
+        {"text": "2024년 3월 22일 기준 매출액은 100이다", "value": "100", "period": None,
+         "doc_id": _DOC, "quote": "매출액 | 100"},
+        {_DOC: grounded_answer._squash("매출액 | 100")}, {_DOC: {}}, set(),
+        question_numbers=q_nums)
     assert ok, fails
 
 

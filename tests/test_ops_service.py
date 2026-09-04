@@ -198,3 +198,18 @@ def test_dummy_mode_works_without_answer_api(monkeypatch):
         assert set(body) == set(ops_service.WIRE_KEYS)
         assert all(isinstance(v, str) for v in body.values())
     assert ops_service._cache == {}  # 더미는 절대 캐시되지 않는다
+
+
+def test_answer_replaces_invalid_fresh_wire_with_fallback(monkeypatch):
+    """검수 4차 발견 3: provider가 None/불량 wire를 돌려줘도 200 + 유효 5필드여야 한다."""
+    from fastapi.testclient import TestClient
+    from dart_detective import ops_service as ops
+    for bad in (None, {"question_id": "x"}, "문자열", 42):
+        ops.configure(call_fn=lambda qid, q, deadline_s=None, _b=bad: (_b, {"cacheable": False}),
+                      readiness_fn=lambda: {"ready": True, "pins": {}})
+        ops._cache.clear()
+        r = TestClient(ops.app).get("/answer", params={"question_id": "bad", "question": "q"})
+        assert r.status_code == 200
+        body = r.json()
+        assert set(body) == set(ops.WIRE_KEYS)
+        assert all(isinstance(v, str) for v in body.values()) and body["answer"]
