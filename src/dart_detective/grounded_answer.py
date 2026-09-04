@@ -203,6 +203,21 @@ def _period_tokens(text: str) -> set[str]:
     return toks
 
 
+def _num_key(tok: str) -> str:
+    """수치 동치 키 — '5'·'5.00'·'5.0'은 같은 수, '90'과 '190'은 다른 수(코덱스 수정 취지 유지)."""
+    from decimal import Decimal, InvalidOperation
+    t = str(tok).replace(",", "").strip()
+    try:
+        d = Decimal(t)
+    except (InvalidOperation, ValueError):
+        return t
+    return format(d.normalize(), "f")
+
+
+def _cell_has(cell: str, v: str) -> bool:
+    return _num_key(v) in {_num_key(x) for x in numbers_in(cell)}
+
+
 def _column_mismatch(quote: str, value: str, claim_years: set[str],
                      chunk_texts: Sequence[str],
                      base_year: int | None) -> str | None:
@@ -226,8 +241,7 @@ def _column_mismatch(quote: str, value: str, claim_years: set[str],
         cell = tables.value_at(line, col)
         if cell is None:
             return f"period_bound:period_unbound:{y}"
-        cell_numbers = set(numbers_in(cell))
-        if not all(v in cell_numbers for v in vnums):
+        if not all(_cell_has(cell, v) for v in vnums):
             return f"period_bound:column_mismatch:{y}"
     return None
 
@@ -288,7 +302,7 @@ def _verify_period_pairs(text: str, quote: str, chunk_texts: Sequence[str],
         cell = tables.value_at(line, col)
         if cell is None:
             return None
-        if num not in set(numbers_in(cell)):
+        if not _cell_has(cell, num):
             return False
     return True
 
@@ -316,24 +330,31 @@ def _token_column_mismatch(quote: str, value: str, token: str,
     cell = tables.value_at(line, col)
     if cell is None:
         return f"period_bound:period_unbound:{token}"
-    if not all(v in set(numbers_in(cell)) for v in vnums):
+    if not all(_cell_has(cell, v) for v in vnums):
         return f"period_bound:column_mismatch:{token}"
     return None
 
 
-def _has_multi_period_table(chunk_texts: Sequence[str],
+def _has_multi_period_table(quote: str, chunk_texts: Sequence[str],
                             base_year: int | None) -> bool:
-    """문서 발췌에 두 열 이상의 기간 표가 있으면 True.
+    """**인용이 든 청크**에 두 열 이상의 기간 표가 있으면 True.
 
-    기간 수치 답변이 이런 발췌를 근거로 삼을 때는, 단순히 같은 숫자가 다른 행에
-    존재하는 것만으로는 기간-열 결박을 입증할 수 없다.
+    같은 표의 무관한 행("기타 | 90")을 인용해 "같은 숫자가 인용 어딘가에 있음"을 검증
+    성공으로 삼는 우회(코덱스 수정)를 막되, 문서의 **다른** 청크(다른 node)에 다기간 표가
+    있다는 이유로 문단 인용·단일값 행 인용까지 폐기하지 않는다 — DocumentIR은 표 node와
+    문단 node가 별개 청크라, 문서 전체로 보면 정기보고서의 거의 모든 문단 인용이 오탐된다
+    (검수 재현: "2024년 말 종업원 수는 1,234명" 문단 인용이 폐기됐다).
     """
+    q = _squash(quote)
     for chunk in chunk_texts:
+        if q not in _squash(chunk):
+            continue
         lines = chunk.split("\n")
         if len(tables.period_columns_of_lines(lines, base_year=base_year)) >= 2:
             return True
         if len(tables.period_token_columns(lines)) >= 2:
             return True
+        return False
     return False
 
 
@@ -435,7 +456,14 @@ def check_generated_answer(answer: str, citations: Sequence[Mapping[str, Any]],
     body = _ATTRIBUTION_RE.sub(" ", answer or "")
     for sent in _SENT_SPLIT_RE.split(body):
         sent = sent.strip(" ·-—")
-        nums = _claim_numbers(sent)
+        # 날짜·기수 표현("3월 22일"·"제3회차") 속 숫자는 값이 아니라 결박 대상에서 뺀다 —
+        # 안 빼면 "2025년 3월 22일 체결된 계약금액은 X"의 3·22가 인용에 없다고 폐기된다
+        # (자체 재현; judge12 period_unbound 일부가 이 오탐). 질문 표현 재사용도 같은 취급.
+        ctx_nums: set[str] = set()
+        for _, toks in _context_expressions(sent):
+            ctx_nums |= toks
+        ctx_nums |= context_number_allowance(question, sent)
+        nums = [n for n in _claim_numbers(sent) if n not in ctx_nums]
         if not nums:
             continue
         ptoks = _period_tokens(sent)
@@ -476,7 +504,7 @@ def check_generated_answer(answer: str, citations: Sequence[Mapping[str, Any]],
                 except (TypeError, ValueError):
                     base = None
                 for q in quotes:
-                    if n not in set(numbers_in(q)):
+                    if _num_key(n) not in {_num_key(x) for x in numbers_in(q)}:
                         continue
                     # 원문 문장을 그대로 옮긴 서술형 인용은 표 열 대조가 필요 없다.
                     if sq and sq in _squash(q):
@@ -494,7 +522,7 @@ def check_generated_answer(answer: str, citations: Sequence[Mapping[str, Any]],
                     # 다기간 표가 있는데 인용을 그 표의 값 행으로 특정하지 못했다면,
                     # "같은 숫자가 인용 어딘가에 있음"을 검증 성공으로 보지 않는다.
                     if f is None and _quote_table_columns(q, chunks, base) is None \
-                            and _has_multi_period_table(chunks, base):
+                            and _has_multi_period_table(q, chunks, base):
                         f = "period_bound:citation_not_column_bound"
                     if f is None:
                         bound = True

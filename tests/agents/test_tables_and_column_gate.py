@@ -370,3 +370,47 @@ def test_column_gate_binds_explicit_metric_to_cited_row():
         "2024년 매출액증가율은 5이다.",
         [{"document_id": _DOC, "quote_or_fact": "매출액 | 5 | 4"}],
         {_DOC: [nested]}, {_DOC: {}})
+
+
+def test_sentence_gate_multi_period_rule_is_chunk_scoped():
+    """코덱스 수정의 오탐 교정: 다른 청크의 다기간 표는 문단·단일값 행 인용을 폐기할 근거가 아니다."""
+    para = "2024년 12월 31일 현재 종업원 수는 1,234명이다."
+    table = "구분 | 2024년 | 2023년\n매출액 | 100 | 90"
+    assert grounded_answer.check_generated_answer(
+        "2024년 말 종업원 수는 1,234명이다.", [{"document_id": _DOC, "quote_or_fact": para}],
+        {_DOC: [table, para]}, {_DOC: {}}) == []
+    row = "계약금액(원) | 1,195,242,120,000"
+    fin = "구분 | 2024년 | 2023년\n매출액 | 500 | 400"
+    assert grounded_answer.check_generated_answer(
+        "2025년 3월 22일 체결된 계약금액은 1,195,242,120,000원이다.",
+        [{"document_id": _DOC, "quote_or_fact": row}], {_DOC: [row, fin]}, {_DOC: {}},
+        question="2025년 3월 22일 계약금액은?") == []
+    # 같은 청크의 무관 행 인용(코덱스 재현)은 여전히 차단 — 라벨 언급이 없어도.
+    t = "구분 | 2024년 | 2023년\n매출액 | 100 | 90\n기타 | 90"
+    assert grounded_answer.check_generated_answer(
+        "2024년 값은 90이다.", [{"document_id": _DOC, "quote_or_fact": "기타 | 90"}],
+        {_DOC: [t]}, {_DOC: {}})
+
+
+def test_sentence_gate_ignores_date_numbers_as_values():
+    """문장 속 날짜·기수 숫자(3월 22일의 3·22)는 값이 아니므로 인용 결박 대상이 아니다."""
+    row = "계약금액(원) | 1,195,242,120,000"
+    assert grounded_answer.check_generated_answer(
+        "2025년 3월 22일 계약금액은 1,195,242,120,000원이다.",
+        [{"document_id": _DOC, "quote_or_fact": row}], {_DOC: [row]}, {_DOC: {}}) == []
+    # 값 자체가 인용에 없으면 여전히 폐기.
+    assert grounded_answer.check_generated_answer(
+        "2025년 3월 22일 계약금액은 999원이다.",
+        [{"document_id": _DOC, "quote_or_fact": row}], {_DOC: [row]}, {_DOC: {}})
+
+
+def test_column_compare_is_numeric_equality_not_substring():
+    """'5'와 '5.00'은 같은 수(표기 차), '90'과 '190'은 다른 수(코덱스 수정 유지)."""
+    table = "구분 | 2024년 | 2023년\n보유비율 | 5.00 | 4.10"
+    assert grounded_answer.check_generated_answer(
+        "2024년 보유비율은 5%이다.", [{"document_id": _DOC, "quote_or_fact": "보유비율 | 5.00 | 4.10"}],
+        {_DOC: [table]}, {_DOC: {}}) == []
+    t2 = "구분 | 2024년 | 2023년\n매출액 | 190 | 90"
+    assert grounded_answer.check_generated_answer(
+        "2024년 매출액은 90이다.", [{"document_id": _DOC, "quote_or_fact": "매출액 | 190 | 90"}],
+        {_DOC: [t2]}, {_DOC: {}})
