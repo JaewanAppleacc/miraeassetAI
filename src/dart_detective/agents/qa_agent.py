@@ -21,7 +21,7 @@ import inspect
 import re
 import time
 from dataclasses import dataclass, field
-from typing import Any, Mapping, Sequence
+from typing import Any, Iterable, Mapping, Sequence
 
 from dart_corpus.retrieval.chunk_index import infer_metrics, row_label_of
 from dart_corpus.retrieval.conditions import QueryConditions
@@ -671,7 +671,14 @@ def fallback_answer(matches: Sequence[EvidenceMatch]) -> tuple[str, str]:
     if rest:
         parts.append(("함께 확인되는 원문 근거:" if valued
                       else "검색된 공시에서 확인되는 근거는 다음과 같다."))
-        parts.extend(f"- [{m.slot}] {m.evidence_text}" for m in rest)
+        # 표시층 정리(코덱스 검수 조건): 내부 슬롯 태그([answer])는 사람이 읽는 답에 노출하지
+        # 않고, 공백 정규화 후 **완전 동일**한 줄만 중복 제거한다(값·날짜가 다른 유사 행 병합
+        # 금지). 표 구분자 '|'는 원문 표기 그대로 둔다 — 열 의미를 임의 치환하면 당기/전기가
+        # 더 모호해진다. 원문 byte는 retrieved_context가 그대로 보존한다.
+        parts.extend(_dedupe_exact(
+            (f"- {m.evidence_text}" if m.slot == ANSWER_SLOT
+             else f"- {slot_label(m.slot)}: {m.evidence_text}") for m in rest))
+        parts.append("(위 줄은 공시 원문 표기 그대로이며, '|'는 표의 칸 구분이다.)")
     return ("\n".join(parts),
             "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.")
 
@@ -910,6 +917,43 @@ def withheld_text(found: Mapping[str, str]) -> str:
     return "\n".join(parts)
 
 
+def withheld_answer(found: Mapping[str, str],
+                    matches: Sequence[EvidenceMatch]) -> tuple[str, str]:
+    """유보 전용 결정론 답변(코덱스 검수 반영) — 원문 발췌 전체를 덧붙이지 않는다.
+
+    종전에는 withheld_text 뒤에 fallback_answer 전체(원문 줄 나열)를 이어 붙여 답이
+    수천 자가 됐다(알테오젠 실측). 원문 근거는 retrieved_context에 byte 그대로 실리므로
+    answer에는 유보 사실·사유·기한과, 유보되지 않은 확정 값만 담는다. 모든 문구의 숫자는
+    공시 원문에서 추출된 값이라 validator 숫자 게이트를 그대로 통과한다."""
+    parts = [withheld_text(found)]
+    valued = [m for m in matches if m.picked_value and m.slot != ANSWER_SLOT]
+    if valued:
+        parts.append("")
+        parts.append("유보되지 않은 항목 중 공시에서 확인되는 값:")
+        parts.extend(f"- {slot_label(m.slot)}: {m.picked_value}" for m in valued)
+    parts.append("")
+    parts.append("회사가 공개한 범위의 상세 내용은 답변과 함께 제공되는 근거 목록"
+                 "(retrieved_context)의 공시 원문에서 확인할 수 있다.")
+    if found.get("유보기한"):
+        parts.append(f"유보기한({found['유보기한']}) 이후의 공시에서 상세가 공개될 수 있다.")
+    return ("\n".join(parts),
+            "공시유보 항목은 원문에 값이 없어 답할 수 없다. 유보 사실·사유는 원문 그대로다.")
+
+
+def _dedupe_exact(lines: Iterable[str]) -> list[str]:
+    """공백 정규화 후 **완전 동일**한 줄만 제거한다 — 금액·날짜가 한 글자라도 다른 유사 행은
+    병합하지 않는다(코덱스 검수 조건 4). 순서는 유지, 첫 등장만 남긴다."""
+    seen: set[str] = set()
+    out: list[str] = []
+    for ln in lines:
+        key = "".join(ln.split())
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(ln)
+    return out
+
+
 def answer_question(question: str, retriever: CorpusRetriever, *,
                     llm: Any | None = None, k: int | None = None,
                     max_evidence: int = MAX_EVIDENCE,
@@ -993,9 +1037,10 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
     state.withheld = detect_withheld(question, state.retrieval_results,
                                      state.evidence_matches, doc_lines)
     if state.withheld:
-        # 값이 유보된 질문이다. 찾은 값(계약상대·기간 등)은 그대로 두고 앞에 유보 사실을
-        # 못 박는다. LLM은 부르지 않는다 — "-"를 보고 값을 지어낼 위험만 남는다.
-        answer = withheld_text(state.withheld) + "\n\n" + answer
+        # 값이 유보된 질문이다. 유보 전용 템플릿으로 답한다(코덱스 검수: 원문 발췌 전체를
+        # 덧붙이지 않는다 — retrieved_context가 원문을 그대로 담는다). 유보되지 않은 확정
+        # 값은 템플릿이 보존한다. LLM은 부르지 않는다 — "-"를 보고 값을 지어낼 위험만 남는다.
+        answer, uncertainty = withheld_answer(state.withheld, state.evidence_matches)
         state.answerability = "WITHHELD"
         if llm is not None:
             state.llm = {"used": False, "skipped": "withheld_disclosure"}

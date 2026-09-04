@@ -51,7 +51,16 @@ def excerpt_answer(matches: Sequence[Any]) -> tuple[str, str]:
         lines.append(f"- {text}")
     if not lines:
         return SAFE_ANSWER, SAFE_UNCERTAINTY
-    return ("질문이 요구한 항목의 공시 원문 발췌는 다음과 같다.\n" + "\n".join(lines),
+    # 공백 정규화 후 완전 동일한 줄만 중복 제거(값·날짜가 다른 유사 행 병합 금지 — 검수 조건 4).
+    seen: set[str] = set()
+    deduped = []
+    for ln in lines:
+        key = "".join(ln.split())
+        if key not in seen:
+            seen.add(key)
+            deduped.append(ln)
+    return ("질문이 요구한 항목의 공시 원문 발췌는 다음과 같다.\n" + "\n".join(deduped)
+            + "\n(위 줄은 공시 원문 표기 그대로이며, '|'는 표의 칸 구분이다.)",
             "생성 답변이 검증을 통과하지 못해 원문 발췌로 대체했다. 출처는 evidence에 있다.")
 
 
