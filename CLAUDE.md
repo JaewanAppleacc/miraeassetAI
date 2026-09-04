@@ -180,6 +180,23 @@
   (j15 57.5 대비 밴드 내 +0.5, 악화 4건은 FC claim 수 변동으로 판별 — 표시층 무관) · NARRATIVE_THIN
   14→10 · 안전세트 28/28 · 테스트 552. 알테오젠 유보 답변 수천 자 → 5줄. **재배포 시
   DART_QA_CODE_SHA env 갱신 필수**(유보 답변이 캐시 대상이라 pins의 code_sha 변경으로 무효화).
+- **대량보유 서식 파서 + 부분 답변(2026-09-05 · judge17 · 브랜치 feat/holding-parser)**:
+  `docs/plans/2026-09-05-holding-parser.md` §3 구현, 커밋 3분할(파서→배선→통합 테스트).
+  배경: 대량보유 33/101문항 전부에서 기존 쌍 계산기 발동 0(라벨 완전일치가 실서식 2종과 불일치).
+  연혁표(2행 머리글 병합·라벨 '직전보고서')·요약표(라벨 둘째 칸) 판독 — 열은 머리글 **이름**으로
+  확정(주권·의결권 그룹 배제, 고정 인덱스 금지), 문서는 질문 기준일('기준일'/'이번보고서' 앵커)·
+  보고자(정규화 포함 비교)로 결박, 유일하지 않으면 미발동(fail-closed). 추출 행은 EvidenceMatch
+  승격(retrieved_context·citations·프롬프트 공유), node 유래 행은 검증 sources에도 추가. 증감은
+  쌍 완비+변동어일 때만 Derived(holding_change, 주/%p) — 다른 보고자 행으로 빈자리를 채우지
+  않고 missing_slots를 "확인하지 못했다"로 명시. 폴백 덤프는 **소비한 행만** 숨김(exclude_texts —
+  보유목적 등 다른 slot 근거 보존). describe는 increase_rate/pair_change 포함 "…에서 …로 N
+  증가/감소(signed 병기)" 형식으로 통일. **실측(judge17): 완전 40·부분 43·미포함 9·가중 61.5 —
+  3지표 모두 역대 최고**(종전 최고 58.5). paired diff: 대량보유 개선 6·악화 0, 비대량보유 churn 0,
+  답변가능성 98/101, RETRIEVAL_MISS 63→52(승격 행이 근거 완전성도 개선), LLM_PATH_FAILED 55→41,
+  period_unbound 10→3, 계산 발동 0→11/33. 안전세트 28/28 · 테스트 580. 판 §6(선별 발췌·presentation
+  모듈화·프롬프트 문체 등)은 미구현 — 실측 후 재논의. 보유목적 줄이 기본 선발 예산(문서당 4줄)에서
+  표 행에 밀리는 것은 파서 이전부터의 선발 동작(§6 범위 밖, 테스트 주석에 기록). **main 병합·push
+  대기 — 재배포 시 DART_QA_CODE_SHA 갱신 필수**(pins 변경으로 캐시 자동 무효화).
 - **vFINAL 21번 변경 승인(2026-09-04, Owner=팀 대표)**: "FC Native Function Calling 경로에 한해
   전송 maxTokens 최소 1024 적용을 승인한다. 사유는 서비스 앱 API가 1024 미만 요청을 40001로
   거부하기 때문이다. JSON 경로의 v4 §7 예산은 변경하지 않으며 requested/sent 값을 구분해
