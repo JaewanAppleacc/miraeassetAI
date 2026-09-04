@@ -1,12 +1,12 @@
 {
  "arm": "B",
  "label": "LINE_WINDOW+LOW_ONLY_DENSE",
- "started_at": "2026-09-03T13:58:55",
- "finished_at": "2026-09-03T14:07:21",
+ "started_at": "2026-09-04T16:47:16",
+ "finished_at": "2026-09-04T16:57:13",
  "host": "ijiyeong-ui-MacBookPro.local",
  "platform": "macOS-14.0-arm64-arm-64bit",
  "python": "3.12.6",
- "code_sha256": "c950a00324a90c912b34a4e30043cf7b5f9e9b9d",
+ "code_sha256": "04b847c4a2e61042da9f025735af8b2e2e56311e",
  "git_dirty": false,
  "git_dirty_paths": [],
  "config": {
@@ -52,15 +52,15 @@
  },
  "n_questions": 101,
  "n_errors": 0,
- "bind_s": 22.7,
+ "bind_s": 22.8,
  "latency_ms": {
-  "p50": 1862,
-  "p95": 18134,
-  "mean": 4769,
-  "max": 24286,
-  "total_s": 481.7
+  "p50": 1859,
+  "p95": 22739,
+  "mean": 5667,
+  "max": 33878,
+  "total_s": 572.4
  },
- "peak_rss_mb": 1430.3,
+ "peak_rss_mb": 1423.0,
  "external_services": [],
- "results_sha256": "16a5424153c234c395e1a735e409a17878d0f185fff55390ccd879bcfce1b9a0"
+ "results_sha256": "de661a1cbd20d8de268e24b84ccac8ab41feeace0af2502891d401a2c0898985"
 }
