@@ -1294,8 +1294,11 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
     doc_lines = {doc_id: [ln for node in (docs_by_id.get(doc_id) or {}).get("nodes") or []
                           for ln in (node.get("text") or "").split("\n")]
                  for doc_id in {m.doc_id for m in state.evidence_matches}}
-    state.withheld = detect_withheld(question, state.retrieval_results,
-                                     state.evidence_matches, doc_lines)
+    # 이분 판정(신청/승인)이 서식 필드로 확정된 질문은 유보 값을 묻는 질문이 아니다 — 같은 회사의
+    # 다른 공시에 있는 유보 문구('개발대상품목…')가 '품목' 겹침으로 유보 탐지를 오발동시켜
+    # 정답을 유보 템플릿으로 덮고 폴백으로만 구제되던 경로(알테오젠 실측, 자체 검증 발견).
+    state.withheld = {} if binary else detect_withheld(
+        question, state.retrieval_results, state.evidence_matches, doc_lines)
     if state.withheld:
         # 값이 유보된 질문이다. 유보 전용 템플릿으로 답한다(코덱스 검수: 원문 발췌 전체를
         # 덧붙이지 않는다 — retrieved_context가 원문을 그대로 담는다). 유보되지 않은 확정

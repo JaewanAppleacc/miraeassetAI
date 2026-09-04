@@ -253,6 +253,33 @@ def test_binary_question_application_only_field():
     assert got is not None and "신청 사실을 알리는 공시다" in got[0]
 
 
+def test_binary_verdict_is_not_overridden_by_withheld_misfire():
+    """자체 검증 발견(알테오젠): 다른 공시의 유보 문구('개발대상품목')가 '품목' 겹침으로 유보
+    탐지를 오발동 → 정답이 유보 템플릿으로 덮이고 폴백으로만 구제됐다. 이분 판정이 확정되면
+    유보 탐지를 건너뛰어 SUPPORTED·캐시 가능 상태로 나가야 한다."""
+    corp_dict = CorpDictionary.from_rows(
+        [{"corp_name": "알테오젠", "listed_name": "알테오젠", "stock_code": "196170"}])
+    withheld_rows = ("8. 공시유보 관련내용 | 유보사항 | - 계약상대방 회사의 개발대상품목의 내용\n"
+                     "8. 공시유보 관련내용 | 유보사유 | 계약상 비밀유지\n"
+                     "8. 공시유보 관련내용 | 유보기한 | 2042-12-28")
+    docs, docs_by_id = [], {}
+    for doc_id, text, rcept in (("major_20240705900656", APPROVAL_FIELD_ROW, "20240705"),
+                                ("major_20240730900136", withheld_rows, "20240730")):
+        docs.append(IndexedDocument(
+            doc_id=doc_id, corp_name="알테오젠", corp_code="196170", filer_name="알테오젠",
+            doc_group="major", doc_subtype="", report_nm="투자판단 관련 주요경영사항",
+            rcept_dt=rcept, base_year=2024, base_month=7, is_correction=False, text=text))
+        docs_by_id[doc_id] = {"doc_id": doc_id, "doc_group": "major", "nodes": [
+            {"node_index": 3, "kind": "table", "section_hierarchy": ["주요내용"], "text": text}]}
+    retriever = CorpusRetriever(document_index=DocumentIndex(docs, corp_dict),
+                                corp_dict=corp_dict, docs_by_id=docs_by_id)
+    state = qa_agent.answer_question(BINARY_Q, retriever)
+    assert "승인(허가) 사실을 알리는 공시다" in state.answer
+    assert state.answerability != "WITHHELD" and not state.withheld
+    assert state.fallback_stage == ""
+    assert state.validation["status"] == "SUPPORTED"
+
+
 def test_binary_question_fails_closed_on_ambiguity():
     q = "알테오젠 공시는 품목허가 신청 사실인가, 승인 사실인가?"   # 날짜 앵커 없음
     got = qa_agent.approval_or_application(
