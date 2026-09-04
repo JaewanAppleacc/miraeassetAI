@@ -73,15 +73,16 @@ def test_single_year_chunk_skips_column_check():
     assert ok, fails
 
 
-def test_two_year_value_claim_in_mapped_table_is_dropped():
-    """검수 4차 발견 2: 다연도 값 claim은 연도-값 결속을 구문 없이 특정할 수 없다 —
-    다기간 표에서 왔다면 폐기해 분리 claim(프롬프트 규칙)을 강제한다. 스왑도 여기 걸린다."""
-    for text in ("2024년 매출 100은 2023년 90보다 크다",          # 옳은 결속
-                 "2024년 매출액 90은 2023년 매출액 100보다 작다"):  # 스왑
-        ok, fails = _validate({"text": text, "value": text.split()[2].rstrip("은"),
-                               "period": None, "doc_id": _DOC, "quote": "매출액 | 100 | 90"})
-        assert not ok, text
-        assert "period_bound:multi_year_value_unsplit" in fails, (text, fails)
+def test_two_year_value_claim_pair_verification():
+    """검수 4차 발견 2 + judge10 교정: 다연도 값 claim은 (기간, 값) 쌍을 표 열과 대조한다 —
+    옳게 결합된 claim은 통과(일괄 폐기는 대량보유 계열 정답까지 버렸다), 스왑만 폐기."""
+    ok, fails = _validate({"text": "2024년 매출 100은 2023년 90보다 크다", "value": "100",
+                           "period": None, "doc_id": _DOC, "quote": "매출액 | 100 | 90"})
+    assert ok, fails
+    ok, fails = _validate({"text": "2024년 매출액 90은 2023년 매출액 100보다 작다", "value": "90",
+                           "period": None, "doc_id": _DOC, "quote": "매출액 | 100 | 90"})
+    assert not ok
+    assert any("unsplit" in f for f in fails), fails
 
 
 def test_two_year_value_claim_outside_table_also_split_enforced():

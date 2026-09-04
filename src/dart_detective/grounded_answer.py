@@ -232,6 +232,67 @@ def _column_mismatch(quote: str, value: str, claim_years: set[str],
     return None
 
 
+def _ordered_period_value_pairs(text: str) -> list[tuple[str | None, str]] | None:
+    """문장을 왼→오로 훑어 각 숫자를 직전 기간 토큰과 짝짓는다("직전 보고서 5.00%, 이번 보고서 3.87%").
+
+    반환: [(기간토큰|None, 숫자)] — 기간 토큰보다 앞에 나온 숫자는 None 짝(검증 불가).
+    기수 표기("제49기") 안의 숫자는 값이 아니므로 세지 않는다.
+    """
+    events: list[tuple[int, str, str]] = []
+    period_spans: list[tuple[int, int]] = []
+    for m in YEAR_RE.finditer(text or ""):
+        events.append((m.start(), "p", m.group()))
+        period_spans.append(m.span())
+    for rx in _PERIOD_TOKEN_RES:
+        for m in rx.finditer(text or ""):
+            events.append((m.start(), "p", re.sub(r"\s+", "", m.group()).lower()))
+            period_spans.append(m.span())
+    for m in NUM_RE.finditer(text or ""):
+        if YEAR_RE.fullmatch(m.group()):
+            continue
+        if any(s <= m.start() < e for s, e in period_spans):
+            continue
+        events.append((m.start(), "n", m.group().replace(",", "")))
+    events.sort()
+    pairs: list[tuple[str | None, str]] = []
+    current: str | None = None
+    for _, kind, tok in events:
+        if kind == "p":
+            current = tok
+        else:
+            pairs.append((current, tok))
+    return pairs
+
+
+def _verify_period_pairs(text: str, quote: str, chunk_texts: Sequence[str],
+                         base_year: int | None) -> bool | None:
+    """다기간 수치 claim의 (기간, 값) 쌍을 표 열과 대조한다.
+
+    True = 전 쌍이 자기 기간 열과 일치(옳게 결합된 claim — 폐기하지 않는다),
+    False = 어긋나는 쌍 존재(스왑), None = 검증 불가(표 미특정·짝 없음 등 → 기존 폐기 유지).
+    일괄 폐기는 대량보유(직전/이번) 계열의 옳은 결합 claim까지 버려 완전성을 깎았다
+    (judge10 실측 — 악화 7건 전부 이 계열). 검증 가능한 것은 검증으로 살린다.
+    """
+    located = _quote_table_columns(quote, chunk_texts, base_year)
+    if located is None:
+        return None
+    line, year_cols, token_cols = located
+    pairs = _ordered_period_value_pairs(text)
+    if not pairs or any(tok is None for tok, _ in pairs):
+        return None
+    for tok, num in pairs:
+        col = year_cols.get(int(tok)) if tok.isdigit() else token_cols.get(
+            tables._norm_period_token(tok))
+        if col is None:
+            return None
+        cell = tables.value_at(line, col)
+        if cell is None:
+            return None
+        if num not in cell.replace(",", ""):
+            return False
+    return True
+
+
 def _token_column_mismatch(quote: str, value: str, token: str,
                            chunk_texts: Sequence[str],
                            base_year: int | None) -> str | None:
@@ -321,7 +382,20 @@ def check_generated_answer(answer: str, citations: Sequence[Mapping[str, Any]],
         sq = _squash(sent.rstrip(". "))
         if (len(ptoks) >= 2 and len(nums) >= 2
                 and not any(sq in _squash(q) for q in all_quotes)):
-            fails.append(f"multi_period_sentence:{sent[:40]}")
+            # claim 게이트와 동일한 구제: (기간, 값) 쌍이 표 열과 전부 대조되면 통과.
+            verified = False
+            for doc_id, quotes in quotes_by_doc.items():
+                meta = doc_meta.get(doc_id) or {}
+                try:
+                    b = int(meta.get("base_year")) if meta.get("base_year") not in (None, "") else None
+                except (TypeError, ValueError):
+                    b = None
+                if any(_verify_period_pairs(sent, q, doc_chunks.get(doc_id) or (), b) is True
+                       for q in quotes):
+                    verified = True
+                    break
+            if not verified:
+                fails.append(f"multi_period_sentence:{sent[:40]}")
             continue
         years = _years_of(sent)
         rel_toks = ptoks - years
@@ -379,15 +453,25 @@ def validate_claim(claim: Mapping[str, Any], doc_text_squashed: Mapping[str, str
             fails.append(f"numbers_bound:value:{value}")
 
     period = str(claim.get("period") or "")
-    # 다기간 수치 claim 분리 강제(검수 4·5·6차 발견 2): 기간 토큰(연도·당기/전기·제N기·분기)
-    # 2개 이상 + 숫자 2개 이상이 한 문장에 있으면 기간-값 결속을 구문 없이 검증할 수 없다 —
-    # 스왑("당기 90, 전기 100")이 그대로 통과한다. value 유무·표/문장 여부와 무관하게 폐기해
-    # 값별 claim 분리(프롬프트 규칙)를 강제한다. 유일한 예외: claim이 원문 문장을 **그대로**
-    # 옮긴 경우(공백만 무시) — 순서가 원문에서 왔으므로 스왑이 성립하지 않는다.
+    meta = doc_meta.get(doc_id) or {}
+    base = meta.get("base_year")
+    try:
+        base = int(base) if base not in (None, "") else None
+    except (TypeError, ValueError):
+        base = None
+    chunks_of_doc = (doc_chunks or {}).get(doc_id) or ()
+
+    # 다기간 수치 claim(검수 4·5·6차 발견 2): 기간 토큰 2개 이상 + 숫자 2개 이상이 한 문장에
+    # 있으면 스왑("당기 90, 전기 100")이 구문 없이 통과한다. 처리 순서 —
+    #   ① 원문 문장 그대로 재인용이면 통과(순서가 원문 소속이라 스왑 불성립)
+    #   ② (기간, 값) 쌍을 순서로 짝지어 표 열과 전부 대조되면 통과(옳게 결합된 claim —
+    #      일괄 폐기는 대량보유(직전/이번) 계열의 정답 claim까지 버렸다, judge10 실측)
+    #   ③ 쌍이 어긋나거나(스왑) 검증 불가면 폐기해 값별 claim 분리를 강제한다.
     text_years_all = _years_of(text)
     if (len(_period_tokens(text)) >= 2 and len(_claim_numbers(text)) >= 2
             and _squash(text.rstrip(". ")) not in _squash(quote)):
-        fails.append("period_bound:multi_period_claim_unsplit")
+        if _verify_period_pairs(text, quote, chunks_of_doc, base) is not True:
+            fails.append("period_bound:multi_period_claim_unsplit")
 
     # 열 대조에 쓸 연도: period 우선. period가 비면 text의 연도가 하나일 때만 쓴다.
     claim_years = _years_of(period)
@@ -408,13 +492,6 @@ def validate_claim(claim: Mapping[str, Any], doc_text_squashed: Mapping[str, str
     # 기간-열 결합(검수 발견 1): "2024년 매출액은 90"이 2023년 열의 90을 인용해도
     # 기존 검사(연도가 문서 어딘가 존재)는 통과한다. 값 claim은 연도 열까지 대조한다.
     if value not in (None, "") and doc_chunks:
-        meta = doc_meta.get(doc_id) or {}
-        base = meta.get("base_year")
-        try:
-            base = int(base) if base not in (None, "") else None
-        except (TypeError, ValueError):
-            base = None
-        chunks_of_doc = doc_chunks.get(doc_id) or ()
         if not claim_years and base is not None:
             # "당기 매출액은 90"처럼 연도 없이 상대 기간 하나로 값을 주장하는 claim도
             # base_year로 환산해 열을 대조한다(당기/전기 표의 대칭 구멍 — 자체 검수).
@@ -426,7 +503,9 @@ def validate_claim(claim: Mapping[str, Any], doc_text_squashed: Mapping[str, str
             if col_fail:
                 fails.append(col_fail)
         elif multi_year_unsplit and _quote_table_columns(quote, chunks_of_doc, base) is not None:
-            fails.append("period_bound:multi_year_value_unsplit")
+            # value 있는 결합 claim도 같은 구제를 받는다 — (기간, 값) 쌍 전부 대조되면 통과.
+            if _verify_period_pairs(text, quote, chunks_of_doc, base) is not True:
+                fails.append("period_bound:multi_year_value_unsplit")
         elif not claim_years:
             # 연도로 환산 못 하는 단일 기간 토큰(제49기·Q1·1H·전년 동기 등)은 머리글 토큰
             # 맵으로 직접 결박한다(검수 7차 발견 2 — 종전엔 이 표들이 무검사였다).

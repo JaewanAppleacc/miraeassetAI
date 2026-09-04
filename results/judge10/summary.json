@@ -1,0 +1,26 @@
+{
+ "n": 101,
+ "answerability_ok": 98,
+ "value": {
+  "partial": 46,
+  "full": 31,
+  "zero": 15
+ },
+ "value_denominator": 92,
+ "slots_full_in_context": 37,
+ "citation_ok": 96,
+ "tags": {
+  "RETRIEVAL_MISS": 63,
+  "LLM_PATH_FAILED": 43,
+  "VALUE_NOT_EXTRACTED": 18,
+  "NARRATIVE_THIN": 13,
+  "ANSWERABILITY_WRONG": 3
+ },
+ "by_type_value_full": {
+  "COMPARISON_CALC": "5/12",
+  "EVENT_TRACE": "1/5",
+  "NARRATIVE_MULTI_DOC": "11/20",
+  "NUMERIC_LOOKUP": "14/55"
+ },
+ "fallbacks": 4
+}
