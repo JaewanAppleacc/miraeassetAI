@@ -208,10 +208,9 @@ def _column_mismatch(quote: str, value: str, claim_years: set[str],
                      base_year: int | None) -> str | None:
     """값 claim의 연도 열에 실제 그 값이 있는지 확인한다(검수 발견 1 — 기간-열 결합).
 
-    보수적으로만 잡는다: 인용 줄을 표 데이터 행으로 특정했고, 그 표의 연도→열 매핑을
-    읽을 수 있고, claim 연도의 열에 claim 값이 **없을 때만** 실패다. 하나라도 못
-    확정하면 기존 period_bound(문서 어딘가에 연도 존재)만 남는다 — 오탐으로 claim이
-    전멸하면 이 게이트보다 약한 JSON 폴백 경로로 넘어가 오히려 검증이 후퇴한다.
+    인용 줄을 다기간 표 데이터 행으로 특정한 뒤에는 claim 연도의 열을 못 찾거나 그
+    열의 숫자가 정확히 일치하지 않으면 실패한다. ``90``을 ``190``의 부분문자열로
+    인정하지 않는다. 표 자체를 특정하지 못한 문장형 근거는 기존 게이트에 맡긴다.
     """
     vnums = _claim_numbers(value) or list(numbers_in(value))
     if not vnums:
@@ -223,12 +222,12 @@ def _column_mismatch(quote: str, value: str, claim_years: set[str],
     for y in claim_years:
         col = cols.get(int(y))
         if col is None:
-            continue
+            return f"period_bound:period_unbound:{y}"
         cell = tables.value_at(line, col)
         if cell is None:
-            continue
-        cell_norm = cell.replace(",", "")
-        if not all(v in cell_norm for v in vnums):
+            return f"period_bound:period_unbound:{y}"
+        cell_numbers = set(numbers_in(cell))
+        if not all(v in cell_numbers for v in vnums):
             return f"period_bound:column_mismatch:{y}"
     return None
 
@@ -289,7 +288,7 @@ def _verify_period_pairs(text: str, quote: str, chunk_texts: Sequence[str],
         cell = tables.value_at(line, col)
         if cell is None:
             return None
-        if num not in cell.replace(",", ""):
+        if num not in set(numbers_in(cell)):
             return False
     return True
 
@@ -317,8 +316,62 @@ def _token_column_mismatch(quote: str, value: str, token: str,
     cell = tables.value_at(line, col)
     if cell is None:
         return f"period_bound:period_unbound:{token}"
-    if not all(v in cell.replace(",", "") for v in vnums):
+    if not all(v in set(numbers_in(cell)) for v in vnums):
         return f"period_bound:column_mismatch:{token}"
+    return None
+
+
+def _has_multi_period_table(chunk_texts: Sequence[str],
+                            base_year: int | None) -> bool:
+    """문서 발췌에 두 열 이상의 기간 표가 있으면 True.
+
+    기간 수치 답변이 이런 발췌를 근거로 삼을 때는, 단순히 같은 숫자가 다른 행에
+    존재하는 것만으로는 기간-열 결박을 입증할 수 없다.
+    """
+    for chunk in chunk_texts:
+        lines = chunk.split("\n")
+        if len(tables.period_columns_of_lines(lines, base_year=base_year)) >= 2:
+            return True
+        if len(tables.period_token_columns(lines)) >= 2:
+            return True
+    return False
+
+
+def _table_row_label_mismatch(text: str, quote: str,
+                              chunk_texts: Sequence[str]) -> str | None:
+    """답변에 명시된 표 지표와 인용된 데이터 행의 라벨이 다르면 실패한다.
+
+    자유 서술의 동의어를 추측하지 않는다. 같은 표에서 실제로 관측된 행 라벨이 답변에
+    명시된 경우에만 비교하므로, ``매출액``을 주장하면서 ``영업이익`` 행의 같은 숫자를
+    인용하는 명백한 바꿔치기만 차단한다.
+    """
+    q = _squash(quote)
+    statement = _squash(text)
+    for chunk in chunk_texts:
+        if q not in _squash(chunk):
+            continue
+        labels: set[str] = set()
+        cited_label = ""
+        for line in chunk.split("\n"):
+            cells = [c.strip() for c in line.split("|")]
+            if len(cells) < 2 or not numbers_in("|".join(cells[1:])):
+                continue
+            label = _squash(cells[0])
+            if len(label) < 2:
+                continue
+            labels.add(label)
+            if q in _squash(line) or _squash(line) in q:
+                cited_label = label
+        # 긴 라벨부터 소비해 ``매출액증가율`` 안의 ``매출액``을 별도 지표 언급으로
+        # 세지 않는다. 문장에 두 라벨이 실제로 따로 있으면 긴 라벨 제거 뒤에도 남는다.
+        mentioned: set[str] = set()
+        remaining = statement
+        for label in sorted(labels, key=len, reverse=True):
+            if label in remaining:
+                mentioned.add(label)
+                remaining = remaining.replace(label, " ")
+        if cited_label and mentioned and cited_label not in mentioned:
+            return f"citation_bound:row_mismatch:{cited_label}"
     return None
 
 
@@ -366,8 +419,8 @@ def check_generated_answer(answer: str, citations: Sequence[Mapping[str, Any]],
     claim 게이트와 같은 규칙을 문장에 적용한다:
       · 기간 토큰 ≥2 + 숫자 ≥2 문장은 인용 원문 그대로가 아니면 실패(분리 강제와 동일)
       · 단일 기간 문장은 그 숫자를 담은 인용의 표 열과 대조(연도·토큰 맵)
-    한 문장에 지표가 여럿이면 열 귀속을 특정할 수 없어 숫자 하나라도 기간 열에 있으면
-    통과시킨다(과잉 폐기 방지) — 지배적 실패 형태인 단일 값 스왑은 잡힌다.
+    기간 수치 문장의 각 숫자는 해당 인용에 있어야 하며, 다기간 표 인용이면 기간 열과
+    명시된 행 지표까지 결박되어야 한다.
     반환: 실패 사유 목록(비면 통과). FC 조립 답변은 이미 claim 게이트를 통과한 문장들이라
     인라인 출처 제거 후 추가 탈락이 드물다.
     """
@@ -425,12 +478,24 @@ def check_generated_answer(answer: str, citations: Sequence[Mapping[str, Any]],
                 for q in quotes:
                     if n not in set(numbers_in(q)):
                         continue
-                    if len(years) == 1:
+                    # 원문 문장을 그대로 옮긴 서술형 인용은 표 열 대조가 필요 없다.
+                    if sq and sq in _squash(q):
+                        bound = True
+                        break
+                    f = _table_row_label_mismatch(sent, q, chunks)
+                    if f is not None:
+                        pass
+                    elif len(years) == 1:
                         f = _column_mismatch(q, n, years, chunks, base)
                     elif not years and len(rel_toks) == 1:
                         f = _token_column_mismatch(q, n, next(iter(rel_toks)), chunks, base)
                     else:
                         f = None
+                    # 다기간 표가 있는데 인용을 그 표의 값 행으로 특정하지 못했다면,
+                    # "같은 숫자가 인용 어딘가에 있음"을 검증 성공으로 보지 않는다.
+                    if f is None and _quote_table_columns(q, chunks, base) is None \
+                            and _has_multi_period_table(chunks, base):
+                        f = "period_bound:citation_not_column_bound"
                     if f is None:
                         bound = True
                         break
@@ -480,6 +545,10 @@ def validate_claim(claim: Mapping[str, Any], doc_text_squashed: Mapping[str, str
     except (TypeError, ValueError):
         base = None
     chunks_of_doc = (doc_chunks or {}).get(doc_id) or ()
+    if quote and chunks_of_doc:
+        row_fail = _table_row_label_mismatch(text, quote, chunks_of_doc)
+        if row_fail:
+            fails.append(row_fail)
 
     # 다기간 수치 claim(검수 4·5·6차 발견 2): 기간 토큰 2개 이상 + 숫자 2개 이상이 한 문장에
     # 있으면 스왑("당기 90, 전기 100")이 구문 없이 통과한다. 처리 순서 —

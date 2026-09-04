@@ -27,6 +27,23 @@ from dart_corpus.evaluation import fourarm  # noqa: E402
 from dart_corpus.retrieval.node_store import NodeStore  # noqa: E402
 
 
+def _result_id_errors(path: Path, expected: set[str]) -> dict[str, list[str]]:
+    """원시 JSONL의 문항 ID 완비·유일성을 검사한다(dict 로더의 중복 덮어쓰기 전)."""
+    counts: dict[str, int] = {}
+    for line in path.open(encoding="utf-8"):
+        if not line.strip():
+            continue
+        row = json.loads(line)
+        qid = str(row.get("question_id") or "")
+        counts[qid] = counts.get(qid, 0) + 1
+    actual = set(counts)
+    return {
+        "duplicates": sorted(qid for qid, n in counts.items() if n > 1),
+        "missing": sorted(expected - actual),
+        "unexpected": sorted(actual - expected),
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="4-arm 채점·판정")
     p.add_argument("--arms", nargs="+", required=True, choices=["A", "B", "C", "D"])
@@ -52,6 +69,19 @@ def main(argv: list[str] | None = None) -> int:
     segments = fourarm.load_segments(args.conditions)
     gold_sha = hashlib.sha256(args.gold.read_bytes()).hexdigest()
     cond_sha = hashlib.sha256(args.conditions.read_bytes()).hexdigest()
+    if args.final:
+        expected_ids = set(gold)
+        for arm in args.arms:
+            rpath = args.results_dir / f"{arm}.results.jsonl"
+            if not rpath.exists():
+                print(f"[{arm}] 결과 파일 없음: {rpath} — 최종 판정 불가", file=sys.stderr)
+                return 1
+            id_errors = _result_id_errors(rpath, expected_ids)
+            if any(id_errors.values()):
+                brief = {k: v[:5] for k, v in id_errors.items() if v}
+                print(f"최종 판정 불가 — {arm} 결과 문항 ID 이상: "
+                      f"{json.dumps(brief, ensure_ascii=False)}", file=sys.stderr)
+                return 1
     store = None if args.no_locator_check else NodeStore(args.index_dir)
 
     reports = {}

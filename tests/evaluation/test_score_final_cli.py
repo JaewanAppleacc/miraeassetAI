@@ -96,3 +96,17 @@ def test_final_requires_registered_shas_for_every_arm(tmp_path):
     rc = score.main(["--arms", "A", "B", "C", "D", "--final", "--no-locator-check",
                      "--results-dir", str(d)])
     assert rc == 1        # registry(git 추적)에 A/C 미등록 → 거부
+
+
+def test_final_result_id_check_rejects_duplicates_missing_and_unknown(tmp_path):
+    """dict 로더가 중복 ID를 덮어써도 --final 사전검사는 원시 행 이상을 잡아야 한다."""
+    p = tmp_path / "A.results.jsonl"
+    p.write_text(
+        '{"question_id":"q1"}\n'
+        '{"question_id":"q1"}\n'
+        '{"question_id":"q3"}\n',
+        encoding="utf-8")
+    errors = score._result_id_errors(p, {"q1", "q2"})
+    assert errors["duplicates"] == ["q1"]
+    assert errors["missing"] == ["q2"]
+    assert errors["unexpected"] == ["q3"]

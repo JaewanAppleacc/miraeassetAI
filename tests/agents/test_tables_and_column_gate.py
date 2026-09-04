@@ -307,3 +307,66 @@ def test_sentence_gate_requires_per_number_citation_binding():
     assert grounded_answer.check_generated_answer(
         "2024년 매출액은 100이다.",
         [{"document_id": _DOC, "quote_or_fact": "매출액 | 100 | 90"}], {_DOC: [table]}, {_DOC: {}}) == []
+
+
+def test_sentence_gate_rejects_same_number_from_unrelated_row():
+    """숫자만 같은 다른 행은 기간-열 결박의 근거가 아니다.
+
+    2023년 열의 90을 ``기타`` 행에서 다시 인용하면 종전 구현은 표 행을 특정하지
+    못했다는 이유로 검증 성공(None)으로 취급해, 2024년 매출액 90을 채택했다.
+    """
+    table = "구분 | 2024년 | 2023년\n매출액 | 100 | 90\n기타 | 90"
+    wrong_citation = [{"document_id": _DOC, "quote_or_fact": "기타 | 90"}]
+    assert grounded_answer.check_generated_answer(
+        "2024년 매출액은 90이다.", wrong_citation, {_DOC: [table]}, {_DOC: {}})
+
+    # 표가 아닌 원문 문장을 그대로 답한 경우까지 막아서는 안 된다.
+    prose = "2024년 매출액은 100이다."
+    assert grounded_answer.check_generated_answer(
+        prose, [{"document_id": _DOC, "quote_or_fact": prose}],
+        {_DOC: [prose]}, {_DOC: {}}) == []
+
+
+def test_column_gate_compares_complete_numeric_tokens():
+    """값 90은 같은 문자열을 포함하는 190과 같은 숫자가 아니다."""
+    table = "구분 | 2024년 | 2023년\n매출액 | 190 | 90"
+    citation = [{"document_id": _DOC, "quote_or_fact": "매출액 | 190 | 90"}]
+    assert grounded_answer.check_generated_answer(
+        "2024년 매출액은 90이다.", citation, {_DOC: [table]}, {_DOC: {}})
+
+    ok, fails = grounded_answer.validate_claim(
+        {"text": "2024년 매출액은 90이다", "value": "90", "period": "2024",
+         "doc_id": _DOC, "quote": "매출액 | 190 | 90"},
+        {_DOC: grounded_answer._squash(table)}, {_DOC: {}}, set(),
+        doc_chunks={_DOC: [table]})
+    assert not ok and any("column_mismatch" in f for f in fails)
+
+
+def test_column_gate_binds_explicit_metric_to_cited_row():
+    """기간 열의 숫자가 맞아도 다른 지표 행을 인용하면 안 된다."""
+    table = ("구분 | 2024년 | 2023년\n"
+             "매출액 | 100 | 90\n"
+             "영업이익 | 90 | 80")
+    wrong_row = [{"document_id": _DOC, "quote_or_fact": "영업이익 | 90 | 80"}]
+    assert grounded_answer.check_generated_answer(
+        "2024년 매출액은 90이다.", wrong_row, {_DOC: [table]}, {_DOC: {}})
+
+    ok, fails = grounded_answer.validate_claim(
+        {"text": "2024년 매출액은 90이다", "value": "90", "period": "2024",
+         "doc_id": _DOC, "quote": "영업이익 | 90 | 80"},
+        {_DOC: grounded_answer._squash(table)}, {_DOC: {}}, set(),
+        doc_chunks={_DOC: [table]})
+    assert not ok and any("row_mismatch" in f for f in fails)
+
+    correct_row = [{"document_id": _DOC, "quote_or_fact": "매출액 | 100 | 90"}]
+    assert grounded_answer.check_generated_answer(
+        "2024년 매출액은 100이다.", correct_row, {_DOC: [table]}, {_DOC: {}}) == []
+
+    # 한 행 라벨이 다른 라벨의 부분문자열이어도 더 구체적인 명시 지표에 결박한다.
+    nested = ("구분 | 2024년 | 2023년\n"
+              "매출액 | 5 | 4\n"
+              "매출액증가율 | 5 | 3")
+    assert grounded_answer.check_generated_answer(
+        "2024년 매출액증가율은 5이다.",
+        [{"document_id": _DOC, "quote_or_fact": "매출액 | 5 | 4"}],
+        {_DOC: [nested]}, {_DOC: {}})

@@ -250,3 +250,34 @@ def test_deadline_janitor_serializes_and_waiting_request_respects_deadline(monke
     assert live["max"] == 1                      # 겹침 없음
     assert live["calls"] == 1                    # 대기 중 데드라인 초과 요청은 계산을 시작하지 않음
     assert all(isinstance(v, str) for v in r2.json().values()) and r2.json()["answer"]
+
+
+def test_provider_finishing_just_after_deadline_is_not_accepted(monkeypatch):
+    """0.5초 폴링보다 빨리 끝나도 요청 데드라인을 넘긴 결과는 폴백이어야 한다."""
+    import asyncio
+    import time
+    import httpx
+    from dart_detective import ops_service as ops
+
+    monkeypatch.setenv("DART_QA_DEADLINE_S", "0.05")
+
+    def slightly_late(qid, q, deadline_s=None):
+        time.sleep(0.10)
+        return _wire(qid, q, answer="늦은 정상 답"), {"cacheable": True}
+
+    ops.configure(call_fn=slightly_late,
+                  readiness_fn=lambda: {"ready": True, "pins": {}, "mode": "real"})
+    ops._cache.clear()
+
+    async def run():
+        transport = httpx.ASGITransport(app=ops.app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://t") as client:
+            response = await client.get(
+                "/answer", params={"question_id": "late", "question": "q"})
+            await asyncio.sleep(0.12)  # janitor가 세마포어를 반환할 시간
+            return response
+
+    response = asyncio.run(run())
+    assert response.status_code == 200
+    assert response.json()["answer"] != "늦은 정상 답"
+    assert '"reason": "deadline"' in response.json()["think_trace"]

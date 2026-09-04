@@ -312,12 +312,17 @@ async def answer_endpoint(request: Request) -> JSONResponse:
             asyncio.to_thread(_call, question_id, question, deadline_s=remaining))
         try:
             while True:
-                done, _ = await asyncio.wait({task}, timeout=0.5)
+                remaining = deadline_budget() - (time.perf_counter() - t0)
+                if remaining <= 0:
+                    raise TimeoutError
+                done, _ = await asyncio.wait({task}, timeout=min(0.5, remaining))
                 if done:
+                    # 이벤트 루프 스케줄링 경계에서 완료와 타임아웃이 동시에 보이면
+                    # 늦은 정상 결과보다 계약상 데드라인 폴백을 우선한다.
+                    if (time.perf_counter() - t0) >= deadline_budget():
+                        raise TimeoutError
                     response, meta = task.result()
                     break
-                if (time.perf_counter() - t0) >= deadline_budget():
-                    raise TimeoutError
                 if not disconnected and await request.is_disconnected():
                     # 클라이언트가 끊었다(재시도 예상). task.cancel()은 to_thread의 실행 중
                     # 스레드를 멈추지 못하므로(검수 3차 발견 7), 취소 대신 **세마포어를 쥔 채**
