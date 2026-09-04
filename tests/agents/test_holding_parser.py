@@ -184,6 +184,87 @@ def test_korea_zinc_other_group_rows_are_consumed():
     assert "".join(row.split()) in got.consumed_texts   # 덤프로 재노출 금지
 
 
+# ---------- 삼성전기 실물(holding_20260220000569) — 신규 보고·표지 전체 보고자·서식 필드 ----------
+
+SE_DOC = "holding_20260220000569"
+SE_FULL_REPORTER = "BlackRock Fund Advisors위 대리인  변호사 윤태한               변호사 한병하"
+SE_NODE0 = (
+    "금융위원회 귀중 | 보고의무발생일　 : | 2026년 02월 12일\n"
+    "한국거래소 귀중 | 보고서작성기준일 : | 2026년 02월 12일\n"
+    f" | 보고자 : | {SE_FULL_REPORTER}"
+)
+SE_NODE1 = (
+    "요약정보 | 요약정보 | 요약정보 | 요약정보\n"
+    "보고특례 적용전문투자자 구분 | - | - | -\n"
+    "발행회사명 | 삼성전기(주) | 발행회사와의 관계 | 기타\n"
+    "보고구분 | 신규 | 신규 | 신규\n"
+    "보유주식등의 수 및 보유비율 |  | 보유주식등의 수 | 보유비율\n"
+    "보유주식등의 수 및 보유비율 | 직전 보고서 | - | -\n"
+    "보유주식등의 수 및 보유비율 | 이번 보고서 | 3,739,817 | 5.01\n"
+    "의결권의 수 및보유비율 |  | 의결권의 수 | 보유비율\n"
+    "의결권의 수 및보유비율 | 직전 보고서 | - | -\n"
+    "의결권의 수 및보유비율 | 이번 보고서 | - | -\n"
+    "보고사유 | - 단순투자목적으로 장내에서 발행회사의 주식 매수 | - 단순투자목적으로 장내에서 발행회사의 주식 매수 | - 단순투자목적으로 장내에서 발행회사의 주식 매수\n"
+    "보유목적 | 단순투자 | 단순투자 | 단순투자"
+)
+# 같은 문서 안의 연혁표 — 과거 이력에 직전 값이 있는 함정(재검수 BLOCKER 2 재현).
+SE_HIST = (
+    "| 보고서작성기준일 | 보고자 | 보고자 | 주식등 | 주식등 | 주권 | 주권 | 의결권 있는 발행주식총수(주)\n"
+    " | 보고서작성기준일 | 본인 성명 | 특별관계자수 | 주식등의 수(주) | 비율(%) | 주식수(주) | 비율(%) | 의결권 있는 발행주식총수(주)\n"
+    "직전보고서 | 2026년 01월 02일 | BlackRockFundAdvisors | 13 | 3,730,598 | 4.99 | 3,730,598 | 4.99 | 74,693,696\n"
+    "이번보고서 | 2026년 02월 12일 | BlackRockFundAdvisors | 13 | 3,739,817 | 5.01 | 3,739,817 | 5.01 | 74,693,696"
+)
+SE_QUESTION = ("삼성전기에 대해 2026-02-12 보고서작성기준일로 제출된 주식등의대량보유상황보고서"
+               "(약식)에서 보고자, 직전/이번 보고서의 보유주식등의 수ㆍ보유비율과 보유목적은 "
+               "각각 무엇인가?")
+
+
+def se_chunks():
+    filer = "BlackRock Fund Advisors"
+    return [chunk(SE_NODE0, doc_id=SE_DOC, chunk_id="se-c0", filer=filer, node_index=0),
+            chunk(SE_NODE1, doc_id=SE_DOC, chunk_id="se-c1", filer=filer, node_index=1),
+            chunk(SE_HIST, doc_id=SE_DOC, chunk_id="se-c2", filer=filer, node_index=9)]
+
+
+def test_new_report_does_not_backfill_prev_from_history():
+    """신규 보고의 직전 '-'는 해당 없음이다 — 연혁표의 과거 값(3,730,598)으로 채우지 않는다."""
+    got = parse(question=SE_QUESTION, chunks=se_chunks())
+    assert got is not None
+    vals = values_by_slot(got)
+    assert vals["이번 보고서 보유주식등의 수"] == "3,739,817"
+    assert vals["이번 보고서 보유비율"] == "5.01"
+    assert vals["직전 보고서 보유주식등의 수"] == "-"
+    assert vals["직전 보고서 보유비율"] == "-"
+    assert "3,730,598" not in set(vals.values()) and "4.99" not in set(vals.values())
+    assert got.derived == ()                            # 직전 없음 — 증감 미계산
+    assert got.report_kind == "신규"
+    assert any("신규" in n for n in got.notes)
+
+
+def test_cover_full_reporter_name_beats_history_abbreviation():
+    got = parse(question=SE_QUESTION, chunks=se_chunks())
+    assert values_by_slot(got)["보고자"] == SE_FULL_REPORTER
+
+
+def test_purpose_and_report_kind_extracted_from_fixed_fields():
+    got = parse(question=SE_QUESTION, chunks=se_chunks())
+    vals = values_by_slot(got)
+    assert vals["보유목적"] == "단순투자"
+    assert vals["보고구분"] == "신규"
+
+
+def test_explicit_dash_without_new_kind_still_blocks_backfill():
+    """보고구분 행이 없어도 요약표의 명시적 '-'는 연혁값 보충을 막는다."""
+    node1 = "\n".join(l for l in SE_NODE1.split("\n") if not l.startswith("보고구분"))
+    chunks = [chunk(SE_NODE0, doc_id=SE_DOC, chunk_id="se-c0", node_index=0),
+              chunk(node1, doc_id=SE_DOC, chunk_id="se-c1", node_index=1),
+              chunk(SE_HIST, doc_id=SE_DOC, chunk_id="se-c2", node_index=9)]
+    got = parse(question=SE_QUESTION, chunks=chunks)
+    vals = values_by_slot(got)
+    assert vals["직전 보고서 보유주식등의 수"] == "-"
+    assert "3,730,598" not in set(vals.values())
+
+
 def test_consumed_texts_cover_used_rows_whitespace_normalized():
     got = parse()
     prev_row = "직전보고서 | 2023년 06월 02일 | MassachusettsFinancialServicesCompany | 1 | 2,925,317 | 5.00 | 2,925,317 | 5.00 | 58,492,759"

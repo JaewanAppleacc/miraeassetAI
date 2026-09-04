@@ -355,6 +355,8 @@ class HoldingParseResult:
     consumed_texts: frozenset[str]          # 소비한 행(공백 정규화) — 폴백 덤프에서 이 행만 숨김
     doc_id: str
     filer: str
+    report_kind: str = ""                   # 보고구분(신규/변동ㆍ변경 등, 서식 그대로)
+    notes: tuple[str, ...] = ()             # 답변에 명시할 결정론 안내(신규 보고의 직전 '-' 등)
 
 
 def _squash(text: str) -> str:
@@ -559,8 +561,49 @@ def _summary_rows(lines: Sequence[tuple[str, dict]]) -> list[dict]:
             continue                        # 머리글 없음 → 미발동(정렬 가드)
         out.append({"label": label, "line": text, "src": src,
                     "qty": _cell_if_value(cells, cols["qty"]),
-                    "ratio": _cell_if_value(cells, cols["ratio"])})
+                    "ratio": _cell_if_value(cells, cols["ratio"]),
+                    # 명시적 '-'는 "값을 못 찾음"이 아니라 "해당 없음"이다(신규 보고 등).
+                    # 연혁표 값으로 보충하면 안 되므로 구분해 둔다(재검수 BLOCKER 2).
+                    "qty_null": _dash_cell(cells, cols["qty"]),
+                    "ratio_null": _dash_cell(cells, cols["ratio"])})
     return out
+
+
+_NULL_CELLS = {"-", "－", "―", "—"}
+
+
+def _dash_cell(cells: Sequence[str], col: int | None) -> bool:
+    if col is None or col >= len(cells):
+        return False
+    return _squash(cells[col]) in _NULL_CELLS
+
+
+# 요약정보의 단독 항목 행("보고구분 | 신규 | 신규", "보유목적 | 단순투자"). 같은 값이
+# 반복 셀로 오는 고정 서식이라 첫 비어있지 않은 값을 쓴다. 서로 다른 값이 나오면 판정하지
+# 않는다(fail-closed).
+_FIELD_NAME_RES = {
+    "보고구분": re.compile(r"\d*\.?보고구분"),
+    "보유목적": re.compile(r"\d*\.?보유목적"),
+    "보고사유": re.compile(r"\d*\.?보고사유"),
+}
+
+
+def _field_value(lines: Sequence[tuple[str, dict]], name: str) -> dict | None:
+    rx = _FIELD_NAME_RES[name]
+    found: dict | None = None
+    for text, src in lines:
+        cells = _cells(text)
+        for i, cell in enumerate(cells[:-1]):
+            if not rx.fullmatch(_squash(cell)):
+                continue
+            value = next((c.strip() for c in cells[i + 1:] if c.strip()), "")
+            if not value or rx.fullmatch(_squash(value)):
+                continue
+            if found is not None and _squash(found["value"]) != _squash(value):
+                return None                 # 값이 갈리면 fail-closed
+            found = {"value": value, "line": text, "src": src}
+            break
+    return found
 
 
 def _cover_reporter(lines: Sequence[tuple[str, dict]]) -> dict | None:
@@ -616,7 +659,8 @@ def _resolve_label(rows: list[dict]) -> tuple[dict | None, bool]:
         if hit is None:
             uniq.append(row)
         else:
-            for key in ("qty", "ratio", "date", "reporter"):   # 빈 칸은 다른 행이 보충
+            for key in ("qty", "ratio", "date", "reporter",
+                        "qty_null", "ratio_null"):             # 빈 칸은 다른 행이 보충
                 if not hit.get(key) and row.get(key):
                     hit[key] = row[key]
     if not uniq:
@@ -673,9 +717,11 @@ def _doc_profile(doc_id: str, line_groups: Sequence[Sequence[tuple[str, dict]]],
     filer_row = (cur.get("reporter") or "") if cur else ""
     meta_filer = str(meta.get("filer_name") or "")
     cover_name = (cover or {}).get("reporter") or ""
-    # 보고자 출처 우선순위: 연혁표 이번보고서 행(값과 같은 행) → 표지 '보고자 :' 행.
-    reporter_src = (cur if cur and filer_row else None) or cover
-    reporter_name = filer_row or cover_name
+    # 보고자 출처 우선순위: 표지 '보고자 :' 행(전체 명칭 — 대리인 표기 포함) → 연혁표
+    # 이번보고서 행(붙여쓴 축약 표기). 재검수 BLOCKER 2: 축약 행이 전체 명칭을 가렸다.
+    reporter_src = cover or (cur if cur and filer_row else None)
+    reporter_name = cover_name or filer_row
+    all_lines = [pair for lines in line_groups for pair in lines]
     return {
         "doc_id": doc_id, "resolved": resolved, "conflict": conflict, "date": date,
         "filer_row": filer_row, "meta_filer": meta_filer,
@@ -683,6 +729,10 @@ def _doc_profile(doc_id: str, line_groups: Sequence[Sequence[tuple[str, dict]]],
                                     _norm_name(cover_name)) if n},
         "reporter_src": reporter_src, "reporter_name": reporter_name,
         "consumed": consumed,
+        # 요약정보 단독 항목 — 보고구분(신규/변동)·보유목적·보고사유 결정론 추출.
+        "report_kind": _field_value(all_lines, "보고구분"),
+        "purpose": _field_value(all_lines, "보유목적"),
+        "report_reason": _field_value(all_lines, "보고사유"),
     }
 
 
@@ -750,15 +800,27 @@ def parse_holding_report(question: str, chunks: Sequence[Any],
     resolved = profile["resolved"]
     doc_id = profile["doc_id"]
     req = _requested_topics(question)
+    kind_field = profile.get("report_kind")
+    new_report = bool(kind_field) and "신규" in _squash(kind_field["value"])
     values: list[HoldingExtract] = []
     missing: list[str] = []
+    notes: list[str] = []
     consumed: set[str] = set(profile["consumed"])
     pair: dict[str, str] = {}
     for label, period, period_key in (("직전보고서", "직전 보고서", "prev"),
                                       ("이번보고서", "이번 보고서", "cur")):
+        prev_of_new = new_report and label == "직전보고서"
         for kind, kind_label in (("qty", "보유주식등의 수"), ("ratio", "보유비율")):
-            row = next((resolved[f][label] for f in ("hist", "summ")
-                        if resolved[f][label] and resolved[f][label].get(kind)), None)
+            summ_row = resolved["summ"][label]
+            # 요약표의 명시적 '-'는 "해당 없음"이다 — 연혁표 값으로 보충하지 않는다.
+            # 신규 보고의 직전 값도 마찬가지다(재검수 BLOCKER 2: 삼성전기 신규 공시에서
+            # 과거 연혁의 3,730,598이 직전 값으로 오귀속됐다).
+            null_row = (summ_row if summ_row is not None and not summ_row.get(kind)
+                        and summ_row.get(f"{kind}_null") else None)
+            row = None
+            if null_row is None and not prev_of_new:
+                row = next((resolved[f][label] for f in ("hist", "summ")
+                            if resolved[f][label] and resolved[f][label].get(kind)), None)
             if row is not None:
                 for fmt in ("hist", "summ"):
                     used = resolved[fmt][label]
@@ -768,14 +830,29 @@ def parse_holding_report(question: str, chunks: Sequence[Any],
                 continue                        # 질문하지 않은 값은 답에 싣지 않는다
             slot = f"{period} {kind_label}"
             if row is None:
-                missing.append(slot)
+                if null_row is not None:
+                    values.append(_extract(slot, null_row, "-", doc_id))
+                    consumed.add(_squash(null_row["line"]))
+                elif not prev_of_new:
+                    missing.append(slot)
                 continue
             values.append(_extract(slot, row, row[kind], doc_id))
             pair[f"{label}:{kind}"] = row[kind]
+    if new_report and req["prev"]:
+        notes.append("※ 이 보고서의 보고구분은 '신규'다 — 직전 보고서의 값은 "
+                     "'-'(해당 없음)로 보고되었다.")
+        values.append(_extract("보고구분", kind_field, kind_field["value"], doc_id))
+        consumed.add(_squash(kind_field["line"]))
     if req["reporter"] and profile["reporter_src"] and profile["reporter_name"]:
         values.append(_extract(REPORTER_SLOT, profile["reporter_src"],
                                profile["reporter_name"], doc_id))
         consumed.add(_squash(profile["reporter_src"]["line"]))
+    # 질문이 물은 서술 항목이 서식 필드로 확정되면 결정론으로 답한다(LLM 보완 불필요).
+    for topic in ("보유목적", "보고사유"):
+        field = profile.get({"보유목적": "purpose", "보고사유": "report_reason"}[topic])
+        if topic in (question or "") and field:
+            values.append(_extract(topic, field, field["value"], doc_id))
+            consumed.add(_squash(field["line"]))
     if not values:
         return None
 
@@ -798,7 +875,8 @@ def parse_holding_report(question: str, chunks: Sequence[Any],
     return HoldingParseResult(
         values=tuple(values), derived=tuple(derived), missing_slots=tuple(missing),
         consumed_texts=frozenset(consumed), doc_id=doc_id,
-        filer=profile["reporter_name"] or profile["meta_filer"])
+        filer=profile["reporter_name"] or profile["meta_filer"],
+        report_kind=(kind_field or {}).get("value", ""), notes=tuple(notes))
 
 
 def has_final_consonant(word: str) -> bool:

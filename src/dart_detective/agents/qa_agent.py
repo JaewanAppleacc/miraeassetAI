@@ -753,10 +753,14 @@ HOLDING_LLM_TOPICS = ("보유목적", "보고사유", "변동사유", "취득자
 
 def _holding_llm_topics(question: str,
                         holding: "calculator.HoldingParseResult") -> tuple[str, ...]:
-    """파서가 결정론으로 채우지 못한, 질문이 요구한 대량보유 항목들."""
-    topics = [w for w in HOLDING_LLM_TOPICS if w in question]
+    """파서가 결정론으로 채우지 못한, 질문이 요구한 대량보유 항목들.
+
+    보유목적·보고사유는 서식 필드로 확정되면 파서가 slot으로 승격한다 — 그 경우 LLM 보완이
+    필요 없다. 남은 항목이 있을 때만 LLM을 부른다(발췌는 대상 문서로 제한된 상태다)."""
+    covered = {v.slot for v in holding.values}
+    topics = [w for w in HOLDING_LLM_TOPICS if w in question and w not in covered]
     if (any(w in question for w in ("보고자", "본인 성명"))
-            and not any(v.slot == calculator.REPORTER_SLOT for v in holding.values)):
+            and calculator.REPORTER_SLOT not in covered):
         topics.append("보고자")
     return tuple(topics)
 
@@ -785,7 +789,7 @@ def approval_or_application(question: str, matches: Sequence[EvidenceMatch],
         [m.evidence_text for m in matches]
         + [ln for c in list(chunks)[:ANSWER_CHUNKS] for ln in chunk_lines(c)]))
     q_dates = set(calculator._dates_in(question))
-    hits: list[tuple[str, str, str]] = []
+    hits: list[tuple[str, str, str, str]] = []
     for ln in lines:
         if "신청일" not in ln:
             continue
@@ -795,19 +799,32 @@ def approval_or_application(question: str, matches: Sequence[EvidenceMatch],
             continue
         app_d = app.group(1).strip() if app else ""
         appr_d = appr.group(1).strip() if appr else ""
-        if q_dates and not (set(calculator._dates_in(ln)) & q_dates):
-            continue                    # 질문이 지목한 날짜가 없는 필드(다른 품목) 제외
-        hits.append((ln, app_d, appr_d))
-    uniq = {(a, b) for _, a, b in hits}
+        app_t = next(iter(calculator._dates_in(app_d)), None)
+        appr_t = next(iter(calculator._dates_in(appr_d)), None)
+        # 질문이 날짜를 지목했으면 그 날짜가 **어느 필드**인지로 판정한다(재검수 BLOCKER 3:
+        # 허가일 존재만으로 항상 '승인'이라 답해 신청일 공시 질문이 오답이 됐다).
+        if q_dates:
+            if appr_t in q_dates:
+                verdict = "approval"
+            elif app_t in q_dates:
+                verdict = "application"
+            else:
+                continue                # 질문의 날짜가 없는 필드(다른 품목) 제외
+        else:
+            verdict = "approval" if appr_t else "application"
+        hits.append((ln, app_d, appr_d, verdict))
+    uniq = {(a, b, v) for _, a, b, v in hits}
     if len(uniq) != 1:
         return None                     # 필드가 없거나 서로 다른 값 — fail-closed
-    line, app_d, appr_d = hits[0]
-    if appr_d:
+    line, app_d, appr_d, verdict = hits[0]
+    if verdict == "approval":
         head = ("이 공시는 품목허가 신청이 아니라 품목허가 승인(허가) 사실을 알리는 공시다."
                 + (f" 신청일은 {app_d}이고," if app_d else "")
                 + f" 허가일은 {appr_d}이다.")
     elif app_d:
-        head = f"이 공시는 품목허가 승인이 아니라 품목허가 신청 사실을 알리는 공시다. 신청일은 {app_d}이다."
+        head = (f"이 공시는 품목허가 승인이 아니라 품목허가 신청 사실을 알리는 공시다. "
+                f"신청일은 {app_d}이다."
+                + (f" (해당 품목의 품목허가일은 {appr_d}로 확인된다.)" if appr_d else ""))
     else:
         return None
     return head, line
@@ -1126,6 +1143,10 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
     holding = _holding_parse(question, state, docs_by_id)
     if holding:
         _promote_holding_matches(state, holding)
+        # 대상 보고서가 확정됐다 — 다른 보고서의 근거는 프롬프트(wanted)·인용·
+        # retrieved_context 어디에도 싣지 않는다(재검수 BLOCKER 1 + v4 "실제 사용 근거만").
+        state.evidence_matches = [m for m in state.evidence_matches
+                                  if m.doc_id == holding.doc_id]
     # LLM 유무와 무관하게 기록한다 — 키가 없어도 "무엇을 얼마나 넘길 것인가"를 알아야
     # 크레딧을 쓰기 전에 비용과 문맥 크기를 가늠할 수 있다.
     n_context = (llm_context_chunks if llm_context_chunks is not None
@@ -1162,13 +1183,18 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
     if holding:
         state.derived += list(holding.derived)
 
-    sources = [c.as_source() for c in state.retrieval_results]
+    # 대상 문서가 확정되면 검증 소스도 그 문서로 제한한다(재검수 BLOCKER 1: 다른 보고서의
+    # 숫자를 답하면서 대상 문서의 무해한 문장만 인용해도 SUPPORTED가 되던 구멍 — FC claim
+    # 게이트·최종 validator·문장 게이트가 전부 이 sources를 본다).
+    source_chunks = (state.retrieval_results if not holding else
+                     [c for c in state.retrieval_results if c.doc_id == holding.doc_id])
+    sources = [c.as_source() for c in source_chunks]
     if holding:
         # 승격 행이 검색 청크 밖(같은 문서의 원문 node)에서 왔으면 검증 소스에도 넣는다 —
         # 원문 그대로의 행이고, 없으면 validator가 그 값을 '원문에 없는 숫자'로 오폭한다.
         for ex in holding.values:
             if ex.from_node and not any(ex.line in c.evidence_text
-                                        for c in state.retrieval_results):
+                                        for c in source_chunks):
                 sources.append({"document_id": ex.doc_id, "text": ex.line,
                                 "chunk_id": ex.chunk_id, "score": 0.0})
     sources_by_doc: dict[str, list[str]] = {}
@@ -1184,6 +1210,9 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
         # 다른 보고자의 행으로 빈자리를 채우지 않는다.
         answer = (f"{answer}\n\n다음 항목은 검색된 근거에서 확인하지 못했다: "
                   + ", ".join(holding.missing_slots) + ".")
+    if holding and holding.notes:
+        # 결정론 안내(신규 보고의 직전 '-' 등) — 값이 없는 이유를 서식 그대로 설명한다.
+        answer = f"{answer}\n\n" + "\n".join(holding.notes)
     binary = approval_or_application(question, state.evidence_matches,
                                      state.retrieval_results)
     if binary:

@@ -72,12 +72,14 @@ def retrieved_context_of(state: Mapping[str, Any]) -> list[dict[str, Any]]:
     없는 값을 만들어 넣는 것이 아니다.
     """
     out: list[dict[str, Any]] = []
-    seen: set[tuple[str, str]] = set()
+    seen: set[tuple[str, str, str]] = set()
 
     def push(entry: dict[str, Any]) -> None:
-        # 같은 행이 여러 slot으로 승격되면 원문이 중복 직렬화된다 — 동일 (문서, 행)은 첫
-        # 항목만 싣는다(locator가 같으므로 slot 대조에는 손실이 없다).
-        key = (entry["document_id"], "".join((entry["quoted_text"] or "").split()))
+        # 같은 행이 여러 slot으로 승격되면 원문이 중복 직렬화된다 — 동일 (문서, 위치, 행)은
+        # 첫 항목만 싣는다. locator를 키에 넣는 이유: 같은 문장이 같은 문서의 **다른 node**에
+        # 반복될 수 있고, 4-arm 판정에서 node는 의미 있는 차이다(재검수 HIGH 5).
+        key = (entry["document_id"], entry.get("source_locator") or "",
+               "".join((entry["quoted_text"] or "").split()))
         if key in seen:
             return
         seen.add(key)

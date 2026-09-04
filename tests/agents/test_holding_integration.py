@@ -158,30 +158,56 @@ def test_llm_answer_citing_other_holding_doc_is_discarded():
     """삼성전기 회귀(최종 검수 1): LLM이 다른 대량보유 보고서의 값을 답하면 통째로 폐기 —
     파서 값과 한 답변에 합쳐지는 경로 차단. 결정론 답(파서 값)이 최종본이다."""
     q = QUESTION.replace("각각 어떻게 변동되었는가?",
-                         "각각 어떻게 변동되었고, 보유목적은 무엇인가?")
+                         "각각 어떻게 변동되었고, 보고사유는 무엇인가?")
     trap_row = "직전보고서 | 2023년 09월 22일 | 국민연금공단 | 1 | 4,329,578 | 7.40 | 4,329,578 | 7.40 | 58,492,759"
     llm = FakeLLM({"answer": "직전 보고서의 보유주식등의 수는 4,329,578주입니다.",
                    "evidence": [{"document_id": NPS_DOC, "quote_or_fact": trap_row}],
                    "uncertainty": ""})
     state = qa_agent.answer_question(q, holding_retriever(with_trap=True), llm=llm)
-    assert llm.calls == 1                           # 잔여 항목(보유목적) 때문에 LLM은 호출됨
-    assert state.llm.get("degraded_reason") == "holding_doc_unbound"
+    assert llm.calls == 1                           # 잔여 항목(보고사유) 때문에 LLM은 호출됨
+    assert state.llm.get("degraded_reason") in ("unsupported", "holding_doc_unbound")
     assert "4,329,578" not in state.answer          # 다른 보고서 값 미혼입
     assert "2,925,317" in state.answer and "662,232" in state.answer
 
 
-# ---------- 최종 검수 3: 계산이 있어도 잔여 항목(보유목적)은 LLM으로 보완 ----------
+def test_other_doc_number_with_bound_doc_citation_is_rejected():
+    """재검수 BLOCKER 1 재현: 다른 보고서 숫자 + 대상 문서의 무해한 인용 → 폐기.
 
-def test_remaining_topic_keeps_llm_and_calculation_together():
+    sources가 대상 문서로 제한되지 않으면 이 조합이 SUPPORTED로 통과한다."""
     q = QUESTION.replace("각각 어떻게 변동되었는가?",
-                         "각각 어떻게 변동되었고, 보유목적은 무엇인가?")
-    llm = FakeLLM({"answer": "보유목적은 단순투자다.",
+                         "각각 어떻게 변동되었고, 보고사유는 무엇인가?")
+    llm = FakeLLM({"answer": "보유주식등의 수는 4,329,578주이고 보고사유는 장내 매수다.",
                    "evidence": [{"document_id": DOC_ID, "quote_or_fact": PURPOSE_LINE}],
                    "uncertainty": ""})
+    state = qa_agent.answer_question(q, holding_retriever(with_trap=True), llm=llm)
+    assert llm.calls == 1
+    assert state.llm.get("degraded")                # 대상 문서 밖 숫자 — 채택 불가
+    assert "4,329,578" not in state.answer
+
+
+# ---------- 최종 검수 3: 잔여 항목 처리 — 결정론 필드 우선, 없으면 LLM 보완 ----------
+
+def test_purpose_field_is_deterministic_and_llm_is_skipped():
+    """보유목적이 서식 필드로 확정되면 LLM 없이 답한다(재검수: 슬롯 충족 판단)."""
+    q = QUESTION.replace("각각 어떻게 변동되었는가?",
+                         "각각 어떻게 변동되었고, 보유목적은 무엇인가?")
+    llm = FakeLLM({"answer": "무관", "evidence": [], "uncertainty": ""})
     state = qa_agent.answer_question(q, holding_retriever(), llm=llm)
-    assert llm.calls == 1 and state.llm.get("used")
-    assert not state.llm.get("degraded")
-    assert "보유목적은 단순투자다." in state.answer
+    assert llm.calls == 0
+    assert state.llm.get("skipped") == "deterministic_calculation"
+    assert "보유목적" in state.answer and "단순투자" in state.answer
+    assert "662,232주 감소" in state.answer
+
+
+def test_report_reason_topic_still_uses_llm_with_bound_context():
+    q = QUESTION.replace("각각 어떻게 변동되었는가?",
+                         "각각 어떻게 변동되었고, 보고사유는 무엇인가?")
+    llm = FakeLLM({"answer": "보고사유는 장내 매수 보고다.",
+                   "evidence": [{"document_id": DOC_ID, "quote_or_fact": BASIS_DATE_LINE}],
+                   "uncertainty": ""})
+    state = qa_agent.answer_question(q, holding_retriever(), llm=llm)
+    assert llm.calls == 1 and state.llm.get("used") and not state.llm.get("degraded")
+    assert "보고사유는 장내 매수 보고다." in state.answer
     assert "662,232주 감소" in state.answer         # 채택 후에도 계산 문장 유지
     assert "2,925,317" in state.answer              # 확정값 보존
 
@@ -234,6 +260,17 @@ def test_binary_question_fails_closed_on_ambiguity():
     assert got is None                               # 서로 다른 필드 2개 — 판정 불가
 
 
+def test_binary_question_dated_at_application_answers_application():
+    """재검수 BLOCKER 3 재현: 질문 날짜 = 신청일이면 '신청 공시'가 정답이다."""
+    q = ("알테오젠의 테르가제주(ALT-BB4) 관련 2023년 2월 7일 공시는 품목허가 신청 사실을 "
+         "알리는 것인가, 품목허가 승인 사실을 알리는 것인가?")
+    got = qa_agent.approval_or_application(q, [], [_c(APPROVAL_FIELD_ROW)])
+    assert got is not None
+    assert "품목허가 신청 사실을 알리는 공시다" in got[0]
+    assert "신청일은 2023년 2월 7일" in got[0]
+    assert "승인(허가) 사실을 알리는 공시다" not in got[0]
+
+
 # ---------- 최종 검수 4: retrieved_context 중복 제거·사용 근거 우선 ----------
 
 def test_retrieved_context_dedupes_same_row_across_slots():
@@ -249,3 +286,24 @@ def test_retrieved_context_dedupes_same_row_across_slots():
     assert len(rows) == 1                            # 같은 행은 한 번만
     assert rows[0]["slot_name"] != "answer"          # 사용 근거(slot 매치)가 우선
     assert {e["quoted_text"] for e in ctx} >= {"2,925,317", "5.00"}
+
+
+def test_retrieved_context_keeps_same_text_at_different_nodes():
+    """재검수 HIGH 5: 동일 문장이 다른 node에 있으면 locator별로 둘 다 보존한다."""
+    base = dict(chunk_id="c1", doc_id=DOC_ID, evidence_text="같은 문장 반복",
+                section_path=[], confidence=1.0, reason="t",
+                rcept_no="20240403000410", picked_value=None)
+    state = {"evidence_matches": [{**base, "slot": "a", "node_index": 3},
+                                  {**base, "slot": "answer", "node_index": 7}]}
+    ctx = answer_wire.retrieved_context_of(state)
+    rows = [e for e in ctx if e["quoted_text"] == "같은 문장 반복"]
+    assert len(rows) == 2
+    assert len({e["source_locator"] for e in rows}) == 2
+
+
+def test_retrieved_context_restricted_to_bound_doc():
+    """재검수 HIGH 4: 파서가 문서를 확정하면 context에 다른 보고서가 남지 않는다."""
+    state = qa_agent.answer_question(QUESTION, holding_retriever(with_trap=True))
+    wire = answer_wire.to_answer_wire("q", QUESTION, state.to_dict())
+    docs = {e["document_id"] for e in _json.loads(wire["retrieved_context"])}
+    assert docs == {DOC_ID}
