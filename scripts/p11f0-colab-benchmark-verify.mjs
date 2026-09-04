@@ -195,18 +195,41 @@ function compareCosine(local, remote, errors) {
   return result;
 }
 
-export async function verifyGpuBenchmarkPackage({ summaryPath, sampleFulltextPath, localDir, remoteDir, remotePrefix }) {
+// idsAndOrderingShaFromFulltext reads a `<...>-fulltext.jsonl`-shaped file
+// (one JSON object per line with an `embedding_input_id` field) and returns
+// the id set plus the same canonical input_ordering_sha256 computation used
+// throughout this file (sha256 of ids joined by "\n", in file order).
+async function idsAndOrderingShaFromFulltext(fulltextPath) {
+  const raw = await readFile(fulltextPath, "utf8");
+  const rows = raw.split("\n").filter((l) => l.trim() !== "").map((l) => JSON.parse(l));
+  const ids = new Set(rows.map((r) => r.embedding_input_id));
+  const orderingSha256 = createHash("sha256").update(rows.map((r) => r.embedding_input_id).join("\n"), "utf8").digest("hex");
+  return { ids, orderingSha256 };
+}
+
+// Turn AC-COLAB-COMPAT-V1.1 (AC_COLAB_BENCH_V1.1_AMENDMENT.md section 2.3):
+// optional `localSampleFulltextPath` lets the LOCAL package be checked
+// against a SMALLER population than the REMOTE package -- e.g. a
+// deterministic 500-row length-stratified subset of the same 5,000-row
+// population the remote (Colab) package already covers. When omitted,
+// behavior is unchanged: both packages are checked against the same
+// `sampleFulltextPath` population, exactly as before this parameter existed.
+export async function verifyGpuBenchmarkPackage({ summaryPath, sampleFulltextPath, localSampleFulltextPath, localDir, remoteDir, remotePrefix }) {
   const summary = JSON.parse(await readFile(summaryPath, "utf8"));
   const expectedIds = new Set(summary.benchmark_sample.sample_ids);
   const sampleFulltextRaw = await readFile(sampleFulltextPath, "utf8");
   const sampleRows = sampleFulltextRaw.split("\n").filter((l) => l.trim() !== "").map((l) => JSON.parse(l));
   const expectedInputOrderingSha256 = createHash("sha256").update(sampleRows.map((r) => r.embedding_input_id).join("\n"), "utf8").digest("hex");
 
+  const localExpected = localSampleFulltextPath
+    ? await idsAndOrderingShaFromFulltext(localSampleFulltextPath)
+    : { ids: expectedIds, orderingSha256: expectedInputOrderingSha256 };
+
   const errors = [];
   const local = await loadPackage(localDir, "local-reference");
   verifyPackageIntegrity(local, errors);
   verifyPins(local, errors);
-  verifyMembershipAndOrdering(local, expectedIds, expectedInputOrderingSha256, errors);
+  verifyMembershipAndOrdering(local, localExpected.ids, localExpected.orderingSha256, errors);
   const localFiniteNorm = verifyFiniteAndNormalization(local, errors);
 
   let remote = null;
@@ -238,13 +261,13 @@ export async function verifyGpuBenchmarkPackage({ summaryPath, sampleFulltextPat
 }
 
 async function main() {
-  const [summaryPath, sampleFulltextPath, localDir, remoteDir, remotePrefix] = process.argv.slice(2);
+  const [summaryPath, sampleFulltextPath, localDir, remoteDir, remotePrefix, localSampleFulltextPath] = process.argv.slice(2);
   if (!summaryPath || !sampleFulltextPath || !localDir) {
-    console.error("usage: node p11f0-colab-benchmark-verify.mjs <summary.json> <sample-fulltext.jsonl> <local-dir> [remote-dir] [remote-prefix]");
+    console.error("usage: node p11f0-colab-benchmark-verify.mjs <summary.json> <sample-fulltext.jsonl> <local-dir> [remote-dir] [remote-prefix] [local-sample-fulltext.jsonl]");
     process.exitCode = 1;
     return;
   }
-  const report = await verifyGpuBenchmarkPackage({ summaryPath, sampleFulltextPath, localDir, remoteDir: remoteDir || null, remotePrefix: remotePrefix || null });
+  const report = await verifyGpuBenchmarkPackage({ summaryPath, sampleFulltextPath, localSampleFulltextPath: localSampleFulltextPath || null, localDir, remoteDir: remoteDir || null, remotePrefix: remotePrefix || null });
   console.log(JSON.stringify(report, null, 2));
   process.exitCode = report.ok ? 0 : 1;
 }

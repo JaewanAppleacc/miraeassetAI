@@ -15,7 +15,7 @@
 // file). No prompt/Gold/secret content is ever logged -- only counts,
 // timings, and sha256 hex digests.
 import { createHash } from "node:crypto";
-import { readFile, writeFile, rename } from "node:fs/promises";
+import { readFile, writeFile, rename, mkdir } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
@@ -106,6 +106,11 @@ async function main() {
   if (!kureUrl) throw new Error("P11F0_KURE_SERVER_URL is required");
   const batchSize = Number(process.env.P11F0_LOCAL_RUN_BATCH_SIZE ?? 25);
 
+  // Turn AC-COLAB-COMPAT-V1.1 fix (mkdir): outDir must exist before any
+  // writeFileAtomic call below -- previously a not-yet-created outDir made
+  // every write fail with ENOENT on its .partial rename step.
+  await mkdir(outDir, { recursive: true });
+
   const infoUrl = kureUrl.replace(/\/v1\/embeddings\/?$/, "/info");
   const infoResp = await fetch(infoUrl);
   if (!infoResp.ok) throw new Error(`KURE_SERVER_INFO_UNREACHABLE: ${infoResp.status}`);
@@ -120,7 +125,6 @@ async function main() {
   const flat = new Float32Array(n * EXPECTED_DIMENSION);
   const rowMappingLines = [];
   const batchLatenciesMs = [];
-  let failedCount = 0;
 
   const serverPid = await findEmbeddingServerPid();
   const rssSamplesBytes = [];
@@ -133,6 +137,14 @@ async function main() {
 
   const perBatchTimeoutMs = Number(process.env.P11F0_LOCAL_RUN_BATCH_TIMEOUT_MS ?? 120000);
   const startedAt = Date.now();
+  // Turn AC-COLAB-COMPAT-V1.1 fix (fail-fast + incomplete-output): any
+  // batch/row failure now aborts the ENTIRE run immediately instead of
+  // marking rows failed and grinding through every remaining batch (which
+  // previously cost up to perBatchTimeoutMs PER failing batch for no
+  // benefit -- Turn V1 section F measured 75+ minutes of pure timeout wait
+  // before ever reporting a failure). A run that aborts writes NO output
+  // files at all (see below) -- a package on disk is only ever a genuine,
+  // fully-succeeded run, never a partial one dressed up as complete.
   for (let start = 0; start < n; start += batchSize) {
     const batch = rows.slice(start, start + batchSize);
     const batchStarted = Date.now();
@@ -146,18 +158,15 @@ async function main() {
         signal: AbortSignal.timeout(perBatchTimeoutMs),
       });
     } catch (error) {
-      failedCount += batch.length;
-      console.error(`[local-ref-run] batch starting at ${start}: REQUEST_FAILED_OR_TIMED_OUT after ${Date.now() - batchStarted}ms (${error.name}: ${error.message}) -- ${batch.length} inputs marked failed`);
-      batchLatenciesMs.push(Date.now() - batchStarted);
-      continue;
+      if (rssSampler) clearInterval(rssSampler);
+      throw new Error(`LOCAL_RUN_ABORTED_ON_BATCH_FAILURE: batch starting at ${start}: REQUEST_FAILED_OR_TIMED_OUT after ${Date.now() - batchStarted}ms (${error.name}: ${error.message})`);
     }
     const batchElapsedMs = Date.now() - batchStarted;
     batchLatenciesMs.push(batchElapsedMs);
     console.error(`[local-ref-run] batch start=${start} responded in ${batchElapsedMs}ms status=${resp.status}`);
     if (!resp.ok) {
-      failedCount += batch.length;
-      console.error(`[local-ref-run] batch starting at ${start}: HTTP ${resp.status} -- ${batch.length} inputs marked failed`);
-      continue;
+      if (rssSampler) clearInterval(rssSampler);
+      throw new Error(`LOCAL_RUN_ABORTED_ON_BATCH_FAILURE: batch starting at ${start}: HTTP ${resp.status}`);
     }
     const body = await resp.json();
     const embeddings = body.data.map((d) => d.embedding);
@@ -170,9 +179,8 @@ async function main() {
         vec = l2Normalize(Float32Array.from(embeddings[i]));
         for (const v of vec) if (!Number.isFinite(v)) throw new Error("NON_FINITE_COMPONENT");
       } catch (error) {
-        failedCount += 1;
-        console.error(`[local-ref-run] row ${globalIdx} (${row.embedding_input_id}): ${error.message}`);
-        continue;
+        if (rssSampler) clearInterval(rssSampler);
+        throw new Error(`LOCAL_RUN_ABORTED_ON_BATCH_FAILURE: row ${globalIdx} (${row.embedding_input_id}): ${error.message}`);
       }
       flat.set(vec, globalIdx * EXPECTED_DIMENSION);
       rowMappingLines.push(JSON.stringify({ input_index: globalIdx, embedding_input_id: row.embedding_input_id, embed_text_sha256: row.embed_text_sha256 }));
@@ -182,7 +190,9 @@ async function main() {
   const totalElapsedMs = Date.now() - startedAt;
   if (rssSampler) clearInterval(rssSampler);
 
-  const successCount = n - failedCount;
+  // Reaching this line means every batch/row succeeded -- any failure
+  // above throws and returns before any output file is written.
+  const successCount = n;
   const sortedLatencies = [...batchLatenciesMs].sort((a, b) => a - b);
 
   const npyBuffer = encodeNpyFloat32Matrix(n, EXPECTED_DIMENSION, flat);
@@ -204,7 +214,7 @@ async function main() {
     batch_size: batchSize,
     row_count_requested: n,
     row_count_succeeded: successCount,
-    row_count_failed: failedCount,
+    row_count_failed: 0,
     elapsed_ms_total: totalElapsedMs,
     texts_per_sec: successCount / (totalElapsedMs / 1000),
     batch_latency_ms: {
@@ -235,10 +245,6 @@ async function main() {
   await writeFileAtomic(`${outDir}/local-reference-file-integrity-manifest.json`, Buffer.from(`${JSON.stringify(integrityManifest, null, 2)}\n`, "utf8"));
 
   console.log(JSON.stringify({ ...runtimeManifest, integrity: integrityManifest.files }, null, 2));
-  if (failedCount > 0) {
-    console.error(`[local-ref-run] ${failedCount}/${n} rows failed -- see stderr above for per-row reasons`);
-    process.exitCode = 1;
-  }
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

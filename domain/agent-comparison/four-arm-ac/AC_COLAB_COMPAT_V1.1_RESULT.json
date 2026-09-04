@@ -1,0 +1,78 @@
+{
+  "schema_version": "p11f0-colab-benchmark-compat-result.v1.1",
+  "turn_id": "AC-COLAB-COMPAT-V1.1",
+  "amendment": "AC_COLAB_BENCH_V1.1_AMENDMENT.md",
+  "benchmark_gate_status": "COLAB_BENCHMARK_VERIFIED",
+  "cross_runtime_compatibility_status": "COLAB_MPS_COMPATIBILITY_VERIFIED",
+  "model": {
+    "repository": "nlpai-lab/KURE-v1",
+    "revision": "4ed4540949c70b7da2c74004a915e1f2d5e46e4f",
+    "dimension": 1024
+  },
+  "cosine_thresholds": {
+    "cosine_mean_min": 0.9999,
+    "cosine_min_min": 0.999,
+    "note": "unchanged from Turn AC-COLAB-BENCH-V1; not reopened by this amendment"
+  },
+  "local_subset_selection": {
+    "method": "deterministic length-stratified (char_length ascending, 10 equal-rank strata, SHA-evenly-spaced 50/stratum, step = stratum_size/50, floor-indexed)",
+    "source_population_file": "work/turn-ac-colab-bench-v1/benchmark-sample-fulltext.jsonl",
+    "population": 5000,
+    "strata_count": 10,
+    "per_stratum": 50,
+    "selected_count": 500,
+    "sample_manifest_sha256": "29c88f303d114368595bf5a592865c08472ae85f2c52754e00fb7b71b6b3c2d1",
+    "input_ordering_sha256": "29c88f303d114368595bf5a592865c08472ae85f2c52754e00fb7b71b6b3c2d1",
+    "strata_char_length_ranges": [
+      { "stratum_index": 0, "row_count": 500, "char_length_min": 311, "char_length_max": 1308 },
+      { "stratum_index": 1, "row_count": 500, "char_length_min": 1308, "char_length_max": 1385 },
+      { "stratum_index": 2, "row_count": 500, "char_length_min": 1385, "char_length_max": 1455 },
+      { "stratum_index": 3, "row_count": 500, "char_length_min": 1455, "char_length_max": 1521 },
+      { "stratum_index": 4, "row_count": 500, "char_length_min": 1522, "char_length_max": 1590 },
+      { "stratum_index": 5, "row_count": 500, "char_length_min": 1590, "char_length_max": 1643 },
+      { "stratum_index": 6, "row_count": 500, "char_length_min": 1643, "char_length_max": 1708 },
+      { "stratum_index": 7, "row_count": 500, "char_length_min": 1709, "char_length_max": 1807 },
+      { "stratum_index": 8, "row_count": 500, "char_length_min": 1807, "char_length_max": 1964 },
+      { "stratum_index": 9, "row_count": 500, "char_length_min": 1964, "char_length_max": 3030 }
+    ]
+  },
+  "local_reference_run": {
+    "device": "mps",
+    "row_count_requested": 500,
+    "row_count_succeeded": 500,
+    "row_count_failed": 0,
+    "elapsed_ms_total": 244576,
+    "texts_per_sec": 2.0443543111343714,
+    "batch_latency_ms": { "p50": 4556, "p95": 6917, "min": 3635, "max": 8051, "count": 50 },
+    "input_ordering_sha256": "29c88f303d114368595bf5a592865c08472ae85f2c52754e00fb7b71b6b3c2d1",
+    "vector_output_sha256": "89c4afc9c81d5df54aa245f767edf7815f3dd20973fead990e2ed99e7b64aa87",
+    "generated_at": "2026-09-04T02:37:41.004Z"
+  },
+  "remote_colab_run": {
+    "device": "Tesla T4",
+    "row_count_requested": 5000,
+    "row_count_succeeded": 5000,
+    "row_count_failed": 0,
+    "elapsed_ms_total": 1348256.877265,
+    "texts_per_sec": 3.70849211623732,
+    "input_ordering_sha256": "9e4e3b6f0e5310b8dae9cac457b450dd570dec3695c39324cce71ec2fbf61a1c",
+    "vector_output_sha256": "d0a3d110eca0d87f59ec8d561ee1c80affb5ac8d6280217de2bd532261aa698d",
+    "generated_at": "2026-09-04T01:36:12Z",
+    "note": "reused as-is, not re-run this Turn; source: user-provided package outside this repo"
+  },
+  "verification": {
+    "ok": true,
+    "local_summary": { "row_count": 500, "non_finite_count": 0, "worst_norm_deviation": 2.977738122744711e-8 },
+    "remote_summary": { "row_count": 5000, "non_finite_count": 0, "worst_norm_deviation": 1.0137906447660328e-7 },
+    "cosine": {
+      "compared_count": 500,
+      "mean_cosine": 0.9999999999941023,
+      "min_cosine": 0.9999999996575464
+    },
+    "verdict": "COLAB_BENCHMARK_VERIFIED"
+  },
+  "scope_notes": [
+    "No embedding or Colab execution was performed by the turn that produced this artifact -- it records results from a prior turn's real local MPS run and the user's real Colab run.",
+    "Contains no raw chunk/document text, no embedding vectors, no DEV_CHECK/HOLDOUT/DB/Gold content, no secrets, no absolute local paths."
+  ]
+}
