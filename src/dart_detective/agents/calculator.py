@@ -525,12 +525,18 @@ def _is_holding_data_row(cells: Sequence[str]) -> bool:
     return tables._is_data_row(cells)
 
 
+# 요약표의 기본 그룹 제목(법정 고정 서식). 같은 문서에 '주요계약체결 주식등의 수 및 비율',
+# '의결권의 수 및 보유비율' 그룹이 함께 있으므로(고려아연 실측 holding_20240904000440),
+# 그룹 제목 전체로 결박해야 서로 다른 그룹의 값이 한 표로 합쳐져 충돌 폐기되지 않는다.
+_SUMMARY_GROUP_KEY = "보유주식등의수및보유비율"
+
+
 def _summary_rows(lines: Sequence[tuple[str, dict]]) -> list[dict]:
-    """요약표: 데이터 행 = cell[0]에 '주식등' 포함(의결권 그룹 배제) AND cell[1]이 라벨."""
+    """요약표: 데이터 행 = cell[0]이 기본 그룹 제목 AND cell[1]이 직전/이번 라벨."""
     out: list[dict] = []
     for idx, (text, src) in enumerate(lines):
         cells = _cells(text)
-        if len(cells) < 3 or "주식등" not in _squash(cells[0]):
+        if len(cells) < 3 or _SUMMARY_GROUP_KEY not in _squash(cells[0]):
             continue
         label = _squash(cells[1]) if len(cells) > 1 else ""
         if label not in _HISTORY_LABELS:
@@ -540,6 +546,8 @@ def _summary_rows(lines: Sequence[tuple[str, dict]]) -> list[dict]:
             cj = _cells(lines[j][0])
             if len(cj) != len(cells):
                 continue                    # 사이에 다른 표 줄이 낄 수 있다 — 계속 위로
+            if _SUMMARY_GROUP_KEY not in _squash(cj[0]):
+                continue                    # 다른 그룹의 머리글은 이 그룹을 설명하지 않는다
             if _squash(cj[1]) in _HISTORY_LABELS:
                 continue                    # 위쪽 데이터 행
             merged = [_squash(c) for c in cj]
@@ -553,6 +561,43 @@ def _summary_rows(lines: Sequence[tuple[str, dict]]) -> list[dict]:
                     "qty": _cell_if_value(cells, cols["qty"]),
                     "ratio": _cell_if_value(cells, cols["ratio"])})
     return out
+
+
+def _cover_reporter(lines: Sequence[tuple[str, dict]]) -> dict | None:
+    """표지의 '보고자 : 이름' 행. 연혁표가 없는 문서(변동 보고서 등)의 보고자 출처.
+
+    셀이 정확히 '보고자:'인 경우만 본다 — 연혁표 머리글의 '보고자' 셀(뒤에 이름 아닌
+    '본인 성명' 셀이 옴)과 구분하기 위해서다. 서로 다른 이름이 나오면 판정하지 않는다."""
+    found: dict | None = None
+    for text, src in lines:
+        cells = _cells(text)
+        for i, cell in enumerate(cells[:-1]):
+            if _squash(cell) not in ("보고자:", "보고자："):
+                continue
+            name = next((c.strip() for c in cells[i + 1:] if c.strip()), "")
+            if not name or len(name) > 60 or "보고자" in name:
+                continue
+            if found is not None and _norm_name(found["reporter"]) != _norm_name(name):
+                return None                 # 이름이 갈리면 fail-closed
+            found = {"line": text, "src": src, "reporter": name}
+    return found
+
+
+def _requested_topics(question: str) -> dict[str, bool]:
+    """질문이 지목한 항목·기간만 답에 싣는다(질문하지 않은 값 자동 출력 금지).
+
+    수량·비율·보고자 어느 것도 지목되지 않으면 값 질문으로 보고 수량·비율을 켠다.
+    변동어가 있으면 두 기간 모두 필요하고, 아니면 직전/이번 언급을 따른다(둘 다 없으면 둘 다)."""
+    q = _squash(question or "")
+    qty = any(w in q for w in ("주식등의수", "주식수", "보유주식"))
+    ratio = any(w in q for w in ("비율", "지분"))
+    reporter = any(w in q for w in ("보고자", "본인성명"))
+    if not (qty or ratio or reporter):
+        qty = ratio = True
+    change = any(w in (question or "") for w in _HOLDING_CHANGE_WORDS)
+    prev = change or "직전" in q or "이번" not in q
+    cur = change or "이번" in q or "직전" not in q
+    return {"qty": qty, "ratio": ratio, "reporter": reporter, "prev": prev, "cur": cur}
 
 
 def _same_values(a: Mapping[str, Any], b: Mapping[str, Any]) -> bool:
@@ -587,6 +632,8 @@ def _doc_profile(doc_id: str, line_groups: Sequence[Sequence[tuple[str, dict]]],
     summ: dict[str, list[dict]] = {lb: [] for lb in _HISTORY_LABELS}
     basis_dates: set[tuple[int, int, int]] = set()
     seen_rows: set[str] = set()
+    consumed: set[str] = set()
+    cover: dict | None = None
     for lines in line_groups:
         for row in _history_rows(lines):
             key = _squash(row["line"])
@@ -601,6 +648,13 @@ def _doc_profile(doc_id: str, line_groups: Sequence[Sequence[tuple[str, dict]]],
         for text, _src in lines:
             if "작성기준일" in _squash(text):
                 basis_dates.update(_dates_in(text))
+            # 요약표 계열 그룹 행(의결권·주요계약체결 포함)은 파서가 인지하고 배제한 행이다 —
+            # 원문 덤프로 다시 내보내면 기본 그룹 값과 혼동을 부른다(코덱스 최종 검수 5).
+            cells = _cells(text)
+            if len(cells) >= 3 and _squash(cells[1]) in _HISTORY_LABELS:
+                consumed.add(_squash(text))
+        if cover is None:
+            cover = _cover_reporter(lines)
     conflict = False
     resolved: dict[str, dict[str, dict | None]] = {"hist": {}, "summ": {}}
     for label in _HISTORY_LABELS:
@@ -618,11 +672,17 @@ def _doc_profile(doc_id: str, line_groups: Sequence[Sequence[tuple[str, dict]]],
         date = next(iter(basis_dates)) if len(basis_dates) == 1 else None
     filer_row = (cur.get("reporter") or "") if cur else ""
     meta_filer = str(meta.get("filer_name") or "")
+    cover_name = (cover or {}).get("reporter") or ""
+    # 보고자 출처 우선순위: 연혁표 이번보고서 행(값과 같은 행) → 표지 '보고자 :' 행.
+    reporter_src = (cur if cur and filer_row else None) or cover
+    reporter_name = filer_row or cover_name
     return {
         "doc_id": doc_id, "resolved": resolved, "conflict": conflict, "date": date,
         "filer_row": filer_row, "meta_filer": meta_filer,
-        "filer_norms": {n for n in (_norm_name(filer_row), _norm_name(meta_filer)) if n},
-        "reporter_src": cur if cur and filer_row else None,
+        "filer_norms": {n for n in (_norm_name(filer_row), _norm_name(meta_filer),
+                                    _norm_name(cover_name)) if n},
+        "reporter_src": reporter_src, "reporter_name": reporter_name,
+        "consumed": consumed,
     }
 
 
@@ -689,29 +749,35 @@ def parse_holding_report(question: str, chunks: Sequence[Any],
 
     resolved = profile["resolved"]
     doc_id = profile["doc_id"]
+    req = _requested_topics(question)
     values: list[HoldingExtract] = []
     missing: list[str] = []
-    consumed: set[str] = set()
+    consumed: set[str] = set(profile["consumed"])
     pair: dict[str, str] = {}
-    for label, period in (("직전보고서", "직전 보고서"), ("이번보고서", "이번 보고서")):
+    for label, period, period_key in (("직전보고서", "직전 보고서", "prev"),
+                                      ("이번보고서", "이번 보고서", "cur")):
         for kind, kind_label in (("qty", "보유주식등의 수"), ("ratio", "보유비율")):
-            slot = f"{period} {kind_label}"
             row = next((resolved[f][label] for f in ("hist", "summ")
                         if resolved[f][label] and resolved[f][label].get(kind)), None)
+            if row is not None:
+                for fmt in ("hist", "summ"):
+                    used = resolved[fmt][label]
+                    if used and used.get(kind):
+                        consumed.add(_squash(used["line"]))
+            if not (req[period_key] and req[kind]):
+                continue                        # 질문하지 않은 값은 답에 싣지 않는다
+            slot = f"{period} {kind_label}"
             if row is None:
                 missing.append(slot)
                 continue
             values.append(_extract(slot, row, row[kind], doc_id))
             pair[f"{label}:{kind}"] = row[kind]
-            for fmt in ("hist", "summ"):
-                used = resolved[fmt][label]
-                if used and used.get(kind):
-                    consumed.add(_squash(used["line"]))
+    if req["reporter"] and profile["reporter_src"] and profile["reporter_name"]:
+        values.append(_extract(REPORTER_SLOT, profile["reporter_src"],
+                               profile["reporter_name"], doc_id))
+        consumed.add(_squash(profile["reporter_src"]["line"]))
     if not values:
         return None
-    if profile["reporter_src"]:
-        values.append(_extract(REPORTER_SLOT, profile["reporter_src"],
-                               profile["filer_row"], doc_id))
 
     derived: list[Derived] = []
     if any(w in (question or "") for w in _HOLDING_CHANGE_WORDS):
@@ -732,7 +798,7 @@ def parse_holding_report(question: str, chunks: Sequence[Any],
     return HoldingParseResult(
         values=tuple(values), derived=tuple(derived), missing_slots=tuple(missing),
         consumed_texts=frozenset(consumed), doc_id=doc_id,
-        filer=profile["filer_row"] or profile["meta_filer"])
+        filer=profile["reporter_name"] or profile["meta_filer"])
 
 
 def has_final_consonant(word: str) -> bool:

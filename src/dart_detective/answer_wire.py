@@ -71,8 +71,22 @@ def retrieved_context_of(state: Mapping[str, Any]) -> list[dict[str, Any]]:
     확정한 자리는 값만 담은 항목을 하나 더 싣는다 — 둘 다 원문에서 그대로 온 것이고,
     없는 값을 만들어 넣는 것이 아니다.
     """
-    out = []
-    for match in state.get("evidence_matches") or []:
+    out: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
+
+    def push(entry: dict[str, Any]) -> None:
+        # 같은 행이 여러 slot으로 승격되면 원문이 중복 직렬화된다 — 동일 (문서, 행)은 첫
+        # 항목만 싣는다(locator가 같으므로 slot 대조에는 손실이 없다).
+        key = (entry["document_id"], "".join((entry["quoted_text"] or "").split()))
+        if key in seen:
+            return
+        seen.add(key)
+        out.append(entry)
+
+    # 최종 답에 실제로 쓰인 근거(값을 확정한 slot 매치)를 자유 자리 발췌보다 앞에 싣는다.
+    matches = sorted(state.get("evidence_matches") or [],
+                     key=lambda m: 0 if m.get("slot") != "answer" else 1)
+    for match in matches:
         locator = source_locator_of(match)
         base = {
             "document_id": match["doc_id"],
@@ -80,10 +94,10 @@ def retrieved_context_of(state: Mapping[str, Any]) -> list[dict[str, Any]]:
             "slot_name": match["slot"],
             "chunk_id": match["chunk_id"],
         }
-        out.append({**base, "quoted_text": match["evidence_text"]})
+        push({**base, "quoted_text": match["evidence_text"]})
         picked = match.get("picked_value")
         if picked and picked != match["evidence_text"]:
-            out.append({**base, "quoted_text": picked})
+            push({**base, "quoted_text": picked})
     return out
 
 

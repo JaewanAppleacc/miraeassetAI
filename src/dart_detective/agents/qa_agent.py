@@ -644,12 +644,15 @@ def slot_label(slot: str) -> str:
 
 
 def fallback_answer(matches: Sequence[EvidenceMatch],
-                    exclude_texts: frozenset[str] = frozenset()) -> tuple[str, str]:
+                    exclude_texts: frozenset[str] = frozenset(),
+                    restrict_doc: str = "") -> tuple[str, str]:
     """LLM 없이 만드는 답변. 값과 인용 전부 원문 그대로라 항상 grounded다.
 
     exclude_texts: 대량보유 파서가 소비한 행(공백 정규화) — 그 행의 값은 '공시에서 확인한
     값' 문장으로 이미 나가므로 원문 덤프에서만 숨긴다. 덤프 전체를 끄지 않는 이유(§3-5):
     보유목적·보고사유처럼 파서가 다루지 않는 slot의 근거가 사라지면 안 된다.
+    restrict_doc: 파서가 대상 문서를 확정했으면 자유 자리(answer) 덤프는 그 문서의 행으로
+    제한한다 — 다른 보고자·다른 날짜 보고서의 행이 답 본문에 섞이면 안 된다(최종 검수 5).
 
     값까지 확정한 자리(picked_value)는 "항목: 값" 문장으로 정리한다 — 발췌 줄만
     나열하면 표 머리글 조각이 섞여 읽기 어렵다(Phase 10 실측: LLM 답변이 폐기된
@@ -669,7 +672,9 @@ def fallback_answer(matches: Sequence[EvidenceMatch],
                 "질문을 좁히거나 기간·기업 조건을 명시해야 한다.")
     valued = [m for m in matches if m.picked_value and m.slot != ANSWER_SLOT]
     rest = [m for m in matches if m not in valued
-            and "".join(m.evidence_text.split()) not in exclude_texts]
+            and "".join(m.evidence_text.split()) not in exclude_texts
+            and (not restrict_doc or m.slot != ANSWER_SLOT
+                 or m.doc_id == restrict_doc)]
     parts: list[str] = []
     if valued:
         parts.append("공시에서 확인한 값:")
@@ -739,6 +744,73 @@ def _promote_holding_matches(state: AgentState,
                 evidence_text=ex.line, section_path=ex.section_path,
                 confidence=0.9, reason="대량보유 서식 파서(기준일·보고자 결박)",
                 picked_value=ex.value, node_index=ex.node_index, rcept_no=ex.rcept_no))
+
+
+# 파서가 다루지 않는 대량보유 서술 항목 — 질문이 이걸 물으면 계산이 있어도 LLM을 부른다
+# (최종 검수 3: derived 존재만으로 LLM을 끄면 보유목적 답변 기회가 사라진다).
+HOLDING_LLM_TOPICS = ("보유목적", "보고사유", "변동사유", "취득자금")
+
+
+def _holding_llm_topics(question: str,
+                        holding: "calculator.HoldingParseResult") -> tuple[str, ...]:
+    """파서가 결정론으로 채우지 못한, 질문이 요구한 대량보유 항목들."""
+    topics = [w for w in HOLDING_LLM_TOPICS if w in question]
+    if (any(w in question for w in ("보고자", "본인 성명"))
+            and not any(v.slot == calculator.REPORTER_SLOT for v in holding.values)):
+        topics.append("보고자")
+    return tuple(topics)
+
+
+# ---------- 3-2. 신청/승인 이분 질문 (고정 서식 '품목허가 신청(허가)일' 필드) ----------
+# 실측(알테오젠 테르가제주): LLM 답이 폐기되면 원문 장문 덤프가 나갔다. 서식 필드에
+# 신청일·허가일이 함께 적히므로 허가일 존재 여부로 결정론 판정이 가능하다(최종 검수 6).
+
+_FIELD_DATE = r"((?:19|20)\d{2}\s*[.\-년/]\s*\d{1,2}\s*[.\-월/]\s*\d{1,2}\s*일?)"
+_APPLICATION_DATE_RE = re.compile(r"신청일\s*[::]?\s*[--]?\s*" + _FIELD_DATE)
+_APPROVAL_DATE_RE = re.compile(r"허가일\s*[::]?\s*[--]?\s*" + _FIELD_DATE)
+
+
+def approval_or_application(question: str, matches: Sequence[EvidenceMatch],
+                            chunks: Sequence[RetrievedChunk]) -> tuple[str, str] | None:
+    """"신청 사실인가, 승인 사실인가" 이분 질문의 결정론 답. 판정 불가면 None.
+
+    근거는 '신청일: X - 허가일: Y'가 한 줄에 적힌 고정 서식 필드뿐이다. 질문에 날짜가
+    있으면 그 날짜가 실린 필드 행으로 결박한다(같은 문서에 다른 품목의 필드가 공존한다 —
+    알테오젠 실측). 서로 다른 필드 값이 남으면 판정하지 않는다."""
+    if "신청" not in question or not any(w in question for w in ("승인", "허가")):
+        return None
+    if "인가" not in question and "입니까" not in question:
+        return None
+    lines = list(dict.fromkeys(
+        [m.evidence_text for m in matches]
+        + [ln for c in list(chunks)[:ANSWER_CHUNKS] for ln in chunk_lines(c)]))
+    q_dates = set(calculator._dates_in(question))
+    hits: list[tuple[str, str, str]] = []
+    for ln in lines:
+        if "신청일" not in ln:
+            continue
+        app = _APPLICATION_DATE_RE.search(ln)
+        appr = _APPROVAL_DATE_RE.search(ln)
+        if not app and not appr:
+            continue
+        app_d = app.group(1).strip() if app else ""
+        appr_d = appr.group(1).strip() if appr else ""
+        if q_dates and not (set(calculator._dates_in(ln)) & q_dates):
+            continue                    # 질문이 지목한 날짜가 없는 필드(다른 품목) 제외
+        hits.append((ln, app_d, appr_d))
+    uniq = {(a, b) for _, a, b in hits}
+    if len(uniq) != 1:
+        return None                     # 필드가 없거나 서로 다른 값 — fail-closed
+    line, app_d, appr_d = hits[0]
+    if appr_d:
+        head = ("이 공시는 품목허가 신청이 아니라 품목허가 승인(허가) 사실을 알리는 공시다."
+                + (f" 신청일은 {app_d}이고," if app_d else "")
+                + f" 허가일은 {appr_d}이다.")
+    elif app_d:
+        head = f"이 공시는 품목허가 승인이 아니라 품목허가 신청 사실을 알리는 공시다. 신청일은 {app_d}이다."
+    else:
+        return None
+    return head, line
 
 
 def llm_context(chunks: Sequence[RetrievedChunk],
@@ -1058,7 +1130,13 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
     # 크레딧을 쓰기 전에 비용과 문맥 크기를 가늠할 수 있다.
     n_context = (llm_context_chunks if llm_context_chunks is not None
                  else state.route.budget.context_chunks)
-    context = llm_context(state.retrieval_results, n_context)
+    context_pool = state.retrieval_results
+    if holding:
+        # 파서가 대상 문서를 확정했다 — LLM 발췌도 그 문서로 제한한다(최종 검수 2:
+        # 다른 날짜·다른 보고자 보고서의 값이 claim으로 섞이는 것을 원천 차단).
+        bound_chunks = [c for c in state.retrieval_results if c.doc_id == holding.doc_id]
+        context_pool = bound_chunks or state.retrieval_results
+    context = llm_context(context_pool, n_context)
     state.llm_context_chunk_ids = tuple(c.chunk_id for c in context)
     user_prompt = build_user_prompt(question, state.evidence_matches, context)
     state.prompt_chars = len(user_prompt)
@@ -1098,13 +1176,32 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
         sources_by_doc.setdefault(str(s.get("document_id") or ""), []).append(str(s.get("text") or ""))
     doc_meta_all = {c.doc_id: dict(c.metadata) for c in state.retrieval_results}
     holding_excl = holding.consumed_texts if holding else frozenset()
-    answer, uncertainty = fallback_answer(state.evidence_matches,
-                                          exclude_texts=holding_excl)
+    answer, uncertainty = fallback_answer(
+        state.evidence_matches, exclude_texts=holding_excl,
+        restrict_doc=holding.doc_id if holding else "")
     if holding and holding.missing_slots:
         # §3-5 부분 답변: 확인된 값은 위 문장으로 나가고, 없는 자리는 명시한다 —
         # 다른 보고자의 행으로 빈자리를 채우지 않는다.
         answer = (f"{answer}\n\n다음 항목은 검색된 근거에서 확인하지 못했다: "
                   + ", ".join(holding.missing_slots) + ".")
+    binary = approval_or_application(question, state.evidence_matches,
+                                     state.retrieval_results)
+    if binary:
+        # 신청/승인 이분 질문 — 원문 덤프 대신 판정 문장으로 직접 답한다(최종 검수 6).
+        answer, src_line = binary
+        uncertainty = "판정은 공시의 '신청일·허가일' 서식 필드에서 결정론으로 읽었다."
+        if not any("".join(m.evidence_text.split()) == "".join(src_line.split())
+                   for m in state.evidence_matches):
+            src_chunk = next((c for c in state.retrieval_results
+                              if src_line in c.evidence_text), None)
+            if src_chunk is not None:
+                state.evidence_matches.append(EvidenceMatch(
+                    slot=ANSWER_SLOT, chunk_id=src_chunk.chunk_id,
+                    doc_id=src_chunk.doc_id, evidence_text=src_line,
+                    section_path=src_chunk.section_path, confidence=0.9,
+                    reason="신청/허가일 서식 필드(이분 판정 근거)",
+                    node_index=src_chunk.node_index,
+                    rcept_no=str(src_chunk.metadata.get("rcept_no") or "")))
     det_template = (answer, uncertainty)     # ⑨ 폴백 ②단(템플릿)도 같은 결정론 답을 쓴다
     if state.derived:
         answer = calculator.describe(state.derived) + "\n\n" + answer
@@ -1128,7 +1225,10 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
 
     # 계산 결과가 있으면 LLM을 부르지 않는다: 답에 필요한 값이 이미 확정돼 있고,
     # LLM이 다시 계산하면 틀린 숫자로 덮어쓸 위험만 남는다(호출 비용도 든다).
-    if state.derived and llm is not None:
+    # 예외(최종 검수 3): 대량보유 질문이 파서가 못 채우는 항목(보유목적·보고사유·보고자)을
+    # 함께 물으면, 계산이 있어도 그 항목을 위해 LLM을 부른다 — 발췌는 대상 문서로 제한돼 있다.
+    llm_topics = _holding_llm_topics(question, holding) if holding else ()
+    if state.derived and llm is not None and not llm_topics:
         state.llm = {"used": False, "skipped": "deterministic_calculation"}
         llm = None
 
@@ -1176,6 +1276,17 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
                 state.llm["degraded"] = True
                 state.llm["degraded_reason"] = "unsupported"
                 state.llm["degraded_answer"] = llm_answer
+            elif holding and any(
+                    (c.get("document_id") or "").startswith("holding")
+                    and c.get("document_id") != holding.doc_id
+                    for c in llm_citations):
+                # 파서가 대상 보고서를 확정했는데 LLM이 **다른** 대량보유 보고서를 인용했다 —
+                # 다른 날짜·다른 보고자의 값이 한 답변에 섞이는 경로(최종 검수 1, 삼성전기
+                # 실측: 과거 보고서 값 + 대상 보고서 값이 나란히 SUPPORTED로 나감). 폐기하면
+                # 결정론 답(파서 값)이 최종본이다.
+                state.llm["degraded"] = True
+                state.llm["degraded_reason"] = "holding_doc_unbound"
+                state.llm["degraded_answer"] = llm_answer
             elif not llm_citations or any(
                     c.get("check") in ("quote_grounded", "citation_present")
                     and not c.get("passed") for c in check["checks"]):
@@ -1212,6 +1323,10 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
                         {"document_id": m.doc_id, "quote_or_fact": m.evidence_text}
                         for m in preserved]
                     state.llm["preserved_values"] = len(preserved)
+                if state.derived:
+                    # LLM 답을 채택해도 코드 계산 문장은 유지한다 — 잔여 항목(보유목적 등)
+                    # 때문에 LLM을 부른 경우 증감 답이 사라지면 안 된다(최종 검수 3).
+                    answer = calculator.describe(state.derived) + "\n\n" + answer
         except (LLMUnavailable, Exception) as exc:  # noqa: BLE001 — 어떤 실패든 fallback
             state.llm = {"used": False, "error": f"{type(exc).__name__}: {exc}"}
         state.timings["llm_ms"] = int((time.perf_counter() - t_llm) * 1000)

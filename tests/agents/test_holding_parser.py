@@ -87,10 +87,101 @@ def test_change_pair_is_derived_with_sign():
     assert by_kind[("holding_change", "%p")].value == "-1.13"
 
 
-def test_reporter_is_extracted_from_current_row():
-    got = parse()
-    vals = values_by_slot(got)
+def test_reporter_is_extracted_when_question_asks():
+    q = QUESTION.replace("보유주식등의 수와 보유비율은", "보고자와 보유주식등의 수·보유비율은")
+    vals = values_by_slot(parse(question=q))
     assert vals["보고자"] == "MassachusettsFinancialServicesCompany"
+
+
+def test_reporter_not_emitted_unless_asked():
+    """질문하지 않은 보고자를 자동 출력하지 않는다(최종 검수 4)."""
+    assert "보고자" not in values_by_slot(parse())
+
+
+def test_reporter_only_question_omits_values():
+    q = ("Massachusetts Financial Services Company이(가) 아모레퍼시픽에 대해 제출한 "
+         "대량보유상황보고서(보고서작성기준일 2024년 03월 22일)의 보고자 본인 성명은 무엇인가?")
+    got = parse(question=q)
+    vals = values_by_slot(got)
+    assert vals == {"보고자": "MassachusettsFinancialServicesCompany"}
+    assert got.derived == () and got.missing_slots == ()
+
+
+def test_period_filter_prev_only_question():
+    q = ("Massachusetts Financial Services Company이(가) 아모레퍼시픽에 대해 제출한 "
+         "대량보유상황보고서(보고서작성기준일 2024년 03월 22일)의 직전 보고서 "
+         "보유주식등의 수는 몇 주인가?")
+    got = parse(question=q)
+    vals = values_by_slot(got)
+    assert vals["직전 보고서 보유주식등의 수"] == "2,925,317"
+    assert "이번 보고서 보유주식등의 수" not in vals   # 묻지 않은 기간은 싣지 않는다
+    assert got.missing_slots == ()                     # 요청 밖 자리는 missing도 아니다
+
+
+# ---------- 고려아연 실물(holding_20240904000440) — 요약표 그룹 분리·표지 보고자 ----------
+
+KZ_NODE0 = (
+    "(일반서식 : 자본시장과 금융투자업에 관한 법률 제147조에 의한 보고 중 '경영권에 영향을 주기 위한 목적'의 경우) | (일반서식 : 자본시장과 금융투자업에 관한 법률 제147조에 의한 보고 중 '경영권에 영향을 주기 위한 목적'의 경우) | (일반서식 : 자본시장과 금융투자업에 관한 법률 제147조에 의한 보고 중 '경영권에 영향을 주기 위한 목적'의 경우)\n"
+    " |  | \n"
+    "금융위원회 귀중 | 보고의무발생일　 : | 2024년 09월 02일\n"
+    "한국거래소 귀중 | 보고서작성기준일 : | 2024년 09월 04일\n"
+    " | 보고자 : | 최윤범"
+)
+
+KZ_NODE1 = (
+    "요약정보 | 요약정보 | 요약정보 | 요약정보\n"
+    "발행회사명 | 고려아연(주) | 발행회사와의 관계 | 임원(등기)\n"
+    "보고구분 | 변동ㆍ변경 | 변동ㆍ변경 | 변동ㆍ변경\n"
+    "보유주식등의 수 및 보유비율 |  | 보유주식등의 수 | 보유비율\n"
+    "보유주식등의 수 및 보유비율 | 직전 보고서 | 10,071,580 | 48.65\n"
+    "보유주식등의 수 및 보유비율 | 이번 보고서 | 10,098,385 | 48.78\n"
+    "주요계약체결 주식등의 수 및 비율 |  | 주식등의 수 | 비율\n"
+    "주요계약체결 주식등의 수 및 비율 | 직전 보고서 | 291,188 | 1.41\n"
+    "주요계약체결 주식등의 수 및 비율 | 이번 보고서 | 291,188 | 1.41\n"
+    "의결권의 수 및 보유비율 |  | 의결권의 수 | 보유비율\n"
+    "의결권의 수 및 보유비율 | 직전 보고서 | - | -\n"
+    "의결권의 수 및 보유비율 | 이번 보고서 | - | -\n"
+    "주요계약체결 의결권의 수 및비율 |  | 의결권의 수 | 비율\n"
+    "주요계약체결 의결권의 수 및비율 | 직전 보고서 | - | -\n"
+    "주요계약체결 의결권의 수 및비율 | 이번 보고서 | - | -\n"
+    "보고사유 | - 보유주식수 변동- 보유주식 등에 관한 계약의 변경 | - 보유주식수 변동- 보유주식 등에 관한 계약의 변경 | - 보유주식수 변동- 보유주식 등에 관한 계약의 변경"
+)
+
+KZ_DOC = "holding_20240904000440"
+KZ_QUESTION = ("고려아연의 2024-09-04 대량보유상황보고서(변동)에서 보고자, 보유주식등의 수ㆍ"
+               "보유비율의 직전ㆍ이번 보고서 변화와 보유목적을 알려줘.")
+
+
+def kz_chunks():
+    return [chunk(KZ_NODE0, doc_id=KZ_DOC, chunk_id="kz-c0", filer="최윤범", node_index=0),
+            chunk(KZ_NODE1, doc_id=KZ_DOC, chunk_id="kz-c1", filer="최윤범", node_index=1)]
+
+
+def test_korea_zinc_summary_groups_do_not_conflict():
+    """주요계약체결·의결권 그룹이 기본 그룹과 합쳐져 충돌 폐기되던 확정 버그(최종 검수 2)."""
+    got = parse(question=KZ_QUESTION, chunks=kz_chunks())
+    assert got is not None
+    vals = values_by_slot(got)
+    assert vals["직전 보고서 보유주식등의 수"] == "10,071,580"
+    assert vals["직전 보고서 보유비율"] == "48.65"
+    assert vals["이번 보고서 보유주식등의 수"] == "10,098,385"
+    assert vals["이번 보고서 보유비율"] == "48.78"
+    assert "291,188" not in set(vals.values())          # 주요계약체결 그룹 값 미혼입
+    by_unit = {d.unit: d.value for d in got.derived if d.kind == "holding_change"}
+    assert by_unit["주"] == "26,805" and by_unit["%p"] == "0.13"
+
+
+def test_korea_zinc_cover_page_reporter_promoted():
+    got = parse(question=KZ_QUESTION, chunks=kz_chunks())
+    rep = next(v for v in got.values if v.slot == "보고자")
+    assert rep.value == "최윤범"
+    assert "보고자" in rep.line and rep.node_index == 0  # 표지 행 provenance
+
+
+def test_korea_zinc_other_group_rows_are_consumed():
+    got = parse(question=KZ_QUESTION, chunks=kz_chunks())
+    row = "주요계약체결 주식등의 수 및 비율 | 직전 보고서 | 291,188 | 1.41"
+    assert "".join(row.split()) in got.consumed_texts   # 덤프로 재노출 금지
 
 
 def test_consumed_texts_cover_used_rows_whitespace_normalized():
