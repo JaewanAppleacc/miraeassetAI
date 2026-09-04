@@ -178,6 +178,17 @@ def test_korea_zinc_cover_page_reporter_promoted():
     assert "보고자" in rep.line and rep.node_index == 0  # 표지 행 provenance
 
 
+def test_korea_zinc_purpose_inferred_from_general_form():
+    """보유목적 텍스트가 문서에 없다 — 일반서식 구분 문구가 유일한 근거(실측).
+
+    서식이 '경영권에 영향을 주기 위한 목적의 경우' 전용이므로 범주를 결정론으로 확정한다.
+    LLM이 이 문구를 읽어 답하다 실행마다 흔들리던 변동성을 제거한다."""
+    got = parse(question=KZ_QUESTION, chunks=kz_chunks())
+    purpose = next(v for v in got.values if v.slot == "보유목적")
+    assert purpose.value == "경영권 영향"
+    assert "일반서식" in purpose.line                    # 서식 구분 행이 근거
+
+
 def test_korea_zinc_other_group_rows_are_consumed():
     got = parse(question=KZ_QUESTION, chunks=kz_chunks())
     row = "주요계약체결 주식등의 수 및 비율 | 직전 보고서 | 291,188 | 1.41"
@@ -189,6 +200,7 @@ def test_korea_zinc_other_group_rows_are_consumed():
 SE_DOC = "holding_20260220000569"
 SE_FULL_REPORTER = "BlackRock Fund Advisors위 대리인  변호사 윤태한               변호사 한병하"
 SE_NODE0 = (
+    "(약식서식 : 자본시장과 금융투자업에 관한 법률 제147조에 의한 보고 중 '경영권에 영향을 주기 위한 목적'이 아닌 경우 및 보고자가 동조 제1항 후단에 따른 전문투자자인 경우) | (약식서식) | (약식서식)\n"
     "금융위원회 귀중 | 보고의무발생일　 : | 2026년 02월 12일\n"
     "한국거래소 귀중 | 보고서작성기준일 : | 2026년 02월 12일\n"
     f" | 보고자 : | {SE_FULL_REPORTER}"
@@ -247,10 +259,12 @@ def test_cover_full_reporter_name_beats_history_abbreviation():
 
 
 def test_purpose_and_report_kind_extracted_from_fixed_fields():
+    """명시 필드가 서식 추론보다 우선한다 — 약식서식('아닌 경우')은 범주 추론도 없다."""
     got = parse(question=SE_QUESTION, chunks=se_chunks())
     vals = values_by_slot(got)
     assert vals["보유목적"] == "단순투자"
     assert vals["보고구분"] == "신규"
+    assert "경영권 영향" not in set(vals.values())
 
 
 def test_explicit_dash_without_new_kind_still_blocks_backfill():

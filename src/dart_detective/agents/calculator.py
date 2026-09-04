@@ -606,6 +606,23 @@ def _field_value(lines: Sequence[tuple[str, dict]], name: str) -> dict | None:
     return found
 
 
+# 대량보유 서식 구분 문구가 보유목적 범주를 법정으로 명시한다:
+#   일반서식 "… '경영권에 영향을 주기 위한 목적'의 경우"  → 보유목적 = 경영권 영향
+#   약식서식 "… 목적'이 아닌 경우 …"                     → 범주 확정 불가(일반투자/단순투자 갈림)
+# 고려아연 실측: 문서 어디에도 '보유목적' 텍스트가 없고 이 서식 문구가 유일한 근거였다 —
+# LLM이 이걸 읽어 답하다 실행마다 흔들렸다. 명시 필드가 있으면 필드가 우선한다.
+_FORM_MGMT_PURPOSE = "경영권에영향을주기위한목적"
+
+
+def _form_purpose(lines: Sequence[tuple[str, dict]]) -> dict | None:
+    for text, src in lines:
+        sq = _squash(text)
+        if (_FORM_MGMT_PURPOSE in sq and "의경우" in sq and "아닌경우" not in sq
+                and "서식" in sq):
+            return {"value": "경영권 영향", "line": text, "src": src}
+    return None
+
+
 def _cover_reporter(lines: Sequence[tuple[str, dict]]) -> dict | None:
     """표지의 '보고자 : 이름' 행. 연혁표가 없는 문서(변동 보고서 등)의 보고자 출처.
 
@@ -730,8 +747,9 @@ def _doc_profile(doc_id: str, line_groups: Sequence[Sequence[tuple[str, dict]]],
         "reporter_src": reporter_src, "reporter_name": reporter_name,
         "consumed": consumed,
         # 요약정보 단독 항목 — 보고구분(신규/변동)·보유목적·보고사유 결정론 추출.
+        # 보유목적은 명시 필드가 없으면 서식 구분 문구(일반서식=경영권 영향)로 확정한다.
         "report_kind": _field_value(all_lines, "보고구분"),
-        "purpose": _field_value(all_lines, "보유목적"),
+        "purpose": _field_value(all_lines, "보유목적") or _form_purpose(all_lines),
         "report_reason": _field_value(all_lines, "보고사유"),
     }
 
