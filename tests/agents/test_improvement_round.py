@@ -105,6 +105,23 @@ def test_annual_comparison_rejects_quarterly_report_values():
     assert matches[0].picked_value == "32,978"
 
 
+def test_plain_year_question_prefers_annual_report_over_quarterly():
+    """"2025년 실적" — 기간 단어가 없으면 사업보고서(12월) 값이 답이다(HMM: 3분기 9개월 누적 8,183,821 실측)."""
+    annual = _chunk("구분 | 제 50 기 | 제 49 기\n매출액 | 10,891,443 | 8,400,969", "periodic_2025_annual", 2025, 12)
+    q3 = _chunk("구분 | 제 50 기 3분기 | 제 49 기 3분기\n매출액 | 8,183,821 | 6,000,000", "periodic_2025_q3", 2025, 9)
+    matches = qa_agent.match_evidence(["매출액_2025"], [q3, annual],
+                                      question="HMM의 2023년과 2025년 연결 실적을 비교했을 때 매출액은?",
+                                      prefer_annual=True)
+    assert matches[0].doc_id == "periodic_2025_annual" and matches[0].picked_value == "10,891,443"
+    assert qa_agent.period_months("HMM의 2023년과 2025년 연결 실적") == frozenset()
+
+
+def test_question_reporter_reads_subject_of_submitted_verb():
+    assert calculator._question_reporter("2025년 5월 영풍이 제출한 고려아연 대량보유 보고서에서") == "영풍"
+    assert calculator._question_reporter("국민연금공단이 보고한 삼성전자 지분") == "국민연금공단"
+    assert calculator._question_reporter("고려아연의 2024-09-04 대량보유상황보고서(변동)에서 보고자를 알려줘") == ""
+
+
 def test_magnitude_gap_blocks_mixed_unit_calculation():
     """원 단위 표와 백만원 표가 섞이면(5,573만% 증가 실측) 계산하지 않는다."""
     got = calculator.derive("2023년과 2025년 매출액은 얼마나 변동했는가?", ["매출액_2023", "매출액_2025"],

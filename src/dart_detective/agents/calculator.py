@@ -345,9 +345,12 @@ _HOLDING_DATE_RE = re.compile(
     r"((?:19|20)\d{2})\s*[.\-년/]\s*(\d{1,2})\s*[.\-월/]\s*(\d{1,2})\s*일?")
 # 값 칸 판정: 금액·비율만("-"·날짜·문장은 값이 아니다 → 그 행 미사용).
 _PURE_CELL_RE = re.compile(r"^\(?-?\d[\d,]*(?:\.\d+)?\)?%?$")
-# 질문의 보고자: "X이(가) Y에 대해 제출한" / "보고자: X" 문형만 신뢰한다.
+# 질문의 보고자: "X이(가) Y에 대해 제출한" / "보고자: X" / "X이 제출한·보고한" 문형만 신뢰한다.
 _Q_REPORTER_RE = re.compile(r"([^,.\n]{2,80}?)\s*이\(가\)")
 _Q_REPORTER_COLON_RE = re.compile(r"보고자\s*[::]\s*([^),\n]{2,60})")
+# "2025년 5월 영풍이 제출한 고려아연 대량보유 보고서" — 주어 '영풍'(gold25 Q03 실측: 같은 날
+# 다른 보고서를 LLM이 답함). 조사 앞 어절 하나만 잡는다(회사명은 띄어쓰기 없이 오는 서식).
+_Q_REPORTER_VERB_RE = re.compile(r"([A-Za-z가-힣㈜()&]{2,30})(?:이|가)\s*(?:제출|보고|신고)한")
 
 
 @dataclass(frozen=True)
@@ -444,6 +447,9 @@ def _question_reporter(question: str) -> str:
     if m:
         return m.group(1).strip()
     m = _Q_REPORTER_RE.search(question or "")
+    if m:
+        return m.group(1).strip()
+    m = _Q_REPORTER_VERB_RE.search(question or "")
     return m.group(1).strip() if m else ""
 
 

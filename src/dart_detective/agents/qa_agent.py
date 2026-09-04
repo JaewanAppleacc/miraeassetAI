@@ -431,6 +431,7 @@ SEPARATE_WORDS = ("별도", "개별")
 SCOPE_BONUS = 0.6       # 질문이 요구한 쪽 표에 주는 가산점
 SCOPE_PENALTY = 0.6     # 반대쪽 표에 주는 감점
 SUMMARY_TABLE_BONUS = 2.0   # 같은 기간 대조에서 요약재무정보 표 우선(검색 순위 점수 1.0을 넘김)
+ANNUAL_BONUS = 1.0          # 기간 단어 없는 연도 질문에서 사업보고서(12월 기준) 값 우선
 
 
 def wanted_scope(question: str) -> str:
@@ -490,7 +491,8 @@ def match_evidence(slots: Sequence[str], chunks: Sequence[RetrievedChunk],
                    drop: frozenset[str] = frozenset(),
                    scopes: Mapping[str, Mapping[int, str]] | None = None,
                    bind_doc_year: bool = False,
-                   bind_months: frozenset[int] = frozenset()) -> list[EvidenceMatch]:
+                   bind_months: frozenset[int] = frozenset(),
+                   prefer_annual: bool = False) -> list[EvidenceMatch]:
     """slot마다 가장 잘 맞는 청크를 고른다. 근거가 없으면 그 slot은 비운다.
 
     선택은 결정론적이다 — 지표가 행 레이블에 있는지, 연도가 청크/문서에 있는지,
@@ -582,6 +584,12 @@ def match_evidence(slots: Sequence[str], chunks: Sequence[RetrievedChunk],
                 continue                # 같은 기간 대조 — 다른 연도 문서의 비교 열은 쓰지 않는다
             if year is not None and bind_months and chunk.metadata.get("base_month") not in bind_months:
                 continue                # 1분기(3월) 질문에 3분기(9월) 보고서를 쓰지 않는다(LIG넥스원 실측)
+            if year is not None and prefer_annual and chunk.metadata.get("base_month") == 12:
+                # "2025년 실적"처럼 기간 단어가 없는 연도 질문은 사업보고서(연간) 값이 답이다 —
+                # 3분기보고서의 9개월 누적(HMM 8,183,821 실측)이 검색 순위로 이기지 못하게 한다.
+                # 연간 문서가 검색에 없으면 자연히 다른 문서로 내려간다(hard 결박 아님).
+                weight += ANNUAL_BONUS
+                reasons.append("연간 보고서")
             if year is not None:
                 cols = period_columns(chunk)
                 if cols:
@@ -1282,7 +1290,8 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
         drop=corp_tokens(sorted(state.conditions.corps)), scopes=scopes,
         bind_doc_year=same_period,
         bind_months=(period_months(question) if same_period
-                     else frozenset({12}) if annual_only else frozenset()))
+                     else frozenset({12}) if annual_only else frozenset()),
+        prefer_annual=(not same_period and not period_months(question)))
     docs_by_id = getattr(retriever, "docs_by_id", None) or {}
     # 대량보유 서식 파서 — 값을 뽑으면 근거로 승격한다(프롬프트·검증·발췌 모두가 본다).
     holding, bound_docs = _holding_parse(question, state, docs_by_id)
