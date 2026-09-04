@@ -125,6 +125,26 @@ def question_context_numbers(question: str) -> set[str]:
     return out
 
 
+def _context_expressions(text: str) -> set[str]:
+    """날짜·기수 표현을 통째로(공백 제거) 추출한다."""
+    return {_squash(m.group()) for m in _QUESTION_CONTEXT_NUM_RE.finditer(text or "")}
+
+
+def context_number_allowance(question: str, generated: str) -> set[str]:
+    """생성 텍스트에서 허용되는 질문 유래 숫자 = **표현 전체가 그대로 재사용된** 날짜·기수의 숫자만.
+
+    숫자 단위 허용은 "2024년 3월 22일 계약금액은?"의 22를 "계약기간은 22일"로 의미를 바꿔
+    쓰는 전용을 막지 못한다(검수 5차 발견 1). 표현("2024년3월22일") 단위로 정확히 일치할 때만
+    그 표현 안의 숫자를 허용한다 — 부분 표현("22일")은 별개 표현이므로 허용되지 않는다.
+    """
+    q_exprs = _context_expressions(question)
+    allowed: set[str] = set()
+    for e in _context_expressions(generated):
+        if e in q_exprs:
+            allowed |= set(numbers_in(e))
+    return allowed
+
+
 def _years_of(text: str) -> set[str]:
     return {m.group() for m in YEAR_RE.finditer(text or "")}
 
@@ -184,7 +204,7 @@ def _quote_table_columns(quote: str, chunk_texts: Sequence[str],
 
 def validate_claim(claim: Mapping[str, Any], doc_text_squashed: Mapping[str, str],
                    doc_meta: Mapping[str, Mapping[str, Any]],
-                   derived_allowed: set[str], question_numbers: set[str] = frozenset(),
+                   derived_allowed: set[str], question: str = "",
                    doc_chunks: Mapping[str, Sequence[str]] | None = None) -> tuple[bool, list[str]]:
     """(통과 여부, 실패 사유 목록). 사유 코드는 v4 §11 게이트 이름을 그대로 쓴다."""
     fails: list[str] = []
@@ -199,13 +219,11 @@ def validate_claim(claim: Mapping[str, Any], doc_text_squashed: Mapping[str, str
         fails.append("quote_grounded")
 
     quote_nums = set(numbers_in(quote))
-    # 질문 날짜·기수 숫자는 claim 안에서도 같은 문맥(날짜·기수 표현)으로 쓰일 때만 허용한다.
-    # "2024년 3월 22일 매출액은?" → "매출액은 22이다"처럼 날짜 토큰을 값으로 전용하는
-    # 우회를 막는다(검수 4차 발견 1 재현).
-    claim_ctx = question_context_numbers(text)
+    # 질문 유래 숫자는 표현 전체가 그대로 재사용될 때만 허용(검수 4·5차 발견 1 — 숫자 단위
+    # 허용은 "3월 22일"의 22를 "계약기간은 22일"로 전용하는 우회를 남긴다).
+    q_allowed = context_number_allowance(question, text)
     for n in _claim_numbers(text):
-        if (n not in quote_nums and n not in derived_allowed
-                and not (n in question_numbers and n in claim_ctx)):
+        if n not in quote_nums and n not in derived_allowed and n not in q_allowed:
             fails.append(f"numbers_bound:{n}")
     value = claim.get("value")
     if value not in (None, ""):
@@ -215,18 +233,25 @@ def validate_claim(claim: Mapping[str, Any], doc_text_squashed: Mapping[str, str
             fails.append(f"numbers_bound:value:{value}")
 
     period = str(claim.get("period") or "")
+    # 다기간 수치 claim 분리 강제(검수 4·5차 발견 2): 연도 2개 이상 + 숫자 2개 이상이 한
+    # 문장에 있으면 연도-값 결속을 구문 없이 검증할 수 없다 — 스왑("2024년 90, 2023년 100")이
+    # 그대로 통과한다. value 유무·표/문장 여부와 무관하게 폐기해 값별 claim 분리(프롬프트
+    # 규칙)를 강제한다. 유일한 예외: claim이 원문 문장을 **그대로** 옮긴 경우(공백만 무시) —
+    # 순서가 원문에서 왔으므로 스왑이 성립하지 않는다.
+    text_years_all = _years_of(text)
+    if (len(text_years_all) >= 2 and len(_claim_numbers(text)) >= 2
+            and _squash(text.rstrip(". ")) not in _squash(quote)):
+        fails.append("period_bound:multi_period_claim_unsplit")
+
     # 열 대조에 쓸 연도: period 우선. period가 비면 text의 연도가 하나일 때만 쓴다.
     claim_years = _years_of(period)
     multi_year_unsplit = False
     if not claim_years and value not in (None, ""):
-        text_years = _years_of(text)
-        if len(text_years) == 1:
-            claim_years = text_years
-        elif len(text_years) >= 2:
-            # 비교 문장("2024년 90은 2023년 100보다…")은 값의 연도 소속을 구문 없이 특정할 수
-            # 없다. 통과시키면 스왑 오귀속이 그대로 나간다(검수 4차 발견 2) — 다기간 표에서
-            # 왔다면 폐기해서 분리 claim(프롬프트 규칙)을 강제한다. 값별 claim이 따로 오면
-            # 각각 단일 연도 검사로 통과한다.
+        if len(text_years_all) == 1:
+            claim_years = text_years_all
+        elif len(text_years_all) >= 2:
+            # 연도 2개 + 숫자 1개(위 일반 규칙 미해당)도 값의 연도 소속을 특정할 수 없다 —
+            # 다기간 표에서 왔다면 폐기해 분리를 강제한다.
             multi_year_unsplit = True
     for year in _years_of(period):
         meta = doc_meta.get(doc_id) or {}
@@ -318,12 +343,11 @@ def fc_answer(llm: Any, user_prompt: str, *, sources: Sequence[Mapping[str, Any]
         by_doc.setdefault(str(s.get("document_id") or ""), []).append(str(s.get("text") or ""))
     doc_squashed = {d: _squash("\n".join(ts)) for d, ts in by_doc.items()}
     derived_set = {str(d).replace(",", "") for d in derived_allowed}
-    q_nums = question_context_numbers(question)
 
     kept: list[Mapping[str, Any]] = []
     dropped: list[dict[str, Any]] = []
     for c in raw_claims:
-        ok, fails = validate_claim(c, doc_squashed, doc_meta, derived_set, q_nums,
+        ok, fails = validate_claim(c, doc_squashed, doc_meta, derived_set, question,
                                    doc_chunks=by_doc)
         if ok:
             kept.append(c)

@@ -358,3 +358,13 @@ def test_pipeline_result_shape(retriever):
                         "conditions", "retrieval", "validation", "llm"}
     for ev in out["evidence"]:
         assert set(ev) == {"chunk_id", "text", "section_path", "doc_id"}
+
+
+def test_llm_answer_without_citations_is_not_adopted(retriever):
+    """검수 5차 발견 3: 인용 0개인 LLM 답변은 비수치 서술이라도 채택하지 않는다(v4 §11)."""
+    llm = FakeLLM(payload={"answer": "회사는 해운업을 영위한다", "evidence": [],
+                           "uncertainty": ""})
+    state = qa_agent.answer_question(QUESTION, retriever, llm=llm)
+    assert state.llm.get("degraded") is True
+    assert state.llm.get("degraded_reason") == "citation_unbound"
+    assert "회사는 해운업을 영위한다" not in state.answer

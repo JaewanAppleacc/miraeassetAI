@@ -102,8 +102,8 @@ def main(argv: list[str] | None = None) -> int:
             shared[arm] = {"conditions": inp.get("conditions"),
                            "document_ir": inp.get("document_ir"),
                            "universe": inp.get("universe")}
-            if run.get("arm") and run["arm"] != arm:
-                print(f"최종 판정 불가 — {arm}.run.json의 arm={run['arm']} (파일명과 불일치)",
+            if run.get("arm") != arm:
+                print(f"최종 판정 불가 — {arm}.run.json의 arm={run.get('arm')!r} (파일명과 불일치/누락)",
                       file=sys.stderr)
                 return 1
             if not run.get("code_sha256") or not run.get("config_sha256"):
@@ -111,10 +111,19 @@ def main(argv: list[str] | None = None) -> int:
                       file=sys.stderr)
                 return 1
             rpath = args.results_dir / f"{arm}.results.jsonl"
+            # 결과 파일 사후 변조 검출(검수 5차 발견 4): run.json에 기록된 results_sha256과
+            # 실제 파일 해시를 대조한다. 행 수준 config/code SHA는 계약(§1-1)에 없으므로
+            # 요구하지 않는다 — 러너 실행 단위 무결성은 이 파일 해시가 담보한다.
+            actual = hashlib.sha256(rpath.read_bytes()).hexdigest()
+            if run.get("results_sha256") != actual:
+                print(f"최종 판정 불가 — {arm}.results.jsonl 해시가 run.json 기록과 다름 "
+                      f"(기록 {str(run.get('results_sha256'))[:12]}… ≠ 실제 {actual[:12]}…)",
+                      file=sys.stderr)
+                return 1
             bad_rows = sum(1 for line in rpath.open(encoding="utf-8") if line.strip()
-                           and json.loads(line).get("arm") not in (None, arm))
+                           and json.loads(line).get("arm") != arm)
             if bad_rows:
-                print(f"최종 판정 불가 — {arm}.results.jsonl에 다른 arm 행 {bad_rows}건",
+                print(f"최종 판정 불가 — {arm}.results.jsonl에 arm 불일치/누락 행 {bad_rows}건",
                       file=sys.stderr)
                 return 1
         keys = ("conditions", "document_ir", "universe")

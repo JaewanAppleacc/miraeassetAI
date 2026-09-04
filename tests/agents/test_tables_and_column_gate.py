@@ -84,32 +84,33 @@ def test_two_year_value_claim_in_mapped_table_is_dropped():
         assert "period_bound:multi_year_value_unsplit" in fails, (text, fails)
 
 
-def test_two_year_value_claim_outside_table_is_kept():
-    # 다기간 표로 특정되지 않으면(문단 인용 등) 기존 검사만 남는다 — 과잉 폐기 방지.
+def test_two_year_value_claim_outside_table_also_split_enforced():
+    # 5차 정책 변경: 문단 인용이라도 다연도+다숫자 재구성 문장은 폐기한다(스왑과 구분 불가).
+    # 원문 그대로 재인용하는 예외는 test_multi_period_numeric_claim_is_split_enforced가 잠근다.
     chunk = "2024년 매출은 100이고 2023년 매출은 90이었다."
     squashed = {_DOC: grounded_answer._squash(chunk)}
     ok, fails = grounded_answer.validate_claim(
         {"text": "2024년 매출 100은 2023년 90보다 크다", "value": "100", "period": None,
          "doc_id": _DOC, "quote": chunk},
         squashed, {_DOC: {}}, set(), doc_chunks={_DOC: [chunk]})
-    assert ok, fails
+    assert not ok and "period_bound:multi_period_claim_unsplit" in fails
 
 
 def test_question_date_token_cannot_become_a_value():
-    """검수 4차 발견 1: 질문의 날짜 숫자(3·22)를 값으로 전용하면 날조로 잡아야 한다."""
-    q_nums = grounded_answer.question_context_numbers("2024년 3월 22일 매출액은?")
+    """검수 4·5차 발견 1: 질문 날짜 숫자를 값으로도, **다른 날짜형 의미로도** 전용 불가."""
+    q = "2024년 3월 22일 계약금액은 얼마인가?"
+    for text, tok in (("매출액은 22이다", "22"),            # 값으로 전용
+                      ("계약기간은 22일", "22")):           # 날짜형 의미 전용(5차 재현)
+        ok, fails = grounded_answer.validate_claim(
+            {"text": text, "value": None, "period": None,
+             "doc_id": _DOC, "quote": "계약금액 | 100"},
+            {_DOC: grounded_answer._squash("계약금액 | 100")}, {_DOC: {}}, set(), question=q)
+        assert not ok and any(f.startswith(f"numbers_bound:{tok}") for f in fails), (text, fails)
+    # 표현 전체를 그대로 반복하면 허용(원래 오탐 교정 취지 유지).
     ok, fails = grounded_answer.validate_claim(
-        {"text": "매출액은 22이다", "value": None, "period": None,
-         "doc_id": _DOC, "quote": "매출액 | 100"},
-        {_DOC: grounded_answer._squash("매출액 | 100")}, {_DOC: {}}, set(),
-        question_numbers=q_nums)
-    assert not ok and any(f.startswith("numbers_bound:22") for f in fails)
-    # 같은 숫자라도 claim 안에서 날짜 문맥이면 허용(원래 오탐 교정 취지 유지).
-    ok, fails = grounded_answer.validate_claim(
-        {"text": "2024년 3월 22일 기준 매출액은 100이다", "value": "100", "period": None,
-         "doc_id": _DOC, "quote": "매출액 | 100"},
-        {_DOC: grounded_answer._squash("매출액 | 100")}, {_DOC: {}}, set(),
-        question_numbers=q_nums)
+        {"text": "2024년 3월 22일 기준 계약금액은 100이다", "value": "100", "period": None,
+         "doc_id": _DOC, "quote": "계약금액 | 100"},
+        {_DOC: grounded_answer._squash("계약금액 | 100")}, {_DOC: {}}, set(), question=q)
     assert ok, fails
 
 
@@ -141,15 +142,38 @@ def test_relative_header_swap_caught_without_explicit_years():
 def test_question_echo_number_is_not_allowed_as_claim_value():
     """검수 3차 발견 2 재현: 질문의 임의 숫자(999)를 문장으로 반복해도 날조로 잡아야 한다."""
     chunk = "매출액 | 100"
-    q_nums = grounded_answer.question_context_numbers("매출액이 999인가?")
-    assert "999" not in q_nums
+    assert "999" not in grounded_answer.question_context_numbers("매출액이 999인가?")
     ok, fails = grounded_answer.validate_claim(
         {"text": "매출액은 999이다", "value": None, "period": None,
          "doc_id": _DOC, "quote": "매출액 | 100"},
         {_DOC: grounded_answer._squash(chunk)}, {_DOC: {}}, set(),
-        question_numbers=q_nums, doc_chunks={_DOC: [chunk]})
+        question="매출액이 999인가?", doc_chunks={_DOC: [chunk]})
     assert not ok and any(f.startswith("numbers_bound:999") for f in fails)
-    # 날짜·기수형 숫자는 여전히 허용된다(원래 오탐 교정 취지 유지).
-    allowed = grounded_answer.question_context_numbers(
-        "2024년 3월 22일 기준 제3회차 전환사채의 발행 목적은?")
+    # 날짜·기수 표현을 통째로 반복하면 여전히 허용된다(원래 오탐 교정 취지 유지).
+    allowed = grounded_answer.context_number_allowance(
+        "2024년 3월 22일 기준 제3회차 전환사채의 발행 목적은?",
+        "2024년 3월 22일 기준 제3회차 전환사채이다")
     assert {"3", "22"} <= allowed
+
+
+def test_multi_period_numeric_claim_is_split_enforced():
+    """검수 5차 발견 2: 다연도+다숫자 claim은 value 유무·표/문장 무관 폐기(분리 강제).
+    예외는 원문 문장을 그대로 옮긴 경우뿐 — 순서가 원문에서 오므로 스왑 불가."""
+    chunk = "구분 | 2024년 | 2023년\n매출액 | 100 | 90"
+    ok, fails = grounded_answer.validate_claim(
+        {"text": "2024년 매출액은 90이고 2023년 매출액은 100이다", "value": None, "period": None,
+         "doc_id": _DOC, "quote": "매출액 | 100 | 90"},
+        {_DOC: grounded_answer._squash(chunk)}, {_DOC: {}}, set(), doc_chunks={_DOC: [chunk]})
+    assert not ok and "period_bound:multi_period_claim_unsplit" in fails
+    prose = "2024년 매출은 100이고 2023년 매출은 90이었다."
+    ok, fails = grounded_answer.validate_claim(
+        {"text": "2024년 매출은 90이고 2023년 매출은 100이었다", "value": None, "period": None,
+         "doc_id": _DOC, "quote": prose},
+        {_DOC: grounded_answer._squash(prose)}, {_DOC: {}}, set(), doc_chunks={_DOC: [prose]})
+    assert not ok and "period_bound:multi_period_claim_unsplit" in fails
+    # 원문 그대로 재인용은 허용.
+    ok, fails = grounded_answer.validate_claim(
+        {"text": "2024년 매출은 100이고 2023년 매출은 90이었다", "value": None, "period": None,
+         "doc_id": _DOC, "quote": prose},
+        {_DOC: grounded_answer._squash(prose)}, {_DOC: {}}, set(), doc_chunks={_DOC: [prose]})
+    assert ok, fails

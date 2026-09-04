@@ -1047,11 +1047,12 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
                 state.llm["degraded"] = True
                 state.llm["degraded_reason"] = "unsupported"
                 state.llm["degraded_answer"] = llm_answer
-            elif any(c.get("check") in ("quote_grounded", "citation_present")
-                     and not c.get("passed") for c in check["checks"]):
+            elif not llm_citations or any(
+                    c.get("check") in ("quote_grounded", "citation_present")
+                    and not c.get("passed") for c in check["checks"]):
                 # v4 §11: quote_grounded·citation_bound는 hard다. validator가 soft로 두는
-                # 타문서 인용·수치 무인용도 **LLM 답 채택 조건**으로는 hard로 적용한다
-                # (검수 4차 발견 5 — FC 실패 후 JSON 폴백이 계약보다 약하게 채택되던 경로).
+                # 타문서 인용·수치 무인용은 물론, **인용이 아예 없는 LLM 답변**(비수치 서술
+                # 포함)도 채택하지 않는다(검수 5차 발견 3 — 생성 답변은 근거 결박이 계약이다).
                 # 결정론 경로(발췌·템플릿)는 이 조임의 영향을 받지 않는다.
                 state.llm["degraded"] = True
                 state.llm["degraded_reason"] = "citation_unbound"
@@ -1104,10 +1105,9 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
         for m in state.evidence_matches:
             _, nums = grounded_answer.attribution_of(m.doc_id, doc_meta.get(m.doc_id) or {})
             final_derived |= nums
-        # 질문의 날짜·기수형 숫자를, 답변 안에서도 같은 문맥으로 쓰인 것만 허용한다
-        # (검수 3차 발견 2 + 4차 발견 1 — 질문 echo·날짜 토큰 전용 날조 차단).
-        final_derived |= (grounded_answer.question_context_numbers(question)
-                          & grounded_answer.question_context_numbers(answer))
+        # 질문의 날짜·기수 **표현 전체**가 답변에 그대로 재사용된 경우만 허용한다
+        # (검수 3·4·5차 — 질문 echo·날짜 토큰 의미 전용 날조 차단).
+        final_derived |= grounded_answer.context_number_allowance(question, answer)
     state.validation = validator.validate(answer, citations, sources, derived=final_derived)
     if state.validation["status"] == "UNSUPPORTED":
         # ⑨ 3단 폴백(v4 §11) — 최종 답이 게이트를 못 넘으면 수리(OFF)→템플릿→발췌 순서로 대체.

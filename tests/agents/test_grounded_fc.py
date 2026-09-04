@@ -115,10 +115,11 @@ def test_claim_allows_numbers_from_question():
     assert not ok and any(f.startswith("numbers_bound") for f in fails)
     squashed = {DOC: ga._squash(SOURCES[0]["text"])}
     ok, fails = ga.validate_claim(c, squashed, DOC_META, set(),
-                                  question_numbers=set(ga.numbers_in("보고서작성기준일 2024년 03월 22일")))
+                                  question="보고서작성기준일 2024년 03월 22일 매출액은?")
     assert ok, fails
     bad_value = _claim(value="03")                          # 값 자체는 질문 허용 없음
-    ok, fails = ga.validate_claim(bad_value, squashed, DOC_META, set(), question_numbers={"03"})
+    ok, fails = ga.validate_claim(bad_value, squashed, DOC_META, set(),
+                                  question="2024년 03월 22일 기준으로 알려줘")
     assert not ok and any("value" in f for f in fails)
 
 

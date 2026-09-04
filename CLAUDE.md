@@ -73,10 +73,19 @@
   세마포어 획득 후 캐시 재확인(단절 재시도 중복 계산 제거) · **v4 §11 hard 준수: LLM 답 채택 시
   타문서 인용·수치 무인용 폐기(citation_unbound)** — 3차의 "H4 보류"는 스펙 위반이라 철회 ·
   --final pin 확대(universe·arm/파일명·config_sha·행 arm; doc_index는 스택 종속 제외) ·
-  DART_QA_EVAL_PROFILE=1이면 HCX-005+code_sha 없이는 ready=False(team_deploy.md 반영).
+  DART_QA_EVAL_PROFILE=1이면 HCX-005 **구성**+code_sha 없이는 ready=False(team_deploy.md 반영 —
+  실연결 검증은 deploy_probe E2E가 담당, readiness는 구성 강제만).
   judge7: 완전 31·부분 49·**미포함 12**(4회 실행 밴드: 완전 31~34 진동, 미포함 17→12 단조 감소).
   잔여(공개 리스크): 데드라인 경로의 취소는 스레드를 못 멈춤(응답 의무상 유지 — 최대 계산 40s ≪
   예산 290s, 발생 실측 0회) · Anthropic 코드 경로는 존재하나 평가 프로필이 readiness에서 거부.
+- 검수 5차 반영(2026-09-04 · judge8): 날짜·기수 허용을 **표현 전체 일치**로 교체("3월 22일"의
+  22를 "계약기간은 22일"로 의미 전용하는 우회 차단) · 다연도+다숫자 claim은 value·표/문장 무관
+  폐기(원문 그대로 재인용만 예외 — 순서가 원문에서 오므로 스왑 불가) · **LLM 답변은 인용 ≥1
+  없으면 채택 안 함**(비수치 서술 포함, v4 §11) · --final에 results_sha256 파일 해시 대조·
+  run.arm/행 arm 필수(이름 바꿔치기·사후 변조 검출 테스트 잠금).
+  검수 주장 중 기각 2건(사유 기록): 행 수준 config/code SHA 요구는 §1-1 계약에 없음(파일 해시가
+  실행 단위 무결성 담보) · readiness에 HCX 실호출 삽입은 폴링 경로에 지연·429 유발 — 실연결은
+  deploy_probe E2E 담당.
 - **FC maxTokens 1024 = vFINAL 21번 변경 대상**: v4 §7 예산(512/256/768)은 JSON 경로에 그대로,
   FC 전송만 API 하한(1024 미만 40001 실측)으로 상향. Owner(팀 대표) 승인 대기 — 승인 시 이 줄이 로그.
 - 남은 큰 덩어리: 검색손실(~19, 4-arm 승자 확정 후) · EVENT_TRACE(원장 필요, 조건부 — DEV_TUNE 강등 실측 0건이라 ledger는 DEV_TUNE 지표에 +0, 기각) · COMPARISON 열 선택(5/12) · 서술형 자동채점 한계.
