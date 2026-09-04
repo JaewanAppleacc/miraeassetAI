@@ -185,7 +185,8 @@ def test_korea_zinc_purpose_inferred_from_general_form():
     LLM이 이 문구를 읽어 답하다 실행마다 흔들리던 변동성을 제거한다."""
     got = parse(question=KZ_QUESTION, chunks=kz_chunks())
     purpose = next(v for v in got.values if v.slot == "보유목적")
-    assert purpose.value == "경영권 영향"
+    assert purpose.value.startswith("경영권 영향")         # 범주 라벨 + 서식 문구 병기
+    assert "경영권에 영향을 주기 위한 목적" in purpose.value
     assert "일반서식" in purpose.line                    # 서식 구분 행이 근거
 
 

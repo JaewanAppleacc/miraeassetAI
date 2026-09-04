@@ -91,6 +91,19 @@ def unit_of(line: str) -> str:
     return m.group(1) if m else ""
 
 
+# 단위를 못 읽은 두 값의 배율이 이 이상이면 같은 단위로 볼 수 없다(연간 매출이 500배 뛰는
+# 일은 없고, 원↔백만원 혼합은 100만 배다).
+MAGNITUDE_GAP_MAX = Decimal(500)
+
+
+def _magnitude_gap(old_raw: str, new_raw: str) -> Decimal:
+    old, new = parse_number(old_raw), parse_number(new_raw)
+    if old is None or new is None or old == 0 or new == 0:
+        return Decimal(0)
+    big, small = max(abs(old), abs(new)), min(abs(old), abs(new))
+    return big / small
+
+
 def plan_comparisons(question: str,
                      slots: Sequence[str]) -> list[tuple[str, int, int]]:
     """(지표, 이전 연도, 이후 연도) 목록. 확신할 수 없으면 빈 목록.
@@ -255,6 +268,10 @@ def derive(question: str, slots: Sequence[str],
         new_unit = unit_of(lines_by_slot.get(new_slot, ""))
         if old_unit and new_unit and old_unit != new_unit:
             continue                 # 단위가 섞이면 계산하지 않는다
+        if not (old_unit and new_unit) and _magnitude_gap(old_raw, new_raw) >= MAGNITUDE_GAP_MAX:
+            # 단위를 한쪽이라도 못 읽었는데 값이 수백 배 차이 — 원 단위 표와 백만원 표가 섞인
+            # 실측(LIG넥스원: 1,628,530 vs 907,622,648,219 → 5,573만% 증가). 계산하지 않는다.
+            continue
         out.extend(compute(metric, old_slot, old_raw, new_slot, new_raw,
                            unit=old_unit or new_unit))
 
@@ -603,6 +620,9 @@ _FIELD_NAME_RES = {
     "보고구분": re.compile(r"\d*\.?보고구분"),
     "보유목적": re.compile(r"\d*\.?보유목적"),
     "보고사유": re.compile(r"\d*\.?보고사유"),
+    # 요약정보 첫 행 "발행회사명 | X | 발행회사와의 관계 | Y" — 보고자 신원 문맥(gold issuer/relationship).
+    "발행회사명": re.compile(r"발행회사명"),
+    "발행회사와의 관계": re.compile(r"발행회사와의관계"),
 }
 
 
@@ -775,6 +795,11 @@ def _doc_profile(doc_id: str, line_groups: Sequence[Sequence[tuple[str, dict]]],
         "report_kind": _field_value(all_lines, "보고구분"),
         "purpose": _field_value(all_lines, "보유목적") or _form_purpose(all_lines),
         "report_reason": _field_value(all_lines, "보고사유"),
+        "issuer": _field_value(all_lines, "발행회사명"),
+        "relationship": _field_value(all_lines, "발행회사와의 관계"),
+        # 직전/이번 보고서의 작성기준일(연혁표 날짜 셀) — 비교 대상 보고서의 신원.
+        "prev_date_row": resolved["hist"]["직전보고서"],
+        "cur_date_row": cur,
     }
 
 
@@ -929,11 +954,33 @@ def parse_holding_report(question: str, chunks: Sequence[Any],
         values.append(_extract(REPORTER_SLOT, profile["reporter_src"],
                                profile["reporter_name"], doc_id))
         consumed.add(_squash(profile["reporter_src"]["line"]))
+        # 보고자 신원 문맥 — 발행회사명·발행회사와의 관계(요약정보 첫 행). 보고자를 물은 질문에만.
+        for topic, key in (("발행회사명", "issuer"), ("발행회사와의 관계", "relationship")):
+            field = profile.get(key)
+            if field:
+                values.append(_extract(topic, field, field["value"], doc_id))
+                consumed.add(_squash(field["line"]))
+    # 비교 대상 보고서의 작성기준일 — 연혁표 날짜 셀. 값을 실제로 그 기간에서 뽑았을 때만
+    # (신규 보고의 직전 연혁 행은 억제 대상이라 날짜로도 승격하지 않는다).
+    if req["qty"] or req["ratio"]:
+        for period_key, label, hist_label in (("prev", "직전 보고서", "직전보고서"),
+                                              ("cur", "이번 보고서", "이번보고서")):
+            row = profile.get(f"{period_key}_date_row")
+            used = any(k.startswith(f"{hist_label}:") for k in pair)
+            if req[period_key] and used and row and row.get("date"):
+                cells = _cells(row["line"])
+                cell = next((c for c in cells if _dates_in(c) == [row["date"]]), "")
+                if cell:
+                    values.append(_extract(f"{label} 작성기준일", row, cell, doc_id))
     # 질문이 물은 서술 항목이 서식 필드로 확정되면 결정론으로 답한다(LLM 보완 불필요).
     for topic in ("보유목적", "보고사유"):
         field = profile.get({"보유목적": "purpose", "보고사유": "report_reason"}[topic])
         if topic in (question or "") and field:
-            values.append(_extract(topic, field, field["value"], doc_id))
+            value = field["value"]
+            if value == "경영권 영향":
+                # 서식 추론값은 범주 라벨과 서식 문구를 함께 적는다 — 질문·채점 표현이 둘 다 쓰인다.
+                value = "경영권 영향(경영권에 영향을 주기 위한 목적)"
+            values.append(_extract(topic, field, value, doc_id))
             consumed.add(_squash(field["line"]))
     if not values:
         return None

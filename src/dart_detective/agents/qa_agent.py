@@ -365,6 +365,29 @@ _PICK_VALUE_RE = re.compile(r"\(?\d[\d,]*(?:\.\d+)?\)?%?")
 _PICK_DATE_RE = re.compile(r"(?:19|20)\d{2}[-.]\d{1,2}[-.]\d{1,2}")
 
 
+def cumulative_subheader(chunk: RetrievedChunk) -> bool:
+    """분기·반기 손익계산서의 부머리글 "3개월 | 누적 | 3개월 | 누적" 이 있는가.
+
+    이 표는 연도(기수) 머리글 한 칸 아래에 값 열이 두 개씩 붙는다. 반기·분기 "실적"은 누적
+    열이므로(gold·요약재무정보와 일치) 연도 열 번호를 그대로 쓰면 3개월 값을 집는다(현대제철
+    실측: 7,138,316,741,671(2분기 3개월) vs 13,527,367,230,976(반기 누적))."""
+    for ln in chunk_lines(chunk):
+        cells = [c.strip() for c in ln.split("|")]
+        if any("누적" in c for c in cells) and any(c.replace(" ", "") in ("3개월", "3개월분") for c in cells):
+            return True
+    return False
+
+
+def cumulative_column(chunk: RetrievedChunk, cols: Mapping[int, int], year: int) -> int | None:
+    """같은 기간 대조에서 쓸 누적 열. 연도 열 i → 누적 열 2i+1. 연도 머리글이 없으면(3분기 누적표
+    실측 신한지주) 문서 기준연도의 첫 그룹 누적 열 1."""
+    if not cumulative_subheader(chunk):
+        return None
+    if year in cols:
+        return cols[year] * 2 + 1
+    return 1
+
+
 def period_columns(chunk: RetrievedChunk) -> dict[int, int]:
     """표 머리글 → {연도: 값 열 번호}. 로직은 tables.period_columns_of_lines(FC 게이트와 공유).
 
@@ -407,6 +430,7 @@ CONSOLIDATED_WORDS = ("연결",)
 SEPARATE_WORDS = ("별도", "개별")
 SCOPE_BONUS = 0.6       # 질문이 요구한 쪽 표에 주는 가산점
 SCOPE_PENALTY = 0.6     # 반대쪽 표에 주는 감점
+SUMMARY_TABLE_BONUS = 2.0   # 같은 기간 대조에서 요약재무정보 표 우선(검색 순위 점수 1.0을 넘김)
 
 
 def wanted_scope(question: str) -> str:
@@ -430,6 +454,32 @@ def scope_of_chunk(chunk: RetrievedChunk, scopes: Mapping[int, str]) -> str:
     return scopes.get(chunk.node_index, "")
 
 
+# 분기/반기 질문이 지목한 보고서 기준월. "1분기"→3, "반기"→6, "3분기"→9, "(2023.03)"·"9월 30일"·
+# "09.30"·"1월~6월" 표기도 읽는다. 여러 월이 나오면 전부 허용(각 슬롯의 연도 문서 중 그 월만).
+_PERIOD_MONTH_RES = (
+    (re.compile(r"1\s*분기"), 3), (re.compile(r"2\s*분기"), 6),
+    (re.compile(r"3\s*분기"), 9), (re.compile(r"4\s*분기"), 12), (re.compile(r"반기"), 6),
+)
+_MONTH_TOKEN_RE = re.compile(r"(?:20\d{2}\s*[.년]\s*)?(\d{1,2})\s*(?:[.월]\s*(?:\d{1,2}\s*일?)?)?\s*(?=[)~\s누적말까지]|$)")
+
+
+def period_months(question: str) -> frozenset[int]:
+    months: set[int] = set()
+    for rx, month in _PERIOD_MONTH_RES:
+        if rx.search(question or ""):
+            months.add(month)
+    # "(2023.03)" / "2023.09.30" / "2023년 1월~6월" — 기간 끝 월
+    for m in re.finditer(r"20\d{2}\s*[.년]\s*(\d{1,2})\s*(?:[.월]\s*(\d{1,2}))?", question or ""):
+        mm = int(m.group(1))
+        if 1 <= mm <= 12 and mm in (3, 6, 9, 12):
+            months.add(mm)
+    for m in re.finditer(r"(\d{1,2})\s*월\s*[~∼-]\s*(\d{1,2})\s*월", question or ""):
+        end = int(m.group(2))
+        if end in (3, 6, 9, 12):
+            months.add(end)
+    return frozenset(months)
+
+
 def corp_tokens(corps: Sequence[str]) -> frozenset[str]:
     """기업명에서 나온 토큰. 줄 고르기에서 빼려고 모은다."""
     return frozenset(t for corp in corps for t in tokenize(corp))
@@ -438,12 +488,17 @@ def corp_tokens(corps: Sequence[str]) -> frozenset[str]:
 def match_evidence(slots: Sequence[str], chunks: Sequence[RetrievedChunk],
                    *, limit: int = MAX_EVIDENCE, question: str = "",
                    drop: frozenset[str] = frozenset(),
-                   scopes: Mapping[str, Mapping[int, str]] | None = None) -> list[EvidenceMatch]:
+                   scopes: Mapping[str, Mapping[int, str]] | None = None,
+                   bind_doc_year: bool = False,
+                   bind_months: frozenset[int] = frozenset()) -> list[EvidenceMatch]:
     """slot마다 가장 잘 맞는 청크를 고른다. 근거가 없으면 그 slot은 비운다.
 
     선택은 결정론적이다 — 지표가 행 레이블에 있는지, 연도가 청크/문서에 있는지,
     그리고 Retrieval 점수 순서만 본다. LLM은 여기 관여하지 않는다.
     question은 청크 안에서 어느 줄을 인용할지 고르는 데만 쓴다(순위에는 영향 없음).
+    bind_doc_year: 분기/반기/누적 비교처럼 "같은 기간" 대조가 요구되면 연도 자리는 그 연도가
+    기준연도인 문서에서만 채운다 — 2025년 반기보고서의 전전기(2023.12 연간) 열을 "2023년 반기"로
+    쓰던 오귀속(실측 레인보우로보틱스·SK텔레콤·LIG넥스원) 차단.
     """
     matches: list[EvidenceMatch] = []
     used: set[tuple[str, str, int | None]] = set()
@@ -523,6 +578,10 @@ def match_evidence(slots: Sequence[str], chunks: Sequence[RetrievedChunk],
                     # 지표 신호가 없으면 그 자리는 비운다.
                     continue
             column = None
+            if year is not None and bind_doc_year and chunk.metadata.get("period_year") != year:
+                continue                # 같은 기간 대조 — 다른 연도 문서의 비교 열은 쓰지 않는다
+            if year is not None and bind_months and chunk.metadata.get("base_month") not in bind_months:
+                continue                # 1분기(3월) 질문에 3분기(9월) 보고서를 쓰지 않는다(LIG넥스원 실측)
             if year is not None:
                 cols = period_columns(chunk)
                 if cols:
@@ -533,6 +592,17 @@ def match_evidence(slots: Sequence[str], chunks: Sequence[RetrievedChunk],
                     column = cols[year]
                     weight += 0.5
                     reasons.append(f"표 머리글 {year}년 = {column + 1}번째 값 열")
+                    if bind_doc_year:
+                        cum = cumulative_column(chunk, cols, year)
+                        if cum is not None:
+                            column = cum      # 3개월/누적 부머리글 — 기간 실적은 누적 열
+                            reasons.append(f"누적 열 {column + 1}")
+                elif bind_doc_year and cumulative_column(chunk, cols, year) is not None:
+                    # 연도 머리글이 없는 3분기 누적표(신한지주 실측) — 문서 연도가 결박돼 있으니
+                    # 첫 그룹의 누적 열을 쓴다.
+                    column = cumulative_column(chunk, cols, year)
+                    weight += 0.3
+                    reasons.append(f"문서 기준연도 {year} · 누적 열 {column + 1}")
                 elif str(year) in chunk.evidence_text:
                     # 머리글을 못 읽은 청크(문단 등) — 약한 신호로만 둔다.
                     weight += 0.1
@@ -542,6 +612,13 @@ def match_evidence(slots: Sequence[str], chunks: Sequence[RetrievedChunk],
                     reasons.append(f"문서 기준연도 {year}(열 미확인)")
             if metric != ANSWER_SLOT and not metric_hit:
                 continue
+            if bind_doc_year and any("요약재무" in p for p in chunk.section_path):
+                # 같은 기간 대조에서 요약재무정보는 기간 실적(누적)이 연도당 한 열로 정리돼 있어
+                # 손익계산서(3개월/누적 혼재)보다 오귀속 위험이 작다. gold·질문 어휘도 이 표다.
+                # 검색 순위 점수(1위 = 1.0)를 넘어서야 하므로 크게 준다 — 두 연도 슬롯이 같은
+                # 표 종류(같은 단위)에서 나오게 하는 효과도 있다(LIG넥스원: 원↔백만원 혼합 실측).
+                weight += SUMMARY_TABLE_BONUS
+                reasons.append("요약재무정보")
             if want_scope:
                 chunk_scope = scope_of_chunk(chunk, (scopes or {}).get(chunk.doc_id, {}))
                 if chunk_scope == want_scope:
@@ -1194,9 +1271,12 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
     if wanted_scope(question) and hasattr(retriever, "statement_scopes"):
         scopes = {doc_id: retriever.statement_scopes(doc_id)
                   for doc_id in {c.doc_id for c in state.retrieval_results}}
+    same_period = bool(state.conditions.periodic_subtypes & {"half", "quarter"}) or "누적" in question
     state.evidence_matches = match_evidence(
         state.slots, state.retrieval_results, limit=max_evidence, question=question,
-        drop=corp_tokens(sorted(state.conditions.corps)), scopes=scopes)
+        drop=corp_tokens(sorted(state.conditions.corps)), scopes=scopes,
+        bind_doc_year=same_period,
+        bind_months=period_months(question) if same_period else frozenset())
     docs_by_id = getattr(retriever, "docs_by_id", None) or {}
     # 대량보유 서식 파서 — 값을 뽑으면 근거로 승격한다(프롬프트·검증·발췌 모두가 본다).
     holding, bound_docs = _holding_parse(question, state, docs_by_id)
@@ -1233,10 +1313,17 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
                   if chnk.chunk_id in matched_ids
                   for ln in chunk_lines(chnk)]
     state.derived = calculator.report_pair_diffs(question, pair_lines)
+    # 단위는 값 행이 아니라 표 머리("(단위 : 백만원)")에 적히는 경우가 많다 — 같은 청크의
+    # 단위 표기 줄을 값 행에 이어 붙여 계산기가 단위를 읽게 한다(원↔백만원 혼합 계산 차단).
+    chunk_by_id = {c.chunk_id: c for c in state.retrieval_results}
+    def _unit_context(m: EvidenceMatch) -> str:
+        chunk = chunk_by_id.get(m.chunk_id)
+        unit_lines = [ln for ln in (chunk_lines(chunk) if chunk else ()) if "단위" in ln]
+        return " ".join([m.evidence_text, *unit_lines[:1]])
     state.derived += calculator.derive(
         question, state.slots,
         {m.slot: m.picked_value for m in state.evidence_matches if m.picked_value},
-        {m.slot: m.evidence_text for m in state.evidence_matches})
+        {m.slot: _unit_context(m) for m in state.evidence_matches})
     state.derived += calculator.derive_percent_of(
         question,
         {m.slot: m.picked_value for m in state.evidence_matches if m.picked_value},
