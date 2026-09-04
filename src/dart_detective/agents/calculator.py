@@ -652,7 +652,9 @@ def _requested_topics(question: str) -> dict[str, bool]:
     qty = any(w in q for w in ("주식등의수", "주식수", "보유주식"))
     ratio = any(w in q for w in ("비율", "지분"))
     reporter = any(w in q for w in ("보고자", "본인성명"))
-    if not (qty or ratio or reporter):
+    # 서술 항목(보유목적·보고사유 등)만 묻는 질문에 수량·비율을 자동으로 켜지 않는다(재검수 WARN).
+    narrative_only = any(w in q for w in ("보유목적", "보고사유", "변동사유", "취득자금", "보고구분"))
+    if not (qty or ratio or reporter or narrative_only):
         qty = ratio = True
     change = any(w in (question or "") for w in _HOLDING_CHANGE_WORDS)
     prev = change or "직전" in q or "이번" not in q
@@ -698,6 +700,9 @@ def _doc_profile(doc_id: str, line_groups: Sequence[Sequence[tuple[str, dict]]],
     for lines in line_groups:
         for row in _history_rows(lines):
             key = _squash(row["line"])
+            # 파서가 인식한 연혁 행은 쓰든 안 쓰든 소비한 것으로 본다 — 신규 공시에서 억제한
+            # 과거 연혁 행이 덤프·context로 새어 나가면 안 된다(재검수 3차 HIGH 2·3).
+            consumed.add(key)
             if key not in seen_rows:
                 seen_rows.add(key)
                 hist[row["label"]].append(row)
@@ -856,9 +861,11 @@ def parse_holding_report(question: str, chunks: Sequence[Any],
                 continue
             values.append(_extract(slot, row, row[kind], doc_id))
             pair[f"{label}:{kind}"] = row[kind]
-    if new_report and req["prev"]:
+    wants_prev_values = req["prev"] and (req["qty"] or req["ratio"])
+    if new_report and wants_prev_values:
         notes.append("※ 이 보고서의 보고구분은 '신규'다 — 직전 보고서의 값은 "
                      "'-'(해당 없음)로 보고되었다.")
+    if kind_field and ((new_report and wants_prev_values) or "보고구분" in (question or "")):
         values.append(_extract("보고구분", kind_field, kind_field["value"], doc_id))
         consumed.add(_squash(kind_field["line"]))
     if req["reporter"] and profile["reporter_src"] and profile["reporter_name"]:

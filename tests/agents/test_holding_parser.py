@@ -267,6 +267,20 @@ def test_purpose_and_report_kind_extracted_from_fixed_fields():
     assert "경영권 영향" not in set(vals.values())
 
 
+def test_purpose_only_question_emits_no_values():
+    """재검수 WARN: 보유목적만 물으면 수량·비율을 자동 출력하지 않는다."""
+    q = ("삼성전기에 대해 2026-02-12 보고서작성기준일로 제출된 주식등의대량보유상황보고서(약식)의 "
+         "보유목적은 무엇인가?")
+    got = parse(question=q, chunks=se_chunks())
+    assert values_by_slot(got) == {"보유목적": "단순투자"}
+    assert got.derived == () and got.missing_slots == ()
+
+
+def test_report_kind_extracted_when_asked_on_change_report():
+    q = KZ_QUESTION.replace("보유목적을 알려줘", "보고구분과 보유목적을 알려줘")
+    assert values_by_slot(parse(question=q, chunks=kz_chunks()))["보고구분"] == "변동ㆍ변경"
+
+
 def test_explicit_dash_without_new_kind_still_blocks_backfill():
     """보고구분 행이 없어도 요약표의 명시적 '-'는 연혁값 보충을 막는다."""
     node1 = "\n".join(l for l in SE_NODE1.split("\n") if not l.startswith("보고구분"))

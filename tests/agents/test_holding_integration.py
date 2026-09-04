@@ -307,3 +307,84 @@ def test_retrieved_context_restricted_to_bound_doc():
     wire = answer_wire.to_answer_wire("q", QUESTION, state.to_dict())
     docs = {e["document_id"] for e in _json.loads(wire["retrieved_context"])}
     assert docs == {DOC_ID}
+
+
+# ---------- 재검수(3차) BLOCKER: 신규 공시 — 같은 문서 연혁값의 LLM 재유입 차단 ----------
+
+from test_holding_parser import (SE_DOC, SE_FULL_REPORTER, SE_HIST, SE_NODE0, SE_NODE1,  # noqa: E402
+                                 SE_QUESTION)
+
+SE_PREV_HIST_ROW = ("직전보고서 | 2026년 01월 02일 | BlackRockFundAdvisors | 13 | 3,730,598 | 4.99 | "
+                    "3,730,598 | 4.99 | 74,693,696")
+
+
+def samsung_retriever() -> CorpusRetriever:
+    nodes = [
+        {"node_index": 0, "kind": "table", "section_hierarchy": ["표지"], "text": SE_NODE0},
+        {"node_index": 1, "kind": "table", "section_hierarchy": ["요약정보"], "text": SE_NODE1},
+        {"node_index": 9, "kind": "table", "section_hierarchy": ["대량보유자에 관한 사항"],
+         "text": SE_HIST},
+    ]
+    corp_dict = CorpDictionary.from_rows(
+        [{"corp_name": "삼성전기", "listed_name": "삼성전기", "stock_code": "009150"}])
+    doc = IndexedDocument(
+        doc_id=SE_DOC, corp_name="삼성전기", corp_code="009150",
+        filer_name="BlackRock Fund Advisors", doc_group="holding", doc_subtype="약식",
+        report_nm="주식등의대량보유상황보고서(약식)", rcept_dt="20260220",
+        base_year=2026, base_month=2, is_correction=False,
+        text="\n".join(n["text"] for n in nodes))
+    return CorpusRetriever(
+        document_index=DocumentIndex([doc], corp_dict), corp_dict=corp_dict,
+        docs_by_id={SE_DOC: {"doc_id": SE_DOC, "doc_group": "holding", "nodes": nodes}})
+
+
+def test_new_report_all_slots_filled_skips_llm_without_derived():
+    """요구 항목(보고자·직전/이번 값·보유목적)이 전부 결정론으로 채워졌다 — 계산이 없어도 LLM 미호출."""
+    llm = FakeLLM({"answer": "직전 보고서의 보유주식등의 수는 3,730,598주입니다.",
+                   "evidence": [{"document_id": SE_DOC, "quote_or_fact": SE_PREV_HIST_ROW}],
+                   "uncertainty": ""})
+    state = qa_agent.answer_question(SE_QUESTION, samsung_retriever(), llm=llm)
+    assert llm.calls == 0
+    assert state.llm.get("skipped") == "holding_all_slots_filled"
+    assert "3,739,817" in state.answer and "5.01" in state.answer
+    assert SE_FULL_REPORTER in state.answer and "단순투자" in state.answer
+    assert "신규" in state.answer                    # 직전 '-' 안내 노트
+    assert "3,730,598" not in state.answer and "4.99" not in state.answer
+    assert state.validation["status"] != "UNSUPPORTED" and state.fallback_stage == ""
+
+
+def test_same_doc_history_value_reclaimed_by_llm_is_hard_rejected():
+    """재검수 BLOCKER 1-b 재현: 같은 문서 연혁 행의 3,730,598을 LLM이 직전값으로 주장 —
+    validator는 통과시키지만(같은 문서 숫자) 파서 확정값('-')과 충돌하므로 폐기한다."""
+    q = SE_QUESTION + " 특별관계자 수도 알려줘."          # 미확정 항목 → LLM 호출
+    llm = FakeLLM({"answer": "직전 보고서의 보유주식등의 수는 3,730,598주이고 보유비율은 4.99%입니다.",
+                   "evidence": [{"document_id": SE_DOC, "quote_or_fact": SE_PREV_HIST_ROW}],
+                   "uncertainty": ""})
+    state = qa_agent.answer_question(q, samsung_retriever(), llm=llm)
+    assert llm.calls == 1
+    assert state.llm.get("degraded_reason") == "holding_value_conflict"
+    assert "3,730,598" not in state.answer and "4.99" not in state.answer
+    assert "신규" in state.answer
+
+
+def test_notes_survive_llm_adoption_for_remaining_topic():
+    q = SE_QUESTION + " 특별관계자 수도 알려줘."
+    cur_row = ("이번보고서 | 2026년 02월 12일 | BlackRockFundAdvisors | 13 | 3,739,817 | 5.01 | "
+               "3,739,817 | 5.01 | 74,693,696")
+    llm = FakeLLM({"answer": "특별관계자 수는 13명이다.",
+                   "evidence": [{"document_id": SE_DOC, "quote_or_fact": cur_row}],
+                   "uncertainty": ""})
+    state = qa_agent.answer_question(q, samsung_retriever(), llm=llm)
+    assert llm.calls == 1 and state.llm.get("used") and not state.llm.get("degraded")
+    assert "특별관계자 수는 13명이다." in state.answer
+    assert "신규" in state.answer                    # 채택 후에도 안내 노트 유지
+    assert "3,739,817" in state.answer               # 확정값 보존
+
+
+def test_retrieved_context_drops_unused_same_doc_history_row():
+    """재검수 HIGH 3: 대상 문서 안이라도 답에 쓰이지 않은 과거 연혁 행은 싣지 않는다."""
+    state = qa_agent.answer_question(SE_QUESTION, samsung_retriever())
+    wire = answer_wire.to_answer_wire("q", SE_QUESTION, state.to_dict())
+    quoted = " ".join(e["quoted_text"] for e in _json.loads(wire["retrieved_context"]))
+    assert "3,730,598" not in quoted
+    assert "3,739,817" in quoted                     # 사용한 값의 근거는 남는다

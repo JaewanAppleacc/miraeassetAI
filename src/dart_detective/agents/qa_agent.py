@@ -746,9 +746,34 @@ def _promote_holding_matches(state: AgentState,
                 picked_value=ex.value, node_index=ex.node_index, rcept_no=ex.rcept_no))
 
 
-# 파서가 다루지 않는 대량보유 서술 항목 — 질문이 이걸 물으면 계산이 있어도 LLM을 부른다
-# (최종 검수 3: derived 존재만으로 LLM을 끄면 보유목적 답변 기회가 사라진다).
-HOLDING_LLM_TOPICS = ("보유목적", "보고사유", "변동사유", "취득자금")
+# 파서가 다루지 않을 수 있는 대량보유 항목 — 질문이 이걸 물었는데 파서 slot으로 확정되지
+# 않았으면 LLM을 부른다(최종 검수 3). 파서가 질문의 요구 항목을 전부 채웠으면 derived 유무와
+# 무관하게 LLM을 부르지 않는다(재검수 BLOCKER: 신규 공시에서 계산이 없다는 이유로 LLM을 불러
+# 같은 문서의 과거 연혁값을 직전값으로 재주장하는 경로).
+HOLDING_LLM_TOPICS = ("보유목적", "보고사유", "변동사유", "취득자금", "특별관계자",
+                      "관계", "발행회사", "보고구분", "담보", "계약")
+# 보유 값 문맥으로 보는 단어 — 이 문장 안의 숫자는 파서 확정값·계산값·출처 표기·질문 표현만 허용.
+_HOLDING_VALUE_WORDS = ("직전", "이번", "보유주식", "주식등의 수", "주식수", "비율", "지분")
+_HOLDING_SENT_SPLIT_RE = re.compile(r"(?<=[.다])\s+|\n")
+BINARY_EVIDENCE_REASON = "신청/허가일 서식 필드(이분 판정 근거)"
+
+
+def _holding_value_conflicts(llm_answer: str, allowed_numbers: Iterable[str],
+                             question: str) -> list[str]:
+    """보유 값 문맥의 문장에서 허용 목록 밖 숫자를 돌려준다 — 있으면 LLM 답을 hard reject.
+
+    같은 문서의 과거 연혁 행(예: 신규 공시 문서 안의 3,730,598)은 sources에 남아 있어
+    validator·문서 결박 게이트가 잡지 못한다(재검수 BLOCKER). 파서가 확정한 값과 다른 숫자를
+    직전/이번·수량·비율 문장에서 주장하면 근거가 같은 문서여도 채택하지 않는다."""
+    allowed = validator.num_keys(allowed_numbers)
+    body = grounded_answer.strip_context_expressions(llm_answer, question)
+    bad: list[str] = []
+    for sent in _HOLDING_SENT_SPLIT_RE.split(body):
+        if not any(w in sent for w in _HOLDING_VALUE_WORDS):
+            continue
+        bad.extend(tok for tok in validator.numbers_in(sent)
+                   if validator.num_key(tok) not in allowed)
+    return bad
 
 
 def _holding_llm_topics(question: str,
@@ -1205,14 +1230,15 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
     answer, uncertainty = fallback_answer(
         state.evidence_matches, exclude_texts=holding_excl,
         restrict_doc=holding.doc_id if holding else "")
+    # 대량보유 결정론 꼬리: 부분 답변(§3-5 — 없는 자리를 명시, 다른 보고자 행으로 채우지 않음)과
+    # 안내 노트(신규 보고의 직전 '-' 등). LLM 답을 채택해도 그대로 붙인다(재검수 BLOCKER 1-c).
+    holding_tail = ""
     if holding and holding.missing_slots:
-        # §3-5 부분 답변: 확인된 값은 위 문장으로 나가고, 없는 자리는 명시한다 —
-        # 다른 보고자의 행으로 빈자리를 채우지 않는다.
-        answer = (f"{answer}\n\n다음 항목은 검색된 근거에서 확인하지 못했다: "
-                  + ", ".join(holding.missing_slots) + ".")
+        holding_tail += ("\n\n다음 항목은 검색된 근거에서 확인하지 못했다: "
+                         + ", ".join(holding.missing_slots) + ".")
     if holding and holding.notes:
-        # 결정론 안내(신규 보고의 직전 '-' 등) — 값이 없는 이유를 서식 그대로 설명한다.
-        answer = f"{answer}\n\n" + "\n".join(holding.notes)
+        holding_tail += "\n\n" + "\n".join(holding.notes)
+    answer = f"{answer}{holding_tail}"
     binary = approval_or_application(question, state.evidence_matches,
                                      state.retrieval_results)
     if binary:
@@ -1228,7 +1254,7 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
                     slot=ANSWER_SLOT, chunk_id=src_chunk.chunk_id,
                     doc_id=src_chunk.doc_id, evidence_text=src_line,
                     section_path=src_chunk.section_path, confidence=0.9,
-                    reason="신청/허가일 서식 필드(이분 판정 근거)",
+                    reason=BINARY_EVIDENCE_REASON,
                     node_index=src_chunk.node_index,
                     rcept_no=str(src_chunk.metadata.get("rcept_no") or "")))
     det_template = (answer, uncertainty)     # ⑨ 폴백 ②단(템플릿)도 같은 결정론 답을 쓴다
@@ -1257,8 +1283,11 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
     # 예외(최종 검수 3): 대량보유 질문이 파서가 못 채우는 항목(보유목적·보고사유·보고자)을
     # 함께 물으면, 계산이 있어도 그 항목을 위해 LLM을 부른다 — 발췌는 대상 문서로 제한돼 있다.
     llm_topics = _holding_llm_topics(question, holding) if holding else ()
-    if state.derived and llm is not None and not llm_topics:
-        state.llm = {"used": False, "skipped": "deterministic_calculation"}
+    if llm is not None and ((holding and not llm_topics) or (not holding and state.derived)):
+        # 대량보유: 질문의 요구 항목을 파서가 전부 채웠으면 계산이 없어도 LLM을 부르지 않는다 —
+        # 같은 문서의 과거 연혁값을 직전값으로 재주장하는 경로 자체를 없앤다(재검수 BLOCKER 1-a).
+        state.llm = {"used": False, "skipped": ("deterministic_calculation" if state.derived
+                                                else "holding_all_slots_filled")}
         llm = None
 
     if llm is not None and state.evidence_matches:
@@ -1316,6 +1345,20 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
                 state.llm["degraded"] = True
                 state.llm["degraded_reason"] = "holding_doc_unbound"
                 state.llm["degraded_answer"] = llm_answer
+            elif holding and (conflicts := _holding_value_conflicts(
+                    llm_answer,
+                    {v.value for v in holding.values if any(ch.isdigit() for ch in v.value)}
+                    | derived_allowed | extra_allowed
+                    | grounded_answer.attribution_of(
+                        holding.doc_id, doc_meta_all.get(holding.doc_id) or {})[1]
+                    | set(validator.numbers_in(question)),
+                    question)):
+                # 파서 확정값·명시적 '-'와 충돌하는 보유 값 claim — 같은 문서의 과거 연혁값이라
+                # validator는 통과시킨다. 결정론 값이 authoritative다(재검수 BLOCKER 1-b).
+                state.llm["degraded"] = True
+                state.llm["degraded_reason"] = "holding_value_conflict"
+                state.llm["degraded_detail"] = conflicts[:5]
+                state.llm["degraded_answer"] = llm_answer
             elif not llm_citations or any(
                     c.get("check") in ("quote_grounded", "citation_present")
                     and not c.get("passed") for c in check["checks"]):
@@ -1356,6 +1399,8 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
                     # LLM 답을 채택해도 코드 계산 문장은 유지한다 — 잔여 항목(보유목적 등)
                     # 때문에 LLM을 부른 경우 증감 답이 사라지면 안 된다(최종 검수 3).
                     answer = calculator.describe(state.derived) + "\n\n" + answer
+                if holding_tail:
+                    answer = f"{answer}{holding_tail}"     # 부분 답변·신규 안내는 채택 후에도 유지
         except (LLMUnavailable, Exception) as exc:  # noqa: BLE001 — 어떤 실패든 fallback
             state.llm = {"used": False, "error": f"{type(exc).__name__}: {exc}"}
         state.timings["llm_ms"] = int((time.perf_counter() - t_llm) * 1000)
@@ -1403,6 +1448,18 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
         state.fallback_stage = resolved["stage"]
         state.validation = resolved["validation"]
         state.validation["fallback_attempts"] = resolved["attempts"]
+    if holding:
+        # v4 "retrieved_context = 실제 사용 근거만"(재검수 HIGH 3): 대상 문서 안에서도 최종 답·
+        # 계산·인용에 쓰이지 않은 자유 자리 행(예: 신규 공시 문서의 과거 연혁 행)은 싣지 않는다.
+        # 값을 확정한 slot 매치·답 본문에 실린 행·LLM이 인용한 행·이분 판정 근거만 남긴다.
+        final_sq = "".join(state.answer.split())
+        cited = {"".join(str(c.get("quote_or_fact") or "").split()) for c in citations
+                 if (state.llm or {}).get("used") and not (state.llm or {}).get("degraded")}
+        state.evidence_matches = [
+            m for m in state.evidence_matches
+            if m.slot != ANSWER_SLOT or m.reason == BINARY_EVIDENCE_REASON
+            or "".join(m.evidence_text.split()) in final_sq
+            or "".join(m.evidence_text.split()) in cited]
     state.confidence = confidence.assess(
         validation=state.validation, n_evidence=len(state.evidence_matches),
         n_derived=len(state.derived), warnings=state.warnings, llm=state.llm,
