@@ -109,6 +109,14 @@
   검증**(_verify_period_pairs: 전 쌍 열 대조 통과=허용·어긋남=스왑 폐기·불가=폐기)으로 교정.
   **judge11: 완전 35·부분 47·미포함 10·가중 58.5 — 3지표 역대 최고.** meta에
   llm_degraded_reason 추가(발동 분포: period_unbound 7·citation_unbound 15·unsupported 20).
+- 검수 8차 반영(2026-09-04 · judge12): ① 문장 게이트를 **숫자별 인용 결박**으로 — 숫자 없는
+  인용만 대기·정답 숫자 섞기("90 또는 100") 우회 차단 ② 기간 토큰 정규화 체계(직전 사업연도↔
+  전기·Q1↔1분기·1H↔상반기, 머리글·claim 통일) + 다기간 표에서 토큰 미결박은 fail-closed
+  ③ --final 외부 allowlist `results/fourarm/arm_registry.json`(git 추적; config/code/results
+  SHA) — 디렉터리 안 자기일관 위조 차단, B/D 등록·A/C는 팀원1 run.json 도착 시 등록
+  ④ 세마포어 대기를 남은 예산으로 제한·획득 후 잔여 0이면 계산 없이 폴백, janitor 회귀 테스트
+  ⑤ 루프별 세마포어(테스트 순서 의존 제거). judge12: 완전 35·부분 44·미포함 13·가중 57.0
+  (밴드 54~58.5 안, 3↑/4↓ 잡음). 발동: period_unbound 16·citation_unbound 14·unsupported 16.
 - **vFINAL 21번 변경 승인(2026-09-04, Owner=팀 대표)**: "FC Native Function Calling 경로에 한해
   전송 maxTokens 최소 1024 적용을 승인한다. 사유는 서비스 앱 API가 1024 미만 요청을 40001로
   거부하기 때문이다. JSON 경로의 v4 §7 예산은 변경하지 않으며 requested/sent 값을 구분해
