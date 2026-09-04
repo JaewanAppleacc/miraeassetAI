@@ -30,8 +30,9 @@
 
 different-node 규칙(A/C 검수 3차): Gold acceptable source에 없는 node의 동일 텍스트 매치는
 scorer가 경미/치명을 자동 결정하지 않는다 — UNRESOLVED(duplicate_evidence_different_node)로
-Owner arm-blind 판정에 넘기고, Owner의 EQUIVALENT_EVIDENCE 판정 시에만 경미로 강등한다.
-다른 기간이 확정되는 경우(Gold span 연도가 청크에 없고 청크는 다른 연도)는 치명.
+Owner arm-blind 판정에 넘긴다(허용 분류는 16번 그대로: COMMON_SOURCE/ARM_SPECIFIC/UNKNOWN —
+'동등 근거 사면' 분류는 스펙에 없어 도입했다 철회함). 다른 기간이 확정되는 경우
+(Gold span 연도가 청크에 없고 청크는 다른 연도)는 치명.
 """
 from __future__ import annotations
 
@@ -472,10 +473,10 @@ def unresolved_packets(report: Mapping[str, Any]) -> list[dict]:
 
 # ---------- vFINAL 16번: Owner 판정(resolutions) 적용 ----------
 
-# EQUIVALENT_EVIDENCE: Owner가 "동등 근거 맞음"으로 판정한 패킷(다른 node의 동일 근거 반복 등) —
-# 위반이 아니었던 것으로 확정, 매치는 유지하고 경미로 강등 기록. Gold는 동결이라 acceptable
-# source를 추가할 수 없으므로 16번 판정 결과로만 표현한다.
-RESOLUTION_CLASSES = ("COMMON_SOURCE", "ARM_SPECIFIC", "EQUIVALENT_EVIDENCE", "UNKNOWN")
+# vFINAL 16번이 허용하는 분류 그대로다. "동등 근거였으니 무위반" 같은 사면 분류는 스펙에
+# 없다 — 한 번 EQUIVALENT_EVIDENCE로 넣었다가 §21 절차 없는 사후 완화라 철회했다(2026-09-04,
+# 코덱스·A/C 검수 합치). 동등 근거로 보이는 패킷도 UNKNOWN으로 남겨 관련 arm을 보류한다.
+RESOLUTION_CLASSES = ("COMMON_SOURCE", "ARM_SPECIFIC", "UNKNOWN")
 
 
 def load_resolutions(path: Path | str) -> dict[str, dict]:
@@ -514,7 +515,6 @@ def adjudication_plan(reports: Mapping[str, dict], resolutions: Mapping[str, dic
     common_qids: set[str] = set()
     per_arm_invalid: dict[str, dict[tuple[str, str], set]] = {}
     per_arm_critical: dict[str, list[str]] = {}
-    per_arm_equivalent: dict[str, list[str]] = {}
     unknown_per_arm: dict[str, int] = {}
     for arm, rep in reports.items():
         for v in rep["violations"]["items"]:
@@ -531,8 +531,6 @@ def adjudication_plan(reports: Mapping[str, dict], resolutions: Mapping[str, dic
                     (str(v["doc_id"]), int(v["node_index"] if v["node_index"] is not None else -1)))
                 if res.get("critical"):
                     per_arm_critical.setdefault(arm, []).append(pid)
-            elif cls == "EQUIVALENT_EVIDENCE":
-                per_arm_equivalent.setdefault(arm, []).append(pid)
             else:
                 unknown_per_arm[arm] = unknown_per_arm.get(arm, 0) + 1
     limit = common_exclusion_limit(n_set)
@@ -543,27 +541,8 @@ def adjudication_plan(reports: Mapping[str, dict], resolutions: Mapping[str, dic
         "per_arm_invalid": {a: {k: frozenset(s) for k, s in m.items()}
                             for a, m in per_arm_invalid.items()},
         "per_arm_critical": per_arm_critical,
-        "per_arm_equivalent": per_arm_equivalent,
         "unknown_per_arm": unknown_per_arm,
     }
-
-
-def apply_equivalent_evidence(report: dict, packet_ids: Sequence[str]) -> int:
-    """Owner가 EQUIVALENT_EVIDENCE로 판정한 UNRESOLVED 위반을 경미로 강등한다(매치 유지).
-
-    재채점 리포트에 제자리 적용. 반환: 강등 건수. 위반 카운트를 다시 센다."""
-    wanted = set(packet_ids)
-    n = 0
-    for v in report["violations"]["items"]:
-        if v["severity"] == "unresolved" and packet_id_of(v) in wanted:
-            v["severity"] = "minor"
-            v["reason"] = f"{v['reason']}:owner_equivalent_evidence"
-            n += 1
-    sev = {"critical": 0, "minor": 0, "unresolved": 0, "coarse": 0}
-    for v in report["violations"]["items"]:
-        sev[v["severity"]] += 1
-    report["violations"].update(sev)
-    return n
 
 
 # ---------- 판정 체인 ----------

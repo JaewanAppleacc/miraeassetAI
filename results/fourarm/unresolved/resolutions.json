@@ -1,0 +1,72 @@
+{
+ "u-0242ed257328": {
+  "classification": "UNKNOWN",
+  "note": "Owner 소견: 동등 근거로 보이나 §16에 사면 분류 없음 — UNKNOWN 유지(보류). 동일 대량보유보고서의 반복 표이며 Gold와 보고자 Kopernik GlobalInvestors, LLC가 일치한다."
+ },
+ "u-0f63a81df003": {
+  "classification": "UNKNOWN",
+  "note": "Owner 소견: 동등 근거로 보이나 §16에 사면 분류 없음 — UNKNOWN 유지(보류). 동일 보고서 요약정보 표에 이번보고서 보유주식수 53,569,672와 비율 55.03이 모두 있다."
+ },
+ "u-192d06b044ea": {
+  "classification": "UNKNOWN",
+  "note": "Owner 소견: 동등 근거로 보이나 §16에 사면 분류 없음 — UNKNOWN 유지(보류). 동일 2025년 1분기 연결 손익계산서에서 누적 영업이익 149,420,804,340이 정확히 일치한다."
+ },
+ "u-1b6cd184a87f": {
+  "classification": "ARM_SPECIFIC",
+  "critical": true,
+  "note": "질문과 Gold는 요약연결재무정보(node 230, 2023 매출 15,258,135)를 요구하지만 후보 node 233은 요약 별도재무정보이며 매출도 16,368,185로 다르다."
+ },
+ "u-306d35a3890d": {
+  "classification": "UNKNOWN",
+  "note": "Owner 소견: 동등 근거로 보이나 §16에 사면 분류 없음 — UNKNOWN 유지(보류). 동일 정정공시의 분할방법 본문에 신설회사4의 정정 후 상호 주식회사 루디우스게임즈가 명시되어 있다."
+ },
+ "u-563f0c29d422": {
+  "classification": "UNKNOWN",
+  "note": "Owner 소견: 동등 근거로 보이나 §16에 사면 분류 없음 — UNKNOWN 유지(보류). 동일 대량보유보고서의 반복 표이며 Gold와 보고자 크리스탈코리아 유한회사가 일치한다."
+ },
+ "u-63cddb9b0159": {
+  "classification": "UNKNOWN",
+  "note": "Owner 소견: 동등 근거로 보이나 §16에 사면 분류 없음 — UNKNOWN 유지(보류). 동일 보고서의 반복 표에 보고자와 이번보고서 보유주식수 2,212,237 및 비율 9.66이 직접 명시되어 있다."
+ },
+ "u-63efc7b71368": {
+  "classification": "UNKNOWN",
+  "note": "Owner 소견: 동등 근거로 보이나 §16에 사면 분류 없음 — UNKNOWN 유지(보류). 동일 2023년 1분기 연결 포괄손익계산서의 누적 매출 546,799,032,026원으로 Gold 546,799백만원을 더 정밀하게 지지한다."
+ },
+ "u-6ebd6ff8de67": {
+  "classification": "UNKNOWN",
+  "note": "Owner 소견: 동등 근거로 보이나 §16에 사면 분류 없음 — UNKNOWN 유지(보류). 동일 2023년 1분기 연결 손익계산서에서 누적 영업이익 182,434,934,168이 정확히 일치한다."
+ },
+ "u-8564414f6080": {
+  "classification": "ARM_SPECIFIC",
+  "critical": true,
+  "note": "질문과 Gold는 요약연결재무정보(node 149, 2025 1분기 매출 1,697,877)를 요구하지만 후보 node 152는 요약 별도재무정보이며 매출도 892,729로 다르다."
+ },
+ "u-893641aa1791": {
+  "classification": "UNKNOWN",
+  "note": "Owner 소견: 동등 근거로 보이나 §16에 사면 분류 없음 — UNKNOWN 유지(보류). 동일 2025년 1분기 연결 손익계산서에서 누적 매출액 841,911,660,218이 정확히 일치한다."
+ },
+ "u-896a2a3163e6": {
+  "classification": "UNKNOWN",
+  "note": "Owner 소견: 동등 근거로 보이나 §16에 사면 분류 없음 — UNKNOWN 유지(보류). 동일 보고서 요약정보 표에 직전보고서 보유주식수 53,541,672와 비율 55.01이 모두 있다."
+ },
+ "u-aa1e331b4d22": {
+  "classification": "UNKNOWN",
+  "note": "Owner 소견: 동등 근거로 보이나 §16에 사면 분류 없음 — UNKNOWN 유지(보류). 동일 대량보유보고서의 반복 표이며 Gold와 보고자 국민연금공단이 일치한다."
+ },
+ "u-bb1d59b61b69": {
+  "classification": "UNKNOWN",
+  "note": "Owner 소견: 동등 근거로 보이나 §16에 사면 분류 없음 — UNKNOWN 유지(보류). 동일 2023년 1분기 연결 손익계산서에서 누적 매출액 597,564,003,593이 정확히 일치한다."
+ },
+ "u-c55cdd9aa429": {
+  "classification": "UNKNOWN",
+  "note": "Owner 소견: 동등 근거로 보이나 §16에 사면 분류 없음 — UNKNOWN 유지(보류). 동일 2023년 반기 연결 포괄손익계산서의 누적 매출 13,527,367,230,976원으로 Gold 13,527,367백만원을 더 정밀하게 지지한다."
+ },
+ "u-cdf167178203": {
+  "classification": "UNKNOWN",
+  "note": "Owner 소견: 동등 근거로 보이나 §16에 사면 분류 없음 — UNKNOWN 유지(보류). 동일 정정공시의 분할방법 본문에 신설회사2의 정정 후 상호 주식회사 빅파이어게임즈가 명시되어 있다."
+ },
+ "u-f49512b5641c": {
+  "classification": "UNKNOWN",
+  "note": "Owner 소견: 동등 근거로 보이나 §16에 사면 분류 없음 — UNKNOWN 유지(보류). 동일 정정공시의 분할방법 본문에 신설회사1의 정정 후 상호 주식회사 퍼스트스파크게임즈가 명시되어 있다."
+ }
+}

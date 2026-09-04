@@ -143,8 +143,6 @@ def main(argv: list[str] | None = None) -> int:
                     rep["violations"]["critical"] += 1
                     rep["violations"]["items"].append(
                         {"severity": "critical", "reason": f"arm_specific_adjudicated_critical:{pid}"})
-                # Owner "동등 근거" 판정: 위반 아님 확정 → 매치 유지, 경미로 강등 기록.
-                fourarm.apply_equivalent_evidence(rep, plan["per_arm_equivalent"].get(arm, []))
                 reports[arm] = rep
                 (args.results_dir / f"score.{arm}.json").write_text(
                     json.dumps(rep, ensure_ascii=False, indent=1), encoding="utf-8")

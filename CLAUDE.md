@@ -160,6 +160,15 @@
   재채점: B unresolved 17·D 13(전부 duplicate-node), arm-blind 패킷 17건, 판정 **PENDING_UNRESOLVED(후보 B)**.
   → Owner(팀 대표)가 results/fourarm/unresolved/resolutions.template.json을 채워 `score.py --resolutions`로
   재실행해야 B/D 진단이 닫힌다(COMMON_SOURCE 한도 5). 테스트 545 통과.
+- **EQUIVALENT_EVIDENCE 철회·Owner 판정 공식 적용(2026-09-04) — B/D 진단 BLOCKED**: 3차 때 도입한
+  '동등 근거 사면' 분류는 §16에 없는 발명(§21 절차 없는 사후 완화)이라 코덱스·A/C 검수 합치로 **철회**
+  (허용 분류는 COMMON_SOURCE/ARM_SPECIFIC/UNKNOWN 원상복구, 거부 테스트 잠금). Owner(팀 대표)가 패킷
+  17건 전수 판정: ARM_SPECIFIC+치명 2건(연결 질문에 별도 재무 청크 — 공통 머리글 줄에 span 매칭이 걸린
+  scorer 과대 인정을 UNRESOLVED 장치가 포착) · 동등 근거 소견 15건은 분류 불가로 UNKNOWN 유지(보류).
+  공식 재채점: B/D 치명 2씩 → **BLOCKED(no hard-safe arm)**. B/D 결과 4파일 불변. 함의: 4-arm 최종에서
+  B/D는 Hard 탈락 상태 — A/C가 hard-safe면 그쪽에서 승자 선출 가능(실험 자체는 살아 있음). 열린 결정
+  2건은 Owner 몫: ① 치명 2건을 §16 B의 'slot 실패' 옵션으로 재판정할지(§14 false-positive 조항 근거)
+  ② UNKNOWN 15건의 종결 방법(§21로 사면 분류 신설 — A/C 결과 도착 전에만 정당화 여지).
 - **vFINAL 21번 변경 승인(2026-09-04, Owner=팀 대표)**: "FC Native Function Calling 경로에 한해
   전송 maxTokens 최소 1024 적용을 승인한다. 사유는 서비스 앱 API가 1024 미만 요청을 40001로
   거부하기 때문이다. JSON 경로의 v4 §7 예산은 변경하지 않으며 requested/sent 값을 구분해

@@ -4,7 +4,7 @@
  "n_questions": 101,
  "n_common_excluded": 0,
  "common_excluded_qids": [],
- "n_arm_specific_invalidated": 2,
+ "n_arm_specific_invalidated": 0,
  "n_excluded_zero_slot": 1,
  "n_missing_or_error": 0,
  "segments": {
@@ -16,10 +16,10 @@
    "all_found@5": 34,
    "all_found_rate@5": 0.34,
    "doc_hit@5": 76,
-   "slots_found@10": 168,
-   "recall@10": 0.5874,
-   "all_found@10": 44,
-   "all_found_rate@10": 0.44,
+   "slots_found@10": 170,
+   "recall@10": 0.5944,
+   "all_found@10": 45,
+   "all_found_rate@10": 0.45,
    "doc_hit@10": 82,
    "slots_found@20": 192,
    "recall@20": 0.6713,
@@ -35,10 +35,10 @@
    "all_found@5": 25,
    "all_found_rate@5": 0.3086,
    "doc_hit@5": 64,
-   "slots_found@10": 144,
-   "recall@10": 0.576,
-   "all_found@10": 33,
-   "all_found_rate@10": 0.4074,
+   "slots_found@10": 146,
+   "recall@10": 0.584,
+   "all_found@10": 34,
+   "all_found_rate@10": 0.4198,
    "doc_hit@10": 67,
    "slots_found@20": 166,
    "recall@20": 0.664,
@@ -67,11 +67,33 @@
   }
  },
  "violations": {
-  "critical": 2,
+  "critical": 0,
   "minor": 0,
-  "unresolved": 15,
+  "unresolved": 17,
   "coarse": 99,
   "items": [
+   {
+    "question_id": "author_14dfddbe1d41275533ae3945",
+    "slot_name": "evidence_1",
+    "doc_id": "periodic_20240321001029",
+    "node_index": 233,
+    "locator": "periodic_20240321001029/20240321001029.xml#node=233",
+    "severity": "unresolved",
+    "reason": "duplicate_evidence_different_node",
+    "chunk_text": "자본총계 | 131,667,154 | 61,478,083 | 47,856,646\n구분 | 2023년 1월~12월 | 2022년 1월~12월 | 2021년 1월~12월\n매출액 | 16,368,185 | 13,615,412 | 8,969,575\n영업이익 | (43,932,239) | 1,310,479 | (1,021,746)\n당기순이익 | 109,139 | 5,775,822 | (7,843,397)\n주당순이익(기본) | 6 | 356 | (497)",
+    "gold_node": 230
+   },
+   {
+    "question_id": "author_a538b0e2240fe01d1a71ebb7",
+    "slot_name": "evidence_2",
+    "doc_id": "periodic_20250515001309",
+    "node_index": 152,
+    "locator": "periodic_20250515001309/20250515001309.xml#node=152",
+    "severity": "unresolved",
+    "reason": "duplicate_evidence_different_node",
+    "chunk_text": "[이익잉여금] | 4,445,534 | 4,242,212 | 4,230,100\n[기타포괄손익누계액] | (3,219) | (3,153) | (2,732)\n[기타자본항목] | 24,872 | 24,872 | 24,872\n자본총계 | 4,653,102 | 4,449,846 | 4,438,155\n자본과 부채총계 | 5,452,238 | 5,171,611 | 5,057,410\n종속ㆍ관계ㆍ공동기업\n투자주식의 평가방법 | 원가법 | 원가법 | 원가법\n | 2025.01.01~ 2025.03.31 | 2024.01.01~ 2024.12.31 | 2023.01.01~ 2023.12.31\n매출액 | 892,729 | 3,534,850 | 3,500,214\n영업이익 | 72,950 | 228,883 | 217,117\n당기순이",
+    "gold_node": 149
+   },
    {
     "question_id": "author_ed4a7d77528a8c5751e9a348",
     "slot_name": "evidence_1",
@@ -1127,14 +1149,6 @@
     "locator": "holding_20241219000061/20241219000061.xml#node=1",
     "severity": "coarse",
     "reason": "no_row_col_in_chunk"
-   },
-   {
-    "severity": "critical",
-    "reason": "arm_specific_adjudicated_critical:u-1b6cd184a87f"
-   },
-   {
-    "severity": "critical",
-    "reason": "arm_specific_adjudicated_critical:u-8564414f6080"
    }
   ]
  },
@@ -1300,12 +1314,12 @@
    "excluded": false,
    "found_at": {
     "5": 1,
-    "10": 1,
+    "10": 2,
     "20": 2
    },
    "all_found_at": {
     "5": false,
-    "10": false,
+    "10": true,
     "20": true
    },
    "doc_hit_at": {
@@ -1313,7 +1327,7 @@
     "10": true,
     "20": true
    },
-   "n_slot_matches": 1,
+   "n_slot_matches": 2,
    "error": ""
   },
   {
@@ -1852,7 +1866,7 @@
    "excluded": false,
    "found_at": {
     "5": 0,
-    "10": 0,
+    "10": 1,
     "20": 2
    },
    "all_found_at": {
@@ -1865,7 +1879,7 @@
     "10": true,
     "20": true
    },
-   "n_slot_matches": 0,
+   "n_slot_matches": 1,
    "error": ""
   },
   {

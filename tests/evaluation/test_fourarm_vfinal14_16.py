@@ -314,19 +314,22 @@ def test_r3_case5_partial_set_never_returns_official_winner():
     assert j4["status"] == "PROVISIONAL_WINNER" and "winner" in j4
 
 
-def test_r3_owner_equivalent_evidence_downgrades_to_minor():
+def test_r3_no_equivalence_amnesty_class_exists():
+    """§16에 없는 '동등 근거 사면' 분류는 거부된다(도입했다 철회 — §21 절차 없는 사후 완화 금지).
+    duplicate-node 패킷은 판정이 없으면 UNKNOWN으로 남아 관련 arm을 보류시킨다."""
+    assert fa.RESOLUTION_CLASSES == ("COMMON_SOURCE", "ARM_SPECIFIC", "UNKNOWN")
+    assert not hasattr(fa, "apply_equivalent_evidence")
+    import json as _json
+    import tempfile
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as f:
+        _json.dump({"u-x": {"classification": "EQUIVALENT_EVIDENCE"}}, f)
+        p = f.name
+    with pytest.raises(ValueError):
+        fa.load_resolutions(p)
     item = {"severity": "unresolved", "question_id": "q1", "slot_name": "s", "doc_id": "d1",
             "node_index": 1, "reason": "duplicate_evidence_different_node", "chunk_text": "t"}
-    rep = {"violations": {"critical": 0, "minor": 0, "unresolved": 1, "coarse": 0, "items": [item]}}
-    plan = fa.adjudication_plan({"B": rep}, {fa.packet_id_of(item): {"classification": "EQUIVALENT_EVIDENCE"}},
-                                n_set=101)
-    assert plan["per_arm_equivalent"] == {"B": [fa.packet_id_of(item)]} and plan["unknown_per_arm"] == {}
-    assert fa.apply_equivalent_evidence(rep, plan["per_arm_equivalent"]["B"]) == 1
-    assert rep["violations"]["minor"] == 1 and rep["violations"]["unresolved"] == 0
-    # 판정이 없으면 자동 강등 없음 — UNKNOWN 그대로(위 apply가 item을 제자리 수정했으므로 새로 만든다).
-    fresh = {**item, "severity": "unresolved", "reason": "duplicate_evidence_different_node"}
-    plan2 = fa.adjudication_plan({"B": {"violations": {"items": [fresh]}}}, {}, n_set=101)
-    assert plan2["unknown_per_arm"] == {"B": 1}
+    plan = fa.adjudication_plan({"B": {"violations": {"items": [item]}}}, {}, n_set=101)
+    assert plan["unknown_per_arm"] == {"B": 1}
 
 
 @pytest.mark.skipif(not (REPO / "results/fourarm/B.results.jsonl").exists(),

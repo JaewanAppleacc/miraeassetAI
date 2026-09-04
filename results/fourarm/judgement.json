@@ -1,19 +1,30 @@
 {
- "status": "PENDING_UNRESOLVED",
- "candidate": "B",
- "selection_type": "PERFORMANCE_WINNER",
- "tie_set": [
-  "B"
- ],
- "counts": {
-  "B": 11,
-  "D": 9
- },
- "arm_set": [
-  "B",
-  "D"
- ],
+ "status": "BLOCKED",
+ "reason": "no hard-safe arm",
  "chain": [
+  {
+   "step": "16 adjudication",
+   "common_excluded": [],
+   "limit": 5,
+   "arm_specific": {
+    "B": 2,
+    "D": 2
+   },
+   "arm_specific_critical": {
+    "B": [
+     "u-1b6cd184a87f",
+     "u-8564414f6080"
+    ],
+    "D": [
+     "u-1b6cd184a87f",
+     "u-8564414f6080"
+    ]
+   },
+   "unknown_remaining": {
+    "B": 15,
+    "D": 11
+   }
+  },
   {
    "step": "14 locator checked",
    "unchecked": []
@@ -25,55 +36,17 @@
   {
    "step": "16 unresolved",
    "counts": {
-    "B": 17,
-    "D": 13
+    "B": 15,
+    "D": 11
    }
   },
   {
    "step": "12 hard gate",
    "critical": {
-    "B": 0,
-    "D": 0
+    "B": 2,
+    "D": 2
    },
-   "hard_safe": [
-    "B",
-    "D"
-   ]
-  },
-  {
-   "step": "12 quality gate",
-   "best_all": 0.5944,
-   "best_high": 0.584,
-   "values": {
-    "B": {
-     "ALL": 0.5944,
-     "HIGH": 0.584
-    },
-    "D": {
-     "ALL": 0.5909,
-     "HIGH": 0.584
-    }
-   },
-   "passed": [
-    "B",
-    "D"
-   ]
-  },
-  {
-   "step": "2/5 LOW all_found@10",
-   "counts": {
-    "B": 11,
-    "D": 9
-   },
-   "best": 11,
-   "final_tie_set": [
-    "B"
-   ]
-  },
-  {
-   "step": "16C selection held",
-   "candidate": "B",
-   "selection_type": "PERFORMANCE_WINNER"
+   "hard_safe": []
   }
  ]
 }

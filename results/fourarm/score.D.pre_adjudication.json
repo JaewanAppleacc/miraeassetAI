@@ -1,31 +1,31 @@
 {
- "arm": "B",
+ "arm": "D",
  "locator_checked": true,
  "n_questions": 101,
  "n_common_excluded": 0,
  "common_excluded_qids": [],
- "n_arm_specific_invalidated": 2,
+ "n_arm_specific_invalidated": 0,
  "n_excluded_zero_slot": 1,
  "n_missing_or_error": 0,
  "segments": {
   "ALL": {
    "questions": 100,
    "slots_total": 286,
-   "slots_found@5": 137,
-   "recall@5": 0.479,
+   "slots_found@5": 139,
+   "recall@5": 0.486,
    "all_found@5": 34,
    "all_found_rate@5": 0.34,
-   "doc_hit@5": 76,
-   "slots_found@10": 168,
-   "recall@10": 0.5874,
-   "all_found@10": 44,
-   "all_found_rate@10": 0.44,
-   "doc_hit@10": 82,
-   "slots_found@20": 192,
-   "recall@20": 0.6713,
-   "all_found@20": 57,
-   "all_found_rate@20": 0.57,
-   "doc_hit@20": 84
+   "doc_hit@5": 79,
+   "slots_found@10": 169,
+   "recall@10": 0.5909,
+   "all_found@10": 43,
+   "all_found_rate@10": 0.43,
+   "doc_hit@10": 83,
+   "slots_found@20": 191,
+   "recall@20": 0.6678,
+   "all_found@20": 56,
+   "all_found_rate@20": 0.56,
+   "doc_hit@20": 85
   },
   "HIGH": {
    "questions": 81,
@@ -35,10 +35,10 @@
    "all_found@5": 25,
    "all_found_rate@5": 0.3086,
    "doc_hit@5": 64,
-   "slots_found@10": 144,
-   "recall@10": 0.576,
-   "all_found@10": 33,
-   "all_found_rate@10": 0.4074,
+   "slots_found@10": 146,
+   "recall@10": 0.584,
+   "all_found@10": 34,
+   "all_found_rate@10": 0.4198,
    "doc_hit@10": 67,
    "slots_found@20": 166,
    "recall@20": 0.664,
@@ -49,29 +49,51 @@
   "LOW": {
    "questions": 19,
    "slots_total": 36,
-   "slots_found@5": 19,
-   "recall@5": 0.5278,
+   "slots_found@5": 21,
+   "recall@5": 0.5833,
    "all_found@5": 9,
    "all_found_rate@5": 0.4737,
-   "doc_hit@5": 12,
-   "slots_found@10": 24,
-   "recall@10": 0.6667,
-   "all_found@10": 11,
-   "all_found_rate@10": 0.5789,
-   "doc_hit@10": 15,
-   "slots_found@20": 26,
-   "recall@20": 0.7222,
-   "all_found@20": 11,
-   "all_found_rate@20": 0.5789,
-   "doc_hit@20": 15
+   "doc_hit@5": 15,
+   "slots_found@10": 23,
+   "recall@10": 0.6389,
+   "all_found@10": 9,
+   "all_found_rate@10": 0.4737,
+   "doc_hit@10": 16,
+   "slots_found@20": 25,
+   "recall@20": 0.6944,
+   "all_found@20": 10,
+   "all_found_rate@20": 0.5263,
+   "doc_hit@20": 16
   }
  },
  "violations": {
-  "critical": 2,
+  "critical": 0,
   "minor": 0,
-  "unresolved": 15,
-  "coarse": 99,
+  "unresolved": 13,
+  "coarse": 103,
   "items": [
+   {
+    "question_id": "author_14dfddbe1d41275533ae3945",
+    "slot_name": "evidence_1",
+    "doc_id": "periodic_20240321001029",
+    "node_index": 233,
+    "locator": "periodic_20240321001029/20240321001029.xml#node=233",
+    "severity": "unresolved",
+    "reason": "duplicate_evidence_different_node",
+    "chunk_text": "자본총계 | 131,667,154 | 61,478,083 | 47,856,646\n구분 | 2023년 1월~12월 | 2022년 1월~12월 | 2021년 1월~12월\n매출액 | 16,368,185 | 13,615,412 | 8,969,575\n영업이익 | (43,932,239) | 1,310,479 | (1,021,746)\n당기순이익 | 109,139 | 5,775,822 | (7,843,397)\n주당순이익(기본) | 6 | 356 | (497)",
+    "gold_node": 230
+   },
+   {
+    "question_id": "author_a538b0e2240fe01d1a71ebb7",
+    "slot_name": "evidence_2",
+    "doc_id": "periodic_20250515001309",
+    "node_index": 152,
+    "locator": "periodic_20250515001309/20250515001309.xml#node=152",
+    "severity": "unresolved",
+    "reason": "duplicate_evidence_different_node",
+    "chunk_text": "[이익잉여금] | 4,445,534 | 4,242,212 | 4,230,100\n[기타포괄손익누계액] | (3,219) | (3,153) | (2,732)\n[기타자본항목] | 24,872 | 24,872 | 24,872\n자본총계 | 4,653,102 | 4,449,846 | 4,438,155\n자본과 부채총계 | 5,452,238 | 5,171,611 | 5,057,410\n종속ㆍ관계ㆍ공동기업\n투자주식의 평가방법 | 원가법 | 원가법 | 원가법\n | 2025.01.01~ 2025.03.31 | 2024.01.01~ 2024.12.31 | 2023.01.01~ 2023.12.31\n매출액 | 892,729 | 3,534,850 | 3,500,214\n영업이익 | 72,950 | 228,883 | 217,117\n당기순이",
+    "gold_node": 149
+   },
    {
     "question_id": "author_ed4a7d77528a8c5751e9a348",
     "slot_name": "evidence_1",
@@ -161,34 +183,28 @@
     "question_id": "gold_b_137f1bfd5c69987d009ae50c",
     "slot_name": "correction_new_company1",
     "doc_id": "major_20241128001098",
-    "node_index": 9,
-    "locator": "major_20241128001098/20241128001098.xml#node=9",
-    "severity": "unresolved",
-    "reason": "duplicate_evidence_different_node",
-    "chunk_text": "·물적분할 방식으로 분할합니다. 분할 후 분할회사는 상장법인으로 존속하고 각 신설회사는 비상장법인으로 합니다.<분할의 개요>1) 분할회사(분할존속회사)- 상호: 주식회사 엔씨소프트- 사업부문: 분할대상 사업부문을 제외한 모든 사업부문- 비고: 상장법인2) 신설회사1(분할신설회사1)- 상호: 주식회사 퍼스트스파크게임즈           (이하 \"TL사업부 신설회사\")- 사업부문: TL 사업부문- 비고: 비상장법인3) 신설회사2(분할신설회사2)- 상호: 주식회사 빅파이어게임즈           (이하 \"LLL사업부 신설회사\")- 사업부문: LLL 사업부문- 비고: 비상장법인4) 신설회사3(분할신설회사3)- 상호: 주식회사 엔씨에이아이           (이하 \"AI서비스연구사업부 신설회사\")- 사업부문: AI서",
-    "gold_node": 5
+    "node_index": 5,
+    "locator": "major_20241128001098/20241128001098.xml#node=5",
+    "severity": "coarse",
+    "reason": "no_row_col_in_chunk"
    },
    {
     "question_id": "gold_b_137f1bfd5c69987d009ae50c",
     "slot_name": "correction_new_company2",
     "doc_id": "major_20241128001098",
-    "node_index": 9,
-    "locator": "major_20241128001098/20241128001098.xml#node=9",
-    "severity": "unresolved",
-    "reason": "duplicate_evidence_different_node",
-    "chunk_text": "·물적분할 방식으로 분할합니다. 분할 후 분할회사는 상장법인으로 존속하고 각 신설회사는 비상장법인으로 합니다.<분할의 개요>1) 분할회사(분할존속회사)- 상호: 주식회사 엔씨소프트- 사업부문: 분할대상 사업부문을 제외한 모든 사업부문- 비고: 상장법인2) 신설회사1(분할신설회사1)- 상호: 주식회사 퍼스트스파크게임즈           (이하 \"TL사업부 신설회사\")- 사업부문: TL 사업부문- 비고: 비상장법인3) 신설회사2(분할신설회사2)- 상호: 주식회사 빅파이어게임즈           (이하 \"LLL사업부 신설회사\")- 사업부문: LLL 사업부문- 비고: 비상장법인4) 신설회사3(분할신설회사3)- 상호: 주식회사 엔씨에이아이           (이하 \"AI서비스연구사업부 신설회사\")- 사업부문: AI서",
-    "gold_node": 5
+    "node_index": 5,
+    "locator": "major_20241128001098/20241128001098.xml#node=5",
+    "severity": "coarse",
+    "reason": "no_row_col_in_chunk"
    },
    {
     "question_id": "gold_b_137f1bfd5c69987d009ae50c",
     "slot_name": "correction_new_company4",
     "doc_id": "major_20241128001098",
-    "node_index": 9,
-    "locator": "major_20241128001098/20241128001098.xml#node=9",
-    "severity": "unresolved",
-    "reason": "duplicate_evidence_different_node",
-    "chunk_text": "·물적분할 방식으로 분할합니다. 분할 후 분할회사는 상장법인으로 존속하고 각 신설회사는 비상장법인으로 합니다.<분할의 개요>1) 분할회사(분할존속회사)- 상호: 주식회사 엔씨소프트- 사업부문: 분할대상 사업부문을 제외한 모든 사업부문- 비고: 상장법인2) 신설회사1(분할신설회사1)- 상호: 주식회사 퍼스트스파크게임즈           (이하 \"TL사업부 신설회사\")- 사업부문: TL 사업부문- 비고: 비상장법인3) 신설회사2(분할신설회사2)- 상호: 주식회사 빅파이어게임즈           (이하 \"LLL사업부 신설회사\")- 사업부문: LLL 사업부문- 비고: 비상장법인4) 신설회사3(분할신설회사3)- 상호: 주식회사 엔씨에이아이           (이하 \"AI서비스연구사업부 신설회사\")- 사업부문: AI서",
-    "gold_node": 5
+    "node_index": 5,
+    "locator": "major_20241128001098/20241128001098.xml#node=5",
+    "severity": "coarse",
+    "reason": "no_row_col_in_chunk"
    },
    {
     "question_id": "gold_b_192fa6ea90c0cdefc2616fc0",
@@ -784,17 +800,6 @@
    },
    {
     "question_id": "gold_b_a534bc30d3414f2d094e7461",
-    "slot_name": "reporter",
-    "doc_id": "holding_20240111000046",
-    "node_index": 27,
-    "locator": "holding_20240111000046/20240111000046.xml#node=27",
-    "severity": "unresolved",
-    "reason": "duplicate_evidence_different_node",
-    "chunk_text": "| 보고서작성기준일 | 보고자 | 보고자 | 주식등 | 주식등 | 주권 | 주권 | 의결권 있는 발행주식총수(주)\n | 보고서작성기준일 | 본인 성명 | 특별관계자수 | 주식등의 수(주) | 비율(%) | 주식수(주) | 비율(%) | 의결권 있는 발행주식총수(주)\n직전보고서 | - | - | - | - | - | - | - | -\n이번보고서 | 2024년 01월 08일 | KopernikGlobalInvestors,LLC | - | 22,272,289 | 5.10 | 22,272,289 | 5.10 | 436,611,361\n증    감 | 증    감 | 증    감 | 증    감 | 22,272,289 | 5.10 | 22,272,289 | 5.10 | 436,611,361",
-    "gold_node": 0
-   },
-   {
-    "question_id": "gold_b_a534bc30d3414f2d094e7461",
     "slot_name": "shares_before",
     "doc_id": "holding_20240111000046",
     "node_index": 1,
@@ -974,6 +979,15 @@
     "reason": "no_row_col_in_chunk"
    },
    {
+    "question_id": "gold_b_e2808b0ce73a5ddd72f7508b",
+    "slot_name": "board_resolution_date",
+    "doc_id": "major_20241021000037",
+    "node_index": 3,
+    "locator": "major_20241021000037/20241021000037.xml#node=3",
+    "severity": "coarse",
+    "reason": "no_row_col_in_chunk"
+   },
+   {
     "question_id": "gold_b_e5cc91d1b8a8bef8695cb6cd",
     "slot_name": "reporter",
     "doc_id": "holding_20260311004186",
@@ -1127,31 +1141,23 @@
     "locator": "holding_20241219000061/20241219000061.xml#node=1",
     "severity": "coarse",
     "reason": "no_row_col_in_chunk"
-   },
-   {
-    "severity": "critical",
-    "reason": "arm_specific_adjudicated_critical:u-1b6cd184a87f"
-   },
-   {
-    "severity": "critical",
-    "reason": "arm_specific_adjudicated_critical:u-8564414f6080"
    }
   ]
  },
  "latency_ms": {
-  "p50": 1859,
-  "p95": 22739,
-  "mean": 5667,
-  "max": 33878,
-  "total_s": 572.4
+  "p50": 1300,
+  "p95": 4077,
+  "mean": 1768,
+  "max": 12267,
+  "total_s": 178.6
  },
- "peak_rss_mb": 1423.0,
+ "peak_rss_mb": 1260.2,
  "external_services": [],
  "pins": {
   "conditions_sha_matches": true,
   "run_conditions_sha": "83d5b8a02de2e3e79e388ec417ed104c81b08eb0a8dc8a8366b020df36b5e527",
   "gold_sha256": "7941144c09ce25debeeab6c3fbdfbd4c16761a6be06ab3a844ad159c832f102b",
-  "config_sha256": "fd23dd8be268a694465a97b4e73bfb48b36bbbb1dfcaa73d97e152a8641fb6b8",
+  "config_sha256": "f4914226620b425dbe1e13da5c2c6921391fe2afbf33ae83e80f9bc9146389b2",
   "code_sha256": "04b847c4a2e61042da9f025735af8b2e2e56311e"
  },
  "questions": [
@@ -1300,12 +1306,12 @@
    "excluded": false,
    "found_at": {
     "5": 1,
-    "10": 1,
+    "10": 2,
     "20": 2
    },
    "all_found_at": {
     "5": false,
-    "10": false,
+    "10": true,
     "20": true
    },
    "doc_hit_at": {
@@ -1313,7 +1319,7 @@
     "10": true,
     "20": true
    },
-   "n_slot_matches": 1,
+   "n_slot_matches": 2,
    "error": ""
   },
   {
@@ -1531,7 +1537,7 @@
    "found_at": {
     "5": 0,
     "10": 0,
-    "20": 1
+    "20": 0
    },
    "all_found_at": {
     "5": false,
@@ -1539,7 +1545,7 @@
     "20": false
    },
    "doc_hit_at": {
-    "5": false,
+    "5": true,
     "10": true,
     "20": true
    },
@@ -1782,17 +1788,17 @@
    "n_slots": 1,
    "excluded": false,
    "found_at": {
-    "5": 0,
+    "5": 1,
     "10": 1,
     "20": 1
    },
    "all_found_at": {
-    "5": false,
+    "5": true,
     "10": true,
     "20": true
    },
    "doc_hit_at": {
-    "5": false,
+    "5": true,
     "10": true,
     "20": true
    },
@@ -1852,7 +1858,7 @@
    "excluded": false,
    "found_at": {
     "5": 0,
-    "10": 0,
+    "10": 1,
     "20": 2
    },
    "all_found_at": {
@@ -1865,7 +1871,7 @@
     "10": true,
     "20": true
    },
-   "n_slot_matches": 0,
+   "n_slot_matches": 1,
    "error": ""
   },
   {
@@ -2022,9 +2028,9 @@
     "20": false
    },
    "doc_hit_at": {
-    "5": false,
-    "10": false,
-    "20": false
+    "5": true,
+    "10": true,
+    "20": true
    },
    "n_slot_matches": 0,
    "error": ""
@@ -2265,7 +2271,7 @@
    "n_slots": 2,
    "excluded": false,
    "found_at": {
-    "5": 1,
+    "5": 0,
     "10": 1,
     "20": 1
    },
@@ -2495,21 +2501,21 @@
    "n_slots": 4,
    "excluded": false,
    "found_at": {
-    "5": 0,
-    "10": 4,
+    "5": 3,
+    "10": 3,
     "20": 4
    },
    "all_found_at": {
     "5": false,
-    "10": true,
+    "10": false,
     "20": true
    },
    "doc_hit_at": {
-    "5": false,
+    "5": true,
     "10": true,
     "20": true
    },
-   "n_slot_matches": 4,
+   "n_slot_matches": 3,
    "error": ""
   },
   {
@@ -3139,21 +3145,21 @@
    "n_slots": 6,
    "excluded": false,
    "found_at": {
-    "5": 6,
-    "10": 6,
-    "20": 6
+    "5": 5,
+    "10": 5,
+    "20": 5
    },
    "all_found_at": {
-    "5": true,
-    "10": true,
-    "20": true
+    "5": false,
+    "10": false,
+    "20": false
    },
    "doc_hit_at": {
     "5": true,
     "10": true,
     "20": true
    },
-   "n_slot_matches": 6,
+   "n_slot_matches": 5,
    "error": ""
   },
   {
@@ -3301,8 +3307,8 @@
    "excluded": false,
    "found_at": {
     "5": 0,
-    "10": 0,
-    "20": 1
+    "10": 1,
+    "20": 2
    },
    "all_found_at": {
     "5": false,
@@ -3310,11 +3316,11 @@
     "20": false
    },
    "doc_hit_at": {
-    "5": true,
+    "5": false,
     "10": true,
     "20": true
    },
-   "n_slot_matches": 0,
+   "n_slot_matches": 1,
    "error": ""
   },
   {
