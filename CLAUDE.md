@@ -99,8 +99,10 @@
   **B/D 새 러너로 재실행: 101문항 순위 차이 0건**(지표 완전 동일, D = PROVISIONAL_WINNER 유지).
   judge9: 완전 34·부분 47·미포함 11(가중 57.5 = 최고 동률) — 최강 게이트에서 기준선 완전 회복.
   ※ A/C 안내: 결과 행마다 arm·config_sha256·code_sha256 필수(§1-1) — --final이 강제한다.
-- **FC maxTokens 1024 = vFINAL 21번 변경 대상**: v4 §7 예산(512/256/768)은 JSON 경로에 그대로,
-  FC 전송만 API 하한(1024 미만 40001 실측)으로 상향. Owner(팀 대표) 승인 대기 — 승인 시 이 줄이 로그.
+- **vFINAL 21번 변경 승인(2026-09-04, Owner=팀 대표)**: "FC Native Function Calling 경로에 한해
+  전송 maxTokens 최소 1024 적용을 승인한다. 사유는 서비스 앱 API가 1024 미만 요청을 40001로
+  거부하기 때문이다. JSON 경로의 v4 §7 예산은 변경하지 않으며 requested/sent 값을 구분해
+  기록한다." — 구현: llm.py complete_tool(sent=max(1024, 예산)), usage.max_tokens_requested/sent.
 - 남은 큰 덩어리: 검색손실(~19, 4-arm 승자 확정 후) · EVENT_TRACE(원장 필요, 조건부 — DEV_TUNE 강등 실측 0건이라 ledger는 DEV_TUNE 지표에 +0, 기각) · COMPARISON 열 선택(5/12) · 서술형 자동채점 한계.
 - **서버 재배포 필요**(3차 반영 커밋까지): pins에 FC 지문·llm·code_sha가 들어가 재배포 시 캐시 자동 무효화 — 수동 삭제 불필요. 배포 시 `DART_QA_CODE_SHA` env 설정 권장(없으면 git HEAD 자동).
 
