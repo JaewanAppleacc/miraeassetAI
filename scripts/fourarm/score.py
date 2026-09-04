@@ -36,7 +36,13 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--index-dir", type=Path, default=REPO / "data" / "index")
     p.add_argument("--deployable", nargs="*", default=[])
     p.add_argument("--no-locator-check", action="store_true")
+    p.add_argument("--final", action="store_true",
+                   help="최종 판정 모드: A/B/C/D 완비·문항 누락 0·arm 간 입력 pin 일치를 강제한다. "
+                        "결과 파일이 없으면 건너뛰지 않고 실패한다(검수 3차 발견 6).")
     args = p.parse_args(argv)
+    if args.final and sorted(args.arms) != ["A", "B", "C", "D"]:
+        print("--final은 --arms A B C D 전부를 요구한다", file=sys.stderr)
+        return 1
 
     gold = fourarm.load_gold(args.gold)
     segments = fourarm.load_segments(args.conditions)
@@ -52,6 +58,9 @@ def main(argv: list[str] | None = None) -> int:
         rpath = args.results_dir / f"{arm}.results.jsonl"
         runpath = args.results_dir / f"{arm}.run.json"
         if not rpath.exists():
+            if args.final:
+                print(f"[{arm}] 결과 파일 없음: {rpath} — 최종 판정 불가", file=sys.stderr)
+                return 1
             print(f"[{arm}] 결과 파일 없음: {rpath} — 건너뜀", file=sys.stderr)
             continue
         results = fourarm.load_results(rpath)
@@ -80,9 +89,29 @@ def main(argv: list[str] | None = None) -> int:
 
     table = fourarm.summary_table(reports)
     out = [f"# 4-arm 채점 요약 (k={fourarm.EVAL_K} 평가 · Gold {gold_sha[:8]} · conditions {cond_sha[:8]})", "", table]
+    if args.final:
+        # arm 간 입력 pin 일치(같은 Gold·conditions·색인·코퍼스를 봤는가) — run.json의 config에서 대조.
+        shared: dict[str, dict] = {}
+        for arm in args.arms:
+            runpath = args.results_dir / f"{arm}.run.json"
+            cfg = (json.loads(runpath.read_text(encoding="utf-8")) if runpath.exists() else {})
+            pins = cfg.get("config") or cfg
+            shared[arm] = {k: pins.get(k) for k in
+                           ("conditions_sha", "gold_sha", "document_ir", "manifest_sha256", "code_sha")
+                           if pins.get(k) is not None}
+        keys = set().union(*(set(v) for v in shared.values()))
+        mismatched = {k: {a: shared[a].get(k) for a in args.arms}
+                      for k in sorted(keys)
+                      if len({json.dumps(shared[a].get(k), sort_keys=True) for a in args.arms}) > 1}
+        if mismatched:
+            print(f"최종 판정 불가 — arm 간 pin 불일치: {json.dumps(mismatched, ensure_ascii=False)[:400]}",
+                  file=sys.stderr)
+            return 1
+
     judgement = None
     if len(reports) >= 2:
-        judgement = fourarm.judge(reports, deployable={a: True for a in args.deployable})
+        judgement = fourarm.judge(reports, deployable={a: True for a in args.deployable},
+                                  require_arms={"A", "B", "C", "D"} if args.final else None)
         (args.results_dir / "judgement.json").write_text(
             json.dumps(judgement, ensure_ascii=False, indent=1), encoding="utf-8")
         head = f"## 판정: {judgement['status']}"

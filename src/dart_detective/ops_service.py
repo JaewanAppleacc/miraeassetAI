@@ -270,6 +270,7 @@ async def answer_endpoint(request: Request) -> JSONResponse:
         return JSONResponse(content=hit)
 
     meta: dict[str, Any] = {"cacheable": False}
+    disconnected = False
     async with _gate:
         remaining = deadline_budget() - (time.perf_counter() - t0)
         task = asyncio.create_task(
@@ -282,13 +283,16 @@ async def answer_endpoint(request: Request) -> JSONResponse:
                     break
                 if (time.perf_counter() - t0) >= deadline_budget():
                     raise TimeoutError
-                if await request.is_disconnected():
-                    # 클라이언트가 끊었다 — 결과를 버리고 자리를 비운다(재시도 겹침 대응).
-                    task.cancel()
-                    logger.info("answer cancelled(disconnect) qid=%s", question_id)
-                    return JSONResponse(status_code=499,
-                                        content={"detail": "client disconnected"})
+                if not disconnected and await request.is_disconnected():
+                    # 클라이언트가 끊었다(재시도 예상). task.cancel()은 to_thread의 실행 중
+                    # 스레드를 멈추지 못하므로(검수 3차 발견 7), 취소 대신 **세마포어를 쥔 채**
+                    # 계산이 끝날 때까지 기다린다 — 재시도는 세마포어에서 대기하다가 캐시로
+                    # 즉시 답을 받는다. HCX 이중 호출·좀비 겹침이 구조적으로 사라진다.
+                    disconnected = True
+                    logger.info("answer disconnect(계산 유지) qid=%s", question_id)
         except TimeoutError:
+            # 데드라인은 응답 의무가 남아 취소한다 — 스레드 좀비 가능성은 데드라인 케이스에
+            # 한정되며(현재 최대 40s « 예산 290s라 실측 0회), 폴백 5필드로 응답한다.
             task.cancel()
             logger.warning("answer deadline qid=%s", question_id)
             response = _fallback_wire(question_id, question, "deadline")
@@ -297,9 +301,19 @@ async def answer_endpoint(request: Request) -> JSONResponse:
             response = _fallback_wire(question_id, question, type(exc).__name__)
 
     response = {k: str(response.get(k, "")) for k in WIRE_KEYS}
+    if not _valid_wire(response):
+        # 새로 계산한 응답도 5-string 계약을 검증한다(검수 3차 발견 3 — 캐시 hit만 검증했었다).
+        logger.error("answer invalid wire qid=%s — 폴백으로 대체", question_id)
+        response = {k: str(_fallback_wire(question_id, question, "invalid_wire").get(k, ""))
+                    for k in WIRE_KEYS}
+        meta = {"cacheable": False}
     stored = cacheable(meta)
     if stored:
         _cache_store(key, response)
+    if disconnected:
+        logger.info("answer discarded(disconnect) qid=%s cached=%s ms=%d",
+                    question_id, stored, int((time.perf_counter() - t0) * 1000))
+        return JSONResponse(status_code=499, content={"detail": "client disconnected"})
     logger.info("answer cache=miss qid=%s chars=%d cached=%s ms=%d",
                 question_id, len(question), stored,
                 int((time.perf_counter() - t0) * 1000))

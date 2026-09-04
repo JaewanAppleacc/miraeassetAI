@@ -7,8 +7,9 @@ JSON 프롬프트 경로(qa_agent SYSTEM_PROMPT)와 다른 점: 모델이 자유
 claim 게이트(하나라도 걸리면 그 claim 폐기 — 답 전체 폐기가 아니다):
     citation_bound   claim.doc_id ∈ 실사용 근거 문서 집합(접수번호∈실사용 근거)
     quote_grounded   claim.quote가 그 문서 원문의 부분문자열(공백만 무시 — validator._squash와 동일 규칙)
-    numbers_bound    claim.text의 모든 숫자 ∈ quote ∪ derived ∪ 연도 ∪ **질문에 적힌 숫자**
-                     (질문의 날짜·기수를 문장에서 반복하는 것은 날조가 아니다 — 실측 오탐 교정).
+    numbers_bound    claim.text의 모든 숫자 ∈ quote ∪ derived ∪ 연도 ∪ **질문의 날짜·기수형 숫자**
+                     (질문의 날짜·기수 반복은 날조가 아니다 — 실측 오탐 교정. 단 질문의 임의 숫자
+                     전부를 허용하면 "매출액이 999인가?" echo 날조가 통과하므로 날짜·기수 문맥만).
                      claim.value는 질문 허용 없이 quote ∪ derived 안이어야 한다(값 자체는 원문 몫).
     period_bound     claim.period의 연도가 quote 또는 그 문서 원문·메타(rcept_dt·report_nm)에 존재
 
@@ -108,6 +109,22 @@ def _claim_numbers(text: str) -> list[str]:
     return [n for n in numbers_in(text or "") if not YEAR_RE.fullmatch(n)]
 
 
+# 질문에서 "반복해도 날조가 아닌" 숫자 = 날짜·기수·회차류 문맥의 숫자만.
+# 종전에는 질문의 모든 숫자를 허용해 "매출액이 999인가?" → "매출액은 999이다"가
+# SUPPORTED로 통과했다(검수 3차 발견 2 재현). 값 후보(금액·수량)는 여기 안 들어간다.
+_QUESTION_CONTEXT_NUM_RE = re.compile(
+    r"(?:19|20)\d{2}\s*[-./년]\s*\d{1,2}(?:\s*[-./월]\s*\d{1,2})?\s*일?"   # 날짜
+    r"|제?\s*\d{1,3}\s*(?:월|일|분기|반기|회차|회|기|차)(?![가-힣0-9])"       # 기수·회차
+)
+
+
+def question_context_numbers(question: str) -> set[str]:
+    out: set[str] = set()
+    for m in _QUESTION_CONTEXT_NUM_RE.finditer(question or ""):
+        out |= set(numbers_in(m.group()))
+    return out
+
+
 def _years_of(text: str) -> set[str]:
     return {m.group() for m in YEAR_RE.finditer(text or "")}
 
@@ -129,14 +146,16 @@ def _column_mismatch(quote: str, value: str, claim_years: set[str],
     for chunk in chunk_texts:
         if q not in _squash(chunk):
             continue
-        if len({m.group() for m in YEAR_RE.finditer(chunk)}) < 2:
-            return None                   # 연도가 하나뿐인 표 — 열 오귀속이 성립하지 않는다
         lines = chunk.split("\n")
         line = next((ln for ln in lines if q in _squash(ln) or
                      (len(_squash(ln)) >= 8 and _squash(ln) in q)), None)
         if line is None or line.count("|") < 2:
             return None
         cols = tables.period_columns_of_lines(lines, base_year=base_year)
+        if len(cols) < 2:
+            return None                   # 기간 열이 하나뿐(또는 판독 불가) — 오귀속이 성립하지 않는다
+        # 모호성은 "명시 연도 글자 수"가 아니라 해석된 기간 열 수로 판단한다 — 당기/전기·제N기
+        # 표는 연도 글자 없이도 열이 2개다(검수 3차 발견 1: 종전 연도 카운트 가드가 우회를 허용).
         for y in claim_years:
             col = cols.get(int(y))
             if col is None:
@@ -272,7 +291,7 @@ def fc_answer(llm: Any, user_prompt: str, *, sources: Sequence[Mapping[str, Any]
         by_doc.setdefault(str(s.get("document_id") or ""), []).append(str(s.get("text") or ""))
     doc_squashed = {d: _squash("\n".join(ts)) for d, ts in by_doc.items()}
     derived_set = {str(d).replace(",", "") for d in derived_allowed}
-    q_nums = set(numbers_in(question))
+    q_nums = question_context_numbers(question)
 
     kept: list[Mapping[str, Any]] = []
     dropped: list[dict[str, Any]] = []

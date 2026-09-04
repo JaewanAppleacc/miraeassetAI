@@ -18,6 +18,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import threading
 import traceback
 from typing import Any
@@ -81,7 +82,8 @@ def _out_of_scope_wire(question_id: str, question: str,
     year = ""
     for r in decision.reasons:
         if r.startswith("future_period:"):
-            year = r.split(":", 1)[1].replace("년", "").strip()
+            m = re.search(r"20[2-9][0-9]", r)
+            year = m.group(0) if m else r.split(":", 1)[1].strip()
     trace = {
         "execution_mode": "EARLY_EXIT",
         "operations": [{"step": "policy_gate", **decision.to_dict()}],
@@ -187,6 +189,27 @@ def answer(question_id: str, question: str, *, deadline_s: float | None = None) 
     return wire
 
 
+_code_sha: str | None = None
+
+
+def _get_code_sha() -> str:
+    """캐시 pin용 코드 식별자. 배포 env(DART_QA_CODE_SHA) 우선, 없으면 git HEAD(1회 조회)."""
+    global _code_sha
+    if _code_sha is None:
+        v = os.environ.get("DART_QA_CODE_SHA", "")
+        if not v:
+            try:
+                import subprocess
+                v = subprocess.run(["git", "rev-parse", "--short", "HEAD"],
+                                   capture_output=True, text=True, timeout=5,
+                                   cwd=os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+                                   ).stdout.strip()
+            except Exception:  # noqa: BLE001
+                v = ""
+        _code_sha = v
+    return _code_sha
+
+
 def readiness() -> dict[str, Any]:
     """vFINAL 19번·/ready. 실패해도 예외 대신 ready=False."""
     try:
@@ -210,6 +233,9 @@ def readiness() -> dict[str, Any]:
                      # 재배포 시 캐시가 자동 무효화된다(검수 발견 10: 종전엔 수동 삭제 필요).
                      "fc_prompt_version": grounded_answer.FC_PROMPT_VERSION,
                      "fc_fingerprint": grounded_answer.fc_fingerprint(),
+                     # 모델·코드가 바뀌면 캐시가 자동 무효화되도록 pin에 넣는다(검수 3차 발견 8).
+                     "llm": f"{getattr(llm, 'provider', '')}:{getattr(llm, 'model', '')}",
+                     "code_sha": _get_code_sha(),
                      "corpus_cutoff": policy_gate.CORPUS_CUTOFF},
         }
     except Exception as exc:  # noqa: BLE001

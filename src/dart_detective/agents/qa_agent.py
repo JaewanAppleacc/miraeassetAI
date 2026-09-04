@@ -1095,7 +1095,8 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
         for m in state.evidence_matches:
             _, nums = grounded_answer.attribution_of(m.doc_id, doc_meta.get(m.doc_id) or {})
             final_derived |= nums
-        final_derived |= set(grounded_answer.numbers_in(question))
+        # 질문 숫자 전부가 아니라 날짜·기수형 토큰만 허용한다(검수 3차 발견 2 — 질문 echo 날조 차단).
+        final_derived |= grounded_answer.question_context_numbers(question)
     state.validation = validator.validate(answer, citations, sources, derived=final_derived)
     if state.validation["status"] == "UNSUPPORTED":
         # ⑨ 3단 폴백(v4 §11) — 최종 답이 게이트를 못 넘으면 수리(OFF)→템플릿→발췌 순서로 대체.

@@ -89,3 +89,34 @@ def test_relative_header_swap_caught_with_base_year():
         squashed, {_DOC: {"base_year": 2024}}, set(), doc_chunks={_DOC: [chunk]})
     assert not ok
     assert any("column_mismatch" in f for f in fails)
+
+
+def test_relative_header_swap_caught_without_explicit_years():
+    """검수 3차 발견 1 재현: 명시 연도가 없는 당기/전기·제N기 표도 열 오귀속을 잡아야 한다."""
+    for header in ("구분 | 당기 | 전기", "구분 | 제 49 기 | 제 48 기"):
+        chunk = f"{header}\n매출액 | 100 | 90"
+        squashed = {_DOC: grounded_answer._squash(chunk)}
+        ok, fails = grounded_answer.validate_claim(
+            {"text": "2024년 매출액은 90이다", "value": "90", "period": "2024",
+             "doc_id": _DOC, "quote": "매출액 | 100 | 90"},
+            squashed, {_DOC: {"base_year": 2024, "rcept_dt": "20240515"}},
+            set(), doc_chunks={_DOC: [chunk]})
+        assert not ok, header
+        assert any("column_mismatch" in f for f in fails), (header, fails)
+
+
+def test_question_echo_number_is_not_allowed_as_claim_value():
+    """검수 3차 발견 2 재현: 질문의 임의 숫자(999)를 문장으로 반복해도 날조로 잡아야 한다."""
+    chunk = "매출액 | 100"
+    q_nums = grounded_answer.question_context_numbers("매출액이 999인가?")
+    assert "999" not in q_nums
+    ok, fails = grounded_answer.validate_claim(
+        {"text": "매출액은 999이다", "value": None, "period": None,
+         "doc_id": _DOC, "quote": "매출액 | 100"},
+        {_DOC: grounded_answer._squash(chunk)}, {_DOC: {}}, set(),
+        question_numbers=q_nums, doc_chunks={_DOC: [chunk]})
+    assert not ok and any(f.startswith("numbers_bound:999") for f in fails)
+    # 날짜·기수형 숫자는 여전히 허용된다(원래 오탐 교정 취지 유지).
+    allowed = grounded_answer.question_context_numbers(
+        "2024년 3월 22일 기준 제3회차 전환사채의 발행 목적은?")
+    assert {"3", "22"} <= allowed
