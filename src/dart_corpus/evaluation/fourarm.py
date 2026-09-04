@@ -38,6 +38,9 @@ LOW_MIN = 10
 TIE_MAX_DIFF = 1
 REL_TIE = 0.05
 DENSE_OFF = ("C", "D")
+# vFINAL 후보 정의 라벨 — --final의 config 결박(arm 바꿔치기 검출)에 쓴다.
+ARM_LABELS = {"A": "FIXED+FULL_DENSE", "B": "LINE_WINDOW+LOW_ONLY_DENSE",
+              "C": "FIXED+DENSE_OFF", "D": "LINE_WINDOW+DENSE_OFF"}
 LINE_WINDOW = ("B", "D")
 
 _LOC_RE = re.compile(

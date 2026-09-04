@@ -53,3 +53,24 @@ def test_final_detects_results_tampering(tmp_path):
     rc = score.main(["--arms", "A", "B", "C", "D", "--final", "--no-locator-check",
                      "--results-dir", str(d)])
     assert rc == 1        # results_sha256 불일치
+
+
+def test_final_detects_full_forgery_with_recomputed_hashes(tmp_path):
+    """검수 6차 발견 3: run.arm·행 arm·results_sha256까지 전부 고쳐 써도
+    config.arm/label 결박과 config_sha256 재계산이 바꿔치기를 잡아야 한다."""
+    import hashlib, json
+    d = _copy_bd_as_abcd(tmp_path)
+    for arm in ("A", "C"):
+        rows = [json.loads(l) for l in (d / f"{arm}.results.jsonl").open(encoding="utf-8")]
+        for r in rows:
+            r["arm"] = arm
+        body = "\n".join(json.dumps(r, ensure_ascii=False) for r in rows) + "\n"
+        (d / f"{arm}.results.jsonl").write_text(body, encoding="utf-8")
+        run = json.loads((d / f"{arm}.run.json").read_text(encoding="utf-8"))
+        run["arm"] = arm
+        run["results_sha256"] = hashlib.sha256(body.encode("utf-8")).hexdigest()
+        # config 내부의 arm은 B/D 그대로 — 여기서 걸려야 한다.
+        (d / f"{arm}.run.json").write_text(json.dumps(run, ensure_ascii=False), encoding="utf-8")
+    rc = score.main(["--arms", "A", "B", "C", "D", "--final", "--no-locator-check",
+                     "--results-dir", str(d)])
+    assert rc == 1

@@ -120,24 +120,36 @@ _QUESTION_CONTEXT_NUM_RE = re.compile(
 
 def question_context_numbers(question: str) -> set[str]:
     out: set[str] = set()
-    for m in _QUESTION_CONTEXT_NUM_RE.finditer(question or ""):
-        out |= set(numbers_in(m.group()))
+    for _, toks in _context_expressions(question):
+        out |= toks
     return out
 
 
-def _context_expressions(text: str) -> list[tuple[tuple[str, ...], set[str]]]:
-    """날짜·기수 표현마다 (정규화 키, 표면 숫자 토큰들)을 돌려준다.
+# 날짜·기수를 따로 파싱해 종류·위치를 보존한다. 숫자 집합 동치는 "제3기"↔"3일",
+# "3월 22일"↔"22월 3일"을 같은 표현으로 봤다(검수 6차 발견 1 재현).
+_CTX_DATE_RE = re.compile(
+    r"((?:19|20)\d{2})\s*[-./년]\s*(\d{1,2})(?:\s*[-./월]\s*(\d{1,2}))?\s*일?")
+_CTX_ORD_RE = re.compile(r"제?\s*(\d{1,3})\s*(월|일|분기|반기|회차|회|기|차)(?![가-힣0-9])")
 
-    정규화 키 = 표현 안 숫자들의 int 정규화 튜플. "2024년 3월 22일"과 "2024-03-22"는
-    표기가 달라도 같은 날짜다 — 문자열 일치로 비교하면 정당한 반복이 표기 차이로 차단된다
-    (자체 검수 발견). 표면 토큰은 numbers_bound가 대조하는 claim 쪽 표기 그대로 남긴다.
+
+def _context_expressions(text: str) -> list[tuple[tuple, set[str]]]:
+    """날짜·기수 표현마다 (구조화 키, 표면 숫자 토큰들)을 돌려준다.
+
+    키는 종류와 자리 순서를 보존한다: ("date", 연, 월, 일) / ("ord", 단위, 수).
+    "2024년 3월 22일"과 "2024-03-22"는 같은 키(표기 무관 동치, 자체 검수 발견)지만
+    "2024년 22월 3일"(자리 스왑)·"3일"(단위 다름)은 다른 키다.
     """
-    out = []
-    for m in _QUESTION_CONTEXT_NUM_RE.finditer(text or ""):
-        toks = set(numbers_in(m.group()))
-        key = tuple(sorted(str(int(t)) for t in toks if t.isdigit()))
-        if key:
-            out.append((key, toks))
+    out: list[tuple[tuple, set[str]]] = []
+    date_spans: list[tuple[int, int]] = []
+    for m in _CTX_DATE_RE.finditer(text or ""):
+        key = ("date", int(m.group(1)), int(m.group(2)),
+               int(m.group(3)) if m.group(3) else None)
+        out.append((key, set(numbers_in(m.group()))))
+        date_spans.append(m.span())
+    for m in _CTX_ORD_RE.finditer(text or ""):
+        if any(s <= m.start() < e for s, e in date_spans):
+            continue                      # 날짜 안의 "3월"·"22일" 조각을 독립 표현으로 세지 않는다
+        out.append((("ord", m.group(2), int(m.group(1))), set(numbers_in(m.group()))))
     return out
 
 
@@ -158,6 +170,21 @@ def context_number_allowance(question: str, generated: str) -> set[str]:
 
 def _years_of(text: str) -> set[str]:
     return {m.group() for m in YEAR_RE.finditer(text or "")}
+
+
+# 회계 기간 토큰 — 연도 외에 당기/전기(말)·제N기·분기/반기도 기간이다(검수 6차 발견 2:
+# 연도만 세면 "당기 90, 전기 100" 스왑이 분리 규칙을 그대로 지나간다).
+# 뒤에 한글이 붙는 "당기순이익"·"전기요금"·"반기보고서"는 lookahead로 제외한다.
+_REL_PERIOD_RE = re.compile(r"(당기|전기|전전기)(말)?(?![가-힣])")
+_ORD_PERIOD_RE = re.compile(r"제\s*\d{1,3}\s*기(말)?(?![가-힣0-9])")
+_QTR_PERIOD_RE = re.compile(r"[1-4]\s*분기|(?:상|하)?반기(?![가-힣])")
+
+
+def _period_tokens(text: str) -> set[str]:
+    toks = set(_years_of(text))
+    for rx in (_REL_PERIOD_RE, _ORD_PERIOD_RE, _QTR_PERIOD_RE):
+        toks |= {re.sub(r"\s+", "", m.group()) for m in rx.finditer(text or "")}
+    return toks
 
 
 def _column_mismatch(quote: str, value: str, claim_years: set[str],
@@ -244,13 +271,13 @@ def validate_claim(claim: Mapping[str, Any], doc_text_squashed: Mapping[str, str
             fails.append(f"numbers_bound:value:{value}")
 
     period = str(claim.get("period") or "")
-    # 다기간 수치 claim 분리 강제(검수 4·5차 발견 2): 연도 2개 이상 + 숫자 2개 이상이 한
-    # 문장에 있으면 연도-값 결속을 구문 없이 검증할 수 없다 — 스왑("2024년 90, 2023년 100")이
-    # 그대로 통과한다. value 유무·표/문장 여부와 무관하게 폐기해 값별 claim 분리(프롬프트
-    # 규칙)를 강제한다. 유일한 예외: claim이 원문 문장을 **그대로** 옮긴 경우(공백만 무시) —
-    # 순서가 원문에서 왔으므로 스왑이 성립하지 않는다.
+    # 다기간 수치 claim 분리 강제(검수 4·5·6차 발견 2): 기간 토큰(연도·당기/전기·제N기·분기)
+    # 2개 이상 + 숫자 2개 이상이 한 문장에 있으면 기간-값 결속을 구문 없이 검증할 수 없다 —
+    # 스왑("당기 90, 전기 100")이 그대로 통과한다. value 유무·표/문장 여부와 무관하게 폐기해
+    # 값별 claim 분리(프롬프트 규칙)를 강제한다. 유일한 예외: claim이 원문 문장을 **그대로**
+    # 옮긴 경우(공백만 무시) — 순서가 원문에서 왔으므로 스왑이 성립하지 않는다.
     text_years_all = _years_of(text)
-    if (len(text_years_all) >= 2 and len(_claim_numbers(text)) >= 2
+    if (len(_period_tokens(text)) >= 2 and len(_claim_numbers(text)) >= 2
             and _squash(text.rstrip(". ")) not in _squash(quote)):
         fails.append("period_bound:multi_period_claim_unsplit")
 
@@ -260,8 +287,8 @@ def validate_claim(claim: Mapping[str, Any], doc_text_squashed: Mapping[str, str
     if not claim_years and value not in (None, ""):
         if len(text_years_all) == 1:
             claim_years = text_years_all
-        elif len(text_years_all) >= 2:
-            # 연도 2개 + 숫자 1개(위 일반 규칙 미해당)도 값의 연도 소속을 특정할 수 없다 —
+        elif len(_period_tokens(text)) >= 2:
+            # 기간 토큰 2개 + 숫자 1개(위 일반 규칙 미해당)도 값의 기간 소속을 특정할 수 없다 —
             # 다기간 표에서 왔다면 폐기해 분리를 강제한다.
             multi_year_unsplit = True
     for year in _years_of(period):
@@ -280,6 +307,12 @@ def validate_claim(claim: Mapping[str, Any], doc_text_squashed: Mapping[str, str
         except (TypeError, ValueError):
             base = None
         chunks_of_doc = doc_chunks.get(doc_id) or ()
+        if not claim_years and base is not None:
+            # "당기 매출액은 90"처럼 연도 없이 상대 기간 하나로 값을 주장하는 claim도
+            # base_year로 환산해 열을 대조한다(당기/전기 표의 대칭 구멍 — 자체 검수).
+            rels = {m.group(1) for m in _REL_PERIOD_RE.finditer(text)}
+            if len(rels) == 1:
+                claim_years = {str(base - {"당기": 0, "전기": 1, "전전기": 2}[next(iter(rels))])}
         if len(claim_years) == 1:
             col_fail = _column_mismatch(quote, str(value), claim_years, chunks_of_doc, base)
             if col_fail:

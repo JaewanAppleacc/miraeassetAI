@@ -102,6 +102,16 @@ def main(argv: list[str] | None = None) -> int:
     # warm-up (미기록) — vFINAL 18번 "동일 warm-up 후 측정"
     adapter.search(rows[0]["question"], conditions=rows[0]["conditions"], k=args.k)
 
+    # config는 루프 전에 확정한다 — §1-1 계약: 결과 행마다 config_sha256·code_sha256을 적는다
+    # (검수 6차: 행 SHA가 계약에 있는데 러너가 안 적고 있었다 — run.json과의 결박이 없으면
+    # 파일 이름 바꿔치기를 채점기가 못 잡는다).
+    pins = dict(ready.get("pins") or {})
+    # readiness().pins **전부**가 config다 — 골라 담으면 config_sha256이 실제 설정을 동결하지 못한다(검수 7번).
+    config = {"arm": args.arm, "label": ready.get("label"), "k": args.k, "dense": ready.get("dense"),
+              "conditions_source": "precomputed", **pins}
+    config_sha = hashlib.sha256(json.dumps(config, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+    code_sha = git_head()
+
     args.out_dir.mkdir(parents=True, exist_ok=True)
     results_path = args.out_dir / f"{args.arm}.results.jsonl"
     latencies: list[int] = []
@@ -109,7 +119,8 @@ def main(argv: list[str] | None = None) -> int:
     with results_path.open("w", encoding="utf-8") as f:
         for i, r in enumerate(rows, 1):
             t0 = time.perf_counter()
-            rec = {"question_id": r["question_id"], "arm": args.arm, "segment": r["segment"]}
+            rec = {"question_id": r["question_id"], "arm": args.arm, "segment": r["segment"],
+                   "config_sha256": config_sha, "code_sha256": code_sha}
             try:
                 chunks = adapter.search(r["question"], conditions=r["conditions"], k=args.k)
                 rec["results"] = [{
@@ -134,20 +145,16 @@ def main(argv: list[str] | None = None) -> int:
             if i % 20 == 0:
                 print(f"{args.arm}: {i}/{len(rows)} · 누적 {sum(latencies)/1000:.0f}s", file=sys.stderr, flush=True)
 
-    pins = dict(ready.get("pins") or {})
-    # readiness().pins **전부**가 config다 — 골라 담으면 config_sha256이 실제 설정을 동결하지 못한다(검수 7번).
-    config = {"arm": args.arm, "label": ready.get("label"), "k": args.k, "dense": ready.get("dense"),
-              "conditions_source": "precomputed", **pins}
     index_manifest = json.loads((REPO / "data" / "index" / "index_manifest.json").read_text(encoding="utf-8"))
     run = {
         "arm": args.arm, "label": ready.get("label"),
         "started_at": started, "finished_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
         "host": platform.node(), "platform": platform.platform(), "python": platform.python_version(),
-        "code_sha256": git_head(),
+        "code_sha256": code_sha,
         "git_dirty": bool(dirty),
         "git_dirty_paths": dirty,
         "config": config,
-        "config_sha256": hashlib.sha256(json.dumps(config, sort_keys=True, ensure_ascii=False).encode()).hexdigest(),
+        "config_sha256": config_sha,
         "input_sha256": {
             "conditions": sha256_file(args.conditions),
             "document_ir": {k: v["sha256"] for k, v in index_manifest["files"].items()},

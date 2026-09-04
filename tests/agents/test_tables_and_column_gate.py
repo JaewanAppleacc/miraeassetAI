@@ -187,3 +187,37 @@ def test_date_expression_matches_across_formats():
     assert {"3", "22"} <= allowed
     assert grounded_answer.context_number_allowance(
         "2024-03-22 기준 보유비율은?", "계약기간은 22일") == set()
+
+
+def test_context_expression_keys_preserve_kind_and_position():
+    """검수 6차 발견 1: 숫자 집합 동치는 '제3기'↔'3일', '3월 22일'↔'22월 3일'을 통과시켰다."""
+    assert grounded_answer.context_number_allowance("제3기 계약금액은?", "계약기간은 3일") == set()
+    assert grounded_answer.context_number_allowance(
+        "2024년 3월 22일 계약금액은?", "기준일은 2024년 22월 3일이다") == set()
+    # 종류·자리가 같으면 표기 변형은 동치.
+    assert {"3", "22"} <= grounded_answer.context_number_allowance(
+        "2024-03-22 계약금액은?", "2024년 3월 22일 기준이다")
+    assert {"3"} <= grounded_answer.context_number_allowance("제3기 실적은?", "제 3 기 실적이다")
+
+
+def test_relative_period_swap_and_single_relative_binding():
+    """검수 6차 발견 2 + 자체 대칭 구멍: 당기/전기·제N기·분기 스왑과 단일 당기 오귀속."""
+    chunk = "구분 | 당기 | 전기\n매출액 | 100 | 90"
+    sq = grounded_answer._squash
+    ok, fails = grounded_answer.validate_claim(
+        {"text": "당기 매출액은 90이고 전기 매출액은 100이다", "value": None, "period": None,
+         "doc_id": _DOC, "quote": "매출액 | 100 | 90"},
+        {_DOC: sq(chunk)}, {_DOC: {"base_year": 2024}}, set(), doc_chunks={_DOC: [chunk]})
+    assert not ok and "period_bound:multi_period_claim_unsplit" in fails
+    ok, fails = grounded_answer.validate_claim(
+        {"text": "당기 매출액은 90이다", "value": "90", "period": None,
+         "doc_id": _DOC, "quote": "매출액 | 100 | 90"},
+        {_DOC: sq(chunk)}, {_DOC: {"base_year": 2024}}, set(), doc_chunks={_DOC: [chunk]})
+    assert not ok and any("column_mismatch" in f for f in fails)
+    ok, fails = grounded_answer.validate_claim(
+        {"text": "당기 매출액은 100이다", "value": "100", "period": None,
+         "doc_id": _DOC, "quote": "매출액 | 100 | 90"},
+        {_DOC: sq(chunk)}, {_DOC: {"base_year": 2024}}, set(), doc_chunks={_DOC: [chunk]})
+    assert ok, fails
+    # "당기순이익"은 기간 토큰이 아니다 — 행 레이블 오탐 방지.
+    assert "당기" not in grounded_answer._period_tokens("당기순이익은 100이다")

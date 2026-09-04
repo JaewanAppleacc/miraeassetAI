@@ -110,21 +110,39 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"최종 판정 불가 — {arm}.run.json에 code_sha256/config_sha256 없음",
                       file=sys.stderr)
                 return 1
+            # config 자체를 arm 정체성에 결박한다(검수 6차 발견 3: results_sha256만으로는 같은
+            # 디렉터리 안에서 함께 고쳐 쓸 수 있다 — config.arm/label 대조 + sha 재계산까지 본다).
+            cfg = run.get("config") or {}
+            recomputed = hashlib.sha256(
+                json.dumps(cfg, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+            if recomputed != run["config_sha256"]:
+                print(f"최종 판정 불가 — {arm} config_sha256이 config 내용과 다름(변조 의심)",
+                      file=sys.stderr)
+                return 1
+            if cfg.get("arm") != arm or cfg.get("label") != fourarm.ARM_LABELS.get(arm):
+                print(f"최종 판정 불가 — {arm} config의 arm/label이 arm 정의와 다름: "
+                      f"{cfg.get('arm')}/{cfg.get('label')}", file=sys.stderr)
+                return 1
             rpath = args.results_dir / f"{arm}.results.jsonl"
-            # 결과 파일 사후 변조 검출(검수 5차 발견 4): run.json에 기록된 results_sha256과
-            # 실제 파일 해시를 대조한다. 행 수준 config/code SHA는 계약(§1-1)에 없으므로
-            # 요구하지 않는다 — 러너 실행 단위 무결성은 이 파일 해시가 담보한다.
+            # 결과 파일 사후 변조 검출(검수 5차 발견 4) + §1-1 행 SHA 결박(검수 6차 —
+            # 행마다 config_sha256/code_sha256이 계약이다. 종전 "계약에 없음" 판단은 오독).
             actual = hashlib.sha256(rpath.read_bytes()).hexdigest()
             if run.get("results_sha256") != actual:
                 print(f"최종 판정 불가 — {arm}.results.jsonl 해시가 run.json 기록과 다름 "
                       f"(기록 {str(run.get('results_sha256'))[:12]}… ≠ 실제 {actual[:12]}…)",
                       file=sys.stderr)
                 return 1
-            bad_rows = sum(1 for line in rpath.open(encoding="utf-8") if line.strip()
-                           and json.loads(line).get("arm") != arm)
+            bad_rows = 0
+            for line in rpath.open(encoding="utf-8"):
+                if not line.strip():
+                    continue
+                row = json.loads(line)
+                if (row.get("arm") != arm or row.get("config_sha256") != run["config_sha256"]
+                        or row.get("code_sha256") != run["code_sha256"]):
+                    bad_rows += 1
             if bad_rows:
-                print(f"최종 판정 불가 — {arm}.results.jsonl에 arm 불일치/누락 행 {bad_rows}건",
-                      file=sys.stderr)
+                print(f"최종 판정 불가 — {arm}.results.jsonl에 arm/config/code SHA 불일치·누락 행 "
+                      f"{bad_rows}건 (§1-1: 행마다 run 메타와 결박)", file=sys.stderr)
                 return 1
         keys = ("conditions", "document_ir", "universe")
         missing_pins = {a: [k for k in keys if not shared[a].get(k)] for a in args.arms
