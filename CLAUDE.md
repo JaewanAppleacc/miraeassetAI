@@ -99,6 +99,16 @@
   **B/D 새 러너로 재실행: 101문항 순위 차이 0건**(지표 완전 동일, D = PROVISIONAL_WINNER 유지).
   judge9: 완전 34·부분 47·미포함 11(가중 57.5 = 최고 동률) — 최강 게이트에서 기준선 완전 회복.
   ※ A/C 안내: 결과 행마다 arm·config_sha256·code_sha256 필수(§1-1) — --final이 강제한다.
+- 검수 7차 반영(2026-09-04 · judge10→11): ① FC 실패 시 JSON 폴백이 claim 게이트를 통째로
+  우회하던 구조 구멍 — check_generated_answer(채택 답변 문장 단위 기간-값 결박)로 차단(judge11
+  실측 발동 7건) ② 기간 어휘 확장(전년 동기·직전/이번 보고서·영문 Q/H) + 연도 환산 불가
+  머리글의 토큰→열 결박(tables.period_token_columns) ③ --final config 의미 대조(strategy·
+  dense — config 전체 위조도 실제 설정 의미가 남아 검출) ④ 데드라인 janitor(취소 대신
+  세마포어 유지 — 재현 조건 동시 실행 2→1 실측). judge10에서 어휘 확장의 일괄 폐기가
+  대량보유(직전/이번) 계열 정답 claim까지 버려 중간 회귀(가중 54.0) → **(기간,값) 순서 쌍
+  검증**(_verify_period_pairs: 전 쌍 열 대조 통과=허용·어긋남=스왑 폐기·불가=폐기)으로 교정.
+  **judge11: 완전 35·부분 47·미포함 10·가중 58.5 — 3지표 역대 최고.** meta에
+  llm_degraded_reason 추가(발동 분포: period_unbound 7·citation_unbound 15·unsupported 20).
 - **vFINAL 21번 변경 승인(2026-09-04, Owner=팀 대표)**: "FC Native Function Calling 경로에 한해
   전송 maxTokens 최소 1024 적용을 승인한다. 사유는 서비스 앱 API가 1024 미만 요청을 40001로
   거부하기 때문이다. JSON 경로의 v4 §7 예산은 변경하지 않으며 requested/sent 값을 구분해
