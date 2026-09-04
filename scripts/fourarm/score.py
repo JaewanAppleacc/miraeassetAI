@@ -90,21 +90,29 @@ def main(argv: list[str] | None = None) -> int:
     table = fourarm.summary_table(reports)
     out = [f"# 4-arm 채점 요약 (k={fourarm.EVAL_K} 평가 · Gold {gold_sha[:8]} · conditions {cond_sha[:8]})", "", table]
     if args.final:
-        # arm 간 입력 pin 일치(같은 Gold·conditions·색인·코퍼스를 봤는가) — run.json의 config에서 대조.
+        # arm 간 입력 pin 일치(같은 Gold·conditions·코퍼스를 봤는가) — run.json(§1-3) 실키로 대조.
+        # code_sha는 스택이 달라 arm별로 다를 수 있으므로 존재만 요구하고 일치는 강제하지 않는다.
         shared: dict[str, dict] = {}
         for arm in args.arms:
             runpath = args.results_dir / f"{arm}.run.json"
-            cfg = (json.loads(runpath.read_text(encoding="utf-8")) if runpath.exists() else {})
-            pins = cfg.get("config") or cfg
-            shared[arm] = {k: pins.get(k) for k in
-                           ("conditions_sha", "gold_sha", "document_ir", "manifest_sha256", "code_sha")
-                           if pins.get(k) is not None}
-        keys = set().union(*(set(v) for v in shared.values()))
-        mismatched = {k: {a: shared[a].get(k) for a in args.arms}
-                      for k in sorted(keys)
-                      if len({json.dumps(shared[a].get(k), sort_keys=True) for a in args.arms}) > 1}
+            run = (json.loads(runpath.read_text(encoding="utf-8")) if runpath.exists() else {})
+            inp = run.get("input_sha256") or {}
+            # gold는 없어야 정상이다 — 러너는 Gold를 열지 않는다(vFINAL 20번 비유출).
+            shared[arm] = {"conditions": inp.get("conditions"),
+                           "document_ir": inp.get("document_ir")}
+            if not run.get("code_sha256"):
+                print(f"최종 판정 불가 — {arm}.run.json에 code_sha256 없음", file=sys.stderr)
+                return 1
+        keys = ("conditions", "document_ir")
+        missing_pins = {a: [k for k in keys if not shared[a].get(k)] for a in args.arms
+                        if any(not shared[a].get(k) for k in keys)}
+        if missing_pins:
+            print(f"최종 판정 불가 — run.json input_sha256 누락: {missing_pins}", file=sys.stderr)
+            return 1
+        mismatched = {k: {a: shared[a][k] for a in args.arms} for k in keys
+                      if len({json.dumps(shared[a][k], sort_keys=True) for a in args.arms}) > 1}
         if mismatched:
-            print(f"최종 판정 불가 — arm 간 pin 불일치: {json.dumps(mismatched, ensure_ascii=False)[:400]}",
+            print(f"최종 판정 불가 — arm 간 입력 pin 불일치: {json.dumps(mismatched, ensure_ascii=False)[:400]}",
                   file=sys.stderr)
             return 1
 
