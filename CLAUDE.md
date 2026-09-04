@@ -67,9 +67,16 @@
   FY2027·회계연도) · score.py --final(A/B/C/D 완비·run.json input_sha256 대조·require_arms) ·
   pins에 llm/code_sha. judge6: 완전 33·부분 44·미포함 15(j5 대비 churn ±3 = 잡음, 게이트 조임에도
   지표 불변). 안전세트 28/28.
-- **보류 판단 기록**: H4(수치 인용 soft→hard)는 폴백 회귀 트레이드오프로 보류(soft=PARTIALLY로
-  정직 표기, 숫자 자체는 hard로 이미 원문 결박). 다연도 서술 claim의 열 대조(3차 C1(c) 잔여)는
-  연도-값 결속을 문장 구문 없이 확정할 수 없어 의도적 미적용.
+- 검수 4차 반영(2026-09-04 · judge7): 3차 보류분 포함 잔여 우회 전부 봉쇄 — 질문 날짜 숫자는
+  claim/답변의 같은 문맥에서만 허용(날짜 토큰→값 전용 차단) · period 없는 다연도 값 claim은
+  다기간 표에서 폐기(분리 강제) · ops 응답 정규화 try 포함(None/비dict도 200+유효 5필드) ·
+  세마포어 획득 후 캐시 재확인(단절 재시도 중복 계산 제거) · **v4 §11 hard 준수: LLM 답 채택 시
+  타문서 인용·수치 무인용 폐기(citation_unbound)** — 3차의 "H4 보류"는 스펙 위반이라 철회 ·
+  --final pin 확대(universe·arm/파일명·config_sha·행 arm; doc_index는 스택 종속 제외) ·
+  DART_QA_EVAL_PROFILE=1이면 HCX-005+code_sha 없이는 ready=False(team_deploy.md 반영).
+  judge7: 완전 31·부분 49·**미포함 12**(4회 실행 밴드: 완전 31~34 진동, 미포함 17→12 단조 감소).
+  잔여(공개 리스크): 데드라인 경로의 취소는 스레드를 못 멈춤(응답 의무상 유지 — 최대 계산 40s ≪
+  예산 290s, 발생 실측 0회) · Anthropic 코드 경로는 존재하나 평가 프로필이 readiness에서 거부.
 - **FC maxTokens 1024 = vFINAL 21번 변경 대상**: v4 §7 예산(512/256/768)은 JSON 경로에 그대로,
   FC 전송만 API 하한(1024 미만 40001 실측)으로 상향. Owner(팀 대표) 승인 대기 — 승인 시 이 줄이 로그.
 - 남은 큰 덩어리: 검색손실(~19, 4-arm 승자 확정 후) · EVENT_TRACE(원장 필요, 조건부 — DEV_TUNE 강등 실측 0건이라 ledger는 DEV_TUNE 지표에 +0, 기각) · COMPARISON 열 선택(5/12) · 서술형 자동채점 한계.
