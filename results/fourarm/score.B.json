@@ -11,58 +11,58 @@
   "ALL": {
    "questions": 100,
    "slots_total": 286,
-   "slots_found@5": 141,
-   "recall@5": 0.493,
-   "all_found@5": 36,
-   "all_found_rate@5": 0.36,
+   "slots_found@5": 137,
+   "recall@5": 0.479,
+   "all_found@5": 34,
+   "all_found_rate@5": 0.34,
    "doc_hit@5": 76,
-   "slots_found@10": 174,
-   "recall@10": 0.6084,
-   "all_found@10": 47,
-   "all_found_rate@10": 0.47,
+   "slots_found@10": 170,
+   "recall@10": 0.5944,
+   "all_found@10": 45,
+   "all_found_rate@10": 0.45,
    "doc_hit@10": 82,
-   "slots_found@20": 195,
-   "recall@20": 0.6818,
-   "all_found@20": 59,
-   "all_found_rate@20": 0.59,
+   "slots_found@20": 192,
+   "recall@20": 0.6713,
+   "all_found@20": 57,
+   "all_found_rate@20": 0.57,
    "doc_hit@20": 84
   },
   "HIGH": {
    "questions": 81,
    "slots_total": 250,
-   "slots_found@5": 119,
-   "recall@5": 0.476,
-   "all_found@5": 26,
-   "all_found_rate@5": 0.321,
+   "slots_found@5": 118,
+   "recall@5": 0.472,
+   "all_found@5": 25,
+   "all_found_rate@5": 0.3086,
    "doc_hit@5": 64,
-   "slots_found@10": 147,
-   "recall@10": 0.588,
-   "all_found@10": 35,
-   "all_found_rate@10": 0.4321,
+   "slots_found@10": 146,
+   "recall@10": 0.584,
+   "all_found@10": 34,
+   "all_found_rate@10": 0.4198,
    "doc_hit@10": 67,
-   "slots_found@20": 167,
-   "recall@20": 0.668,
-   "all_found@20": 47,
-   "all_found_rate@20": 0.5802,
+   "slots_found@20": 166,
+   "recall@20": 0.664,
+   "all_found@20": 46,
+   "all_found_rate@20": 0.5679,
    "doc_hit@20": 69
   },
   "LOW": {
    "questions": 19,
    "slots_total": 36,
-   "slots_found@5": 22,
-   "recall@5": 0.6111,
-   "all_found@5": 10,
-   "all_found_rate@5": 0.5263,
+   "slots_found@5": 19,
+   "recall@5": 0.5278,
+   "all_found@5": 9,
+   "all_found_rate@5": 0.4737,
    "doc_hit@5": 12,
-   "slots_found@10": 27,
-   "recall@10": 0.75,
-   "all_found@10": 12,
-   "all_found_rate@10": 0.6316,
+   "slots_found@10": 24,
+   "recall@10": 0.6667,
+   "all_found@10": 11,
+   "all_found_rate@10": 0.5789,
    "doc_hit@10": 15,
-   "slots_found@20": 28,
-   "recall@20": 0.7778,
-   "all_found@20": 12,
-   "all_found_rate@20": 0.6316,
+   "slots_found@20": 26,
+   "recall@20": 0.7222,
+   "all_found@20": 11,
+   "all_found_rate@20": 0.5789,
    "doc_hit@20": 15
   }
  },
@@ -70,7 +70,7 @@
   "critical": 0,
   "minor": 17,
   "unresolved": 0,
-  "coarse": 103,
+  "coarse": 99,
   "items": [
    {
     "question_id": "author_14dfddbe1d41275533ae3945",
@@ -893,15 +893,6 @@
    },
    {
     "question_id": "gold_b_b6f4714fd3c652594f5d82c1",
-    "slot_name": "bond_amount",
-    "doc_id": "major_20241205000527",
-    "node_index": 3,
-    "locator": "major_20241205000527/20241205000527.xml#node=3",
-    "severity": "coarse",
-    "reason": "no_row_col_in_chunk"
-   },
-   {
-    "question_id": "gold_b_b6f4714fd3c652594f5d82c1",
     "slot_name": "resolution_date",
     "doc_id": "major_20241205000527",
     "node_index": 3,
@@ -969,33 +960,6 @@
     "doc_id": "exchange_20251229800114",
     "node_index": 0,
     "locator": "exchange_20251229800114/20251229800114.xml#node=0",
-    "severity": "coarse",
-    "reason": "no_row_col_in_chunk"
-   },
-   {
-    "question_id": "gold_b_e2808b0ce73a5ddd72f7508b",
-    "slot_name": "split_method",
-    "doc_id": "major_20241021000037",
-    "node_index": 3,
-    "locator": "major_20241021000037/20241021000037.xml#node=3",
-    "severity": "coarse",
-    "reason": "no_row_col_in_chunk"
-   },
-   {
-    "question_id": "gold_b_e2808b0ce73a5ddd72f7508b",
-    "slot_name": "board_resolution_date",
-    "doc_id": "major_20241021000037",
-    "node_index": 3,
-    "locator": "major_20241021000037/20241021000037.xml#node=3",
-    "severity": "coarse",
-    "reason": "no_row_col_in_chunk"
-   },
-   {
-    "question_id": "gold_b_e2808b0ce73a5ddd72f7508b",
-    "slot_name": "split_effective_date",
-    "doc_id": "major_20241021000037",
-    "node_index": 3,
-    "locator": "major_20241021000037/20241021000037.xml#node=3",
     "severity": "coarse",
     "reason": "no_row_col_in_chunk"
    },
@@ -2580,12 +2544,12 @@
    "n_slots": 5,
    "excluded": false,
    "found_at": {
-    "5": 5,
+    "5": 4,
     "10": 5,
     "20": 5
    },
    "all_found_at": {
-    "5": true,
+    "5": false,
     "10": true,
     "20": true
    },
@@ -3225,20 +3189,20 @@
    "excluded": false,
    "found_at": {
     "5": 0,
-    "10": 3,
-    "20": 3
+    "10": 2,
+    "20": 2
    },
    "all_found_at": {
     "5": false,
-    "10": true,
-    "20": true
+    "10": false,
+    "20": false
    },
    "doc_hit_at": {
     "5": true,
     "10": true,
     "20": true
    },
-   "n_slot_matches": 3,
+   "n_slot_matches": 2,
    "error": ""
   },
   {
@@ -3316,21 +3280,21 @@
    "n_slots": 3,
    "excluded": false,
    "found_at": {
-    "5": 3,
-    "10": 3,
-    "20": 3
+    "5": 0,
+    "10": 0,
+    "20": 1
    },
    "all_found_at": {
-    "5": true,
-    "10": true,
-    "20": true
+    "5": false,
+    "10": false,
+    "20": false
    },
    "doc_hit_at": {
     "5": true,
     "10": true,
     "20": true
    },
-   "n_slot_matches": 3,
+   "n_slot_matches": 0,
    "error": ""
   },
   {

@@ -11,39 +11,39 @@
   "ALL": {
    "questions": 100,
    "slots_total": 286,
-   "slots_found@5": 140,
-   "recall@5": 0.4895,
-   "all_found@5": 35,
-   "all_found_rate@5": 0.35,
+   "slots_found@5": 139,
+   "recall@5": 0.486,
+   "all_found@5": 34,
+   "all_found_rate@5": 0.34,
    "doc_hit@5": 79,
-   "slots_found@10": 173,
-   "recall@10": 0.6049,
-   "all_found@10": 46,
-   "all_found_rate@10": 0.46,
+   "slots_found@10": 169,
+   "recall@10": 0.5909,
+   "all_found@10": 43,
+   "all_found_rate@10": 0.43,
    "doc_hit@10": 83,
-   "slots_found@20": 193,
-   "recall@20": 0.6748,
-   "all_found@20": 58,
-   "all_found_rate@20": 0.58,
+   "slots_found@20": 191,
+   "recall@20": 0.6678,
+   "all_found@20": 56,
+   "all_found_rate@20": 0.56,
    "doc_hit@20": 85
   },
   "HIGH": {
    "questions": 81,
    "slots_total": 250,
-   "slots_found@5": 119,
-   "recall@5": 0.476,
-   "all_found@5": 26,
-   "all_found_rate@5": 0.321,
+   "slots_found@5": 118,
+   "recall@5": 0.472,
+   "all_found@5": 25,
+   "all_found_rate@5": 0.3086,
    "doc_hit@5": 64,
-   "slots_found@10": 147,
-   "recall@10": 0.588,
-   "all_found@10": 35,
-   "all_found_rate@10": 0.4321,
+   "slots_found@10": 146,
+   "recall@10": 0.584,
+   "all_found@10": 34,
+   "all_found_rate@10": 0.4198,
    "doc_hit@10": 67,
-   "slots_found@20": 167,
-   "recall@20": 0.668,
-   "all_found@20": 47,
-   "all_found_rate@20": 0.5802,
+   "slots_found@20": 166,
+   "recall@20": 0.664,
+   "all_found@20": 46,
+   "all_found_rate@20": 0.5679,
    "doc_hit@20": 69
   },
   "LOW": {
@@ -54,15 +54,15 @@
    "all_found@5": 9,
    "all_found_rate@5": 0.4737,
    "doc_hit@5": 15,
-   "slots_found@10": 26,
-   "recall@10": 0.7222,
-   "all_found@10": 11,
-   "all_found_rate@10": 0.5789,
+   "slots_found@10": 23,
+   "recall@10": 0.6389,
+   "all_found@10": 9,
+   "all_found_rate@10": 0.4737,
    "doc_hit@10": 16,
-   "slots_found@20": 26,
-   "recall@20": 0.7222,
-   "all_found@20": 11,
-   "all_found_rate@20": 0.5789,
+   "slots_found@20": 25,
+   "recall@20": 0.6944,
+   "all_found@20": 10,
+   "all_found_rate@20": 0.5263,
    "doc_hit@20": 16
   }
  },
@@ -70,7 +70,7 @@
   "critical": 0,
   "minor": 13,
   "unresolved": 0,
-  "coarse": 106,
+  "coarse": 103,
   "items": [
    {
     "question_id": "author_14dfddbe1d41275533ae3945",
@@ -884,15 +884,6 @@
    },
    {
     "question_id": "gold_b_b6f4714fd3c652594f5d82c1",
-    "slot_name": "bond_amount",
-    "doc_id": "major_20241205000527",
-    "node_index": 3,
-    "locator": "major_20241205000527/20241205000527.xml#node=3",
-    "severity": "coarse",
-    "reason": "no_row_col_in_chunk"
-   },
-   {
-    "question_id": "gold_b_b6f4714fd3c652594f5d82c1",
     "slot_name": "resolution_date",
     "doc_id": "major_20241205000527",
     "node_index": 3,
@@ -965,25 +956,7 @@
    },
    {
     "question_id": "gold_b_e2808b0ce73a5ddd72f7508b",
-    "slot_name": "split_method",
-    "doc_id": "major_20241021000037",
-    "node_index": 3,
-    "locator": "major_20241021000037/20241021000037.xml#node=3",
-    "severity": "coarse",
-    "reason": "no_row_col_in_chunk"
-   },
-   {
-    "question_id": "gold_b_e2808b0ce73a5ddd72f7508b",
     "slot_name": "board_resolution_date",
-    "doc_id": "major_20241021000037",
-    "node_index": 3,
-    "locator": "major_20241021000037/20241021000037.xml#node=3",
-    "severity": "coarse",
-    "reason": "no_row_col_in_chunk"
-   },
-   {
-    "question_id": "gold_b_e2808b0ce73a5ddd72f7508b",
-    "slot_name": "split_effective_date",
     "doc_id": "major_20241021000037",
     "node_index": 3,
     "locator": "major_20241021000037/20241021000037.xml#node=3",
@@ -2503,12 +2476,12 @@
    "excluded": false,
    "found_at": {
     "5": 3,
-    "10": 4,
+    "10": 3,
     "20": 4
    },
    "all_found_at": {
     "5": false,
-    "10": true,
+    "10": false,
     "20": true
    },
    "doc_hit_at": {
@@ -2516,7 +2489,7 @@
     "10": true,
     "20": true
    },
-   "n_slot_matches": 4,
+   "n_slot_matches": 3,
    "error": ""
   },
   {
@@ -2571,12 +2544,12 @@
    "n_slots": 5,
    "excluded": false,
    "found_at": {
-    "5": 5,
+    "5": 4,
     "10": 5,
     "20": 5
    },
    "all_found_at": {
-    "5": true,
+    "5": false,
     "10": true,
     "20": true
    },
@@ -3216,20 +3189,20 @@
    "excluded": false,
    "found_at": {
     "5": 0,
-    "10": 3,
-    "20": 3
+    "10": 2,
+    "20": 2
    },
    "all_found_at": {
     "5": false,
-    "10": true,
-    "20": true
+    "10": false,
+    "20": false
    },
    "doc_hit_at": {
     "5": true,
     "10": true,
     "20": true
    },
-   "n_slot_matches": 3,
+   "n_slot_matches": 2,
    "error": ""
   },
   {
@@ -3308,20 +3281,20 @@
    "excluded": false,
    "found_at": {
     "5": 0,
-    "10": 3,
-    "20": 3
+    "10": 1,
+    "20": 2
    },
    "all_found_at": {
     "5": false,
-    "10": true,
-    "20": true
+    "10": false,
+    "20": false
    },
    "doc_hit_at": {
     "5": false,
     "10": true,
     "20": true
    },
-   "n_slot_matches": 3,
+   "n_slot_matches": 1,
    "error": ""
   },
   {

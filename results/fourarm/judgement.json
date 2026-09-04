@@ -1,14 +1,13 @@
 {
  "status": "PROVISIONAL_WINNER",
- "winner": "D",
+ "winner": "B",
  "selection_type": "PERFORMANCE_WINNER",
  "tie_set": [
-  "B",
-  "D"
+  "B"
  ],
  "counts": {
-  "B": 12,
-  "D": 11
+  "B": 11,
+  "D": 9
  },
  "chain": [
   {
@@ -39,16 +38,16 @@
   },
   {
    "step": "12 quality gate",
-   "best_all": 0.6084,
-   "best_high": 0.588,
+   "best_all": 0.5944,
+   "best_high": 0.584,
    "values": {
     "B": {
-     "ALL": 0.6084,
-     "HIGH": 0.588
+     "ALL": 0.5944,
+     "HIGH": 0.584
     },
     "D": {
-     "ALL": 0.6049,
-     "HIGH": 0.588
+     "ALL": 0.5909,
+     "HIGH": 0.584
     }
    },
    "passed": [
@@ -59,24 +58,17 @@
   {
    "step": "2/5 LOW all_found@10",
    "counts": {
-    "B": 12,
-    "D": 11
+    "B": 11,
+    "D": 9
    },
-   "best": 12,
+   "best": 11,
    "final_tie_set": [
-    "B",
-    "D"
-   ]
-  },
-  {
-   "step": "5 dense-off preferred",
-   "dense_off": [
-    "D"
+    "B"
    ]
   },
   {
    "step": "winner",
-   "winner": "D",
+   "winner": "B",
    "selection_type": "PERFORMANCE_WINNER",
    "status": "PROVISIONAL_WINNER"
   }

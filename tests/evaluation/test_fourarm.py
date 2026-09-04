@@ -28,22 +28,23 @@ def _res(doc, node, text="", rank=1, **extra):
 
 def test_slot_found_by_node_then_text_then_miss():
     slot = _slot(("d1", 5, "매출액 | 10,891,443\n영업이익 | 1,461,202"))
-    ok, r, how = fa.slot_found(slot, [_res("d1", 5)], k=10)
-    assert ok and how == "node"
+    ok, r, how, src, state = fa.slot_found(slot, [_res("d1", 5)], k=10)
+    assert ok and how == "node" and state == "blind"        # 청크 text 없음 → 대조 불가(종전 동작)
     # node 다르지만 텍스트에 span 한 줄 포함 → 2순위 text
-    ok, r, how = fa.slot_found(slot, [_res("d1", 7, text="구분 | 값\n매출액 | 10,891,443")], k=10)
-    assert ok and how == "text"
+    ok, r, how, src, state = fa.slot_found(
+        slot, [_res("d1", 7, text="구분 | 값\n매출액 | 10,891,443")], k=10)
+    assert ok and how == "text" and state == "verified"
     # 다른 문서면 텍스트가 같아도 불일치
-    ok, _, _ = fa.slot_found(slot, [_res("d2", 5, text="매출액 | 10,891,443")], k=10)
+    ok, _, _, _, _ = fa.slot_found(slot, [_res("d2", 5, text="매출액 | 10,891,443")], k=10)
     assert not ok
     # k 밖이면 불일치
-    ok, _, _ = fa.slot_found(slot, [_res("d9", 1), _res("d1", 5, rank=2)], k=1)
+    ok, _, _, _, _ = fa.slot_found(slot, [_res("d9", 1), _res("d1", 5, rank=2)], k=1)
     assert not ok
 
 
 def test_slot_found_uses_node_indices_for_multi_node_chunks():
     slot = _slot(("d1", 12, ""))
-    ok, _, how = fa.slot_found(slot, [_res("d1", 10, node_indices=[10, 11, 12])], k=10)
+    ok, _, how, _, _ = fa.slot_found(slot, [_res("d1", 10, node_indices=[10, 11, 12])], k=10)
     assert ok and how == "node"
 
 

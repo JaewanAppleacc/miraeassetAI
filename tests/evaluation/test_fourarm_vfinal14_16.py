@@ -173,6 +173,92 @@ def test_resolutions_reject_unknown_classification(tmp_path):
         fa.load_resolutions(p)
 
 
+# ---------- 검수 2차: slot-found span 결박 (같은 node ≠ 같은 근거) ----------
+
+_SPAN_STORE = _Store({"d1": ["헤더", "매출액 | 100 | 90\n영업이익 | 70 | 60", "다른 섹션"]})
+
+
+def _span_slot(span="매출액 | 100 | 90", row=None, col=None):
+    return fa.GoldSlot("s", [fa.GoldSource("d1", 1, span, row, col)])
+
+
+def test_r2_same_node_other_rows_window_is_not_found():
+    # 같은 node(1)의 창이지만 Gold span 줄이 없는 텍스트 — node 원문에는 span이 있으므로
+    # '옳은 node의 다른 창' 확정 → slot-found 금지 (종전엔 node 일치만으로 인정되던 과대 계상).
+    r = {"rank": 1, "doc_id": "d1", "node_index": 1, "text": "영업이익 | 70 | 60"}
+    ok, *_ = fa.slot_found(_span_slot(), [r], k=10, store=_SPAN_STORE)
+    assert not ok
+
+
+def test_r2_same_node_span_present_is_verified_found():
+    r = {"rank": 1, "doc_id": "d1", "node_index": 1, "text": "매출액 | 100 | 90"}
+    ok, _, how, src, state = fa.slot_found(_span_slot(), [r], k=10, store=_SPAN_STORE)
+    assert ok and how == "node" and state == "verified" and src.node_index == 1
+
+
+def test_r2_different_period_row_with_explicit_rc_is_critical():
+    # 같은 node의 다른 기간(행·열) 근거: 결과가 rc를 명시하면 rc 상이 = 치명(기간 오귀속 커버).
+    qs = fa.QuestionScore("q", "LOW", 1, False)
+    qs.slot_matches = [{"slot_name": "s", "method": "node", "span_state": "verified",
+                        "result": _res("d1", 1, text="매출액 | 100 | 90", row=2, col=2),
+                        "gold_row_col": (1, 1)}]
+    v = fa.check_locators(qs, _SPAN_STORE)
+    assert [x["severity"] for x in v] == ["critical"]
+
+
+def test_r2_unverifiable_span_is_unresolved_packet():
+    # span·text 둘 다 있는데 청크에도 node 원문에도 없음(렌더링 차이 가능) → 매치 유지 +
+    # UNRESOLVED 패킷(16번 Owner행). 자동으로 found-clean도, 탈락도 시키지 않는다.
+    slot = fa.GoldSlot("s", [fa.GoldSource("d1", 2, "원문과 다른 렌더링의 근거줄 ABCDEFG")])
+    r = {"rank": 1, "doc_id": "d1", "node_index": 2, "text": "다른 섹션"}
+    ok, _, how, _, state = fa.slot_found(slot, [r], k=10, store=_SPAN_STORE)
+    assert ok and state == "unverified"
+    qs = fa.QuestionScore("q", "LOW", 1, False)
+    qs.slot_matches = [{"slot_name": "s", "method": "node", "span_state": "unverified",
+                        "result": dict(r), "gold_row_col": None}]
+    v = fa.check_locators(qs, _SPAN_STORE)
+    assert [(x["severity"], x["reason"]) for x in v] == [("unresolved", "gold_span_not_verifiable")]
+
+
+def test_r2_second_acceptable_source_on_same_node_matches():
+    # 같은 node에 acceptable source가 여럿 — 첫 번째 고정이 아니라 전체 대조. 결과 rc와
+    # 일치하는 두 번째 source가 선택되어 위반이 없어야 한다.
+    slot = fa.GoldSlot("s", [fa.GoldSource("d1", 1, "매출액 | 100 | 90", 1, 1),
+                             fa.GoldSource("d1", 1, "영업이익 | 70 | 60", 2, 1)])
+    r = {"rank": 1, "doc_id": "d1", "node_index": 1,
+         "text": "매출액 | 100 | 90\n영업이익 | 70 | 60", "row": 2, "col": 1}
+    ok, _, _, src, state = fa.slot_found(slot, [r], k=10, store=_SPAN_STORE)
+    assert ok and state == "verified" and (src.row, src.col) == (2, 1)
+    qs = fa.QuestionScore("q", "LOW", 1, False)
+    qs.slot_matches = [{"slot_name": "s", "method": "node", "span_state": "verified",
+                        "result": dict(r), "gold_row_col": (src.row, src.col)}]
+    assert fa.check_locators(qs, _SPAN_STORE) == []
+
+
+def test_r2_whitespace_only_difference_is_verified_not_violation():
+    # 동일 node·동일 셀, 공백/구두점만 다른 렌더링 — 정규화 대조로 verified, 위반 없음.
+    r = {"rank": 1, "doc_id": "d1", "node_index": 1, "text": "매출액 |  100  |  90"}
+    ok, _, _, _, state = fa.slot_found(_span_slot(), [r], k=10, store=_SPAN_STORE)
+    assert ok and state == "verified"
+
+
+def test_r2_verified_duplicate_at_other_node_stays_minor():
+    # [의견 불일치 기록] 다른 node의 '동일 문자열': 청크가 자기 locator의 node에서 온 것이
+    # 본문 대조로 확인되면(=그 위치에 근거가 실재) vFINAL 14 경미 조항 "동일 근거, span
+    # offset만 상이(…·범위)"로 본다. 일괄 치명이면 이 조항이 사문화되고 실측상
+    # (B 17·D 13건) 전 arm이 Hard 탈락한다. Owner 재판정 대상이면 이 테스트를 바꾼다.
+    store = _Store({"d1": ["매출액 | 100 | 90", "매출액 | 100 | 90"]})
+    slot = fa.GoldSlot("s", [fa.GoldSource("d1", 0, "매출액 | 100 | 90")])
+    r = {"rank": 1, "doc_id": "d1", "node_index": 1, "text": "매출액 | 100 | 90"}
+    ok, _, how, _, _ = fa.slot_found(slot, [r], k=10, store=store)
+    assert ok and how == "text"
+    qs = fa.QuestionScore("q", "LOW", 1, False)
+    qs.slot_matches = [{"slot_name": "s", "method": "text", "span_state": "verified",
+                        "result": dict(r), "gold_row_col": None}]
+    v = fa.check_locators(qs, store)
+    assert [(x["severity"], x["reason"]) for x in v] == [("minor", "same_evidence_span_offset_differs")]
+
+
 @pytest.mark.skipif(not (REPO / "results/fourarm/B.results.jsonl").exists(),
                     reason="B/D 결과 파일이 있는 환경에서만(로컬 실측 자산)")
 def test_case12_bd_result_files_untouched():

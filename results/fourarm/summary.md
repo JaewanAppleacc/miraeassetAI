@@ -2,10 +2,10 @@
 
 arm | Recall@5 | Recall@10 | Recall@20 | HIGH R@10 | LOW R@10 | LOW all_found@10 | 치명 | 경미 | 미해결 | coarse | p95(ms) | RSS(MB)
 ---|---|---|---|---|---|---|---|---|---|---|---|---
-B | 0.493 | 0.6084 | 0.6818 | 0.588 | 0.75 | 12/19 | 0 | 17 | 0 | 103 | 22739 | 1423.0
-D | 0.4895 | 0.6049 | 0.6748 | 0.588 | 0.7222 | 11/19 | 0 | 13 | 0 | 106 | 4077 | 1260.2
+B | 0.479 | 0.5944 | 0.6713 | 0.584 | 0.6667 | 11/19 | 0 | 17 | 0 | 99 | 22739 | 1423.0
+D | 0.486 | 0.5909 | 0.6678 | 0.584 | 0.6389 | 9/19 | 0 | 13 | 0 | 103 | 4077 | 1260.2
 
-## 판정: PROVISIONAL_WINNER → D (PERFORMANCE_WINNER)
+## 판정: PROVISIONAL_WINNER → B (PERFORMANCE_WINNER)
 
 ```json
 [
@@ -37,16 +37,16 @@ D | 0.4895 | 0.6049 | 0.6748 | 0.588 | 0.7222 | 11/19 | 0 | 13 | 0 | 106 | 4077 
  },
  {
   "step": "12 quality gate",
-  "best_all": 0.6084,
-  "best_high": 0.588,
+  "best_all": 0.5944,
+  "best_high": 0.584,
   "values": {
    "B": {
-    "ALL": 0.6084,
-    "HIGH": 0.588
+    "ALL": 0.5944,
+    "HIGH": 0.584
    },
    "D": {
-    "ALL": 0.6049,
-    "HIGH": 0.588
+    "ALL": 0.5909,
+    "HIGH": 0.584
    }
   },
   "passed": [
@@ -57,24 +57,17 @@ D | 0.4895 | 0.6049 | 0.6748 | 0.588 | 0.7222 | 11/19 | 0 | 13 | 0 | 106 | 4077 
  {
   "step": "2/5 LOW all_found@10",
   "counts": {
-   "B": 12,
-   "D": 11
+   "B": 11,
+   "D": 9
   },
-  "best": 12,
+  "best": 11,
   "final_tie_set": [
-   "B",
-   "D"
-  ]
- },
- {
-  "step": "5 dense-off preferred",
-  "dense_off": [
-   "D"
+   "B"
   ]
  },
  {
   "step": "winner",
-  "winner": "D",
+  "winner": "B",
   "selection_type": "PERFORMANCE_WINNER",
   "status": "PROVISIONAL_WINNER"
  }

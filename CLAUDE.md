@@ -141,6 +141,15 @@
   ARM_SPECIFIC slot 실패 재계산+치명 확정 반영, UNKNOWN·무판정은 자동 분류 없이 보류).
   B/D 재채점 실측: 치명 0 유지·지표/판정 완전 동일(D PROVISIONAL_WINNER)·결과 4파일 byte-identical·
   신규 경미 B 17/D 13(보고용). 회귀 테스트 12케이스(test_fourarm_vfinal14_16.py). 검색 재실행 없음.
+- **A/C 검수 2차 반영 — slot-found span 결박(2026-09-04) · ⚠ 잠정 승자 D→B 반전**: (doc,node) 일치만으로
+  slot 인정하던 과대 계상 제거 — node 일치여도 Gold span이 청크 본문에 있어야 verified, node 원문에는
+  있는데 청크에 없으면 '옳은 node의 다른 창'=매치 아님, 둘 다 확인 불가(렌더링 차이)는 unverified 매치
+  +UNRESOLVED 패킷(16번 Owner행). 같은 node 다중 source 전체 대조(결과 rc 일치 우선). 기간 오귀속은
+  span+행열 결박이 커버(테스트 잠금). **기각 1건**: text-method(검증된 동일 근거 중복)를 일괄 치명 —
+  경미 조항("동일 근거·범위 상이") 사문화 + 실측 B17·D13건 전부 치명 = 전 arm Hard 탈락이라 부적절,
+  테스트에 의견 불일치 기록(Owner 재판정 대상). **재채점: B R@10 0.5944·LOW 11/19, D 0.5909·9/19 —
+  LOW 차이 2 > 동률 한계 1 → B = PROVISIONAL_WINNER(D에서 반전)**. B/D 결과 4파일 byte-identical 유지,
+  검색 재실행 없음. 서빙은 A/C 합류 최종 판정까지 D 유지(B 전환 시 서버에 KURE 스택 필요 — 별도 결정).
 - **vFINAL 21번 변경 승인(2026-09-04, Owner=팀 대표)**: "FC Native Function Calling 경로에 한해
   전송 maxTokens 최소 1024 적용을 승인한다. 사유는 서비스 앱 API가 1024 미만 요청을 40001로
   거부하기 때문이다. JSON 경로의 v4 §7 예산은 변경하지 않으며 requested/sent 값을 구분해

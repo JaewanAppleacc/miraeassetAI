@@ -160,18 +160,53 @@ def _result_nodes(r: Mapping[str, Any]) -> set[int]:
 
 
 def slot_found(slot: GoldSlot, results: Sequence[Mapping[str, Any]], k: int,
-               banned: frozenset[tuple[str, int]] = frozenset()
-               ) -> tuple[bool, Mapping[str, Any] | None, str]:
-    """banned: 16번 B(ARM_SPECIFIC) 판정으로 무효화된 (doc_id, node_index) — 그 결과 행은
-    이 slot의 근거로 세지 않는다(spec: 해당 문항을 slots-found 실패로 계산)."""
+               banned: frozenset[tuple[str, int]] = frozenset(), store: Any = None
+               ) -> tuple[bool, Mapping[str, Any] | None, str, "GoldSource | None", str]:
+    """반환: (found, result, method, 매칭된 source, span_state).
+
+    banned: 16번 B(ARM_SPECIFIC) 판정으로 무효화된 (doc_id, node_index) — 그 결과 행은
+    이 slot의 근거로 세지 않는다(spec: 해당 문항을 slots-found 실패로 계산).
+
+    node 일치 규칙(A/C 검수 2차 반영): (doc, node) 일치만으로 인정하지 않는다 — 청크가
+    라인 윈도우면 같은 node의 **다른 줄들**만 담고도 인정되던 과대 계상이 있었다.
+    span_state:
+      verified    Gold evidence_span 한 줄이 청크 본문에 실재(정규화 대조) — 확정 근거
+      blind       대조 불가(청크 text 또는 Gold span 부재) — 종전 동작, locator 검사가 처리
+      unverified  span·text 둘 다 있는데 청크에 없음 + node 원문에서도 확인 불가(렌더링 차이
+                  가능성) — 매치로 세되 locator 검사가 UNRESOLVED 패킷으로 올린다(16번 Owner행)
+    store가 있고 Gold span이 **node 원문에는 있는데 청크에는 없으면** = 옳은 node의 다른 창
+    → 근거 미포함이 확정이므로 매치가 아니다(검사 범위 규칙: retrieval false positive).
+    같은 node에 acceptable source가 여러 개면 전부 대조한다(첫 번째 고정 아님) — 결과가
+    row/col을 밝혔으면 그와 일치하는 source를 우선한다."""
     def ok(r: Mapping[str, Any]) -> bool:
         return (str(r.get("doc_id") or ""), int(r.get("node_index", -1))) not in banned
     top = [r for r in list(results)[:k] if ok(r)]
+    best: tuple[tuple[int, bool], Mapping[str, Any], GoldSource, str] | None = None
     for r in top:
         nodes = _result_nodes(r)
+        text = norm_text(r.get("text") or "")
+        rc = (r.get("row"), r.get("col"))
         for src in slot.sources:
-            if r.get("doc_id") == src.doc_id and src.node_index in nodes:
-                return True, r, "node"
+            if r.get("doc_id") != src.doc_id or src.node_index not in nodes:
+                continue
+            lines = span_lines(src.span)
+            if not lines or not text:
+                state = "blind"
+            elif any(ln in text for ln in lines):
+                state = "verified"
+            else:
+                if store is not None and src.doc_id in store:
+                    node_text = norm_text(store.fetch_node(src.doc_id, src.node_index)["text"])
+                    if any(ln in node_text for ln in lines):
+                        continue          # 옳은 node의 다른 창 — 근거 미포함 확정, 매치 아님
+                state = "unverified"
+            rank = ({"verified": 2, "blind": 1, "unverified": 0}[state],
+                    rc != (None, None) and (src.row, src.col) == rc)
+            if best is None or rank > best[0]:
+                best = (rank, r, src, state)
+    if best is not None:
+        _, r, src, state = best
+        return True, r, "node", src, state
     for r in top:
         t = norm_text(r.get("text") or "")
         if not t:
@@ -180,8 +215,8 @@ def slot_found(slot: GoldSlot, results: Sequence[Mapping[str, Any]], k: int,
             if r.get("doc_id") != src.doc_id:
                 continue
             if any(ln in t for ln in span_lines(src.span)):
-                return True, r, "text"
-    return False, None, ""
+                return True, r, "text", src, "verified"
+    return False, None, "", None, ""
 
 
 @dataclass
@@ -207,8 +242,10 @@ class QuestionScore:
 
 def score_question(gq: GoldQuestion, rec: Mapping[str, Any] | None, segment: str,
                    ks: Sequence[int] = KS,
-                   banned: Mapping[str, frozenset] | None = None) -> QuestionScore:
-    """banned: slot_name → 무효화된 {(doc_id, node_index)} (16번 B ARM_SPECIFIC 재계산)."""
+                   banned: Mapping[str, frozenset] | None = None,
+                   store: Any = None) -> QuestionScore:
+    """banned: slot_name → 무효화된 {(doc_id, node_index)} (16번 B ARM_SPECIFIC 재계산).
+    store: slot_found의 '옳은 node의 다른 창' 판별용(없으면 unverified로 보수 처리)."""
     banned = banned or {}
     n_slots = len(gq.slots)
     qs = QuestionScore(gq.question_id, segment, n_slots, excluded=(n_slots == 0))
@@ -217,19 +254,20 @@ def score_question(gq: GoldQuestion, rec: Mapping[str, Any] | None, segment: str
     for k in ks:
         found = 0
         for slot in gq.slots:
-            ok, _, _ = slot_found(slot, results, k, banned.get(slot.slot_name, frozenset()))
+            ok, _, _, _, _ = slot_found(slot, results, k,
+                                        banned.get(slot.slot_name, frozenset()), store)
             found += int(ok)
         qs.found_at[k] = found
         qs.all_found_at[k] = (n_slots > 0 and found == n_slots)
         docs = {r.get("doc_id") for r in results[:k]}
         qs.doc_hit_at[k] = bool(gq.gold_docs & docs) if gq.gold_docs else False
     for slot in gq.slots:
-        ok, r, method = slot_found(slot, results, EVAL_K, banned.get(slot.slot_name, frozenset()))
+        ok, r, method, src, span_state = slot_found(
+            slot, results, EVAL_K, banned.get(slot.slot_name, frozenset()), store)
         if ok and r is not None:
-            nodes = _result_nodes(r)
-            src = next((x for x in slot.sources if x.doc_id == r.get("doc_id") and x.node_index in nodes), None)
             qs.slot_matches.append({"slot_name": slot.slot_name, "method": method, "result": dict(r),
-                                    "gold_row_col": (src.row, src.col) if src else None})
+                                    "gold_row_col": (src.row, src.col) if src else None,
+                                    "span_state": span_state})
     return qs
 
 
@@ -276,9 +314,17 @@ def check_locators(qs: QuestionScore, store: Any) -> list[dict]:
             out.append({**base, "severity": "unresolved", "reason": "claim_text_not_in_node",
                         "chunk_text": r.get("text", "")[:400]})
             continue
-        # text-method 매치: doc은 같고 Gold evidence span이 본문에 있음이 확인됐지만 node가
-        # Gold 지정과 다르다(라인 윈도우 겹침 등) — "동일 근거, span offset/범위만 상이" = 경미
-        # (vFINAL 14번. 탈락 사유 아님, 건수·원인 보고).
+        # span 미검증 node 매치: Gold span이 청크에도 node 원문에도 확인 안 됨(렌더링 차이
+        # 가능성) — 지지 여부 판정 불가 = UNRESOLVED(16번 패킷, Owner가 arm-blind 판정).
+        if m.get("span_state") == "unverified":
+            out.append({**base, "severity": "unresolved", "reason": "gold_span_not_verifiable",
+                        "chunk_text": r.get("text", "")[:400]})
+            continue
+        # text-method 매치: doc은 같고 Gold evidence span이 청크 본문에 실재하며, 위의 본문
+        # 대조로 그 청크가 자기 locator의 node에서 온 것도 확인됐다 — 같은 문서 안에 동일
+        # 근거가 반복 수록된 경우다(DART 정기보고서의 표 반복). vFINAL 14번 경미 조항
+        # "동일 근거, span offset만 상이(…·범위)"에 해당 = 경미. 다른-node를 일괄 치명으로
+        # 보면 이 조항의 '범위'가 사문화되고, 실측(B 17·D 13건)상 전 arm이 Hard 탈락한다.
         if m.get("method") == "text":
             out.append({**base, "severity": "minor", "reason": "same_evidence_span_offset_differs"})
             continue
@@ -329,7 +375,8 @@ def score_arm(arm: str, results: Mapping[str, dict], gold: Mapping[str, GoldQues
     invalid = invalid or {}
     qscores = [score_question(gq, results.get(qid), segments.get(qid, "?"), ks,
                               banned={s.slot_name: invalid.get((qid, s.slot_name), frozenset())
-                                      for s in gq.slots} if invalid else None)
+                                      for s in gq.slots} if invalid else None,
+                              store=store)
                for qid, gq in gold.items() if qid not in exclude_qids]
     by_seg = {
         "ALL": _agg(qscores, gold, ks),
