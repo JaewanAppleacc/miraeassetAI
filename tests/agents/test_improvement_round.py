@@ -30,6 +30,15 @@ def test_guarantee_top_doc_moves_quota_chunks_to_front():
     assert cr.guarantee_top_doc(hits, "", 3) == hits           # 문서 없으면 원형
 
 
+def test_top_doc_quota_applies_only_when_top_doc_matches_question_date(monkeypatch):
+    """날짜 없는 질문에서 1위 문서(정정 사업보고서 등)가 정답 행을 밀어내던 judge24 회귀 3건 —
+    쿼터는 질문 접수일과 맞는 1위 문서에만 준다. retrieve() 내부 규칙을 그대로 재현해 잠근다."""
+    dates = cr.question_rcept_dates("한국항공우주가 2025년 6월 26일 체결한 계약의 계약금액은?")
+    assert dates == set()                                     # 한글 날짜 → 접수일 결박 없음 → 쿼터 없음
+    dates = cr.question_rcept_dates("삼성중공업의 2025-03-17 에탄운반선 공급계약 공시에서")
+    assert "20250318" in dates                                # ISO 날짜 → 접수일(익일)까지 결박 → 쿼터 가능
+
+
 # ---------- 비교계산: 분기/반기 월 결박·누적 열·요약재무정보 우선·단위 괴리 가드 ----------
 
 
@@ -83,6 +92,17 @@ def test_summary_table_preferred_for_same_period_comparison():
     matches = qa_agent.match_evidence(["매출액_2023"], [income, summary], question="2023년 반기 매출액 비교",
                                       bind_doc_year=True, bind_months=frozenset({6}))
     assert matches[0].chunk_id == "c-summary"                 # 검색 순위(income이 1위)를 넘어 요약표 우선
+
+
+def test_annual_comparison_rejects_quarterly_report_values():
+    """"같은 연간(사업보고서) 기준" 비교에 분기보고서 값(두산로보틱스 5,280 실측)을 쓰지 않는다."""
+    annual = _chunk("구분 | 제 11 기 | 제 10 기\n매출액 | 32,978 | 53,038", "periodic_2025_annual", 2025, 12)
+    quarter = _chunk("구분 | 제 11 기 3분기 | 제 10 기\n매출액 | 5,280 | 10,000", "periodic_2025_q3", 2025, 9)
+    matches = qa_agent.match_evidence(["매출액_2025"], [quarter, annual],
+                                      question="2023년과 2025년 사이(같은 연간(사업보고서) 기준) 매출액 변동",
+                                      bind_months=frozenset({12}))
+    assert matches and matches[0].doc_id == "periodic_2025_annual"
+    assert matches[0].picked_value == "32,978"
 
 
 def test_magnitude_gap_blocks_mixed_unit_calculation():

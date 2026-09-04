@@ -333,7 +333,10 @@ class CorpusRetriever:
             hits = chunk_index.search(question, k=max(want, TOP_DOC_QUOTA * 4),
                                       section_alpha=self.section_alpha)
         # Stage 1 1위 문서의 청크를 보장한다 — 문서 랭킹이 옳아도 청크 랭킹에서 전멸하던 실측.
-        hits = guarantee_top_doc(list(hits), top_docs[0] if top_docs else "", TOP_DOC_QUOTA)[:want]
+        # 단, 질문이 접수일을 못 박았고 1위 문서가 그 날 접수된 공시일 때만: 날짜 없는 질문에서
+        # 1위가 정정 사업보고서 같은 오답 문서면 그 청크가 정답 행을 밀어냈다(judge24 실측 3건).
+        top1 = top_docs[0] if top_docs and dates and top_docs[0] in date_docs else ""
+        hits = guarantee_top_doc(list(hits), top1, TOP_DOC_QUOTA)[:want]
         hits = supplement_hits(question, hits, chunk_index.chunks, want)
         return [self._to_chunk(score, chunk) for score, chunk in hits]
 

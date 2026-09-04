@@ -1272,11 +1272,17 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
         scopes = {doc_id: retriever.statement_scopes(doc_id)
                   for doc_id in {c.doc_id for c in state.retrieval_results}}
     same_period = bool(state.conditions.periodic_subtypes & {"half", "quarter"}) or "누적" in question
+    # "같은 연간(사업보고서) 기준" 비교는 분기·반기 보고서 값을 섞지 않는다(기준월 12만) — 문서 연도
+    # 결박은 하지 않는다(사업보고서의 비교 열은 같은 연간 값이라 정당하고, 전년 문서가 검색에
+    # 없을 때 값을 잃는 회귀를 피한다). judge24 실측: 두산로보틱스 2025 매출액이 분기 값(5,280)으로.
+    annual_only = (not same_period and (state.conditions.periodic_subtypes == frozenset({"annual"})
+                                        or "연간" in question))
     state.evidence_matches = match_evidence(
         state.slots, state.retrieval_results, limit=max_evidence, question=question,
         drop=corp_tokens(sorted(state.conditions.corps)), scopes=scopes,
         bind_doc_year=same_period,
-        bind_months=period_months(question) if same_period else frozenset())
+        bind_months=(period_months(question) if same_period
+                     else frozenset({12}) if annual_only else frozenset()))
     docs_by_id = getattr(retriever, "docs_by_id", None) or {}
     # 대량보유 서식 파서 — 값을 뽑으면 근거로 승격한다(프롬프트·검증·발췌 모두가 본다).
     holding, bound_docs = _holding_parse(question, state, docs_by_id)
