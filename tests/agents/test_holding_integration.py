@@ -381,6 +381,34 @@ def test_notes_survive_llm_adoption_for_remaining_topic():
     assert "3,739,817" in state.answer               # 확정값 보존
 
 
+def test_llm_claiming_different_reporter_name_is_rejected():
+    """자체 검증 발견: 숫자 없는 이름 주장은 validator가 못 잡는다 — 파서 확정 보고자와 대조."""
+    q = SE_QUESTION + " 특별관계자 수도 알려줘."
+    llm = FakeLLM({"answer": "보고자는 영풍이다.",
+                   "evidence": [{"document_id": SE_DOC, "quote_or_fact": SE_PREV_HIST_ROW}],
+                   "uncertainty": ""})
+    state = qa_agent.answer_question(q, samsung_retriever(), llm=llm)
+    assert state.llm.get("degraded_reason") == "holding_text_conflict"
+    assert "영풍" not in state.answer
+
+
+def test_llm_claiming_different_purpose_is_rejected_but_abbreviation_allowed():
+    q = SE_QUESTION + " 특별관계자 수도 알려줘."
+    cur_row = ("이번보고서 | 2026년 02월 12일 | BlackRockFundAdvisors | 13 | 3,739,817 | 5.01 | "
+               "3,739,817 | 5.01 | 74,693,696")
+    wrong = FakeLLM({"answer": "보유목적은 경영권 영향이다.",
+                     "evidence": [{"document_id": SE_DOC, "quote_or_fact": cur_row}],
+                     "uncertainty": ""})
+    state = qa_agent.answer_question(q, samsung_retriever(), llm=wrong)
+    assert state.llm.get("degraded_reason") == "holding_text_conflict"
+    assert "경영권 영향" not in state.answer
+    ok = FakeLLM({"answer": "보고자는 BlackRock Fund Advisors입니다. 특별관계자 수는 13명이다.",
+                  "evidence": [{"document_id": SE_DOC, "quote_or_fact": cur_row}],
+                  "uncertainty": ""})
+    state = qa_agent.answer_question(q, samsung_retriever(), llm=ok)
+    assert not state.llm.get("degraded")             # 대리인 표기 생략(축약)은 충돌이 아니다
+
+
 def test_retrieved_context_drops_unused_same_doc_history_row():
     """재검수 HIGH 3: 대상 문서 안이라도 답에 쓰이지 않은 과거 연혁 행은 싣지 않는다."""
     state = qa_agent.answer_question(SE_QUESTION, samsung_retriever())

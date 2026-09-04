@@ -758,6 +758,34 @@ _HOLDING_SENT_SPLIT_RE = re.compile(r"(?<=[.다])\s+|\n")
 BINARY_EVIDENCE_REASON = "신청/허가일 서식 필드(이분 판정 근거)"
 
 
+# "보고자는 X이다 / 보유목적은 Y입니다" 꼴의 서술 필드 주장. 숫자가 없어 validator가 못 잡는다 —
+# 파서가 확정한 이름·범주와 다른 값을 주장하면 폐기한다(자체 검증에서 발견: '보고자는 영풍이다').
+_HOLDING_TEXT_CLAIM_RE = re.compile(
+    r"(보고자(?:\s*본인\s*성명)?|보유목적|보고구분|보고사유)\s*(?:는|은|:|：|이|가)\s*"
+    r"(.+?)(?=\s*(?:이다|입니다|임|다)[.\s]|\s*[(.\n]|$)")
+_HOLDING_TEXT_FIELD = {"보고자": calculator.REPORTER_SLOT, "보고자본인성명": calculator.REPORTER_SLOT,
+                       "보유목적": "보유목적", "보고구분": "보고구분", "보고사유": "보고사유"}
+
+
+def _holding_text_conflicts(llm_answer: str,
+                            holding: "calculator.HoldingParseResult") -> list[str]:
+    """파서 확정 서술 필드와 다른 값을 주장하는 문장의 (필드, 주장값) 목록."""
+    confirmed: dict[str, str] = {v.slot: v.value for v in holding.values}
+    if holding.filer and calculator.REPORTER_SLOT not in confirmed:
+        confirmed[calculator.REPORTER_SLOT] = holding.filer   # 묻지 않았어도 대조는 한다
+    bad: list[str] = []
+    for m in _HOLDING_TEXT_CLAIM_RE.finditer(llm_answer or ""):
+        field = _HOLDING_TEXT_FIELD.get("".join(m.group(1).split()))
+        claimed = calculator._norm_name(m.group(2))
+        truth = calculator._norm_name(confirmed.get(field, "")) if field else ""
+        if not field or not truth or not claimed:
+            continue
+        if claimed in truth or truth in claimed:
+            continue                        # 축약·부분 표기(대리인 표기 생략 등)는 허용
+        bad.append(f"{field}={m.group(2).strip()}")
+    return bad
+
+
 def _holding_value_conflicts(llm_answer: str, allowed_numbers: Iterable[str],
                              question: str) -> list[str]:
     """보유 값 문맥의 문장에서 허용 목록 밖 숫자를 돌려준다 — 있으면 LLM 답을 hard reject.
@@ -1358,6 +1386,11 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
                 state.llm["degraded"] = True
                 state.llm["degraded_reason"] = "holding_value_conflict"
                 state.llm["degraded_detail"] = conflicts[:5]
+                state.llm["degraded_answer"] = llm_answer
+            elif holding and (text_conflicts := _holding_text_conflicts(llm_answer, holding)):
+                state.llm["degraded"] = True
+                state.llm["degraded_reason"] = "holding_text_conflict"
+                state.llm["degraded_detail"] = text_conflicts[:5]
                 state.llm["degraded_answer"] = llm_answer
             elif not llm_citations or any(
                     c.get("check") in ("quote_grounded", "citation_present")
