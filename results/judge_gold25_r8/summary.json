@@ -1,0 +1,31 @@
+{
+ "n": 25,
+ "key_value": {
+  "full": 6,
+  "zero": 5,
+  "partial": 14
+ },
+ "all_value": {
+  "full": 6,
+  "zero": 5,
+  "partial": 14
+ },
+ "docs_full_in_context": 9,
+ "tags": {
+  "RETRIEVAL_MISS": 16,
+  "LLM_PATH_FAILED": 12,
+  "VALUE_NOT_EXTRACTED": 5
+ },
+ "by_cell_key_full": {
+  "COMPLEX_DOCUMENT_REASONING_CLOSED": "0/3",
+  "COMPLEX_DOCUMENT_REASONING_OPEN": "0/5",
+  "MULTI_COMPARE_CALCULATE_CLOSED": "3/4",
+  "MULTI_COMPARE_CALCULATE_OPEN": "0/4",
+  "SEARCH_EXTRACTION_CLOSED": "2/5",
+  "SEARCH_EXTRACTION_OPEN": "1/4"
+ },
+ "degraded": {
+  "unsupported": 8,
+  "period_unbound": 2
+ }
+}
