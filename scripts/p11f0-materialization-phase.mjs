@@ -11,15 +11,23 @@
 import pg from "pg";
 import process from "node:process";
 import { createFixedKureLoadSessionRepository, computeFixedKureLoadSessionId } from "../domain/postgres/reference-fixed-kure-load-session-repository.mjs";
+import { createFixedKurePrecomputedRepository } from "../domain/postgres/reference-fixed-kure-precomputed-repository.mjs";
 
 const { Client } = pg;
 const MATERIALIZE_BATCH_SIZE = 500;
+const PRECOMPUTED_MATERIALIZE_BATCH_SIZE = 10_000;
+
+function option(name) {
+  const index = process.argv.indexOf(name);
+  return index >= 0 ? process.argv[index + 1] : undefined;
+}
 
 async function main() {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) throw new Error("DATABASE_URL is required");
-  const corpusSnapshotId = process.argv[process.argv.indexOf("--corpus-snapshot-id") + 1];
-  if (!corpusSnapshotId) throw new Error("--corpus-snapshot-id is required");
+  const corpusSnapshotId = option("--corpus-snapshot-id");
+  const explicitLoadSessionId = option("--load-session-id");
+  if (!corpusSnapshotId && !explicitLoadSessionId) throw new Error("--corpus-snapshot-id or --load-session-id is required");
 
   const client = new Client({ connectionString: databaseUrl });
   await client.connect();
@@ -29,8 +37,9 @@ async function main() {
   // process hanging with an open connection.
   try {
     const repo = createFixedKureLoadSessionRepository({ client });
+    const precomputedRepo = createFixedKurePrecomputedRepository({ client });
 
-    const loadSessionId = computeFixedKureLoadSessionId({
+    const loadSessionId = explicitLoadSessionId ?? computeFixedKureLoadSessionId({
       releaseId: "seed-release-v0.20", corpusSnapshotId,
       embeddingProvider: "nlpai-lab", embeddingModel: "KURE-v1",
       embeddingRevision: "4ed4540949c70b7da2c74004a915e1f2d5e46e4f",
@@ -41,9 +50,17 @@ async function main() {
     console.error(`[materialize] resuming load_session_id=${loadSessionId} status=${session.status}`);
 
     if (session.status === "EMBEDDING") {
-      const counts = await repo.queueStatusCounts(loadSessionId);
-      if (counts.PENDING > 0 || counts.LEASED > 0) throw new Error(`EMBEDDING not complete (PENDING=${counts.PENDING} LEASED=${counts.LEASED}) -- run the embedding phase first`);
-      if (counts.FAILED > 0) throw new Error(`EMBEDDING has ${counts.FAILED} permanently failed unique text(s) -- refusing to materialize`);
+      if (session.discovery_source_load_session_id) {
+        const imported = await precomputedRepo.getImportState(loadSessionId);
+        if (imported.imported_vector_count !== session.expected_unique_embeddable_count
+            || session.embedded_unique_text_count !== session.expected_unique_embeddable_count) {
+          throw new Error(`PRECOMPUTED_EMBEDDING not complete (imported=${imported.imported_vector_count}, recorded=${session.embedded_unique_text_count}, expected=${session.expected_unique_embeddable_count})`);
+        }
+      } else {
+        const counts = await repo.queueStatusCounts(loadSessionId);
+        if (counts.PENDING > 0 || counts.LEASED > 0) throw new Error(`EMBEDDING not complete (PENDING=${counts.PENDING} LEASED=${counts.LEASED}) -- run the embedding phase first`);
+        if (counts.FAILED > 0) throw new Error(`EMBEDDING has ${counts.FAILED} permanently failed unique text(s) -- refusing to materialize`);
+      }
       session = await repo.transitionStatus(loadSessionId, ["EMBEDDING"], "MATERIALIZING");
     } else if (session.status !== "MATERIALIZING") {
       console.error(`[materialize] session status is ${session.status}, not EMBEDDING/MATERIALIZING -- nothing to do`);
@@ -51,7 +68,7 @@ async function main() {
     }
 
     await repo.ensureRetrievalIndexRow({
-      retrievalIndexId: session.retrieval_index_id, releaseId: "seed-release-v0.20", corpusSnapshotId,
+      retrievalIndexId: session.retrieval_index_id, releaseId: session.release_id, corpusSnapshotId: session.corpus_snapshot_id,
       embeddingProvider: session.embedding_provider, embeddingModel: session.embedding_model, embeddingRevision: session.embedding_revision,
       embeddingDimension: session.embedding_dimension, distanceMetric: session.distance_metric,
       chunkingPolicyId: session.chunking_policy_id, chunkingPolicySha256: session.chunking_policy_sha256,
@@ -62,7 +79,9 @@ async function main() {
     let materializedThisRun = 0;
     while (true) {
       // eslint-disable-next-line no-await-in-loop
-      const { materializedCount, done } = await repo.materializeChunkBatch(loadSessionId, session.retrieval_index_id, MATERIALIZE_BATCH_SIZE);
+      const { materializedCount, done } = session.discovery_source_load_session_id
+        ? await precomputedRepo.materializeInheritedChunkBatch(loadSessionId, session.retrieval_index_id, PRECOMPUTED_MATERIALIZE_BATCH_SIZE)
+        : await repo.materializeChunkBatch(loadSessionId, session.retrieval_index_id, MATERIALIZE_BATCH_SIZE);
       materializedThisRun += materializedCount;
       if (materializedCount > 0) console.error(`[materialize] +${materializedCount} (total this run: ${materializedThisRun}), elapsed_s=${Math.round((Date.now() - startedAt) / 1000)}`);
       if (done) break;

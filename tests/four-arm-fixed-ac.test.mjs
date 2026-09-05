@@ -694,6 +694,30 @@ test("fetch_node SQL always scopes by document_id -- structurally impossible to 
   assert.match(body, /WHERE load_session_id = \$1 AND document_id = \$2/);
 });
 
+test("successor/session state and inherited locator provenance may use separate pinned load-session IDs", async () => {
+  const docs = [{ id: "chunk_a00000000000000000000001", text: "매출액" }];
+  const client = fakeClient({
+    chunkRows: new Map(docs.map((d) => [d.id, chunkRow(d.id)])),
+    stagingSpans: new Map(docs.map((d) => [d.id, singleSpan(3)])),
+    allStagingRows: [{ source_spans: singleSpan(3) }],
+    sessionRow: { status: "READY", expected_total_chunk_count: 1, expected_search_eligible_count: 1, expected_unique_embeddable_count: 1, materialized_chunk_count: 1 },
+  });
+  const provenanceLoadSessionId = "fixed_kure_attempt_discovery_source";
+  const adapter = createArmRetrieverAdapter({
+    arm: "C", client, bm25Index: buildBm25Index(docs),
+    retrievalIndexId: RETRIEVAL_INDEX_ID, loadSessionId: LOAD_SESSION_ID,
+    provenanceLoadSessionId,
+  });
+  await adapter.search("매출액", {}, 20);
+  const spanCall = client.calls.find((call) => call.sql.includes("reference_fixed_kure_chunk_staging") && call.sql.includes("chunk_id = ANY"));
+  assert.equal(spanCall.params[0], provenanceLoadSessionId);
+  await adapter.readiness();
+  const sessionCall = client.calls.find((call) => call.sql.includes("reference_fixed_kure_load_sessions"));
+  const coverageCall = client.calls.find((call) => call.sql.includes("jsonb_array_length(source_spans)"));
+  assert.equal(sessionCall.params[0], LOAD_SESSION_ID, "state/count readiness must come from the materialized successor");
+  assert.equal(coverageCall.params[0], provenanceLoadSessionId, "locator coverage must come from the immutable discovery source");
+});
+
 test("double-run canonical SHA match: repeated buildProvenanceSet calls over the same spans hash identically", () => {
   const spans = mixedTableAndProseSpans();
   const sha1 = sha256Hex(JSON.stringify(buildProvenanceSet(spans)));

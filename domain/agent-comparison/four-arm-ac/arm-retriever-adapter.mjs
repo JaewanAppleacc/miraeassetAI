@@ -126,7 +126,7 @@ function toArmResultItem(row, spans, { rank, score, scoreType, componentScores, 
 }
 
 export function createArmRetrieverAdapter({
-  arm, client, bm25Index, retrievalIndexId, loadSessionId, corpusSnapshotId,
+  arm, client, bm25Index, retrievalIndexId, loadSessionId, provenanceLoadSessionId = loadSessionId, corpusSnapshotId,
   vectorRepository, embeddingAdapter, expectedPins,
   bm25TopK = BM25_TOP_K, rrfK = RRF_K_CONSTANT,
 }) {
@@ -135,6 +135,7 @@ export function createArmRetrieverAdapter({
   if (!bm25Index) throw new TypeError("bm25Index is required");
   if (typeof retrievalIndexId !== "string" || retrievalIndexId === "") throw new TypeError("retrievalIndexId is required");
   if (typeof loadSessionId !== "string" || loadSessionId === "") throw new TypeError("loadSessionId is required");
+  if (typeof provenanceLoadSessionId !== "string" || provenanceLoadSessionId === "") throw new TypeError("provenanceLoadSessionId is required");
 
   if (arm === "A") {
     if (!vectorRepository || typeof vectorRepository.searchDocumentChunksByVector !== "function") {
@@ -174,7 +175,7 @@ export function createArmRetrieverAdapter({
     const chunkIds = result.results.map((r) => r.chunk_id);
     const [rowsById, spansById] = await Promise.all([
       fetchChunksByIds(client, retrievalIndexId, chunkIds),
-      fetchStagingSpans(client, loadSessionId, chunkIds),
+      fetchStagingSpans(client, provenanceLoadSessionId, chunkIds),
     ]);
     return result.results.map((r) => toArmResultItem(
       rowsById.get(r.chunk_id), spansById.get(r.chunk_id),
@@ -200,7 +201,7 @@ export function createArmRetrieverAdapter({
     const chunkIds = bm25Ranked.map((r) => r.id);
     const [rowsById, spansById] = await Promise.all([
       fetchChunksByIds(client, retrievalIndexId, chunkIds),
-      fetchStagingSpans(client, loadSessionId, chunkIds),
+      fetchStagingSpans(client, provenanceLoadSessionId, chunkIds),
     ]);
     // Row-level double-check (defense in depth on top of the SQL-level
     // prefilter above), matching arm A's own BM25 leg exactly.
@@ -250,7 +251,7 @@ export function createArmRetrieverAdapter({
       const result = await client.query(
         `SELECT chunk_id, source_spans FROM disclosure_reference.reference_fixed_kure_chunk_staging
          WHERE load_session_id = $1 AND document_id = $2`,
-        [loadSessionId, docId],
+        [provenanceLoadSessionId, docId],
       );
       return verifyNodeIdentity({ documentId: docId, nodeIndex, row, col, chunkRows: result.rows });
     },
@@ -294,9 +295,15 @@ export function createArmRetrieverAdapter({
         && Number(sessionRow.materialized_chunk_count) > 0;
       if (!shardReady) reasons.push("LOAD_SESSION_NOT_READY_OR_COUNT_MISMATCH");
 
+      // Aggregate in PostgreSQL. Returning all ~442k source_spans rows to
+      // Node made readiness itself an unbounded-memory operation at the
+      // full-corpus scale even though the gate needs only counts.
       const spansResult = await client.query(
-        `SELECT source_spans FROM disclosure_reference.reference_fixed_kure_chunk_staging WHERE load_session_id = $1`,
-        [loadSessionId],
+        `SELECT count(*)::int AS total_chunks,
+                count(*) FILTER (WHERE jsonb_array_length(source_spans) = 0)::int AS unresolved_count
+         FROM disclosure_reference.reference_fixed_kure_chunk_staging
+         WHERE load_session_id = $1`,
+        [provenanceLoadSessionId],
       );
       // Turn AC-LOCATOR-READY: gate on `provenance_ready` (every chunk has
       // an interpretable, non-empty candidate set), not `all_fully_resolved`
@@ -306,7 +313,24 @@ export function createArmRetrieverAdapter({
       // a chunk with EMPTY_SPANS_INVALID (no persisted spans at all -- a
       // real parser/loader gap) blocks official readiness, and it is
       // reported here isolated from ambiguity via `unresolved_count`.
-      const coverage = summarizeLocatorCoverage(spansResult.rows);
+      const summary = spansResult.rows[0];
+      const coverage = summary && Object.hasOwn(summary, "total_chunks")
+        ? Object.freeze({
+          total_chunks: summary.total_chunks,
+          counts: Object.freeze({
+            EMPTY_SPANS_INVALID: summary.unresolved_count,
+            NODE_AND_ROW_RESOLVED: null,
+            NODE_RESOLVED_ROW_AMBIGUOUS: null,
+            MULTI_NODE_AMBIGUOUS: null,
+          }),
+          detailed_classification_computed: false,
+          fully_resolved_fraction: null,
+          all_fully_resolved: null,
+          unresolved_count: summary.unresolved_count,
+          ambiguous_count: null,
+          provenance_ready: summary.total_chunks > 0 && summary.unresolved_count === 0,
+        })
+        : summarizeLocatorCoverage(spansResult.rows);
       if (!coverage.provenance_ready) reasons.push("A_C_LOCATOR_UNRESOLVED_SPANS_PRESENT");
 
       const fullIndexReady = bm25Ready && denseReady && shardReady;

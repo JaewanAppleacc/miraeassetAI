@@ -102,6 +102,7 @@ const SESSION_COLUMNS = `
   embedded_unique_text_count, materialized_chunk_count, last_error_code, created_at, updated_at,
   logical_load_id, execution_attempt_id, loader_contract_version, supersedes_load_session_id,
   terminal_diagnostics
+  , discovery_source_load_session_id, precomputed_materialization_cursor_chunk_id
 `;
 
 function trimmedSessionRow(row) {
