@@ -56,7 +56,25 @@ const WORK_SEED_DIR = path.join(REPO_ROOT, "work/domain-seed");
 const LOAD_SESSION_ID = "fixed_kure_attempt_23b88aea167c04400bf77a1a58839f2e";
 const PROVENANCE_LOAD_SESSION_ID = "fixed_kure_attempt_c7ee3363a0af161c7a0572d024dfbf36";
 const RETRIEVAL_INDEX_ID = "fixed_kure_index_8fe191342205848d1d6a6123f38a54e7";
+// Two shapes of "the same pin" are needed by two different call sites:
+// arm-retriever-adapter.mjs's own constructor-time KURE_PIN check reads
+// expectedPins.embedding_revision/embedding_dimension, while that SAME
+// expectedPins object is passed straight through to
+// reference-vector-retrieval-repository.mjs's assertReadyRetrievalIndex,
+// which does a generic key-by-key compare against the REAL
+// reference_retrieval_indexes row (embedding_provider/embedding_model/
+// embedding_revision/embedding_dimension, four separate columns -- there
+// is no single "repository" column). Passing {repository,revision,
+// dimension} looks plausible but silently fails BOTH checks at once: the
+// adapter-level check is skipped (embedding_revision/embedding_dimension
+// keys are simply absent, so `!== undefined` is false and nothing is
+// compared), and the repository-level check throws on every single call
+// because index["repository"] is always undefined.
 const KURE_PIN = Object.freeze({ repository: "nlpai-lab/KURE-v1", revision: "4ed4540949c70b7da2c74004a915e1f2d5e46e4f", dimension: 1024 });
+const KURE_EXPECTED_PINS = Object.freeze({
+  embedding_provider: "nlpai-lab", embedding_model: "KURE-v1",
+  embedding_revision: KURE_PIN.revision, embedding_dimension: KURE_PIN.dimension,
+});
 const EXPECTED_CONDITIONS_SHA256 = "83d5b8a02de2e3e79e388ec417ed104c81b08eb0a8dc8a8366b020df36b5e527";
 const EXPECTED_OWNER_DECISION_SHA256 = "2d8766ba4c5c1da42758b7823feca96cbbab58e844dac6e68c580709f5c22a20";
 const BM25_CACHE_DIR = path.join(os.homedir(), "Library/Caches/ai-festival-p11f0-bm25-index");
@@ -144,7 +162,7 @@ async function main() {
       });
       adapter = createArmRetrieverAdapter({
         arm: "A", client, bm25Index, retrievalIndexId: RETRIEVAL_INDEX_ID, loadSessionId: LOAD_SESSION_ID,
-        provenanceLoadSessionId: PROVENANCE_LOAD_SESSION_ID, vectorRepository, embeddingAdapter, expectedPins: KURE_PIN,
+        provenanceLoadSessionId: PROVENANCE_LOAD_SESSION_ID, vectorRepository, embeddingAdapter, expectedPins: KURE_EXPECTED_PINS,
       });
     } else {
       adapter = createArmRetrieverAdapter({
@@ -164,7 +182,13 @@ async function main() {
     let errors = 0;
 
     for (const row of questions) {
-      if (done.has(row.question_id)) continue;
+      // A prior errored attempt for this question_id is NEVER treated as
+      // "done" -- only a real, successful result checkpoints it. This is
+      // what makes resuming after an infra failure safe: a retry re-issues
+      // exactly the questions that never produced a real result, never the
+      // ones that already succeeded, and never silently accepts a
+      // permanently-broken checkpoint as if it were valid progress.
+      if (done.has(row.question_id) && !done.get(row.question_id).error) continue;
       const mapped = mapOfficialConditionToFilterInput(row.conditions, nameToCorpCodeIndex);
       const t0 = Date.now();
       let resultLine;
