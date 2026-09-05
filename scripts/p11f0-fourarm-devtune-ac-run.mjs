@@ -176,9 +176,17 @@ async function main() {
           question_id: row.question_id, arm, segment: row.segment,
           code_sha256: codeSha256, config_sha256: configSha256, batch_id: batchId,
           latency_ms: latencyMs,
+          // Frozen result-item contract's minimum fields only -- never the
+          // raw chunk text, per this Turn's "no unnecessary raw chunk text"
+          // rule. chunk_text_sha256 (not the text itself) plus the
+          // locator-provenance sidecar (already locator/candidate-only, no
+          // text) are the two things the hard-gate/locator scoring step
+          // actually needs.
           results: results.map((r) => ({
             rank: r.rank, chunk_id: r.chunk_id, doc_id: r.doc_id, node_index: r.node_index,
-            locator: r.locator, row: r.row, col: r.col, score: r.score, score_type: r.score_type,
+            locator: r.locator, row: r.row, col: r.col, locator_status: r.locator_status,
+            chunk_text_sha256: r.chunk_text_sha256, score: r.score, score_type: r.score_type,
+            provenance: r.provenance,
           })),
         };
       } catch (error) {
