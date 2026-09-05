@@ -1,6 +1,6 @@
 {
-  "schema_version": "0.1.0",
-  "turn": "AC-OFFICIAL-INTEGRATION-V1",
+  "schema_version": "0.2.0",
+  "turn": "FOURARM-INTEGRATION-OWNER-DECISION-AND-EXECUTION-GATE",
   "batch_id": "35b588e42086e728302c47f0b5d307b7",
   "cutoff_contract": {
     "retrieval_output_k": 20,
@@ -637,6 +637,44 @@
     "official_execution_ready": true,
     "source": "OFFICIAL_CONDITIONS_ARTIFACT"
   },
+  "owner_resolutions_artifact": {
+    "file_sha256": "90940c7d514220169c2873d14a3aecd1dda328b8782b808697f65036b6cceeba",
+    "packet_combined_sha256": "e65cf7f5372cb007f4e94ef70542a0492ee147d980dea5d56f22c7ffc0c3b2a4",
+    "adjudicated_at": "2026-09-05T06:08:29Z",
+    "method": "arm-blind review of frozen packet content only; no retrieval/search re-run, no scorer re-run, no code or B/D result modification",
+    "equivalent_evidence_rejected": true,
+    "packet_count": 17,
+    "distribution": {
+      "COMMON_SOURCE": 0,
+      "ARM_SPECIFIC": 2,
+      "UNKNOWN": 15,
+      "critical": 2
+    },
+    "critical_packet_ids": [
+      "u-1b6cd184a87f",
+      "u-8564414f6080"
+    ],
+    "unknown_packet_ids": [
+      "u-0242ed257328",
+      "u-0f63a81df003",
+      "u-192d06b044ea",
+      "u-306d35a3890d",
+      "u-563f0c29d422",
+      "u-63cddb9b0159",
+      "u-63efc7b71368",
+      "u-6ebd6ff8de67",
+      "u-893641aa1791",
+      "u-896a2a3163e6",
+      "u-aa1e331b4d22",
+      "u-bb1d59b61b69",
+      "u-c55cdd9aa429",
+      "u-cdf167178203",
+      "u-f49512b5641c"
+    ],
+    "common_source_packet_ids": [],
+    "official_execution_ready": true,
+    "source": "OWNER_RATIFIED_RESOLUTIONS"
+  },
   "ledger": {
     "batch": {
       "batch_id": "35b588e42086e728302c47f0b5d307b7",
@@ -653,8 +691,8 @@
         "role": "AC_LIVE",
         "batch_id": "35b588e42086e728302c47f0b5d307b7",
         "status": "NOT_EXECUTED_PENDING_DEVTUNE",
-        "code_sha256": "44f05231de8b9a3b6fdb6ff422435d0586937941",
-        "config_sha256": "4f82a910f46f1dd503f2275dc467e002356c1f39ef106938a7ffd6994676a315",
+        "code_sha256": "715b1ef18b28368864185d8c79a4b5f830ba71d6",
+        "config_sha256": "d4ebfecdb11f3ce41be8028f356f54e71907242a6f4d92c961a895be74d6f4e7",
         "input_sha256": {
           "conditions": "83d5b8a02de2e3e79e388ec417ed104c81b08eb0a8dc8a8366b020df36b5e527",
           "universe": "96560165c836b10e315cb253ab96a99b369478c3f71a0415d16b7b6fadbfa1dc",
@@ -706,8 +744,8 @@
         "role": "AC_LIVE",
         "batch_id": "35b588e42086e728302c47f0b5d307b7",
         "status": "NOT_EXECUTED_PENDING_DEVTUNE",
-        "code_sha256": "44f05231de8b9a3b6fdb6ff422435d0586937941",
-        "config_sha256": "86555b020a51660efb10a3b05fe7d2e11f9db9023303c27fc0560de09a1f1633",
+        "code_sha256": "715b1ef18b28368864185d8c79a4b5f830ba71d6",
+        "config_sha256": "f2b58ced2076e5d0363e4ffcec5152b657198591a3ba580df8cff6e443d28c95",
         "input_sha256": {
           "conditions": "83d5b8a02de2e3e79e388ec417ed104c81b08eb0a8dc8a8366b020df36b5e527",
           "universe": "96560165c836b10e315cb253ab96a99b369478c3f71a0415d16b7b6fadbfa1dc",
@@ -786,31 +824,49 @@
       }
     ]
   },
-  "bd_judgement": {
-    "status": "BLOCKED_NO_HARD_SAFE_ARM",
-    "reason": "both B and D carry 2 shared ARM_SPECIFIC critical packets (u-1b6cd184a87f, u-8564414f6080) per Owner arm-blind adjudication -- see OWNER_PENDING_POLICY",
-    "owner_pending_policy": {
-      "arm_specific_critical_packets": [
-        "u-1b6cd184a87f",
-        "u-8564414f6080"
-      ],
-      "arm_specific_critical_disposition": "KEPT_AS_HARD_CRITICAL_PER_VFINAL_SECTION_16",
-      "ordinary_slot_failure_relaxation_forbidden": true,
-      "unknown_packet_count": 15,
-      "unknown_disposition": "OWNER_ARM_BLIND_ADJUDICATION_PENDING",
-      "common_source_exclusion_limit": 5,
-      "hard_safe_declaration_before_owner_decision": "FORBIDDEN",
-      "open_owner_decisions": [
-        "whether the 2 ARM_SPECIFIC critical packets should be reclassified as ordinary slot-found failures under section 16 B / section 14's retrieval-false-positive language (would return B/D to hard-safe with those slots counted as misses)",
-        "final disposition of the 15 remaining UNKNOWN packets (new resolution class vs. indefinite hold)"
-      ]
+  "arm_states": [
+    {
+      "arm": "A",
+      "arm_execution_state": "NOT_EXECUTED_PENDING_DEVTUNE",
+      "arm_hard_gate_state": "HARD_GATE_PENDING_EXECUTION",
+      "arm_selection_eligible": null,
+      "failure_reason": null,
+      "quality_metrics": null
+    },
+    {
+      "arm": "C",
+      "arm_execution_state": "NOT_EXECUTED_PENDING_DEVTUNE",
+      "arm_hard_gate_state": "HARD_GATE_PENDING_EXECUTION",
+      "arm_selection_eligible": null,
+      "failure_reason": null,
+      "quality_metrics": null
+    },
+    {
+      "arm": "B",
+      "arm_execution_state": "REUSED_VERIFIED",
+      "arm_hard_gate_state": "HARD_GATE_FAILED",
+      "arm_selection_eligible": false,
+      "failure_reason": "ARM_SPECIFIC_CRITICAL_2",
+      "quality_metrics": null
+    },
+    {
+      "arm": "D",
+      "arm_execution_state": "REUSED_VERIFIED",
+      "arm_hard_gate_state": "HARD_GATE_FAILED",
+      "arm_selection_eligible": false,
+      "failure_reason": "ARM_SPECIFIC_CRITICAL_2",
+      "quality_metrics": null
     }
-  },
-  "official_4arm_execution_ready": false,
-  "blockers": [
-    "BD_JUDGEMENT_NOT_HARD_SAFE: status=BLOCKED_NO_HARD_SAFE_ARM reason=both B and D carry 2 shared ARM_SPECIFIC critical packets (u-1b6cd184a87f, u-8564414f6080) per Owner arm-blind adjudication -- see OWNER_PENDING_POLICY",
-    "OWNER_DECISION_PENDING: B/D cannot be declared hard-safe before the Owner resolves the 2 open decisions recorded in OWNER_PENDING_POLICY"
   ],
+  "official_batch_execution_ready": true,
+  "final_selection_ready": false,
+  "selection": {
+    "status": "EXECUTION_PENDING",
+    "winner": null,
+    "reason": "A, C not yet executed / hard gate not yet evaluated",
+    "eligible_arms": []
+  },
+  "blockers": [],
   "dev_tune_executed": false,
   "dev_check_holdout_accessed": false,
   "production_wiring_performed": false

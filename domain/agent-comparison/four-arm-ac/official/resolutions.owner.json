@@ -1,0 +1,109 @@
+{
+ "review": {
+  "turn_id": "FOURARM-OWNER-REVIEW-V1",
+  "repository": "https://github.com/jiyoung04lee/demo_ai_fesfival.git",
+  "branch": "codex/fourarm-bd-final-handoff-v01",
+  "commit": "1a7c41f2d303c2c8500ff7a342bd5b968bf1cec5",
+  "packet_path": "handoff/fourarm_bd_final_v01/unresolved/",
+  "packet_combined_sha256": "e65cf7f5372cb007f4e94ef70542a0492ee147d980dea5d56f22c7ffc0c3b2a4",
+  "adjudicator": "wodhkscsai@gmail.com",
+  "adjudicated_at": "2026-09-05T06:08:29Z",
+  "method": "arm-blind review of frozen packet content only; no retrieval/search re-run, no scorer re-run, no code or B/D result modification",
+  "superseded_file_rejected": "unresolved/resolutions.proposed.json — used a classification (EQUIVALENT_EVIDENCE) not defined in spec §16 or in the review rules; rejected per rule 10 (no new classification) and rule 9 (no relaxation to improve scores)",
+  "ratified_from": "unresolved/resolutions.json (already-frozen Owner opinion notes were verified independently against packet content and found rule-compliant, then re-issued here with adjudicator/timestamp/SHA metadata)"
+ },
+ "resolutions": {
+  "u-0242ed257328": {
+   "classification": "UNKNOWN",
+   "critical": false,
+   "note": "동일 대량보유보고서 내 반복 표(같은 문서, 다른 node)로 보고자·수치는 Gold와 일치하나, §16에 이런 경우를 위한 사면/등가 분류가 없어 UNKNOWN 유지."
+  },
+  "u-0f63a81df003": {
+   "classification": "UNKNOWN",
+   "critical": false,
+   "note": "동일 보고서 요약정보 표(같은 문서, 다른 node)에 이번보고서 보유주식수·비율이 모두 일치하나, 등가 분류가 없어 UNKNOWN 유지."
+  },
+  "u-192d06b044ea": {
+   "classification": "UNKNOWN",
+   "critical": false,
+   "note": "동일 2025년 1분기 연결 손익계산서(같은 문서, 다른 node)의 누적 영업이익이 정확히 일치하나, 등가 분류가 없어 UNKNOWN 유지."
+  },
+  "u-1b6cd184a87f": {
+   "classification": "ARM_SPECIFIC",
+   "critical": true,
+   "note": "질문/Gold는 요약연결재무정보(node 230, 2023 매출 15,258,135)를 요구하나 후보 node 233은 별도재무정보이며 매출도 16,368,185로 문서 성격·node·값이 모두 달라 critical 유지."
+  },
+  "u-306d35a3890d": {
+   "classification": "UNKNOWN",
+   "critical": false,
+   "note": "동일 정정공시 분할방법 본문(같은 문서, 다른 node)에 신설회사4 정정 후 상호가 그대로 명시되어 있으나, 등가 분류가 없어 UNKNOWN 유지."
+  },
+  "u-563f0c29d422": {
+   "classification": "UNKNOWN",
+   "critical": false,
+   "note": "동일 대량보유보고서 내 반복 표(같은 문서, 다른 node)로 보고자가 Gold와 일치하나, 등가 분류가 없어 UNKNOWN 유지."
+  },
+  "u-63cddb9b0159": {
+   "classification": "UNKNOWN",
+   "critical": false,
+   "note": "동일 보고서 반복 표(같은 문서, 다른 node)에 보고자·보유주식수·비율이 그대로 명시되어 있으나, 등가 분류가 없어 UNKNOWN 유지."
+  },
+  "u-63efc7b71368": {
+   "classification": "UNKNOWN",
+   "critical": false,
+   "note": "동일 2023년 1분기 연결 포괄손익계산서(같은 문서, 다른 node)의 원단위 매출이 Gold의 백만원 단위 값과 반올림 정합하나, 등가 분류가 없어 UNKNOWN 유지."
+  },
+  "u-6ebd6ff8de67": {
+   "classification": "UNKNOWN",
+   "critical": false,
+   "note": "동일 2023년 1분기 연결 손익계산서(같은 문서, 다른 node)의 누적 영업이익이 정확히 일치하나, 등가 분류가 없어 UNKNOWN 유지."
+  },
+  "u-8564414f6080": {
+   "classification": "ARM_SPECIFIC",
+   "critical": true,
+   "note": "질문/Gold는 요약연결재무정보(node 149, 2025 1분기 매출 1,697,877)를 요구하나 후보 node 152는 별도재무정보이며 매출도 892,729로 문서 성격·node·값이 모두 달라 critical 유지."
+  },
+  "u-893641aa1791": {
+   "classification": "UNKNOWN",
+   "critical": false,
+   "note": "동일 2025년 1분기 연결 손익계산서(같은 문서, 다른 node)의 누적 매출액이 정확히 일치하나, 등가 분류가 없어 UNKNOWN 유지."
+  },
+  "u-896a2a3163e6": {
+   "classification": "UNKNOWN",
+   "critical": false,
+   "note": "동일 보고서 요약정보 표(같은 문서, 다른 node)에 직전보고서 보유주식수·비율이 모두 일치하나, 등가 분류가 없어 UNKNOWN 유지."
+  },
+  "u-aa1e331b4d22": {
+   "classification": "UNKNOWN",
+   "critical": false,
+   "note": "동일 대량보유보고서 반복 표(같은 문서, 다른 node)로 보고자가 Gold와 일치하나, 등가 분류가 없어 UNKNOWN 유지."
+  },
+  "u-bb1d59b61b69": {
+   "classification": "UNKNOWN",
+   "critical": false,
+   "note": "동일 2023년 1분기 연결 손익계산서(같은 문서, 다른 node)의 누적 매출액이 정확히 일치하나, 등가 분류가 없어 UNKNOWN 유지."
+  },
+  "u-c55cdd9aa429": {
+   "classification": "UNKNOWN",
+   "critical": false,
+   "note": "동일 2023년 반기 연결 포괄손익계산서(같은 문서, 다른 node)의 원단위 매출이 Gold의 백만원 단위 값과 반올림 정합하나, 등가 분류가 없어 UNKNOWN 유지."
+  },
+  "u-cdf167178203": {
+   "classification": "UNKNOWN",
+   "critical": false,
+   "note": "동일 정정공시 분할방법 본문(같은 문서, 다른 node)에 신설회사2 정정 후 상호가 그대로 명시되어 있으나, 등가 분류가 없어 UNKNOWN 유지."
+  },
+  "u-f49512b5641c": {
+   "classification": "UNKNOWN",
+   "critical": false,
+   "note": "동일 정정공시 분할방법 본문(같은 문서, 다른 node)에 신설회사1 정정 후 상호가 그대로 명시되어 있으나, 등가 분류가 없어 UNKNOWN 유지."
+  }
+ },
+ "distribution": {
+  "total": 17,
+  "critical": 2,
+  "ARM_SPECIFIC": 2,
+  "COMMON_SOURCE": 0,
+  "UNKNOWN": 15
+ }
+}

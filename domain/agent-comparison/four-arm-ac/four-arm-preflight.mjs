@@ -1,51 +1,51 @@
-// Turn AC-OFFICIAL-INTEGRATION-V1: assembles ONE combined preflight
-// manifest for all four arms (A/B/C/D) -- code/config/input/index/results
-// SHAs, the shared cutoff contract, the B/D judgement's Owner-pending
-// state (recorded, never relaxed), and a final official_4arm_execution_
-// ready verdict with an exact blocker list. This module is PURE (no DB/
-// file I/O) so it is fully unit-testable with fixtures; scripts/
-// p11f0-fourarm-preflight.mjs is the thin CLI wrapper that gathers the
-// real inputs (live DB readiness, real file hashes) and calls this.
+// Turn AC-OFFICIAL-INTEGRATION-V1 / FOURARM-INTEGRATION-OWNER-DECISION-AND-
+// EXECUTION-GATE: assembles ONE combined preflight manifest for all four
+// arms (A/B/C/D) -- code/config/input/index/results SHAs, the shared
+// cutoff contract, the Owner's ratified B/D hard-gate outcome (recorded,
+// never relaxed), and TWO separately reported readiness verdicts:
+//
+//   official_batch_execution_ready -- can this batch run at all (every
+//     arm's identity/pins verified, ledger complete, Owner resolutions
+//     artifact verified)? Independent of whether any arm passes its own
+//     hard safety gate -- a hard-gate-failed arm does not block OTHER
+//     arms from executing, it only excludes itself from selection.
+//
+//   final_selection_ready -- can a winner be picked yet? False until
+//     every arm in the batch has a FINAL (non-pending) hard-gate
+//     evaluation, i.e. until A/C have actually executed and been
+//     evaluated. B/D's hard-gate state is already final (from frozen,
+//     Owner-ratified results) the moment their Owner resolutions artifact
+//     is verified -- it does not wait on A/C.
 //
 // This module NEVER runs an evaluation itself (no HCX calls, no retrieval
 // calls, no scoring) -- it only aggregates already-computed identity/
-// readiness facts into one report and applies the Owner-pending policy
-// this Turn was explicitly told to preserve, not resolve.
+// readiness facts into one report. scripts/p11f0-fourarm-preflight.mjs is
+// the thin CLI wrapper that gathers the real inputs (live DB readiness,
+// real file hashes, the imported Owner resolutions artifact) and calls
+// this.
 import { assertSingleCompleteBatch, validateLedgerEntry } from "./four-arm-run-ledger.mjs";
 import { RETRIEVAL_OUTPUT_K, PRIMARY_EVALUATION_K, REPORTED_CUTOFFS } from "./four-arm-cutoff-contract.mjs";
-
-export const OWNER_PENDING_POLICY = Object.freeze({
-  // vFINAL section 16's own ARM_SPECIFIC critical classification, applied
-  // by the adopted ac_scorer_50cc1aa package's Owner arm-blind adjudication
-  // (resolutions.json) -- kept exactly as adjudicated. This Turn does not
-  // reclassify these as ordinary slot-found failures to make B/D pass.
-  arm_specific_critical_packets: Object.freeze(["u-1b6cd184a87f", "u-8564414f6080"]),
-  arm_specific_critical_disposition: "KEPT_AS_HARD_CRITICAL_PER_VFINAL_SECTION_16",
-  ordinary_slot_failure_relaxation_forbidden: true,
-  unknown_packet_count: 15,
-  unknown_disposition: "OWNER_ARM_BLIND_ADJUDICATION_PENDING",
-  common_source_exclusion_limit: 5,
-  hard_safe_declaration_before_owner_decision: "FORBIDDEN",
-  open_owner_decisions: Object.freeze([
-    "whether the 2 ARM_SPECIFIC critical packets should be reclassified as ordinary slot-found failures under section 16 B / section 14's retrieval-false-positive language (would return B/D to hard-safe with those slots counted as misses)",
-    "final disposition of the 15 remaining UNKNOWN packets (new resolution class vs. indefinite hold)",
-  ]),
-});
-
-function sortedKeys(obj) {
-  return Object.keys(obj).sort();
-}
+import { deriveHardGateFromOwnerResolutions } from "./four-arm-owner-resolutions-importer.mjs";
+import { deriveArmSelectionState, selectWinner } from "./four-arm-winner-selection.mjs";
 
 // armReadiness: the real, live createArmRetrieverAdapter(...).readiness()
 // output for arm A or C (see scripts/p11f0-fourarm-preflight.mjs).
-function armLedgerEntryFromReadiness({ arm, readiness, batchId, codeHeadSha256, configSha256, conditionsSha256, universeSha256, corpusManifestSha256, indexSha256 }) {
+// executionState/qualityMetrics default to "not executed yet" -- once a
+// real DEV_TUNE-101 run exists for an arm, the caller passes
+// executionState:"EXECUTED" and qualityMetrics so this same function can
+// build its final (non-pending) ledger/selection state.
+function armLedgerEntryFromReadiness({
+  arm, readiness, batchId, codeHeadSha256, configSha256, conditionsSha256, universeSha256,
+  corpusManifestSha256, indexSha256, executionState = "NOT_EXECUTED_PENDING_DEVTUNE",
+  resultsSha256 = null, qualityMetrics = null,
+}) {
   const blockers = [];
   if (!readiness.official_experiment_ready) blockers.push(`ARM_${arm}_INFRA_NOT_OFFICIAL_EXPERIMENT_READY: ${JSON.stringify(readiness.reasons)}`);
   const entry = Object.freeze({
     arm,
     role: "AC_LIVE",
     batch_id: batchId,
-    status: "NOT_EXECUTED_PENDING_DEVTUNE",
+    status: executionState,
     code_sha256: codeHeadSha256,
     config_sha256: configSha256,
     input_sha256: Object.freeze({
@@ -54,16 +54,26 @@ function armLedgerEntryFromReadiness({ arm, readiness, batchId, codeHeadSha256, 
       corpus_manifest: corpusManifestSha256,
     }),
     index_sha256: indexSha256,
-    results_sha256: null,
+    results_sha256: resultsSha256,
     infra_readiness: readiness,
   });
   validateLedgerEntry(entry);
-  return { entry, blockers };
+  // Hard gate for A/C cannot be evaluated before real execution -- there
+  // is no quality-gate input yet, and readiness()==true only means the
+  // INFRASTRUCTURE is ready, not that any evaluation has happened. Once a
+  // real run exists, the caller supplies qualityMetrics.hard_gate_state
+  // (computed by whatever applies vFINAL's hard/quality gate to the real
+  // results -- not this module's job).
+  const hardGateState = executionState === "EXECUTED" ? (qualityMetrics?.hard_gate_state ?? "HARD_GATE_PENDING_EXECUTION") : "HARD_GATE_PENDING_EXECUTION";
+  return { entry, blockers, hardGateState, qualityMetrics };
 }
 
 // bdRunJson: the imported B.run.json/D.run.json content (already read from
-// disk by the caller). bdResultsSha256/bdJudgement: from
-// official/IMPORT_MANIFEST.json (already SHA-verified at import time).
+// disk by the caller). bdResultsSha256: from official/IMPORT_MANIFEST.json
+// (already SHA-verified at import time). hardGate: the Owner-ratified,
+// already-final hard-gate outcome (deriveHardGateFromOwnerResolutions) --
+// B and D share the exact same two critical packets, so the same object
+// applies to both.
 function bdLedgerEntryFromImport({ arm, batchId, runJson, resultsSha256, conditionsSha256, universeSha256 }) {
   const entry = Object.freeze({
     arm,
@@ -89,54 +99,64 @@ function bdLedgerEntryFromImport({ arm, batchId, runJson, resultsSha256, conditi
 
 export function assembleFourArmPreflightManifest({
   batchId,
-  conditionsValidation, universeValidation,
-  armA, armC, // { readiness, codeHeadSha256, configSha256, corpusManifestSha256, indexSha256 }
+  conditionsValidation, universeValidation, ownerResolutionsValidation,
+  armA, armC, // { readiness, codeHeadSha256, configSha256, corpusManifestSha256, indexSha256, executionState?, resultsSha256?, qualityMetrics? }
   armBRunJson, armDRunJson, armBResultsSha256, armDResultsSha256,
-  bdJudgementStatus, bdJudgementReason,
-  ownerPendingPolicy = OWNER_PENDING_POLICY,
 }) {
   const blockers = [];
 
   const conditionsOk = Boolean(conditionsValidation?.official_execution_ready) && typeof conditionsValidation?.file_sha256 === "string";
   const universeOk = Boolean(universeValidation?.official_execution_ready) && typeof universeValidation?.file_sha256 === "string";
+  const ownerResolutionsOk = Boolean(ownerResolutionsValidation?.official_execution_ready);
   if (!conditionsOk) blockers.push("CONDITIONS_ARTIFACT_NOT_VERIFIED");
   if (!universeOk) blockers.push("UNIVERSE_ARTIFACT_NOT_VERIFIED");
+  if (!ownerResolutionsOk) blockers.push("OWNER_RESOLUTIONS_ARTIFACT_NOT_VERIFIED");
 
   // Ledger entries embed the conditions/universe SHAs as part of each arm's
   // own input_sha256 -- an unverified artifact has no trustworthy SHA to
   // embed, so no entry is even attempted (fail closed) rather than
-  // fabricating a null/placeholder hash that would itself violate the
-  // ledger entry contract (validateLedgerEntry requires every present
-  // input_sha256 value to be a real sha256).
+  // fabricating a null/placeholder hash.
   const entries = [];
-  if (conditionsOk && universeOk) {
-    const builders = [
-      () => armLedgerEntryFromReadiness({
-        arm: "A", batchId, readiness: armA.readiness, codeHeadSha256: armA.codeHeadSha256,
-        configSha256: armA.configSha256, conditionsSha256: conditionsValidation.file_sha256,
-        universeSha256: universeValidation.file_sha256, corpusManifestSha256: armA.corpusManifestSha256,
-        indexSha256: armA.indexSha256,
-      }),
-      () => armLedgerEntryFromReadiness({
-        arm: "C", batchId, readiness: armC.readiness, codeHeadSha256: armC.codeHeadSha256,
-        configSha256: armC.configSha256, conditionsSha256: conditionsValidation.file_sha256,
-        universeSha256: universeValidation.file_sha256, corpusManifestSha256: armC.corpusManifestSha256,
-        indexSha256: armC.indexSha256,
-      }),
-      () => bdLedgerEntryFromImport({
-        arm: "B", batchId, runJson: armBRunJson, resultsSha256: armBResultsSha256,
+  const armStates = [];
+  if (conditionsOk && universeOk && ownerResolutionsOk) {
+    const bdHardGate = deriveHardGateFromOwnerResolutions(ownerResolutionsValidation);
+
+    const acBuilders = [
+      ["A", armA], ["C", armC],
+    ].map(([arm, cfg]) => () => {
+      const built = armLedgerEntryFromReadiness({
+        arm, batchId, readiness: cfg.readiness, codeHeadSha256: cfg.codeHeadSha256,
+        configSha256: cfg.configSha256, conditionsSha256: conditionsValidation.file_sha256,
+        universeSha256: universeValidation.file_sha256, corpusManifestSha256: cfg.corpusManifestSha256,
+        indexSha256: cfg.indexSha256, executionState: cfg.executionState, resultsSha256: cfg.resultsSha256,
+        qualityMetrics: cfg.qualityMetrics,
+      });
+      const selection = deriveArmSelectionState({
+        arm, executionState: built.entry.status, hardGateState: built.hardGateState,
+      });
+      return { ...built, selection, qualityMetrics: cfg.qualityMetrics };
+    });
+
+    const bdBuilders = [
+      ["B", armBRunJson, armBResultsSha256], ["D", armDRunJson, armDResultsSha256],
+    ].map(([arm, runJson, resultsSha256]) => () => {
+      const built = bdLedgerEntryFromImport({
+        arm, batchId, runJson, resultsSha256,
         conditionsSha256: conditionsValidation.file_sha256, universeSha256: universeValidation.file_sha256,
-      }),
-      () => bdLedgerEntryFromImport({
-        arm: "D", batchId, runJson: armDRunJson, resultsSha256: armDResultsSha256,
-        conditionsSha256: conditionsValidation.file_sha256, universeSha256: universeValidation.file_sha256,
-      }),
-    ];
-    for (const build of builders) {
+      });
+      const selection = deriveArmSelectionState({
+        arm, executionState: "REUSED_VERIFIED", hardGateState: bdHardGate.hard_gate_state,
+        failureReason: bdHardGate.failure_reason,
+      });
+      return { ...built, selection, qualityMetrics: null, bdHardGate };
+    });
+
+    for (const build of [...acBuilders, ...bdBuilders]) {
       try {
         const result = build();
         blockers.push(...result.blockers);
         entries.push(result.entry);
+        armStates.push(Object.freeze({ ...result.selection, quality_metrics: result.qualityMetrics ?? null }));
       } catch (error) {
         blockers.push(`RUN_LEDGER_ENTRY_CONSTRUCTION_FAILED: ${error.message}`);
       }
@@ -153,21 +173,22 @@ export function assembleFourArmPreflightManifest({
     }
   }
 
-  if (bdJudgementStatus !== "SUPPORTED_HARD_SAFE") {
-    blockers.push(`BD_JUDGEMENT_NOT_HARD_SAFE: status=${bdJudgementStatus} reason=${bdJudgementReason}`);
-  }
-  if (ownerPendingPolicy.hard_safe_declaration_before_owner_decision === "FORBIDDEN"
-      && bdJudgementStatus !== "SUPPORTED_HARD_SAFE") {
-    blockers.push("OWNER_DECISION_PENDING: B/D cannot be declared hard-safe before the Owner resolves the 2 open decisions recorded in OWNER_PENDING_POLICY");
-  }
+  // official_batch_execution_ready is deliberately NOT gated on any arm's
+  // hard-gate outcome -- a batch where B/D are already known hard-gate-
+  // failed is still a batch A/C can (and per section E, should) execute
+  // in. It IS gated on the batch being structurally complete/verified.
+  const officialBatchExecutionReady = blockers.length === 0 && batch !== null;
 
-  const finalBlockers = blockers.filter(Boolean);
-
-  const officialReady = finalBlockers.length === 0;
+  let selectionResult = null;
+  let finalSelectionReady = false;
+  if (armStates.length === 4) {
+    selectionResult = selectWinner(armStates);
+    finalSelectionReady = selectionResult.status !== "EXECUTION_PENDING";
+  }
 
   return Object.freeze({
-    schema_version: "0.1.0",
-    turn: "AC-OFFICIAL-INTEGRATION-V1",
+    schema_version: "0.2.0",
+    turn: "FOURARM-INTEGRATION-OWNER-DECISION-AND-EXECUTION-GATE",
     batch_id: batchId,
     cutoff_contract: Object.freeze({
       retrieval_output_k: RETRIEVAL_OUTPUT_K,
@@ -176,17 +197,13 @@ export function assembleFourArmPreflightManifest({
     }),
     conditions_artifact: conditionsValidation,
     universe_artifact: universeValidation,
-    ledger: Object.freeze({
-      batch: batch,
-      entries: Object.freeze(entries),
-    }),
-    bd_judgement: Object.freeze({
-      status: bdJudgementStatus,
-      reason: bdJudgementReason,
-      owner_pending_policy: ownerPendingPolicy,
-    }),
-    official_4arm_execution_ready: officialReady,
-    blockers: Object.freeze(finalBlockers),
+    owner_resolutions_artifact: ownerResolutionsValidation,
+    ledger: Object.freeze({ batch, entries: Object.freeze(entries) }),
+    arm_states: Object.freeze(armStates),
+    official_batch_execution_ready: officialBatchExecutionReady,
+    final_selection_ready: finalSelectionReady,
+    selection: selectionResult,
+    blockers: Object.freeze(blockers.filter(Boolean)),
     dev_tune_executed: false,
     dev_check_holdout_accessed: false,
     production_wiring_performed: false,
