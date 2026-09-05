@@ -1551,6 +1551,15 @@ def _dedupe_exact(lines: Iterable[str]) -> list[str]:
     return out
 
 
+EXPANDED_RETRIEVE_K = 40     # 요구 슬롯 미충족 시 1회 확장 폭. 상시 폭은 라우팅 예산 그대로.
+
+
+def unfilled_slots(slots: Sequence[str], matches: Sequence[EvidenceMatch]) -> tuple[str, ...]:
+    """계획한 슬롯 중 EvidenceMatch로 채워지지 않은 것."""
+    filled = {m.slot for m in matches}
+    return tuple(s for s in slots if s not in filled)
+
+
 def answer_question(question: str, retriever: CorpusRetriever, *,
                     llm: Any | None = None, k: int | None = None,
                     max_evidence: int = MAX_EVIDENCE,
@@ -1613,6 +1622,37 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
                      else frozenset({12}) if annual_only else frozenset()),
         prefer_annual=(not same_period and not period_months(question)),
         bind_days=item_days, prefer_doc=item_doc_resolved)
+    # 요구 슬롯이 다 안 잡혔으면 폭을 한 번 넓혀 재검색·재매칭한다(결정론·1회 한정 — 팀원
+    # 검수 브랜치 review/qa-649d1cd-daeun 반영). 채움이 **늘 때만** 채택한다(잡음 채택 금지).
+    # 호출자가 k를 고정했으면 확장하지 않는다(실험 재현성 — 러너가 폭을 통제한다).
+    missing = unfilled_slots(state.slots, state.evidence_matches)
+    if missing and k is None and state.retrieval_results:
+        expanded = list(retriever.retrieve(question, state.conditions,
+                                           k=EXPANDED_RETRIEVE_K))
+        expanded += date_item_supplement(question, state.conditions, retriever, expanded)
+        if len(expanded) > len(state.retrieval_results):
+            scopes2 = scopes
+            if wanted_scope(question) and hasattr(retriever, "statement_scopes"):
+                scopes2 = {doc_id: retriever.statement_scopes(doc_id)
+                           for doc_id in {c.doc_id for c in expanded}}
+            cand2, resolved2 = (
+                _resolve_item_doc(question, expanded, item_days, form_items, corp_drop,
+                                  getattr(retriever, "docs_by_id", None) or {})
+                if form_items and item_days else (set(), ""))
+            rematched = match_evidence(
+                state.slots, expanded, limit=max_evidence, question=question,
+                drop=corp_drop, scopes=scopes2,
+                bind_doc_year=same_period,
+                bind_months=(period_months(question) if same_period
+                             else frozenset({12}) if annual_only else frozenset()),
+                prefer_annual=(not same_period and not period_months(question)),
+                bind_days=item_days, prefer_doc=resolved2)
+            if len(unfilled_slots(state.slots, rematched)) < len(missing):
+                state.retrieval_results = expanded
+                state.evidence_matches = rematched
+                scopes = scopes2
+                item_doc_candidates, item_doc_resolved = cand2, resolved2
+                state.timings["expanded_retrieval"] = 1
     docs_by_id = getattr(retriever, "docs_by_id", None) or {}
     # 대량보유 서식 파서 — 값을 뽑으면 근거로 승격한다(프롬프트·검증·발췌 모두가 본다).
     holding, bound_docs = _holding_parse(question, state, docs_by_id)

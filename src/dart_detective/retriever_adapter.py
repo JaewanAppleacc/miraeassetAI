@@ -204,6 +204,19 @@ def load_corp_dictionary(universe_csv: Path | str,
     return CorpDictionary.from_rows(rows)
 
 
+def _default_ir_dir() -> Path:
+    """DocumentIR 기본 경로 — env > 저장소 내 산출물 > 코어 기본값(~/Desktop).
+
+    코어 기본값이 특정 개발 환경(~/Desktop/document_ir)이라, env 없이 클린 클론에서
+    안전세트·서빙이 죽는 문제(팀원 검수 실측: 다른 환경에서 안전세트 5건이 retriever 빌드
+    실패로 오판)를 dart_detective 층에서 흡수한다. 코어는 무수정.
+    """
+    repo_local = REPO_ROOT / "data" / "artifacts" / "document_ir"
+    if (repo_local / "exchange.jsonl").exists():
+        return repo_local
+    return default_document_ir_dir()
+
+
 def build_line_window_retriever(*, doc_index: Path | str | None = None,
                                 universe_csv: Path | str | None = None,
                                 index_dir: Path | str | None = None,
@@ -215,7 +228,7 @@ def build_line_window_retriever(*, doc_index: Path | str | None = None,
     universe_csv = (Path(universe_csv) if universe_csv
                     else _env_path("DART_QA_UNIVERSE", REPO_ROOT / "data" / "corpus" / "universe.csv"))
     document_ir_dir = Path(document_ir_dir) if document_ir_dir else _env_path(
-        "DART_QA_DOCUMENT_IR_DIR", default_document_ir_dir())
+        "DART_QA_DOCUMENT_IR_DIR", _default_ir_dir())
     corp = load_corp_dictionary(universe_csv)
     index = DocumentIndex.from_jsonl(doc_index, corp)
     kwargs = {"cache_size": cache_size} if cache_size else {}

@@ -35,7 +35,7 @@ from typing import Any, Mapping, Sequence
 from .agents import tables
 from .agents.validator import NUM_RE, YEAR_RE, _squash, num_key, num_keys, numbers_in
 
-FC_PROMPT_VERSION = "fc-2026-09-04.1"
+FC_PROMPT_VERSION = "fc-2026-09-05.1"
 
 SUBMIT_GROUNDED_ANSWER: dict[str, Any] = {
     "name": "submit_grounded_answer",
@@ -80,6 +80,9 @@ FC_SYSTEM_PROMPT = """너는 공시 분석 Agent다. 아래에 주어진 공시 
   "A에서 B로 변했다"처럼 값 2개를 한 문장에 쓰지 마라 — 직전 값 claim과 이번 값 claim으로
   나누고, 각 claim의 quote에는 그 값이 적힌 줄을 넣어라(값과 quote가 짝이 안 맞으면 폐기된다).
   "=== 질문이 요구하는 항목과 찾아둔 줄 ===" 아래의 줄들을 우선 인용하라.
+- **숫자가 없는 요구 항목도 claim으로 만들어라** — 목적·상대방(회사명)·회차·상태·사유·근거일 같은
+  텍스트 항목은 value를 비우고(text에 사실 문장, quote에 그 내용이 적힌 원문 줄) claim 하나로 낸다.
+  (실측: 이런 항목이 답에서 통째로 빠져 부분 정답이 된 사례 17건 — 값 항목과 똑같이 하나씩.)
 - "발췌에 명시되어 있지 않다" 같은 문장을 claim으로 만들지 마라 — 그 항목은 not_found_slots에만 넣어라.
 - 값 claim의 value에는 그 수치를 원문 표기 그대로 적고, quote에는 그 수치가 적힌 줄을 복사하라.
 - 설명·비교형 질문이면: 결론 claim 1개 + 그 결론의 근거가 되는 원문 문장을 quote로 갖는 claim을 2개 이상 만들어라.

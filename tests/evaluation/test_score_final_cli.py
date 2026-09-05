@@ -4,7 +4,17 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 
+import pytest
+
 REPO = Path(__file__).resolve().parents[2]
+
+# 실측 산출물(results/fourarm/*.results.jsonl)은 gitignore라 클린 클론에는 없다.
+# 이 파일의 검사(변조 탐지)는 실측 파일이 있는 환경에서만 의미가 있으므로 없으면 skip —
+# 클린 클론에서 스위트가 빨갛게 되는 것을 막는다(있는 환경에서는 전부 그대로 돈다).
+# 팀원 검수 브랜치(review/qa-649d1cd-daeun) 반영.
+pytestmark = pytest.mark.skipif(
+    not (REPO / "results" / "fourarm" / "B.results.jsonl").exists(),
+    reason="4-arm 실측 산출물 없음(gitignore) — 실측 보유 환경에서만 실행")
 spec = importlib.util.spec_from_file_location("fourarm_score", REPO / "scripts" / "fourarm" / "score.py")
 score = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(score)
