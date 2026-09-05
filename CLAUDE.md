@@ -315,6 +315,21 @@
   확장 재검색 발동 0(실효는 보충 쪽) · gold25 r4(OFF) full 4/zero 5·r5(ON) full 5/zero 4 · 테스트 840 ·
   안전세트 28/28. **Late Expansion ON 적용은 Owner 승인 필요**(승인 시 배포 env에
   DART_QA_LATE_EXPANSION=1, 이 블록이 승인 기록 위치).
+- **재검수 3차 반영(2026-09-05 · b6f1574 · judge32)**: 코덱스 3차(재배포 불가 — OFF/ON 선택 전 BLOCKER)
+  4건 전부 타당 판정·재현·반영. [B1] 미해소 복수 후보(같은 날 서식 2건+)는 **LLM·단일 조립 금지**,
+  문서별 분리 모호성 답변(ambiguous_items_answer, 후보 ①/② 블록·접수번호 숫자 미포함)으로 종료 —
+  숫자 게이트가 못 잡던 "A 금액 인용+B 상대방 주장" 텍스트 혼합 재현·봉쇄(실코퍼스: 한미반도체·삼성E&A
+  분리 블록, 각 블록에 해당 공시 값만). [B2] NARRATIVE 전략만으로 LLM 강제하던 조건 제거(라우터는 값
+  슬롯 3개+ 질문도 NARRATIVE) — LLM 유지는 실제 서술 요구(_residual_asks)일 때만, 폐쇄형 3항목 질문
+  LLM 생략 테스트 잠금. [H3] 두 플래그 boolean을 readiness pins에 추가(OFF↔ON 캐시 혼입 차단, 3상태
+  해시 상이 테스트). [M4] 플래그 분리 — 보충(DART_QA_LATE_EXPANSION, 실측 16문항)과 k=40 재검색
+  (DART_QA_EXPANDED_RETRIEVAL, 발동 0) 별도, 기본 둘 다 OFF. **judge32(보충 ON·k40 OFF = 코덱스 권고
+  구성): 완전 55·부분 32·미포함 5·가중 71.0·답변가능성 100** — judge31(72.5) 대비 악화 3(PASS 밴드:
+  LLM 꼬리 차이 1·FC 변동 1·두산 같은 날 2건 분리답 전환 1 = 혼합 크레딧 제거의 정직한 비용),
+  items_ambiguous_docs 실발동 5문항 · gold25 r6 full 4/zero 5 · 테스트 844·안전세트 28/28.
+  자체 검토 잔여(기록): 해소 단일 문서에서 서술 요구로 LLM이 돌 때 인용 존재만으로 통과하는 서술
+  claim(v4 §11 계약 한계) · 날짜 없는 항목 질문의 결박 부재(기존 동작) · 요구 잔여+해소 문항의 FC 변동.
+  기본 OFF 구성은 3차 반영 후 재실측하지 않음(judge30이 근사 — 선택 시 재실측 필요).
 - **vFINAL 21번 변경 승인(2026-09-04, Owner=팀 대표)**: "FC Native Function Calling 경로에 한해
   전송 maxTokens 최소 1024 적용을 승인한다. 사유는 서비스 앱 API가 1024 미만 요청을 40001로
   거부하기 때문이다. JSON 경로의 v4 §7 예산은 변경하지 않으며 requested/sent 값을 구분해
