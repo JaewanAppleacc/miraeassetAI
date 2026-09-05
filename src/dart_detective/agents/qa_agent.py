@@ -171,6 +171,8 @@ class AgentState:
     route: routing.Route | None = None
     # ⑨ 폴백 체인이 발동했으면 어느 단계가 답했는가("repair"|"template"|"excerpt"|"safe"). 평상시 "".
     fallback_stage: str = ""
+    # 대상 문서 결박 관측(월 단위 결박·해소 문서·결정론 렌더링) — think_trace/meta로 나간다.
+    binding: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -193,6 +195,7 @@ class AgentState:
             "validation": self.validation,
             "llm": self.llm,
             "timings": dict(self.timings),
+            "binding": dict(self.binding),
             "prompt_version": PROMPT_VERSION,
             "prompt_chars": self.prompt_chars,
             "evidence_corps": list(self.evidence_corps),
@@ -210,6 +213,7 @@ class AgentState:
 # 라벨은 실물 서식과 대조했다: 자기주식취득 major_20241115000375 · 신탁해지 major_20230424000440 ·
 # 전환사채 major_20230630000403 · 회사분할 major_20240624000362 · 자기주식처분(신한지주 문항).
 _AGENT_ITEM_WORDS: dict[str, str] = {
+    "투자 규모": "투자금액",        # 검색 사전의 '투자규모'(무공백) 띄어쓰기 변형 — 서식 라벨 '투자금액'
     "취득목적": "취득목적", "취득 목적": "취득목적", "취득방법": "취득방법",
     "취득예정금액": "취득예정금액", "취득예정주식": "취득예정주식",
     "처분목적": "처분목적", "처분 결정의 목적": "처분목적", "처분방법": "처분방법",
@@ -918,6 +922,32 @@ def _question_exact_days(question: str) -> frozenset[str]:
                      if 1 <= mo <= 12 and 1 <= d <= 31)
 
 
+_KO_YM_RE = re.compile(r"((?:19|20)\d{2})\s*년\s*(\d{1,2})\s*월(?!\s*\d{1,2}\s*일)")
+_ISO_YM_RE = re.compile(r"((?:19|20)\d{2})[.\-/](\d{1,2})(?![.\-/]?\d)")
+
+
+def question_months_any(question: str) -> list[tuple[int, int]]:
+    """연·월만 있고 '일'이 없는 질문의 (연, 월). 정확 일자가 하나라도 있으면 빈 목록(정확 일자 우선)."""
+    if question_dates_any(question):
+        return []
+    out: list[tuple[int, int]] = []
+    for y, m in _KO_YM_RE.findall(question) + _ISO_YM_RE.findall(question):
+        y, m = int(y), int(m)
+        if 1 <= m <= 12 and (y, m) not in out:
+            out.append((y, m))
+    return out
+
+
+def _question_month_window(question: str) -> frozenset[str]:
+    """월 단위 결박 창 — 그 달의 모든 접수일 YYYYMMDD(B안 최소 범위: 서식 항목 질문 전용)."""
+    import calendar
+    out: set[str] = set()
+    for y, m in question_months_any(question):
+        for d in range(1, calendar.monthrange(y, m)[1] + 1):
+            out.add(f"{y:04d}{m:02d}{d:02d}")
+    return frozenset(out)
+
+
 def _question_day_window(question: str) -> frozenset[str]:
     """질문 날짜(ISO·한글) ±1일 YYYYMMDD 집합 — 접수일이 공시 이벤트일 다음 날인 실물이 많다."""
     import datetime as _dt
@@ -1038,7 +1068,8 @@ def _doc_identifier(doc_id: str, chunks: Sequence[RetrievedChunk]) -> str:
 
 def ambiguous_items_answer(items: Sequence[str], candidates: set[str],
                            chunks: Sequence[RetrievedChunk],
-                           days_of: Mapping[str, str] | None = None
+                           days_of: Mapping[str, str] | None = None,
+                           window_kind: str = "day"
                            ) -> tuple[str, list[EvidenceMatch]]:
     """후보 공시가 해소되지 않을 때 — 문서별로 **분리해** 값을 제시한다. **항상** 문자열을 돌려준다.
 
@@ -1089,7 +1120,8 @@ def ambiguous_items_answer(items: Sequence[str], candidates: set[str],
         sections.append(head + "\n" + "\n".join(vals))
     same_day = len({days_of.get(d, "") for d in docs}) == 1
     # 숫자를 쓰지 않는다("1일") — validator가 원문 밖 수치로 잡아 폴백으로 대체된다(실측).
-    scope = "질문이 가리키는 날짜에" if same_day else "질문 날짜 전후 하루 범위에"
+    scope = ("질문이 가리키는 날짜에" if same_day else
+             "질문이 가리키는 달에" if window_kind == "month" else "질문 날짜 전후 하루 범위에")
     header = (f"{scope} 같은 서식의 공시가 여러 건 접수되어, 질문 내용만으로는 어느 공시인지 "
               "특정할 수 없다. 값이 섞이지 않도록 각 공시의 값을 분리해 제시한다.")
     return header + "\n\n" + "\n\n".join(sections), used
@@ -1216,26 +1248,77 @@ def _item_doc_conflicts(llm_answer: str, llm_citations: Sequence[Mapping[str, An
             if validator.num_key(tok) in rival and validator.num_key(tok) not in own]
 
 
+_ISO_DATE_RE = re.compile(r"^((?:19|20)\d{2})-(\d{1,2})-(\d{1,2})$")
+
+
+def _ko_date(value: str) -> str:
+    m = _ISO_DATE_RE.match(value.strip())
+    return f"{int(m.group(1))}년 {int(m.group(2))}월 {int(m.group(3))}일" if m else value
+
+
+def _topic_josa(word: str) -> str:
+    """은/는 — 마지막 글자 받침 유무."""
+    ch = word[-1] if word else ""
+    if "가" <= ch <= "힣":
+        return "은" if (ord(ch) - 0xAC00) % 28 else "는"
+    return "은(는)"
+
+
+def _unit_of(line: str) -> str:
+    """서식 행 라벨의 단위 괄호 — '계약금액(원)' → '원', '매출액대비(%)' → '%'."""
+    label = " ".join(c for c in line.split("|")[:-1])
+    for mark, unit in (("(원)", "원"), ("(%)", "%"), ("(주)", "주"), ("(백만원)", "백만원")):
+        if mark in label:
+            return unit
+    return ""
+
+
+def render_item_sentence(items: Sequence[str], by: Mapping[str, tuple[str, str]]) -> str:
+    """확정 슬롯을 한 문장으로 읽어 준다 — 얇은 결정론 렌더러 한 종류(B안 최소 범위).
+
+    by: 항목 → (값, 원문 행). 시작일·종료일이 함께 있으면 '계약기간은 A부터 B까지'로 묶는다.
+    값은 원문 그대로(단위만 라벨 괄호에서 붙임). 질문별 정답 하드코딩 없음.
+    """
+    parts: list[str] = []
+    done: set[str] = set()
+    pair = "시작일" in by and "종료일" in by
+    for item in items:
+        if item in done or item not in by:
+            continue
+        if pair and item in ("시작일", "종료일"):
+            # 항목 순서를 지키되 시작일·종료일은 처음 만나는 자리에서 한 구로 묶는다.
+            parts.append(f"계약기간은 {_ko_date(by['시작일'][0])}부터 {_ko_date(by['종료일'][0])}까지")
+            done |= {"시작일", "종료일"}
+            continue
+        value, line = by[item]
+        unit = _unit_of(line)
+        shown = value if (unit and value.endswith(unit)) or not unit else f"{value}{unit}"
+        parts.append(f"{item}{_topic_josa(item)} {_ko_date(shown) if _ISO_DATE_RE.match(shown) else shown}")
+    body = "이며, ".join(parts) + "입니다."
+    evidence = "\n".join(f"- {item}: {by[item][0]}" for item in items if item in by)
+    return f"해당 공시에서 확인한 {body}\n\n근거:\n{evidence}"
+
+
 def assemble_item_answer(items: Sequence[str],
                          matches: Sequence[EvidenceMatch]) -> str | None:
-    """항목 자리가 전부 **한 문서**의 서식 값으로 확정됐으면 결정론 문장으로 조립한다.
+    """항목 자리가 전부 **한 문서**의 서식 값으로 확정됐으면 결정론 문장으로 렌더링한다.
 
     코덱스 재배포 검수 P0: 단일판매·공급계약 군집은 문서가 검색돼도 FC claim 채택/폐기가
     실행마다 흔들려 full↔partial을 오갔다 — 대량보유(holding_all_slots_filled)와 같은 원리로,
     값이 전부 원문에서 확정되면 LLM을 부르지 않는다. 하나라도 비면 None(기존 경로).
+    표현은 render_item_sentence(문장 + 근거 목록) — B안: '항목: 값' 나열을 사람이 읽는 문장으로.
     """
-    by: dict[str, str] = {}
+    by: dict[str, tuple[str, str]] = {}
     docs: set[str] = set()
     for m in matches:
         if m.slot in items and m.slot not in by:
             value = _item_cell_value(m)
             if value:
-                by[m.slot] = value
+                by[m.slot] = (value, m.evidence_text)
                 docs.add(m.doc_id)
     if not items or any(i not in by for i in items) or len(docs) != 1:
         return None
-    return ("공시 서식에서 확인한 값:\n"
-            + "\n".join(f"- {slot_label(i)}: {by[i]}" for i in items))
+    return render_item_sentence(items, by)
 
 
 # ---------- 3-1. 대량보유 서식 파서 배선 (docs/plans/2026-09-05-holding-parser.md) ----------
@@ -1797,6 +1880,15 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
                                         or "연간" in question))
     form_items = planned_form_items(question)
     item_days = _question_day_window(question) if form_items else frozenset()
+    window_kind = "day" if item_days else ""
+    if form_items and not item_days:
+        # B안 최소 범위: '일'이 없는 연·월 질문("2023년 4월")도 그 달의 접수 공시로 항목 자리를
+        # 결박한다(gold25 Q01 실측: 결박이 없어 다른 계약 값이 발췌에 섞였다). 정확 일자 질문은
+        # 위 창이 우선이고, 해소 규칙(고유 토큰·후보 1건·아니면 분리 답변)은 기존 그대로다.
+        month_days = _question_month_window(question)
+        if month_days:
+            item_days, window_kind = month_days, "month"
+            state.binding["month_item_binding"] = True
     corp_drop = corp_tokens(sorted(state.conditions.corps))
     item_doc_candidates, item_doc_resolved, item_doc_texts = (
         _resolve_item_doc(question, state.retrieval_results, item_days,
@@ -1804,6 +1896,10 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
                           getattr(retriever, "docs_by_id", None) or {},
                           exact_days=_question_exact_days(question))
         if form_items and item_days else (set(), "", {}))
+    if form_items and item_days:
+        state.binding["candidates"] = sorted(item_doc_candidates)
+        if item_doc_resolved:
+            state.binding["resolved_doc_id"] = item_doc_resolved
     state.evidence_matches = match_evidence(
         state.slots, state.retrieval_results, limit=max_evidence, question=question,
         drop=corp_drop, scopes=scopes,
@@ -1852,6 +1948,9 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
                 scopes = scopes2
                 item_doc_candidates, item_doc_resolved = cand2, resolved2
                 item_doc_texts = texts2
+                state.binding["candidates"] = sorted(cand2)
+                if resolved2:
+                    state.binding["resolved_doc_id"] = resolved2
                 state.timings["expanded_retrieval"] = 1
     docs_by_id = getattr(retriever, "docs_by_id", None) or {}
     # 대량보유 서식 파서 — 값을 뽑으면 근거로 승격한다(프롬프트·검증·발췌 모두가 본다).
@@ -1974,7 +2073,8 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
         # 문서별로 값을 분리한 모호성 답변으로 종료하고 LLM은 부르지 않는다(fail-closed).
         answer, amb_matches = ambiguous_items_answer(
             form_items, item_doc_candidates, state.retrieval_results,
-            {c.doc_id: _chunk_day(c) for c in state.retrieval_results})
+            {c.doc_id: _chunk_day(c) for c in state.retrieval_results}, window_kind)
+        state.binding["ambiguous"] = True
         seen_lines = {"".join(m.evidence_text.split()) for m in state.evidence_matches}
         state.evidence_matches = state.evidence_matches + [
             m for m in amb_matches if "".join(m.evidence_text.split()) not in seen_lines]
@@ -1998,6 +2098,7 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
         if assembled:
             answer = assembled + narrative_note
             uncertainty = "값은 공시 서식 필드에서 원문 그대로 추출했다."
+            state.binding["deterministic_render"] = True
             # LLM 생략은 실제 미충족 요구가 남지 않을 때다(전략 라벨은 근거로 쓰지 않는다 —
             # 재검수 3차 BLOCKER 2: 라우터는 값 슬롯 3개 이상 단순 질문도 NARRATIVE로 보낸다).
             assembled_skips_llm = not ask_binding_words

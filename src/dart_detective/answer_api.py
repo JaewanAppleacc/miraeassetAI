@@ -134,6 +134,8 @@ def _meta_of(state: Any, decision: policy_gate.Decision, llm_skipped: str | None
         "policy": decision.to_dict(),
         "strategy": state.route.strategy if getattr(state, "route", None) else None,
         "validation_status": (getattr(state, "validation", None) or {}).get("status"),
+        # 대상 문서 결박 관측(B안: 월 단위 결박·해소 문서·결정론 렌더링) — 없으면 None.
+        "binding": (dict(getattr(state, "binding", None) or {}) or None),
         # Late Expansion 발동 관측(재검수 HIGH 3: 효과·회귀 추적용) — 미발동이면 None.
         "late_expansion": ({k: (getattr(state, "timings", None) or {}).get(k)
                             for k in ("late_expansion_supplement", "expanded_retrieval")

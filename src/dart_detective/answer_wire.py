@@ -263,6 +263,9 @@ def think_trace_of(state: Mapping[str, Any]) -> dict[str, Any]:
         {"step": "evidence", "slots": state.get("slots") or [],
          "n_selected": len(state.get("evidence_matches") or [])},
     ]
+    if state.get("binding"):
+        # 대상 문서 결박 관측(B안): 월 단위 결박 발동·후보·해소 문서·결정론 렌더링 여부.
+        operations.append({"step": "binding", **{k: v for k, v in state["binding"].items()}})
     if state.get("derived"):
         operations.append({"step": "calculation", "n_derived": len(state["derived"])})
     if (state.get("llm") or {}).get("used"):
