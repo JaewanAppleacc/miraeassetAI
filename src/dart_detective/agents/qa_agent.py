@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import hashlib
 import inspect
+import os
 import re
 import time
 from dataclasses import dataclass, field, replace
@@ -1005,9 +1006,13 @@ def _item_cell_value(m: EvidenceMatch) -> str:
 
 
 # 항목 라벨이 못 덮는 요구가 질문에 남아 있는지 보는 단어들 — 남아 있으면 조립으로 LLM을
-# 끄지 않는다(judge27 실측: 아모레 '인원수'·메리츠 '계약목적'·효성 '해지 후 상태' 손실).
+# 끄지 않는다(judge27 실측: 아모레 '인원수'·메리츠 '계약목적'·효성 '해지 후 상태' 손실.
+# 재검수 HIGH 2로 서술 요구 어휘(영향·의미·전망·설명 등) 확장 — 단어 목록과 별개로
+# NARRATIVE 전략이면 항상 LLM 서술 경로를 유지한다).
 _RESIDUAL_ASK_WORDS = ("목적", "사유", "상태", "인원", "대상", "방법", "상호",
-                       "기관", "조건", "경위", "이유", "내용", "배경")
+                       "기관", "조건", "경위", "이유", "내용", "배경",
+                       "영향", "의미", "전망", "설명", "평가", "요약", "정리",
+                       "추이", "계획", "왜", "어떻게")
 
 
 def _residual_asks(question: str, items: Sequence[str]) -> bool:
@@ -1018,8 +1023,9 @@ def _residual_asks(question: str, items: Sequence[str]) -> bool:
 def _resolve_item_doc(question: str, chunks: Sequence[RetrievedChunk],
                       days: frozenset[str], items: Sequence[str],
                       drop: frozenset[str],
-                      docs_by_id: Mapping[str, dict] | None = None) -> tuple[set[str], str]:
-    """(날짜 창 안 항목 서식 후보 문서 집합, 질문 토큰 겹침이 유일 최대인 문서 또는 "").
+                      docs_by_id: Mapping[str, dict] | None = None
+                      ) -> tuple[set[str], str, dict[str, str]]:
+    """(날짜 창 안 항목 서식 후보 문서 집합, 해소된 문서 또는 "", 후보 문서별 대조용 원문).
 
     같은 날 같은 서식이 여러 건이면(한미반도체 06-12 Infineon·Unimicron, 삼성E&A 04-17 2건)
     질문 본문 토큰("에탄운반선" 등)이 유일하게 더 겹치는 문서만 대상이 된다 — 겹침이 같으면
@@ -1031,15 +1037,17 @@ def _resolve_item_doc(question: str, chunks: Sequence[RetrievedChunk],
         if _chunk_day(c) in days and any(i in c.evidence_text for i in items):
             texts.setdefault(c.doc_id, []).append(c.evidence_text)
     if not texts:
-        return set(), ""
-    if len(texts) == 1:
-        return set(texts), next(iter(texts))
+        return set(), "", {}
     # 대조는 문서 **전체 원문**으로 한다 — 검색된 조각만 비교하면 한쪽은 부분 청크·한쪽은
     # 보충 node 전체라 커버리지 차이가 가짜 '고유 토큰'을 만든다(삼성E&A 실측 오해소).
+    # 값 충돌 게이트(재검수 BLOCKER 1)도 이 원문을 대조 기준으로 쓴다.
     for doc_id in texts:
         doc = (docs_by_id or {}).get(doc_id)
         if doc:
             texts[doc_id] = [str(n.get("text") or "") for n in doc.get("nodes") or []]
+    if len(texts) == 1:
+        only = next(iter(texts))
+        return set(texts), only, {only: " ".join(texts[only])}
     q_tokens = set(tokenize(question)) - drop
     tok = {d: q_tokens & set(tokenize(" ".join(t))) for d, t in texts.items()}
     # 겹침 '수'가 아니라 **고유 토큰**으로만 해소한다 — 같은 서식 2건은 공통 어휘 겹침 수가
@@ -1048,7 +1056,32 @@ def _resolve_item_doc(question: str, chunks: Sequence[RetrievedChunk],
     # '체결' 바이그램 하나는 서식 우연 일치)을 가진 문서가 유일할 때만 그 문서다.
     uniq_docs = [d for d, s in tok.items()
                  if len(s - set().union(*(tok[o] for o in tok if o != d))) >= 2]
-    return set(texts), uniq_docs[0] if len(uniq_docs) == 1 else ""
+    joined = {d: " ".join(t) for d, t in texts.items()}
+    return set(texts), uniq_docs[0] if len(uniq_docs) == 1 else "", joined
+
+
+def _item_doc_conflicts(llm_answer: str, llm_citations: Sequence[Mapping[str, Any]],
+                        candidates: set[str], texts: Mapping[str, str],
+                        question: str) -> list[str]:
+    """미해소 복수 후보(같은 날 서식 2건) 상황의 LLM 답 결박 검사 — 어긋나면 사유 목록.
+
+    재검수 BLOCKER 1 재현: 문서 A(계약금액 100원)·B(상대방 B회사)가 같은 날 접수되면 LLM이
+    두 문서의 값을 한 답("계약금액은 100원이고 상대방은 B회사")으로 섞어도 각 숫자·인용이
+    소스 어딘가에 있어 validator를 통과했다. 규칙:
+    ① 후보 문서를 2개 이상 인용하면 폐기 — 요청 claim은 한 문서에서 나와야 한다.
+    ② 답의 숫자가 인용한 후보 문서에는 없고 **라이벌 후보에만** 있으면 폐기.
+    (후보 밖 문서 인용·후보 밖 숫자는 기존 validator·citation 게이트 몫.)
+    """
+    cited = {str(c.get("document_id") or "") for c in llm_citations} & candidates
+    if len(cited) > 1:
+        return [f"복수 후보 문서 인용: {sorted(cited)}"]
+    own = validator.num_keys(validator.numbers_in(" ".join(
+        texts[d] for d in cited if d in texts)))
+    rival = validator.num_keys(validator.numbers_in(" ".join(
+        t for d, t in texts.items() if d not in cited)))
+    body = grounded_answer.strip_context_expressions(llm_answer, question)
+    return [tok for tok in validator.numbers_in(body)
+            if validator.num_key(tok) in rival and validator.num_key(tok) not in own]
 
 
 def assemble_item_answer(items: Sequence[str],
@@ -1554,6 +1587,16 @@ def _dedupe_exact(lines: Iterable[str]) -> list[str]:
 EXPANDED_RETRIEVE_K = 40     # 요구 슬롯 미충족 시 1회 확장 폭. 상시 폭은 라우팅 예산 그대로.
 
 
+def late_expansion_enabled() -> bool:
+    """에이전트 층 추가 검색(대상 문서 원문 보충·확장 재검색 k=40)의 스위치 — **기본 OFF**.
+
+    코덱스 재검수 HIGH 3: v4는 Late Expansion을 X0/X1 별도 실험으로 두고 코어 점수와
+    혼합하지 않는다. 4-arm 최종 확정·Owner 승인 전에는 서빙 기본값에서 끈다.
+    실험·승인 후 적용은 env DART_QA_LATE_EXPANSION=1. 발동 수는 timings에 기록된다.
+    """
+    return os.environ.get("DART_QA_LATE_EXPANSION", "") == "1"
+
+
 def unfilled_slots(slots: Sequence[str], matches: Sequence[EvidenceMatch]) -> tuple[str, ...]:
     """계획한 슬롯 중 EvidenceMatch로 채워지지 않은 것."""
     filled = {m.slot for m in matches}
@@ -1591,10 +1634,13 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
     state.retrieval_results = retriever.retrieve(question, state.conditions, k=k)
     # 날짜+서식 항목 질문의 대상 문서가 청크 후보에 없으면 원문 node로 보충한다(에이전트 층 —
     # 검색 코어는 4-arm 동결로 무변경). 뒤에 붙이므로 기존 후보의 순위는 그대로다.
-    supplement = date_item_supplement(question, state.conditions, retriever,
-                                      state.retrieval_results)
+    # Late Expansion 스위치(기본 OFF — 코덱스 재검수 HIGH 3: X0/X1 별도 실험·Owner 승인 필요).
+    supplement = (date_item_supplement(question, state.conditions, retriever,
+                                       state.retrieval_results)
+                  if late_expansion_enabled() else [])
     if supplement:
         state.retrieval_results = [*state.retrieval_results, *supplement]
+        state.timings["late_expansion_supplement"] = len(supplement)
     state.timings["retrieval_ms"] = int((time.perf_counter() - t_retrieval) * 1000)
     scopes = {}
     if wanted_scope(question) and hasattr(retriever, "statement_scopes"):
@@ -1609,11 +1655,11 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
     form_items = planned_form_items(question)
     item_days = _question_day_window(question) if form_items else frozenset()
     corp_drop = corp_tokens(sorted(state.conditions.corps))
-    item_doc_candidates, item_doc_resolved = (
+    item_doc_candidates, item_doc_resolved, item_doc_texts = (
         _resolve_item_doc(question, state.retrieval_results, item_days,
                           form_items, corp_drop,
                           getattr(retriever, "docs_by_id", None) or {})
-        if form_items and item_days else (set(), ""))
+        if form_items and item_days else (set(), "", {}))
     state.evidence_matches = match_evidence(
         state.slots, state.retrieval_results, limit=max_evidence, question=question,
         drop=corp_drop, scopes=scopes,
@@ -1626,7 +1672,7 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
     # 검수 브랜치 review/qa-649d1cd-daeun 반영). 채움이 **늘 때만** 채택한다(잡음 채택 금지).
     # 호출자가 k를 고정했으면 확장하지 않는다(실험 재현성 — 러너가 폭을 통제한다).
     missing = unfilled_slots(state.slots, state.evidence_matches)
-    if missing and k is None and state.retrieval_results:
+    if missing and k is None and state.retrieval_results and late_expansion_enabled():
         expanded = list(retriever.retrieve(question, state.conditions,
                                            k=EXPANDED_RETRIEVE_K))
         expanded += date_item_supplement(question, state.conditions, retriever, expanded)
@@ -1635,10 +1681,10 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
             if wanted_scope(question) and hasattr(retriever, "statement_scopes"):
                 scopes2 = {doc_id: retriever.statement_scopes(doc_id)
                            for doc_id in {c.doc_id for c in expanded}}
-            cand2, resolved2 = (
+            cand2, resolved2, texts2 = (
                 _resolve_item_doc(question, expanded, item_days, form_items, corp_drop,
                                   getattr(retriever, "docs_by_id", None) or {})
-                if form_items and item_days else (set(), ""))
+                if form_items and item_days else (set(), "", {}))
             rematched = match_evidence(
                 state.slots, expanded, limit=max_evidence, question=question,
                 drop=corp_drop, scopes=scopes2,
@@ -1647,17 +1693,30 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
                              else frozenset({12}) if annual_only else frozenset()),
                 prefer_annual=(not same_period and not period_months(question)),
                 bind_days=item_days, prefer_doc=resolved2)
-            if len(unfilled_slots(state.slots, rematched)) < len(missing):
+            # 채택 조건(코덱스 재검수 MEDIUM 4): 미충족 슬롯이 줄어야 하고, **이미 채운
+            # 슬롯의 (문서, 값, 열)이 그대로 보존**돼야 한다 — 새 슬롯 하나 채우자고 기존
+            # 정답이 다른 문서·값으로 바뀌는 교체 채택을 금지한다.
+            prev_filled = {m.slot: (m.doc_id, m.picked_value, m.column)
+                           for m in state.evidence_matches if m.slot != ANSWER_SLOT}
+            new_filled = {m.slot: (m.doc_id, m.picked_value, m.column)
+                          for m in rematched if m.slot != ANSWER_SLOT}
+            preserved_ok = all(new_filled.get(s) == v for s, v in prev_filled.items())
+            if preserved_ok and len(unfilled_slots(state.slots, rematched)) < len(missing):
                 state.retrieval_results = expanded
                 state.evidence_matches = rematched
                 scopes = scopes2
                 item_doc_candidates, item_doc_resolved = cand2, resolved2
+                item_doc_texts = texts2
                 state.timings["expanded_retrieval"] = 1
     docs_by_id = getattr(retriever, "docs_by_id", None) or {}
     # 대량보유 서식 파서 — 값을 뽑으면 근거로 승격한다(프롬프트·검증·발췌 모두가 본다).
     holding, bound_docs = _holding_parse(question, state, docs_by_id)
     if holding:
         _promote_holding_matches(state, holding)
+    if not holding and not bound_docs and item_doc_resolved:
+        # 서식 항목 질문의 대상 문서가 해소됐다 — 대량보유와 같은 결박(재검수 BLOCKER 1):
+        # 근거·발췌·검증 소스 전부 그 문서 하나로 제한한다. 아래 bound_docs 배선을 공유한다.
+        bound_docs = frozenset({item_doc_resolved})
     if bound_docs:
         # 대상 보고서(또는 기준일이 맞는 후보 집합)가 정해졌다 — 그 밖의 보고서 근거는
         # 프롬프트(wanted)·인용·retrieved_context 어디에도 싣지 않는다(재검수 BLOCKER 1 +
@@ -1757,19 +1816,22 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
                     node_index=src_chunk.node_index,
                     rcept_no=str(src_chunk.metadata.get("rcept_no") or "")))
     assembled = None
+    assembled_skips_llm = False
     if not binary and not holding and form_items and item_days:
-        # 항목 자리가 전부 **질문 날짜에 결박된 한 문서**의 서식 값으로 확정됐고, 질문에
-        # 항목이 못 덮는 요구(인원수·상태 등)가 남아 있지 않을 때만 LLM 없이 결정론 조립.
-        # 날짜 없는 질문·요구 잔여 질문은 기존 경로(발췌 + LLM) 그대로다(judge27 오귀속·
-        # 요구 누락 회귀 5건의 교정 — 조립은 확실할 때만, fail-closed).
+        # 항목 자리가 전부 **질문 날짜에 결박된 한 문서**의 서식 값으로 확정되면 결정론 조립을
+        # 기본 답으로 쓴다. 날짜 없는 질문·후보 미해소 질문은 기존 경로(발췌 + LLM) 그대로다.
         assembled = assemble_item_answer(form_items, state.evidence_matches)
-        if assembled and _residual_asks(question, form_items):
-            assembled = None
         if assembled and len(item_doc_candidates) > 1 and not item_doc_resolved:
             assembled = None        # 같은 날짜 창에 서식 후보 2건 + 질문 토큰으로 해소 불가
         if assembled:
             answer = assembled
             uncertainty = "값은 공시 서식 필드에서 원문 그대로 추출했다."
+            # LLM 생략은 **닫힌 값 질문에서만**(재검수 HIGH 2): 항목이 못 덮는 서술 요구
+            # (영향·의미·전망·설명·인원수 등)가 남아 있거나 NARRATIVE 전략이면 결정론 값
+            # 블록 뒤에 LLM 서술 경로를 유지한다 — 조립이 질문 일부를 조용히 지우면 안 된다.
+            assembled_skips_llm = (not _residual_asks(question, form_items)
+                                   and (state.route is None
+                                        or state.route.strategy != "NARRATIVE"))
     det_template = (answer, uncertainty)     # ⑨ 폴백 ②단(템플릿)도 같은 결정론 답을 쓴다
     if state.derived:
         answer = calculator.describe(state.derived) + "\n\n" + answer
@@ -1801,7 +1863,7 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
     llm_topics = _holding_llm_topics(question, holding) if holding else ()
     if llm is not None and (binary or (holding and not llm_topics)
                             or (not holding and state.derived)
-                            or (not holding and assembled)):
+                            or (not holding and assembled_skips_llm)):
         # 대량보유: 질문의 요구 항목을 파서가 전부 채웠으면 계산이 없어도 LLM을 부르지 않는다 —
         # 같은 문서의 과거 연혁값을 직전값으로 재주장하는 경로 자체를 없앤다(재검수 BLOCKER 1-a).
         # 이분 판정(신청/승인)이 서식 필드로 확정된 질문도 LLM이 더할 것이 없다(자체 검증).
@@ -1886,6 +1948,17 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
                 state.llm["degraded_reason"] = "holding_text_conflict"
                 state.llm["degraded_detail"] = text_conflicts[:5]
                 state.llm["degraded_answer"] = llm_answer
+            elif (not holding and len(item_doc_candidates) > 1 and not item_doc_resolved
+                  and (item_conflicts := _item_doc_conflicts(
+                      llm_answer, llm_citations, item_doc_candidates,
+                      item_doc_texts, question))):
+                # 같은 날 서식 후보가 여럿인데 해소되지 않은 질문(재검수 BLOCKER 1) —
+                # 후보 2개 인용 또는 라이벌 후보 전용 숫자 주장은 문서 혼합이다. 폐기하면
+                # 결정론 발췌(항목 자리는 한 문서로 일관 결박됨)가 최종본이다.
+                state.llm["degraded"] = True
+                state.llm["degraded_reason"] = "item_doc_conflict"
+                state.llm["degraded_detail"] = item_conflicts[:5]
+                state.llm["degraded_answer"] = llm_answer
             elif not llm_citations or any(
                     c.get("check") in ("quote_grounded", "citation_present")
                     and not c.get("passed") for c in check["checks"]):
@@ -1908,9 +1981,18 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
                 answer = llm_answer
                 uncertainty = payload.get("uncertainty", "")
                 citations = llm_citations
+                if assembled:
+                    # 결정론 값 블록은 채택 후에도 앞에 유지한다(재검수 HIGH 2) — 값은
+                    # 서식에서, 서술은 LLM에서. 항목 근거를 인용에도 함께 싣는다.
+                    answer = f"{assembled}\n\n{llm_answer}"
+                    citations = citations + [
+                        {"document_id": m.doc_id, "quote_or_fact": m.evidence_text}
+                        for m in state.evidence_matches if m.slot != ANSWER_SLOT]
                 # 확정값 보존(검수 P1): 열까지 확정해 둔 값을 LLM이 빠뜨렸으면 결정론
                 # 줄로 덧붙인다. 값·근거 모두 원문에서 온 것이라 검증을 그대로 통과한다.
-                preserved = [m for m in state.evidence_matches
+                # (assembled가 이미 값 블록을 실었으면 중복 나열하지 않는다.)
+                preserved = [] if assembled else [
+                             m for m in state.evidence_matches
                              if m.picked_value and m.slot != ANSWER_SLOT
                              and m.picked_value.replace(",", "")
                              not in llm_answer.replace(",", "")]

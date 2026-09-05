@@ -12,6 +12,20 @@ from dart_detective.agents import qa_agent
 from dart_detective.corpus_retriever import RetrievedChunk
 
 
+@pytest.fixture(autouse=True)
+def _enable_late_expansion(monkeypatch):
+    """확장 재검색은 Late Expansion 스위치 뒤에 있다(기본 OFF — 재검수 HIGH 3)."""
+    monkeypatch.setenv("DART_QA_LATE_EXPANSION", "1")
+
+
+def test_late_expansion_is_off_by_default(monkeypatch):
+    """스위치 없이는 확장 재검색이 발동하지 않는다 — 4-arm 최종·Owner 승인 전 기본값."""
+    monkeypatch.delenv("DART_QA_LATE_EXPANSION", raising=False)
+    r = StubRetriever(narrow=NOISE, wide=NOISE + [_chunk("hit", VALUE_LINE)])
+    _ask(r)
+    assert r.calls == [None]
+
+
 def _chunk(cid, text, doc="exchange_20240101800001"):
     return RetrievedChunk(chunk_id=cid, doc_id=doc, score=1.0, section_path=(),
                           row_labels=(), evidence_text=text,

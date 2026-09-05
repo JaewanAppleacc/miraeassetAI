@@ -9,10 +9,10 @@ import pytest
 REPO = Path(__file__).resolve().parents[2]
 
 # 실측 산출물(results/fourarm/*.results.jsonl)은 gitignore라 클린 클론에는 없다.
-# 이 파일의 검사(변조 탐지)는 실측 파일이 있는 환경에서만 의미가 있으므로 없으면 skip —
-# 클린 클론에서 스위트가 빨갛게 되는 것을 막는다(있는 환경에서는 전부 그대로 돈다).
-# 팀원 검수 브랜치(review/qa-649d1cd-daeun) 반영.
-pytestmark = pytest.mark.skipif(
+# **실측 파일을 직접 읽는 테스트만** 개별 skip한다(재검수 MEDIUM 5: 모듈 전체 skipif는
+# 실측 없이도 돌 수 있는 --final 4-arm 완비 검사까지 지웠다). CLI 기본 계약 테스트는
+# 클린 클론에서도 항상 실행된다. 팀원 검수 브랜치(review/qa-649d1cd-daeun) 반영·축소.
+requires_measured = pytest.mark.skipif(
     not (REPO / "results" / "fourarm" / "B.results.jsonl").exists(),
     reason="4-arm 실측 산출물 없음(gitignore) — 실측 보유 환경에서만 실행")
 spec = importlib.util.spec_from_file_location("fourarm_score", REPO / "scripts" / "fourarm" / "score.py")
@@ -39,6 +39,7 @@ def _copy_bd_as_abcd(tmp_path):
     return tmp_path
 
 
+@requires_measured
 def test_final_detects_renamed_arm_files(tmp_path):
     """검수 5차 발견 4: B/D 결과를 A/C 이름만 바꿔 최종 판정에 넣으면 잡혀야 한다."""
     d = _copy_bd_as_abcd(tmp_path)
@@ -47,6 +48,7 @@ def test_final_detects_renamed_arm_files(tmp_path):
     assert rc == 1        # A.run.json의 arm=B — 파일명 불일치로 거부
 
 
+@requires_measured
 def test_final_detects_results_tampering(tmp_path):
     import json
     d = _copy_bd_as_abcd(tmp_path)
@@ -65,6 +67,7 @@ def test_final_detects_results_tampering(tmp_path):
     assert rc == 1        # results_sha256 불일치
 
 
+@requires_measured
 def test_final_detects_full_forgery_with_recomputed_hashes(tmp_path):
     """검수 6차 발견 3: run.arm·행 arm·results_sha256까지 전부 고쳐 써도
     config.arm/label 결박과 config_sha256 재계산이 바꿔치기를 잡아야 한다."""
@@ -86,6 +89,7 @@ def test_final_detects_full_forgery_with_recomputed_hashes(tmp_path):
     assert rc == 1
 
 
+@requires_measured
 def test_final_requires_registered_shas_for_every_arm(tmp_path):
     """검수 8차 발견 3: 디렉터리 안 값을 전부 자기일관되게 고쳐 써도 외부 registry와 어긋나면 거부."""
     import hashlib, json

@@ -134,6 +134,10 @@ def _meta_of(state: Any, decision: policy_gate.Decision, llm_skipped: str | None
         "policy": decision.to_dict(),
         "strategy": state.route.strategy if getattr(state, "route", None) else None,
         "validation_status": (getattr(state, "validation", None) or {}).get("status"),
+        # Late Expansion 발동 관측(재검수 HIGH 3: 효과·회귀 추적용) — 미발동이면 None.
+        "late_expansion": ({k: (getattr(state, "timings", None) or {}).get(k)
+                            for k in ("late_expansion_supplement", "expanded_retrieval")
+                            if (getattr(state, "timings", None) or {}).get(k)} or None),
         # FC 경로 관측(judge4 진단 공백 교정): claim 채택/폐기·전멸 후 JSON 대체·절단 여부.
         "fc": {"claims_total": claims.get("total"), "claims_kept": claims.get("kept"),
                "all_dropped": "fc_claims_all_dropped" in llm,

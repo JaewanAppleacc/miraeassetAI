@@ -213,6 +213,112 @@ def test_date_item_supplement_pulls_stage1_doc_missing_from_chunks():
         "삼성중공업의 2025-03-17 공시 내용을 요약해줘", conditions(), retriever, []) == []
 
 
+# ---------- 재검수 BLOCKER 1: 같은 날 복수 공시 값 혼합은 SUPPORTED로 못 나간다 ----------
+
+import json as _json
+
+from dart_detective.llm import LLMResult
+
+
+DOC_A_FORM = ("2. 계약내역 | 계약금액(원) | 100\n"
+              "3. 계약상대 | 3. 계약상대 | 에이회사")
+DOC_B_FORM = ("2. 계약내역 | 계약금액(원) | 200\n"
+              "3. 계약상대 | 3. 계약상대 | 비회사\n"
+              "4. 판매ㆍ공급지역 | 4. 판매ㆍ공급지역 | 나이지리아 라고스")
+MIX_QUESTION = "한화오션의 2024-04-17 공급계약 공시에서 계약금액과 계약상대방을 알려줘."
+
+
+def two_doc_retriever() -> CorpusRetriever:
+    corp_dict = CorpDictionary.from_rows(
+        [{"corp_name": "한화오션", "listed_name": "한화오션", "stock_code": "042660"}])
+    def doc(doc_id, text):
+        return IndexedDocument(
+            doc_id=doc_id, corp_name="한화오션", corp_code="한화오션", filer_name="한화오션",
+            doc_group="exchange", doc_subtype="단일판매ㆍ공급계약체결",
+            report_nm="단일판매ㆍ공급계약체결", rcept_dt="20240417",
+            base_year=2024, base_month=4, is_correction=False, text=text)
+    index = DocumentIndex([doc("exchange_a", DOC_A_FORM), doc("exchange_b", DOC_B_FORM)], corp_dict)
+    docs_by_id = {d: {"doc_id": d, "doc_group": "exchange",
+                      "nodes": [{"node_index": 0, "section_hierarchy": [], "text": t}]}
+                  for d, t in (("exchange_a", DOC_A_FORM), ("exchange_b", DOC_B_FORM))}
+    return CorpusRetriever(document_index=index, corp_dict=corp_dict, docs_by_id=docs_by_id)
+
+
+class MixLLM:
+    """문서 A의 값(100)과 문서 B의 상대방(비회사)을 한 답으로 섞는 나쁜 모델."""
+
+    provider = "fake"
+
+    def complete_json(self, system, user, schema):
+        payload = {"answer": "계약금액은 100원이고 계약상대는 비회사입니다.",
+                   "evidence": [{"document_id": "exchange_b",
+                                 "quote_or_fact": "3. 계약상대 | 3. 계약상대 | 비회사"}],
+                   "uncertainty": ""}
+        return LLMResult(data=payload, provider=self.provider, model="fake-1",
+                         latency_ms=1, raw_text=_json.dumps(payload, ensure_ascii=False))
+
+
+def test_mixed_document_answer_is_rejected_not_supported():
+    """재검수 BLOCKER 1 재현 시나리오: 문서 A 계약금액 100·문서 B 상대방 — LLM이 섞으면
+    validator 이전에 item_doc_conflict로 폐기돼야 하고, 섞인 답이 최종본이 되면 안 된다."""
+    state = qa_agent.answer_question(MIX_QUESTION, two_doc_retriever(), llm=MixLLM())
+    assert (state.llm or {}).get("degraded_reason") == "item_doc_conflict"
+    assert "100원이고 계약상대는 비회사" not in state.answer
+
+
+def test_resolved_item_doc_bounds_context_and_sources():
+    """후보가 하나로 해소되면 근거·발췌가 그 문서로 제한된다(재검수 BLOCKER 1 조건 3)."""
+    r = two_doc_retriever()
+    # 문서 B에만 있는 고유 토큰(바이그램 2개 이상 — '나이지리아')을 질문에 넣어 해소시킨다.
+    q = "한화오션의 2024-04-17 나이지리아 공급계약 공시에서 계약금액을 알려줘."
+    state = qa_agent.answer_question(q, r, llm=None)
+    docs = {m.doc_id for m in state.evidence_matches}
+    assert docs <= {"exchange_b"}
+    assert all(cid.startswith("exchange_b") for cid in state.llm_context_chunk_ids)
+
+
+# ---------- 재검수 HIGH 2: 서술 요구가 남으면 조립이 LLM을 끄지 않는다 ----------
+
+class EchoLLM:
+    provider = "fake"
+
+    def __init__(self):
+        self.called = 0
+
+    def complete_json(self, system, user, schema):
+        self.called += 1
+        payload = {"answer": "이 계약은 매출 확대에 긍정적 영향을 줄 것으로 공시에 서술되어 있다.",
+                   "evidence": [{"document_id": "exchange_a",
+                                 "quote_or_fact": "2. 계약내역 | 계약금액(원) | 100"}],
+                   "uncertainty": ""}
+        return LLMResult(data=payload, provider=self.provider, model="fake-1",
+                         latency_ms=1, raw_text=_json.dumps(payload, ensure_ascii=False))
+
+
+def test_narrative_residual_keeps_llm_after_assembly():
+    """"계약금액과 이 계약이 실적에 미칠 영향은?" — 값은 조립돼도 '영향' 요구가 남아
+    LLM 서술 경로가 유지돼야 한다(재검수 HIGH 2: 조용한 요구 삭제 금지)."""
+    corp_dict = CorpDictionary.from_rows(
+        [{"corp_name": "한화오션", "listed_name": "한화오션", "stock_code": "042660"}])
+    doc = IndexedDocument(
+        doc_id="exchange_a", corp_name="한화오션", corp_code="한화오션", filer_name="한화오션",
+        doc_group="exchange", doc_subtype="단일판매ㆍ공급계약체결",
+        report_nm="단일판매ㆍ공급계약체결", rcept_dt="20240417",
+        base_year=2024, base_month=4, is_correction=False, text=DOC_A_FORM)
+    r = CorpusRetriever(document_index=DocumentIndex([doc], corp_dict), corp_dict=corp_dict,
+                        docs_by_id={"exchange_a": {"doc_id": "exchange_a", "doc_group": "exchange",
+                                                   "nodes": [{"node_index": 0,
+                                                              "section_hierarchy": [],
+                                                              "text": DOC_A_FORM}]}})
+    llm = EchoLLM()
+    state = qa_agent.answer_question(
+        "한화오션의 2024-04-17 공급계약 공시에서 계약금액과 이 계약이 실적에 미칠 영향은?", r, llm=llm)
+    assert llm.called == 1                                   # 조립이 LLM을 끄지 않았다
+    assert (state.llm or {}).get("skipped") is None
+    assert "계약금액: 100" in state.answer                    # 결정론 값 블록 유지
+    assert "영향" in state.answer                            # 서술도 답에 남는다
+
+
 # ---------- 통합: LGES 실물 서식 → 유보 + 확정값 보존, LLM 미호출 ----------
 
 UNIVERSE_ROWS = [{"corp_name": "LG에너지솔루션", "listed_name": "LG에너지솔루션",
