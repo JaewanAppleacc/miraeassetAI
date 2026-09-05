@@ -1,0 +1,222 @@
+[
+ [
+  "u-0d1651be7c2e",
+  {
+   "classification": "UNKNOWN",
+   "note": "",
+   "_question_id": "author_52e6c0ca8915c4a28c802e4c",
+   "_slot": "evidence_1",
+   "_reason": "duplicate_evidence_different_node"
+  }
+ ],
+ [
+  "u-14717c25f52d",
+  {
+   "classification": "UNKNOWN",
+   "note": "",
+   "_question_id": "gold_b_9d2e358034ea16bcee7d8edf",
+   "_slot": "operating_income_2025q1",
+   "_reason": "duplicate_evidence_different_node"
+  }
+ ],
+ [
+  "u-17fecb7b46e3",
+  {
+   "classification": "UNKNOWN",
+   "note": "",
+   "_question_id": "gold_b_ad6f430084e4c5312283ab1a",
+   "_slot": "event_type",
+   "_reason": "claim_text_not_in_node"
+  }
+ ],
+ [
+  "u-2345d5c23981",
+  {
+   "classification": "UNKNOWN",
+   "note": "",
+   "_question_id": "gold_b_137f1bfd5c69987d009ae50c",
+   "_slot": "split_date",
+   "_reason": "claim_text_not_in_node"
+  }
+ ],
+ [
+  "u-47511cac6428",
+  {
+   "classification": "UNKNOWN",
+   "note": "",
+   "_question_id": "author_14dfddbe1d41275533ae3945",
+   "_slot": "evidence_1",
+   "_reason": "duplicate_evidence_different_node"
+  }
+ ],
+ [
+  "u-4867fc90e51b",
+  {
+   "classification": "UNKNOWN",
+   "note": "",
+   "_question_id": "gold_b_7d494870b3a53946dd2232c8",
+   "_slot": "exercise_details",
+   "_reason": "claim_text_not_in_node"
+  }
+ ],
+ [
+  "u-55e4f67d79e1",
+  {
+   "classification": "UNKNOWN",
+   "note": "",
+   "_question_id": "author_a09660efd75391b28724e656",
+   "_slot": "primary_evidence",
+   "_reason": "claim_text_not_in_node"
+  }
+ ],
+ [
+  "u-6bfa78c62c56",
+  {
+   "classification": "UNKNOWN",
+   "note": "",
+   "_question_id": "gold_b_ad6f430084e4c5312283ab1a",
+   "_slot": "decision_content",
+   "_reason": "claim_text_not_in_node"
+  }
+ ],
+ [
+  "u-6c53d4b6b694",
+  {
+   "classification": "UNKNOWN",
+   "note": "",
+   "_question_id": "gold_b_9d2e358034ea16bcee7d8edf",
+   "_slot": "revenue_2025q1",
+   "_reason": "duplicate_evidence_different_node"
+  }
+ ],
+ [
+  "u-91b74251bb8e",
+  {
+   "classification": "UNKNOWN",
+   "note": "",
+   "_question_id": "author_cc803e40119274b80d14a65a",
+   "_slot": "evidence_1",
+   "_reason": "claim_text_not_in_node"
+  }
+ ],
+ [
+  "u-99b67532d0b6",
+  {
+   "classification": "UNKNOWN",
+   "note": "",
+   "_question_id": "gold_b_9d2e358034ea16bcee7d8edf",
+   "_slot": "revenue_2023q1",
+   "_reason": "duplicate_evidence_different_node"
+  }
+ ],
+ [
+  "u-a2e6569d0ac5",
+  {
+   "classification": "UNKNOWN",
+   "note": "",
+   "_question_id": "gold_b_7d494870b3a53946dd2232c8",
+   "_slot": "conversion_terms",
+   "_reason": "claim_text_not_in_node"
+  }
+ ],
+ [
+  "u-a7d3446ba17d",
+  {
+   "classification": "UNKNOWN",
+   "note": "",
+   "_question_id": "gold_b_7d494870b3a53946dd2232c8",
+   "_slot": "event_type",
+   "_reason": "claim_text_not_in_node"
+  }
+ ],
+ [
+  "u-b652c12b86bf",
+  {
+   "classification": "UNKNOWN",
+   "note": "",
+   "_question_id": "author_ca4ec294ad36b44faa071043",
+   "_slot": "evidence_1",
+   "_reason": "claim_text_not_in_node"
+  }
+ ],
+ [
+  "u-bb95a8e2ea07",
+  {
+   "classification": "UNKNOWN",
+   "note": "",
+   "_question_id": "gold_b_9d2e358034ea16bcee7d8edf",
+   "_slot": "operating_income_2023q1",
+   "_reason": "duplicate_evidence_different_node"
+  }
+ ],
+ [
+  "u-c8642db18cf2",
+  {
+   "classification": "UNKNOWN",
+   "note": "",
+   "_question_id": "gold_b_7d494870b3a53946dd2232c8",
+   "_slot": "bond_series",
+   "_reason": "claim_text_not_in_node"
+  }
+ ],
+ [
+  "u-e462edc78fce",
+  {
+   "classification": "UNKNOWN",
+   "note": "",
+   "_question_id": "author_f87d43f1663f388ab5a57a3b",
+   "_slot": "primary_evidence",
+   "_reason": "claim_text_not_in_node"
+  }
+ ],
+ [
+  "u-e4b7183bc619",
+  {
+   "classification": "UNKNOWN",
+   "note": "",
+   "_question_id": "author_087a90f5918d4e0b3e00959c",
+   "_slot": "evidence_2",
+   "_reason": "duplicate_evidence_different_node"
+  }
+ ],
+ [
+  "u-ea8415e261d8",
+  {
+   "classification": "UNKNOWN",
+   "note": "",
+   "_question_id": "gold_b_926d98d28ea51ea8bb8e6ea1",
+   "_slot": "after_holding",
+   "_reason": "duplicate_evidence_different_node"
+  }
+ ],
+ [
+  "u-ed6afd9b0dd6",
+  {
+   "classification": "UNKNOWN",
+   "note": "",
+   "_question_id": "gold_b_e2808b0ce73a5ddd72f7508b",
+   "_slot": "split_method",
+   "_reason": "claim_text_not_in_node"
+  }
+ ],
+ [
+  "u-edcebce21692",
+  {
+   "classification": "UNKNOWN",
+   "note": "",
+   "_question_id": "gold_b_926d98d28ea51ea8bb8e6ea1",
+   "_slot": "before_holding",
+   "_reason": "duplicate_evidence_different_node"
+  }
+ ],
+ [
+  "u-f4499ab8f480",
+  {
+   "classification": "UNKNOWN",
+   "note": "",
+   "_question_id": "author_50eba48b6e3d77f488421b89",
+   "_slot": "primary_evidence",
+   "_reason": "claim_text_not_in_node"
+  }
+ ]
+]

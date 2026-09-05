@@ -1,0 +1,340 @@
+{
+ "turn": "FOURARM-AC-SCORING-VIEW-FIX-V1",
+ "amendment_commit": "f2d2a8a",
+ "base_head_at_freeze": "b88984e",
+ "frozen_scorer_commit": "50cc1aac57145ab7fdb825cbb054842cb993c395",
+ "retrieval_index_id": "fixed_kure_index_8fe191342205848d1d6a6123f38a54e7",
+ "hydration": {
+  "status": "HYDRATION_COMPLETE",
+  "A": {
+   "total_items": 1869,
+   "hydrated_success": 1869,
+   "missing": 0,
+   "duplicate": 0,
+   "duplicate_within_question": 0,
+   "hash_mismatch": 0,
+   "document_mismatch": 0,
+   "unique_chunk_ids": 1642
+  },
+  "C": {
+   "total_items": 1869,
+   "hydrated_success": 1869,
+   "missing": 0,
+   "duplicate": 0,
+   "duplicate_within_question": 0,
+   "hash_mismatch": 0,
+   "document_mismatch": 0,
+   "unique_chunk_ids": 1620
+  },
+  "A_invariance_ok": true,
+  "C_invariance_ok": true
+ },
+ "segments": {
+  "A": {
+   "ALL": {
+    "questions": 100,
+    "slots_total": 286,
+    "slots_found@5": 217,
+    "recall@5": 0.7587,
+    "all_found@5": 63,
+    "all_found_rate@5": 0.63,
+    "doc_hit@5": 87,
+    "slots_found@10": 237,
+    "recall@10": 0.8287,
+    "all_found@10": 73,
+    "all_found_rate@10": 0.73,
+    "doc_hit@10": 88,
+    "slots_found@20": 245,
+    "recall@20": 0.8566,
+    "all_found@20": 78,
+    "all_found_rate@20": 0.78,
+    "doc_hit@20": 88
+   },
+   "HIGH": {
+    "questions": 81,
+    "slots_total": 250,
+    "slots_found@5": 186,
+    "recall@5": 0.744,
+    "all_found@5": 49,
+    "all_found_rate@5": 0.6049,
+    "doc_hit@5": 71,
+    "slots_found@10": 204,
+    "recall@10": 0.816,
+    "all_found@10": 57,
+    "all_found_rate@10": 0.7037,
+    "doc_hit@10": 72,
+    "slots_found@20": 212,
+    "recall@20": 0.848,
+    "all_found@20": 62,
+    "all_found_rate@20": 0.7654,
+    "doc_hit@20": 72
+   },
+   "LOW": {
+    "questions": 19,
+    "slots_total": 36,
+    "slots_found@5": 31,
+    "recall@5": 0.8611,
+    "all_found@5": 14,
+    "all_found_rate@5": 0.7368,
+    "doc_hit@5": 16,
+    "slots_found@10": 33,
+    "recall@10": 0.9167,
+    "all_found@10": 16,
+    "all_found_rate@10": 0.8421,
+    "doc_hit@10": 16,
+    "slots_found@20": 33,
+    "recall@20": 0.9167,
+    "all_found@20": 16,
+    "all_found_rate@20": 0.8421,
+    "doc_hit@20": 16
+   }
+  },
+  "B": {
+   "ALL": {
+    "questions": 100,
+    "slots_total": 286,
+    "slots_found@5": 137,
+    "recall@5": 0.479,
+    "all_found@5": 34,
+    "all_found_rate@5": 0.34,
+    "doc_hit@5": 76,
+    "slots_found@10": 168,
+    "recall@10": 0.5874,
+    "all_found@10": 44,
+    "all_found_rate@10": 0.44,
+    "doc_hit@10": 82,
+    "slots_found@20": 192,
+    "recall@20": 0.6713,
+    "all_found@20": 57,
+    "all_found_rate@20": 0.57,
+    "doc_hit@20": 84
+   },
+   "HIGH": {
+    "questions": 81,
+    "slots_total": 250,
+    "slots_found@5": 118,
+    "recall@5": 0.472,
+    "all_found@5": 25,
+    "all_found_rate@5": 0.3086,
+    "doc_hit@5": 64,
+    "slots_found@10": 144,
+    "recall@10": 0.576,
+    "all_found@10": 33,
+    "all_found_rate@10": 0.4074,
+    "doc_hit@10": 67,
+    "slots_found@20": 166,
+    "recall@20": 0.664,
+    "all_found@20": 46,
+    "all_found_rate@20": 0.5679,
+    "doc_hit@20": 69
+   },
+   "LOW": {
+    "questions": 19,
+    "slots_total": 36,
+    "slots_found@5": 19,
+    "recall@5": 0.5278,
+    "all_found@5": 9,
+    "all_found_rate@5": 0.4737,
+    "doc_hit@5": 12,
+    "slots_found@10": 24,
+    "recall@10": 0.6667,
+    "all_found@10": 11,
+    "all_found_rate@10": 0.5789,
+    "doc_hit@10": 15,
+    "slots_found@20": 26,
+    "recall@20": 0.7222,
+    "all_found@20": 11,
+    "all_found_rate@20": 0.5789,
+    "doc_hit@20": 15
+   }
+  },
+  "C": {
+   "ALL": {
+    "questions": 100,
+    "slots_total": 286,
+    "slots_found@5": 207,
+    "recall@5": 0.7238,
+    "all_found@5": 63,
+    "all_found_rate@5": 0.63,
+    "doc_hit@5": 83,
+    "slots_found@10": 217,
+    "recall@10": 0.7587,
+    "all_found@10": 67,
+    "all_found_rate@10": 0.67,
+    "doc_hit@10": 85,
+    "slots_found@20": 247,
+    "recall@20": 0.8636,
+    "all_found@20": 77,
+    "all_found_rate@20": 0.77,
+    "doc_hit@20": 91
+   },
+   "HIGH": {
+    "questions": 81,
+    "slots_total": 250,
+    "slots_found@5": 177,
+    "recall@5": 0.708,
+    "all_found@5": 49,
+    "all_found_rate@5": 0.6049,
+    "doc_hit@5": 68,
+    "slots_found@10": 187,
+    "recall@10": 0.748,
+    "all_found@10": 53,
+    "all_found_rate@10": 0.6543,
+    "doc_hit@10": 70,
+    "slots_found@20": 214,
+    "recall@20": 0.856,
+    "all_found@20": 61,
+    "all_found_rate@20": 0.7531,
+    "doc_hit@20": 75
+   },
+   "LOW": {
+    "questions": 19,
+    "slots_total": 36,
+    "slots_found@5": 30,
+    "recall@5": 0.8333,
+    "all_found@5": 14,
+    "all_found_rate@5": 0.7368,
+    "doc_hit@5": 15,
+    "slots_found@10": 30,
+    "recall@10": 0.8333,
+    "all_found@10": 14,
+    "all_found_rate@10": 0.7368,
+    "doc_hit@10": 15,
+    "slots_found@20": 33,
+    "recall@20": 0.9167,
+    "all_found@20": 16,
+    "all_found_rate@20": 0.8421,
+    "doc_hit@20": 16
+   }
+  },
+  "D": {
+   "ALL": {
+    "questions": 100,
+    "slots_total": 286,
+    "slots_found@5": 139,
+    "recall@5": 0.486,
+    "all_found@5": 34,
+    "all_found_rate@5": 0.34,
+    "doc_hit@5": 79,
+    "slots_found@10": 167,
+    "recall@10": 0.5839,
+    "all_found@10": 42,
+    "all_found_rate@10": 0.42,
+    "doc_hit@10": 83,
+    "slots_found@20": 191,
+    "recall@20": 0.6678,
+    "all_found@20": 56,
+    "all_found_rate@20": 0.56,
+    "doc_hit@20": 85
+   },
+   "HIGH": {
+    "questions": 81,
+    "slots_total": 250,
+    "slots_found@5": 118,
+    "recall@5": 0.472,
+    "all_found@5": 25,
+    "all_found_rate@5": 0.3086,
+    "doc_hit@5": 64,
+    "slots_found@10": 144,
+    "recall@10": 0.576,
+    "all_found@10": 33,
+    "all_found_rate@10": 0.4074,
+    "doc_hit@10": 67,
+    "slots_found@20": 166,
+    "recall@20": 0.664,
+    "all_found@20": 46,
+    "all_found_rate@20": 0.5679,
+    "doc_hit@20": 69
+   },
+   "LOW": {
+    "questions": 19,
+    "slots_total": 36,
+    "slots_found@5": 21,
+    "recall@5": 0.5833,
+    "all_found@5": 9,
+    "all_found_rate@5": 0.4737,
+    "doc_hit@5": 15,
+    "slots_found@10": 23,
+    "recall@10": 0.6389,
+    "all_found@10": 9,
+    "all_found_rate@10": 0.4737,
+    "doc_hit@10": 16,
+    "slots_found@20": 25,
+    "recall@20": 0.6944,
+    "all_found@20": 10,
+    "all_found_rate@20": 0.5263,
+    "doc_hit@20": 16
+   }
+  }
+ },
+ "violations": {
+  "A": {
+   "critical": 0,
+   "minor": 1,
+   "unresolved": 21
+  },
+  "B": {
+   "critical": 2,
+   "minor": 0,
+   "unresolved": 15
+  },
+  "C": {
+   "critical": 1,
+   "minor": 1,
+   "unresolved": 15
+  },
+  "D": {
+   "critical": 2,
+   "minor": 0,
+   "unresolved": 11
+  }
+ },
+ "judgement_status_raw": "PENDING_UNRESOLVED",
+ "judgement_status_mapped": "BLOCKED",
+ "judgement_candidate": "A",
+ "judgement_selection_type": "PERFORMANCE_WINNER (held, not finalized)",
+ "hard_gate": {
+  "hard_safe": [
+   "A"
+  ],
+  "failed": [
+   "B",
+   "C",
+   "D"
+  ],
+  "critical_counts": {
+   "A": 0,
+   "B": 2,
+   "C": 1,
+   "D": 2
+  }
+ },
+ "quality_gate": {
+  "passed": [
+   "A"
+  ],
+  "best_all": 0.8287,
+  "best_high": 0.816
+ },
+ "owner_packet_prep": {
+  "genuinely_new_unresolved_union": 22,
+  "already_adjudicated_overlap": 0,
+  "new_packets_prepared_for_owner_review": 22,
+  "reason_distribution": {
+   "claim_text_not_in_node": 13,
+   "duplicate_evidence_different_node": 9
+  },
+  "combined_sha256_of_raw_packet_files": "d69f4bcd1448a57e7f1a4b2d733e8f1cbaa28a71b648a1f747fc2cf71efcf507",
+  "committed_template": "official/unresolved-review-template-v2.json"
+ },
+ "new_critical_finding_C": {
+  "reason": "row_col_differs:(0, 0)!=(0, 1)",
+  "note": "C now genuinely fails the hard safety gate (critical=1) -- Gold specifies a row/col cell the retrieved chunk's own row/col metadata contradicts. This is a real, legitimate finding surfaced by fixing the missing-text defect, not a new scorer/contract defect. C's own results/run files and retrieval are unmodified; this reflects the frozen scorer correctly evaluating real content it could not see before."
+ },
+ "invariance_reverified": {
+  "original_A_C_result_run_sha_unchanged": true,
+  "frozen_scorer_code_sha_unchanged": true,
+  "BD_score_byte_identical_to_prior_frozen": true,
+  "owner_resolutions_json_unchanged": true
+ }
+}
