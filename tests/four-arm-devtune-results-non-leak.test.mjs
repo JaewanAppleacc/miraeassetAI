@@ -54,38 +54,53 @@ for (const arm of ["A", "C"]) {
   });
 }
 
-test("execution-manifest.json never contains an email address, raw chunk text field, or Gold-shaped field", async () => {
+test("execution-manifest.json never contains an email address or raw Gold content, only a pointer-only gold object", async () => {
   const raw = await readFile(path.join(RESULTS_DIR, "execution-manifest.json"), "utf8");
   // "Recall@5/10/20" is legitimate prose in this file -- only an email-
   // shaped "@" (word characters immediately on both sides, with a dot
   // somewhere after) is actually disallowed.
   assert.doesNotMatch(raw, /[\w.+-]+@[\w-]+\.[\w.-]+/);
-  assert.doesNotMatch(raw, /"gold"\s*:|"expected_answer"|"required_evidence"|chunk_text"\s*:/i);
+  assert.doesNotMatch(raw, /"expected_answer"|"required_evidence"|"chunk_text"\s*:/i);
+  // A top-level "gold" object is allowed for this Turn (DEV_TUNE-101 is a
+  // permitted evaluation input), but it must stay pointer-only: SHA/rows/
+  // split distribution/access note, never a question, answer, or evidence field.
+  const manifest = JSON.parse(raw);
+  const goldKeys = Object.keys(manifest.gold);
+  const allowedGoldKeys = new Set(["sha256", "rows", "split_distribution", "accessed_by", "committed_to_git"]);
+  for (const key of goldKeys) {
+    assert.ok(allowedGoldKeys.has(key), `unexpected gold.${key} field -- must stay pointer-only`);
+  }
+  assert.equal(manifest.gold.committed_to_git, false);
 });
 
-test("execution-manifest.json honestly reports scoring as BLOCKED_CONTRACT (no fabricated Recall/winner)", async () => {
+test("execution-manifest.json honestly maps the scorer's own PENDING_UNRESOLVED verdict to BLOCKED, never a fabricated PROVISIONAL_WINNER", async () => {
   const manifest = JSON.parse(await readFile(path.join(RESULTS_DIR, "execution-manifest.json"), "utf8"));
-  assert.equal(manifest.scoring_status, "BLOCKED_CONTRACT");
-  assert.equal(manifest.final_status, "BLOCKED_CONTRACT");
-  assert.equal(Object.prototype.hasOwnProperty.call(manifest, "recall_at_k"), false);
+  assert.equal(manifest.judgement_status_raw, "PENDING_UNRESOLVED");
+  assert.equal(manifest.judgement_status_mapped, "BLOCKED");
+  assert.notEqual(manifest.judgement_status_mapped, "PROVISIONAL_WINNER");
   assert.equal(Object.prototype.hasOwnProperty.call(manifest, "provisional_winner"), false);
 });
 
 test("execution-manifest.json reports both A and C as checkpoint-complete with zero errors and a real, verified results_sha256", async () => {
   const manifest = JSON.parse(await readFile(path.join(RESULTS_DIR, "execution-manifest.json"), "utf8"));
+  const completeness = manifest.judgement_chain.find((s) => s.step === "0 per-arm completeness");
+  assert.deepEqual(completeness.missing_or_error, {});
+  const locatorChecked = manifest.judgement_chain.find((s) => s.step === "14 locator checked");
+  assert.deepEqual(locatorChecked.unchecked, []);
   for (const arm of ["A", "C"]) {
-    assert.equal(manifest.checkpoint_integrity[arm].ok, true);
-    assert.equal(manifest.checkpoint_integrity[arm].row_count, 101);
-    assert.equal(manifest.checkpoint_integrity[arm].error_rows, 0);
-    assert.equal(manifest.locator_provenance[arm].locator_hard_gate, "PASSED");
+    assert.equal(manifest.arm_segments[arm].segments.ALL.questions, 100);
+    assert.match(manifest.result_run_sha_post_scoring[`results/fourarm/${arm}.results.jsonl`], /^[0-9a-f]{64}$/);
   }
 });
 
-test("RESULTS_SUMMARY.md never contains an email address, raw chunk text, or a fabricated Recall/winner claim", async () => {
+test("RESULTS_SUMMARY.md never contains an email address, raw chunk text, or a fabricated PROVISIONAL_WINNER verdict", async () => {
   const raw = await readFile(path.join(RESULTS_DIR, "RESULTS_SUMMARY.md"), "utf8");
   assert.doesNotMatch(raw, /[\w.+-]+@[\w-]+\.[\w.-]+/);
-  assert.doesNotMatch(raw, /PROVISIONAL_WINNER\s*=\s*[AC]\b/);
-  assert.ok(raw.includes("BLOCKED_CONTRACT"));
+  assert.doesNotMatch(raw, /"chunk_text"\s*:\s*"/);
+  // PROVISIONAL_WINNER may appear only inside an explicit disclaimer that it was NOT declared.
+  assert.doesNotMatch(raw, /^#.*PROVISIONAL_WINNER/m);
+  assert.ok(raw.includes("does not declare `PROVISIONAL_WINNER=A`"));
+  assert.ok(raw.includes("supersedes the prior `BLOCKED_CONTRACT` report"));
 });
 
 test("execution-manifest.json: A and C ran at the identical code_sha256 (same batch, no drift)", async () => {

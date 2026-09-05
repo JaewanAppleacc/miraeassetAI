@@ -1,23 +1,53 @@
 {
+ "arm": "C",
+ "label": "FIXED+DENSE_OFF",
+ "batch_id": "35b588e42086e728302c47f0b5d307b7",
+ "started_at": "2026-09-05T09:03:23.206Z",
+ "finished_at": "2026-09-05T09:03:38.040Z",
+ "host": "choejaewan-ui-MacBookAir.local",
+ "platform": "Darwin-25.2.0-arm64",
+ "runtime": "node v26.0.0",
+ "code_sha256": "a5c1c8730225d0905b37c0ee8561e9563a56a30d",
+ "config": {
   "arm": "C",
-  "batch_id": "35b588e42086e728302c47f0b5d307b7",
-  "started_at": "2026-09-05T09:03:23.206Z",
-  "finished_at": "2026-09-05T09:03:38.040Z",
-  "host": "choejaewan-ui-MacBookAir.local",
-  "platform": "Darwin-25.2.0-arm64",
-  "node": "v26.0.0",
-  "code_sha256": "a5c1c8730225d0905b37c0ee8561e9563a56a30d",
-  "config_sha256": "f2b58ced2076e5d0363e4ffcec5152b657198591a3ba580df8cff6e443d28c95",
-  "input_sha256": {
-    "conditions": "83d5b8a02de2e3e79e388ec417ed104c81b08eb0a8dc8a8366b020df36b5e527",
-    "config": "f2b58ced2076e5d0363e4ffcec5152b657198591a3ba580df8cff6e443d28c95"
+  "label": "FIXED+DENSE_OFF",
+  "k": 20,
+  "dense": "off",
+  "conditions_source": "precomputed",
+  "document_ir": {
+   "exchange.jsonl": "80000c1c12f09bb59ce5bea41f62c5a70a39bdc965859c8436c261e9bde02c2a",
+   "holding.jsonl": "fd88d83c53a4c465ec1cbedce0a41046cfa7819822e2d7df046fccf42b8cbc09",
+   "major.jsonl": "5c58da7ad32fe31603f59bdea6829c29e6cb00b823c336b6e90b71f41d25d3ba",
+   "periodic.jsonl": "0aee546312b93797cf35f946144e044d8f43a947c38bb49b0766b623076be852"
   },
-  "n_questions": 101,
-  "n_errors": 0,
-  "latency_ms": {
-    "p50": 62,
-    "p95": 584,
-    "max": 930
+  "manifest_sha256": "04750795e1a2d5c35f73e4bb7766ebede02ff3512d33c382bd4c3a51daba3364",
+  "strategy": "fixed_512_chunk",
+  "chunking_policy_id": "fixed-token-512-o64.v0.1.0",
+  "bm25_top_k": 100,
+  "rrf_k": 60,
+  "dense_model": null,
+  "dense_rev": null
+ },
+ "config_sha256": "6ffcc10c0523393b06110698a91d6fb55af9d5960b112a693669425c3dbd764f",
+ "input_sha256": {
+  "conditions": "83d5b8a02de2e3e79e388ec417ed104c81b08eb0a8dc8a8366b020df36b5e527",
+  "universe": "96560165c836b10e315cb253ab96a99b369478c3f71a0415d16b7b6fadbfa1dc",
+  "document_ir": {
+   "exchange.jsonl": "80000c1c12f09bb59ce5bea41f62c5a70a39bdc965859c8436c261e9bde02c2a",
+   "holding.jsonl": "fd88d83c53a4c465ec1cbedce0a41046cfa7819822e2d7df046fccf42b8cbc09",
+   "major.jsonl": "5c58da7ad32fe31603f59bdea6829c29e6cb00b823c336b6e90b71f41d25d3ba",
+   "periodic.jsonl": "0aee546312b93797cf35f946144e044d8f43a947c38bb49b0766b623076be852"
   },
-  "results_sha256": "564bdbe4226dc2a6df7409279d7218c7cc6a2448f1fdf4ca58454a378b1a50f7"
+  "manifest": "04750795e1a2d5c35f73e4bb7766ebede02ff3512d33c382bd4c3a51daba3364"
+ },
+ "n_questions": 101,
+ "n_errors": 0,
+ "latency_ms": {
+  "p50": 62,
+  "p95": 584,
+  "max": 930
+ },
+ "peak_rss_mb": null,
+ "external_services": [],
+ "results_sha256": "898b53e3aa32c86502d54d13bc3de93d27139ae70975ad64e63a9490fe693081"
 }

@@ -1,23 +1,53 @@
 {
+ "arm": "A",
+ "label": "FIXED+FULL_DENSE",
+ "batch_id": "35b588e42086e728302c47f0b5d307b7",
+ "started_at": "2026-09-05T09:01:47.976Z",
+ "finished_at": "2026-09-05T09:02:38.237Z",
+ "host": "choejaewan-ui-MacBookAir.local",
+ "platform": "Darwin-25.2.0-arm64",
+ "runtime": "node v26.0.0",
+ "code_sha256": "a5c1c8730225d0905b37c0ee8561e9563a56a30d",
+ "config": {
   "arm": "A",
-  "batch_id": "35b588e42086e728302c47f0b5d307b7",
-  "started_at": "2026-09-05T09:01:47.976Z",
-  "finished_at": "2026-09-05T09:02:38.237Z",
-  "host": "choejaewan-ui-MacBookAir.local",
-  "platform": "Darwin-25.2.0-arm64",
-  "node": "v26.0.0",
-  "code_sha256": "a5c1c8730225d0905b37c0ee8561e9563a56a30d",
-  "config_sha256": "d4ebfecdb11f3ce41be8028f356f54e71907242a6f4d92c961a895be74d6f4e7",
-  "input_sha256": {
-    "conditions": "83d5b8a02de2e3e79e388ec417ed104c81b08eb0a8dc8a8366b020df36b5e527",
-    "config": "d4ebfecdb11f3ce41be8028f356f54e71907242a6f4d92c961a895be74d6f4e7"
+  "label": "FIXED+FULL_DENSE",
+  "k": 20,
+  "dense": "present",
+  "conditions_source": "precomputed",
+  "document_ir": {
+   "exchange.jsonl": "80000c1c12f09bb59ce5bea41f62c5a70a39bdc965859c8436c261e9bde02c2a",
+   "holding.jsonl": "fd88d83c53a4c465ec1cbedce0a41046cfa7819822e2d7df046fccf42b8cbc09",
+   "major.jsonl": "5c58da7ad32fe31603f59bdea6829c29e6cb00b823c336b6e90b71f41d25d3ba",
+   "periodic.jsonl": "0aee546312b93797cf35f946144e044d8f43a947c38bb49b0766b623076be852"
   },
-  "n_questions": 101,
-  "n_errors": 0,
-  "latency_ms": {
-    "p50": 205,
-    "p95": 1593,
-    "max": 2995
+  "manifest_sha256": "04750795e1a2d5c35f73e4bb7766ebede02ff3512d33c382bd4c3a51daba3364",
+  "strategy": "fixed_512_chunk",
+  "chunking_policy_id": "fixed-token-512-o64.v0.1.0",
+  "bm25_top_k": 100,
+  "rrf_k": 60,
+  "dense_model": "nlpai-lab/KURE-v1",
+  "dense_rev": "4ed4540949c70b7da2c74004a915e1f2d5e46e4f"
+ },
+ "config_sha256": "399bcd59944319e232aa428e47befe54fbb8f7cc1b44eed9d72a28d3e3dbbbc3",
+ "input_sha256": {
+  "conditions": "83d5b8a02de2e3e79e388ec417ed104c81b08eb0a8dc8a8366b020df36b5e527",
+  "universe": "96560165c836b10e315cb253ab96a99b369478c3f71a0415d16b7b6fadbfa1dc",
+  "document_ir": {
+   "exchange.jsonl": "80000c1c12f09bb59ce5bea41f62c5a70a39bdc965859c8436c261e9bde02c2a",
+   "holding.jsonl": "fd88d83c53a4c465ec1cbedce0a41046cfa7819822e2d7df046fccf42b8cbc09",
+   "major.jsonl": "5c58da7ad32fe31603f59bdea6829c29e6cb00b823c336b6e90b71f41d25d3ba",
+   "periodic.jsonl": "0aee546312b93797cf35f946144e044d8f43a947c38bb49b0766b623076be852"
   },
-  "results_sha256": "4213781f18afec47e9fc31ac02f17ae7ee83130e4e33871b9f444724a55c4326"
+  "manifest": "04750795e1a2d5c35f73e4bb7766ebede02ff3512d33c382bd4c3a51daba3364"
+ },
+ "n_questions": 101,
+ "n_errors": 0,
+ "latency_ms": {
+  "p50": 205,
+  "p95": 1593,
+  "max": 2995
+ },
+ "peak_rss_mb": null,
+ "external_services": [],
+ "results_sha256": "1132226193290fda5e007c417982a005b3381ac11b07a22d2c388d133d6ce156"
 }

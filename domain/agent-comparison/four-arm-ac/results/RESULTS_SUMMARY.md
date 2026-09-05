@@ -1,83 +1,117 @@
-# Official A/C DEV_TUNE-101 Retrieval Run — Results Summary
+# Official 4-Arm DEV_TUNE-101 Scoring — Results Summary
 
-Turn: `FOURARM-AC-OFFICIAL-DEVTUNE-AND-SELECTION-V1`. Batch:
-`35b588e42086e728302c47f0b5d307b7`. Code: `a5c1c8730225d0905b37c0ee8561e9563a56a30d`
-(identical for both arms — no code drift between them).
+Turn: `FOURARM-OFFICIAL-SCORING-V1`. Batch: `35b588e42086e728302c47f0b5d307b7`.
+Frozen scorer commit: `50cc1aac57145ab7fdb825cbb054842cb993c395` (`ac_scorer_50cc1aa`),
+re-verified byte-identical (`shasum -a 256 -c SHA256SUMS` 55/55 OK) before use.
 
-**Retrieval execution: COMPLETE, CLEAN.** **Scoring/selection: BLOCKED_CONTRACT**
-(Gold DEV_TUNE-101 content was never provided to this environment — only its
-SHA-256 pointer — by the same design that keeps DEV_CHECK/HOLDOUT out of
-reach). No DEV_TUNE Gold, DEV_CHECK, or HOLDOUT content was accessed. No
-production wiring was performed.
+**This supersedes the prior `BLOCKED_CONTRACT` report.** DEV_TUNE-101 Gold is
+an allowed evaluation input for this pre-registered experiment (distinct
+from DEV_CHECK/HOLDOUT, which remain untouched). Gold
+(`dev-tune-gold.v0.1.jsonl`, SHA-256 `7941144c09ce25debeeab6c3fbdfbd4c16761a6be06ab3a844ad159c832f102b`,
+101 rows, 100% `split=DEV_TUNE`) was read only by the frozen scorer process
+itself to compute aggregate metrics -- never opened, quoted, or logged by
+this session, and never copied into a git-tracked path.
 
-## Execution
+## What changed in A/C's own artifacts (format only, retrieval unmodified)
 
-| | Arm A (FIXED+FULL_DENSE) | Arm C (FIXED+DENSE_OFF) |
-|---|---|---|
-| questions | 101/101 | 101/101 |
-| errors | 0 | 0 |
-| checkpoint integrity | OK (101 unique ids, results_sha256 verified) | OK |
-| questions with ≥1 result | 95 | 95 |
-| questions with 0 results | 6 (all independently verified as genuine "not in corpus" cases — see below) | 6 (same 6) |
-| dense/embedding calls | 101 | 0 (structurally guaranteed) |
-| latency p50/p95/max (ms) | 205 / 1593 / 2995 | 62 / 584 / 930 |
-| locator/provenance hard gate | **PASSED** (0 unresolved chunks across 1,869 returned chunks) | **PASSED** (0 unresolved chunks across 1,869 returned chunks) |
+Real preflight (`scripts/fourarm/preflight_arm.py`) caught three schema
+defects in the previous Turn's runner output, none of which touch what was
+retrieved: an incompatible `locator` string syntax, a null `node_index` for
+multi-node-ambiguous chunks (contract requires a primary index plus the
+full set in `node_indices`), and a `run.json` missing the `config` object
+interfaces.md section 1-3 requires (`config_sha256` must hash that embedded
+object, not an external config file). Fixed by a pure reformatting pass
+(zero new retrieval calls) — `A.results.jsonl`/`C.results.jsonl`
+`results_sha256` changed accordingly; the underlying ranked chunk_id/
+doc_id/node_index/score per question did not.
 
-Segment distribution (from the official conditions artifact): 81 HIGH, 20 LOW.
+`peak_rss_mb` is `null` -- genuinely not measured by the original runner,
+not estimated. This is flagged by the optional convenience
+`preflight_arm.py` check but is not read anywhere in `score.py`'s actual
+judgement path (verified by inspection).
 
-## The 6 zero-result questions (identical for both arms)
+## Real, verified DocumentIR index
 
-`author_41f346723847e84a051e614a`, `author_642b260aa50968143920281b`,
-`author_a24879dc628ff582fdeba8b5`, `author_d640cbedd7330f4b9bcfeeb7`,
-`author_f119c5d79a4e52a359a84caa`, `author_ffcc4093fb37a87f1a40322d` — each
-independently verified against the live DB (not just the filter logic) as a
-genuine absence: the referenced company/doc_group/subtype/period combination
-does not exist anywhere in the retrieval-eligible corpus (e.g. no `major`
-disclosures for 삼성전기/LG에너지솔루션 at all; no `단일판매공급계약체결`-
-subtype exchange filing for KB금융/알테오젠; no 2022 periodic data for
-삼성전자 -- the corpus's periodic coverage starts at 2023). All six questions'
-own phrasing ("...코퍼스에 포함되어 있는가", "...공시상 확인 가능한가") reads
-as a deliberate existence-check design, consistent with correctly returning
-empty rather than hallucinating a match.
+The frozen scorer's `--final` mode unconditionally needs `data/index/`
+(built from the full 4,204-document, ~8.5GB DocumentIR) to resolve
+locators. All 4 DocumentIR files were located and independently verified
+byte-exact against the pinned SHAs before use; the rebuilt
+`doc_index.jsonl` hash (`c93c18f71ca18cf319e365793fde5e87a0bce470b8d275d65c3881a26d5f5f86`)
+matches the README's own pinned value exactly, confirming this is the same
+index B/D's own team used.
 
-## Two real bugs found and fixed during this Turn before this run
+## Results (k=10 primary; Gold `7941144c…`; conditions `83d5b8a0…`)
 
-1. **Wrong `expectedPins` key shape** made every arm A `search()` call fail
-   with a false "repository mismatch" error (100% error rate on the first
-   attempt, 0 real results produced, discarded before this run).
-2. **Metadata filter fields applied uniformly across doc_groups that don't
-   share their semantics** (`base_year`/`base_month` only populated for
-   `doc_group=periodic`; `doc_subtype` only meaningful for a single pure
-   doc_group at a time) silently guaranteed zero recall for 81/101 questions
-   on the first corrected attempt. Fixed by routing each field to only the
-   doc_group(s) where it is populated and reliable, verified against the
-   live DB and regression-tested (`tests/four-arm-conditions-to-filter-mapper.test.mjs`).
+| arm | Recall@5 | Recall@10 | Recall@20 | HIGH R@10 | LOW R@10 | LOW all_found@10 | critical | minor | unresolved | hard-safe |
+|---|---|---|---|---|---|---|---|---|---|---|
+| A | 0.7692 | 0.8007 | 0.8217 | 0.784 | 0.9167 | 16/19 | 0 | 0 | 229 | **yes** |
+| B (frozen) | 0.479 | 0.5874 | 0.6713 | 0.576 | 0.6667 | 11/19 | 2 | 0 | 15 | no |
+| C | 0.7273 | 0.7552 | 0.8462 | 0.74 | 0.8611 | 15/19 | 0 | 0 | 216 | **yes** |
+| D (frozen) | 0.486 | 0.5839 | 0.6678 | 0.576 | 0.6389 | 9/19 | 2 | 0 | 11 | no |
 
-Both fixes are committed (`a5c1c8730225d0905b37c0ee8561e9563a56a30d`) and
-covered by new tests before this official run was executed.
+B and D reproduced **byte-identical** to their previously-frozen
+`score.B.json`/`score.D.json` (`92a3b73...`/`186cf33c...`), confirming full
+determinism -- neither B/D's results/run files nor the scorer were touched.
 
-## Scoring
+COMMON_SOURCE exclusion: 0 questions (limit 5) for every arm, before and
+after adjudication -- unchanged from B/D's own prior run.
 
-`official_batch_execution_ready = true` (all pins/ledger/artifacts verified,
-independent of any arm's hard-gate outcome). B and D remain frozen at
-`HARD_GATE_FAILED` / `selection_eligible=false` per the Owner-ratified
-`resolutions.owner.json` (2 `ARM_SPECIFIC` critical packets, unchanged).
+## Hard / quality gate chain
 
-A and C's own hard/quality gate (Recall@5/10/20, HIGH Recall@10, LOW
-all-required-slots-found, required-evidence critical checks) **cannot be
-computed in this environment** -- it requires Gold DEV_TUNE-101 content,
-which was never provided here (only its SHA-256 pointer,
-`7941144c09ce25debeeab6c3fbdfbd4c16761a6be06ab3a844ad159c832f102b`). The one
-hard-gate component that does NOT require Gold -- locator/provenance
-integrity -- was computed directly from these results and **passed for both
-arms**.
+1. **Hard safety gate**: `critical=0` → A, C pass; `critical=2` (frozen,
+   `u-1b6cd184a87f`/`u-8564414f6080`) → B, D fail. B/D's `HARD_GATE_FAILED`
+   state is preserved exactly, not relaxed.
+2. **Quality gate** (best ALL/HIGH Recall@10 among hard-safe arms): only
+   **A** passes (`ALL=0.8007`, `HIGH=0.784` vs C's `ALL=0.7552`,
+   `HIGH=0.74`).
+3. **LOW all_found@10** among quality-gate passers: A=16/19 (only
+   candidate remaining).
+4. **Selection**: candidate **A**, `selection_type=PERFORMANCE_WINNER` —
+   held, not finalized (see below).
 
-**Final status: `BLOCKED_CONTRACT`.** No `PROVISIONAL_WINNER` is declared;
-no `NO_SELECTION` is declared either, since that requires having actually
-scored every arm and found none eligible, which has not happened. The next
-step is for whoever holds Gold legitimately to run the same frozen scorer
-(`ac_scorer_50cc1aa`) against `A.results.jsonl`/`C.results.jsonl` exactly as
-it was already run against `B.results.jsonl`/`D.results.jsonl`.
+## Final judgement: `PENDING_UNRESOLVED` → reported as `BLOCKED`
 
-See `execution-manifest.json` for the full machine-readable detail (ledger
-entries, arm states, checkpoint integrity, locator/provenance stats).
+The frozen scorer's own `judgement.json.status` is `PENDING_UNRESOLVED`,
+not one of `PROVISIONAL_WINNER`/`NO_SELECTION`. A and C each surface a
+large number of **brand-new** UNRESOLVED packets (229 and 216
+respectively) that have never been through Owner arm-blind adjudication --
+these are entirely distinct from B/D's already-adjudicated 17 packets
+(2 critical + 15 UNKNOWN), since A/C's different retrieval strategy
+produces different candidate mismatches. Per vFINAL's own rule (no
+automatic UNKNOWN resolution, ever), the scorer correctly refuses to
+finalize any judgement -- not even a provisional one -- while these remain
+unreviewed. This is a real, honest, by-design outcome of the frozen
+scorer, not a scorer error: it ran to completion and produced a complete,
+reproducible judgement chain (see `judgement.json`).
+
+**This Turn does not declare `PROVISIONAL_WINNER=A`.** Doing so would
+require the scorer's own chain to reach that conclusion, which it
+explicitly did not (it stops at `"16C selection held"`, a suspended state).
+`A` is the strong performance candidate pending Owner review of its 229
+new unresolved packets (and C's 216) -- the same arm-blind process already
+applied to B/D's 17.
+
+## Security / access boundary
+
+- DEV_CHECK/HOLDOUT: 0 files searched, 0 opened.
+- Gold content: never quoted, logged, or committed. Only its SHA-256
+  pointer appears anywhere in this report or the repo.
+- No raw chunk text committed: `violations.items` (which carries
+  `chunk_text` per flagged evidence slot) was stripped from every
+  committed `score.{arm}.json` -- aggregate counts only. The full,
+  unstripped reports remain locally at `work/bd_handoff/scorer/results/fourarm/`
+  (gitignored).
+- No HCX calls, no production wiring.
+- `PGPASSWORD`/API keys/DB URLs: none appear in any committed file.
+
+## File/result SHA invariance (recorded before scoring, re-verified after)
+
+All of B/D's `{results.jsonl,run.json}` and both of A/C's reformatted
+`{results.jsonl,run.json}` are byte-identical before and after the
+`score.py --final` run — the scorer only ever *wrote* new files
+(`score.*.json`, `judgement.json`, `adjudication.json`, `unresolved/*`),
+never touched an existing result/run file. Frozen scorer code
+(`fourarm.py`/`score.py`) SHA also unchanged, verified before and after.
+
+See `scoring/` for the sanitized (chunk-text-stripped) `score.{A,B,C,D}.json`,
+`judgement.json`, `adjudication.json`, `arm_registry.json`, and `summary.md`.
