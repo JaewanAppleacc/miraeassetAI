@@ -301,6 +301,20 @@
   폴백의 실행 변동, 코드 무관) · 테스트 836·안전세트 28/28. 4-arm 최종: 팀원1 통보 — B/D
   HARD_GATE_FAILED(우리 동결 인계의 BLOCKED 판정과 일치), B/D 검색·scorer 작업 종료, 승자는 A/C에서.
   검색 코어 동결 사유는 최종 판정 종결 시 소멸 — perf/retrieval-stage2(bf00bb1) 적용은 Owner 결정 대기.
+- **재검수 5건 반영 라운드(2026-09-05 · a427525 · judge30/31)**: 코덱스 재검수(재배포 불가 — dc9c16e)
+  전건 반영. [B1] 같은 날 복수 공시 값 혼합 차단 — 해소된 대상 문서는 bound_docs 결박(근거·발췌·검증
+  소스 제한), 미해소 복수 후보에서 LLM이 후보 2개 인용 또는 라이벌 전용 숫자 주장 시 item_doc_conflict
+  폐기(문서A 100원+문서B 상대방 혼합이 SUPPORTED로 나가던 재현을 MixLLM 파이프라인 테스트로 잠금).
+  [H2] 조립의 서술 요구 삭제 금지 — 잔여 어휘 확장(영향·의미·전망·설명 등)+NARRATIVE 전략이면 LLM 유지,
+  채택 시 "결정론 값 블록+LLM 서술" 조합. [H3] **Late Expansion(원문 보충 k=200·확장 재검색 k=40)을
+  DART_QA_LATE_EXPANSION=1 플래그로 격리, 기본 OFF**(v4 X0/X1 별도 실험 원칙) · 발동 수 meta 관측.
+  [M4] 확장 채택에 기존 슬롯 (문서,값,열) 보존 조건. [M5] skipif를 실측 파일 의존 4건으로 축소.
+  **실측**: judge30(기본 OFF) 완전 55·부분 27·미포함 10·가중 68.5·답변가능성 99(악화 6건 전부 보충
+  의존 단일판매 계열 — OFF 비용) · judge31(ON+게이트) **완전 58·부분 29·미포함 5·가중 72.5·답변가능성
+  100(최고 경신)**, judge29 대비 개선 2·악화 0(PASS), item_doc_conflict 실발동 3 · 보충 발동 16문항,
+  확장 재검색 발동 0(실효는 보충 쪽) · gold25 r4(OFF) full 4/zero 5·r5(ON) full 5/zero 4 · 테스트 840 ·
+  안전세트 28/28. **Late Expansion ON 적용은 Owner 승인 필요**(승인 시 배포 env에
+  DART_QA_LATE_EXPANSION=1, 이 블록이 승인 기록 위치).
 - **vFINAL 21번 변경 승인(2026-09-04, Owner=팀 대표)**: "FC Native Function Calling 경로에 한해
   전송 maxTokens 최소 1024 적용을 승인한다. 사유는 서비스 앱 API가 1024 미만 요청을 40001로
   거부하기 때문이다. JSON 경로의 v4 §7 예산은 변경하지 않으며 requested/sent 값을 구분해
