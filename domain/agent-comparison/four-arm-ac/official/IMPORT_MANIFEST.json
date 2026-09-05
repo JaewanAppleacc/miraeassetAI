@@ -1,0 +1,69 @@
+{
+  "schema_version": "0.1.0",
+  "turn": "AC-OFFICIAL-INTEGRATION-V1",
+  "imported_at": "2026-09-05",
+  "authoritative_spec": {
+    "path": "~/Downloads/4arm-vfinal-spec.txt (not committed -- local reference only)",
+    "sha256": "1a856dada61135df7c79f2cfc3c541a5fee8e820927e70786d00368db42da9f5"
+  },
+  "artifacts": [
+    {
+      "file": "devtune101_conditions.v2.jsonl",
+      "sha256": "83d5b8a02de2e3e79e388ec417ed104c81b08eb0a8dc8a8366b020df36b5e527",
+      "row_count": 101,
+      "note": "Question text + extracted question-understanding conditions only. No Gold answer text present -- devtune101_conditions.v2.meta.json.gold_sha256 is a pointer, not embedded content."
+    },
+    {
+      "file": "devtune101_conditions.v2.meta.json",
+      "sha256": "ebef9b9d3326d67d3a28acf11d2f98d3ee2b25d6ef686c2e80277a7dc9f73ec1",
+      "note": "Build metadata for devtune101_conditions.v2.jsonl (segment histogram, extractor identity, gold_sha256 pointer, universe_sha256 pointer)."
+    },
+    {
+      "file": "universe.csv",
+      "sha256": "96560165c836b10e315cb253ab96a99b369478c3f71a0415d16b7b6fadbfa1dc",
+      "note": "Company/document universe scope artifact backing the conditions extractor."
+    }
+  ],
+  "source_lineage": {
+    "repo": "jiyoung04lee/demo_ai_fesfival",
+    "chain": [
+      { "package": "ac_preflight_649d1cd.zip", "package_sha256": "fa3532126efbc6ccb0a3b1e3eee80093e01d789966d6ea780c31f70f57210868", "commit": "649d1cd775fd74f37bbc431ce74f14bc8afbe40a", "branch": "main", "role": "first delivery of conditions v2 + universe + B/D preflight run.json" },
+      { "package": "ac_scoring_649d1cd.zip", "package_sha256": "ef9e428a3ae85be6fb8f542bdde5e5fbd2eff1cf0d14f79e5fd140a36e57977e", "commit": "649d1cd775fd74f37bbc431ce74f14bc8afbe40a", "role": "adds B.results.jsonl/D.results.jsonl + score.py" },
+      { "package": "ac_scorer_f2e2c38.zip", "package_sha256": "5b9a402e9b5d38af008c7d9253f8b20fbd92df760ae6bc21365c6f8f2d4b584a", "commit": "f2e2c38", "role": "adds scorer tests + bd_sha_before/after proof (no B/D result mutation)" },
+      { "package": "ac_scorer_034b04a.zip", "package_sha256": "0cb57ece35af5fc253f8770b21426ad78b18ef14a91c459bccdcd76a26e97f12", "commit": "034b04a", "role": "SUPERSEDED -- declared PROVISIONAL_WINNER=B using an invented EQUIVALENT_EVIDENCE resolution class not present in vFINAL section 16; withdrawn by independent (Codex) review as an unauthorized section-21-bypassing relaxation" },
+      { "package": "ac_scorer_50cc1aa.zip", "package_sha256": "91cbd21800ea67a3f6943dad7f5ecf719a4d32da6cfbe4ad35ef296b2e1bb279", "commit": "50cc1aac57145ab7fdb825cbb054842cb993c395", "branch": "share/dart-qa-handoff", "role": "ADOPTED AUTHORITATIVE -- withdraws EQUIVALENT_EVIDENCE, restores RESOLUTION_CLASSES=(COMMON_SOURCE, ARM_SPECIFIC, UNKNOWN) exactly per section 16, applies genuine Owner arm-blind adjudication (see resolutions.json), final judgement=BLOCKED (no hard-safe arm)" }
+    ],
+    "re_verified_at_import_time": true,
+    "re_verification_method": "shasum -a 256 -c MANIFEST.sha256 inside each extracted package, plus a direct shasum of the re-downloaded ac_scorer_50cc1aa.zip against the recorded package_sha256 above -- both passed."
+  },
+  "bd_result_run_files": {
+    "note": "Reference copies are NOT duplicated into this repo (large-ish and B/D-owned); their SHA-256 pins are recorded here for the run ledger's byte-identity reuse check. Verified byte-identical across ac_scoring_649d1cd -> ac_scorer_f2e2c38 -> ac_scorer_034b04a (bd_sha_before == bd_sha_after in both scorer packages) -- no rescoring ever re-ran retrieval.",
+    "B.results.jsonl_sha256": "de661a1cbd20d8de268e24b84ccac8ab41feeace0af2502891d401a2c0898985",
+    "D.results.jsonl_sha256": "0f1112219d28442115f0bc07924d580320c40303b365ef1f2325fc5afa29cf6b",
+    "B.run.json_sha256": "f9e61e4682bfa39d69884a62093f6f2d43f09fa85c02aa440cc32c8de378dff4",
+    "D.run.json_sha256": "86296910e10ea7a9669adcb9ebd8e980cd0c5145d5517d6c51ca933a06cefed0",
+    "B.run.json_code_sha256": "04b847c4a2e61042da9f025735af8b2e2e56311e",
+    "D.run.json_code_sha256": "04b847c4a2e61042da9f025735af8b2e2e56311e",
+    "B.run.json_config_sha256": "fd23dd8be268a694465a97b4e73bfb48b36bbbb1dfcaa73d97e152a8641fb6b8",
+    "D.run.json_config_sha256": "f4914226620b425dbe1e13da5c2c6921391fe2afbf33ae83e80f9bc9146389b2",
+    "input_sha256_common": {
+      "conditions": "83d5b8a02de2e3e79e388ec417ed104c81b08eb0a8dc8a8366b020df36b5e527",
+      "universe": "96560165c836b10e315cb253ab96a99b369478c3f71a0415d16b7b6fadbfa1dc",
+      "manifest": "04750795e1a2d5c35f73e4bb7766ebede02ff3512d33c382bd4c3a51daba3364"
+    },
+    "adopted_scorer_result_files": {
+      "judgement_json_sha256": "d2f900a2a88ba2c4b5a0b2d610c72f381802956ed6420e69fb3a112ed18d6bff",
+      "adjudication_json_sha256": "7cbf2904ff2cc580a7ad67beed02ef2999c1f8e2121dc4b605799743ea3d6aa4",
+      "score_B_json_sha256": "92a3b73025c99cb06d1810eb7fb66de4494e1f3311f17ede42e047011f189281",
+      "score_D_json_sha256": "186cf33c1e4220f8a88e2104575286603103cdc1fc2a7d1ee08d4abe66a0e14b",
+      "unresolved_resolutions_json_sha256": "f2a46d0d2797d28c631c05da3f1a03a133a5d6ef28ce14fd34dd755fdce9619c"
+    },
+    "judgement_status": "BLOCKED",
+    "judgement_reason": "no hard-safe arm (2 shared arm-specific critical failures in B and D)",
+    "owner_open_decisions": [
+      "whether the 2 shared ARM_SPECIFIC critical hits (u-1b6cd184a87f, u-8564414f6080) should be reclassified as ordinary slot-found failures instead of Hard-disqualifying criticals",
+      "disposition of the 15 remaining UNKNOWN packets"
+    ]
+  },
+  "note": "This manifest and the three artifact files above are the ONLY things imported this Turn. No Gold/DEV_CHECK/HOLDOUT content is included anywhere in this directory."
+}

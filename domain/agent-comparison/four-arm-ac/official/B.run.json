@@ -1,0 +1,66 @@
+{
+ "arm": "B",
+ "label": "LINE_WINDOW+LOW_ONLY_DENSE",
+ "started_at": "2026-09-04T16:47:16",
+ "finished_at": "2026-09-04T16:57:13",
+ "host": "ijiyeong-ui-MacBookPro.local",
+ "platform": "macOS-14.0-arm64-arm-64bit",
+ "python": "3.12.6",
+ "code_sha256": "04b847c4a2e61042da9f025735af8b2e2e56311e",
+ "git_dirty": false,
+ "git_dirty_paths": [],
+ "config": {
+  "arm": "B",
+  "label": "LINE_WINDOW+LOW_ONLY_DENSE",
+  "k": 20,
+  "dense": "present",
+  "conditions_source": "precomputed",
+  "document_ir": {
+   "exchange.jsonl": "80000c1c12f09bb59ce5bea41f62c5a70a39bdc965859c8436c261e9bde02c2a",
+   "holding.jsonl": "fd88d83c53a4c465ec1cbedce0a41046cfa7819822e2d7df046fccf42b8cbc09",
+   "major.jsonl": "5c58da7ad32fe31603f59bdea6829c29e6cb00b823c336b6e90b71f41d25d3ba",
+   "periodic.jsonl": "0aee546312b93797cf35f946144e044d8f43a947c38bb49b0766b623076be852"
+  },
+  "manifest_sha256": "04750795e1a2d5c35f73e4bb7766ebede02ff3512d33c382bd4c3a51daba3364",
+  "text_recipe": "node_texts_joined_v1",
+  "text_cap": 3000,
+  "strategy": "line_window",
+  "stage1_k": 50,
+  "chunk_k": 20,
+  "dense_model_rev": "4ed4540949c70b7da2c74004a915e1f2d5e46e4f",
+  "dense_pool": 50,
+  "dense_model": "nlpai-lab/KURE-v1",
+  "dense_rev": "4ed4540949c70b7da2c74004a915e1f2d5e46e4f",
+  "dense_device": "mps",
+  "dense_dtype": "float16",
+  "dense_batch": 16,
+  "dense_max_seq_length": 512,
+  "dense_score_decimals": 3
+ },
+ "config_sha256": "fd23dd8be268a694465a97b4e73bfb48b36bbbb1dfcaa73d97e152a8641fb6b8",
+ "input_sha256": {
+  "conditions": "83d5b8a02de2e3e79e388ec417ed104c81b08eb0a8dc8a8366b020df36b5e527",
+  "document_ir": {
+   "exchange.jsonl": "80000c1c12f09bb59ce5bea41f62c5a70a39bdc965859c8436c261e9bde02c2a",
+   "holding.jsonl": "fd88d83c53a4c465ec1cbedce0a41046cfa7819822e2d7df046fccf42b8cbc09",
+   "major.jsonl": "5c58da7ad32fe31603f59bdea6829c29e6cb00b823c336b6e90b71f41d25d3ba",
+   "periodic.jsonl": "0aee546312b93797cf35f946144e044d8f43a947c38bb49b0766b623076be852"
+  },
+  "doc_index": "c93c18f71ca18cf319e365793fde5e87a0bce470b8d275d65c3881a26d5f5f86",
+  "universe": "96560165c836b10e315cb253ab96a99b369478c3f71a0415d16b7b6fadbfa1dc",
+  "manifest": "04750795e1a2d5c35f73e4bb7766ebede02ff3512d33c382bd4c3a51daba3364"
+ },
+ "n_questions": 101,
+ "n_errors": 0,
+ "bind_s": 22.8,
+ "latency_ms": {
+  "p50": 1859,
+  "p95": 22739,
+  "mean": 5667,
+  "max": 33878,
+  "total_s": 572.4
+ },
+ "peak_rss_mb": 1423.0,
+ "external_services": [],
+ "results_sha256": "de661a1cbd20d8de268e24b84ccac8ab41feeace0af2502891d401a2c0898985"
+}

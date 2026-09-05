@@ -1,0 +1,59 @@
+{
+ "arm": "D",
+ "label": "LINE_WINDOW+DENSE_OFF",
+ "started_at": "2026-09-04T16:44:03",
+ "finished_at": "2026-09-04T16:47:06",
+ "host": "ijiyeong-ui-MacBookPro.local",
+ "platform": "macOS-14.0-arm64-arm-64bit",
+ "python": "3.12.6",
+ "code_sha256": "04b847c4a2e61042da9f025735af8b2e2e56311e",
+ "git_dirty": false,
+ "git_dirty_paths": [],
+ "config": {
+  "arm": "D",
+  "label": "LINE_WINDOW+DENSE_OFF",
+  "k": 20,
+  "dense": "off",
+  "conditions_source": "precomputed",
+  "document_ir": {
+   "exchange.jsonl": "80000c1c12f09bb59ce5bea41f62c5a70a39bdc965859c8436c261e9bde02c2a",
+   "holding.jsonl": "fd88d83c53a4c465ec1cbedce0a41046cfa7819822e2d7df046fccf42b8cbc09",
+   "major.jsonl": "5c58da7ad32fe31603f59bdea6829c29e6cb00b823c336b6e90b71f41d25d3ba",
+   "periodic.jsonl": "0aee546312b93797cf35f946144e044d8f43a947c38bb49b0766b623076be852"
+  },
+  "manifest_sha256": "04750795e1a2d5c35f73e4bb7766ebede02ff3512d33c382bd4c3a51daba3364",
+  "text_recipe": "node_texts_joined_v1",
+  "text_cap": 3000,
+  "strategy": "line_window",
+  "stage1_k": 50,
+  "chunk_k": 20,
+  "dense_model_rev": null,
+  "dense_pool": null
+ },
+ "config_sha256": "f4914226620b425dbe1e13da5c2c6921391fe2afbf33ae83e80f9bc9146389b2",
+ "input_sha256": {
+  "conditions": "83d5b8a02de2e3e79e388ec417ed104c81b08eb0a8dc8a8366b020df36b5e527",
+  "document_ir": {
+   "exchange.jsonl": "80000c1c12f09bb59ce5bea41f62c5a70a39bdc965859c8436c261e9bde02c2a",
+   "holding.jsonl": "fd88d83c53a4c465ec1cbedce0a41046cfa7819822e2d7df046fccf42b8cbc09",
+   "major.jsonl": "5c58da7ad32fe31603f59bdea6829c29e6cb00b823c336b6e90b71f41d25d3ba",
+   "periodic.jsonl": "0aee546312b93797cf35f946144e044d8f43a947c38bb49b0766b623076be852"
+  },
+  "doc_index": "c93c18f71ca18cf319e365793fde5e87a0bce470b8d275d65c3881a26d5f5f86",
+  "universe": "96560165c836b10e315cb253ab96a99b369478c3f71a0415d16b7b6fadbfa1dc",
+  "manifest": "04750795e1a2d5c35f73e4bb7766ebede02ff3512d33c382bd4c3a51daba3364"
+ },
+ "n_questions": 101,
+ "n_errors": 0,
+ "bind_s": 2.9,
+ "latency_ms": {
+  "p50": 1300,
+  "p95": 4077,
+  "mean": 1768,
+  "max": 12267,
+  "total_s": 178.6
+ },
+ "peak_rss_mb": 1260.2,
+ "external_services": [],
+ "results_sha256": "0f1112219d28442115f0bc07924d580320c40303b365ef1f2325fc5afa29cf6b"
+}

@@ -53,10 +53,15 @@
     "module": "domain/chunking/chunker.mjs (chunkFixed, unmodified)"
   },
   "metadata_filter": {
-    "source": "SYNTHETIC_FIXTURE_ONLY",
-    "conditions_sha256": null,
+    "source": "OFFICIAL_CONDITIONS_ARTIFACT",
+    "conditions_sha256": "83d5b8a02de2e3e79e388ec417ed104c81b08eb0a8dc8a8366b020df36b5e527",
+    "universe_sha256": "96560165c836b10e315cb253ab96a99b369478c3f71a0415d16b7b6fadbfa1dc",
+    "artifact_dir": "domain/agent-comparison/four-arm-ac/official/",
+    "artifact_import_manifest": "domain/agent-comparison/four-arm-ac/official/IMPORT_MANIFEST.json",
+    "validator_module": "domain/agent-comparison/four-arm-ac/official-conditions-v2-importer.mjs",
     "module": "domain/agent-comparison/four-arm-ac/conditions-fixture.mjs",
-    "note": "This repository has no conditions.py (that name belongs to a separate team's Python codebase referenced only as background material -- CLAUDE.md section 0). Per vFINAL section D's own fallback, metadata filters are exercised with synthetic, question-text-only fixtures only; no official conditions file/SHA is pinned yet. official-conditions-importer.mjs's assertOfficialExecutionReady() fail-closes any official run against this source value."
+    "runtime_wiring_status": "ARTIFACT_IMPORTED_NOT_WIRED",
+    "note": "Turn AC-OFFICIAL-INTEGRATION-V1: the official devtune101_conditions.v2.jsonl/universe.csv artifacts are imported and SHA-verified (both hashes above re-checked at import time -- see IMPORT_MANIFEST.json), so assertOfficialExecutionReady() now passes for this source value. This does NOT mean real per-question metadata filtering is live yet: the artifact's `conditions.corps` field holds Korean company DISPLAY NAMES (e.g. \"아모레퍼시픽\"), not the 8-digit corp_codes buildMetadataFiltersFromConditions/passesMetadataFilters actually compare against, and resolving name->code requires the gated, Owner-approval-pending CompanyResolver (domain/adapters/seed-company-resolver.mjs) plus doc_subtype taxonomy alignment (exchange_subtypes/major_labels/periodic_subtypes vs. the chunker's own doc_subtype vocabulary) -- neither is wired this Turn (explicit production-wiring prohibition). conditions-fixture.mjs's SYNTHETIC_CONDITIONS_FIXTURES remain the only thing search() is actually called with in this repo's own tests."
   },
   "bm25": {
     "tokenizer": "unicode-word-punct (domain/chunking/chunker.mjs tokenizeWithOffsets, lowercased)",
@@ -103,6 +108,6 @@
     "full_dense_ready": null,
     "full_dense_ready_note": "Not applicable to arm C (dense OFF, structural guarantee).",
     "official_4arm_execution_ready": false,
-    "official_4arm_execution_ready_note": "C infrastructure is ready (BM25, materialization, dense-off structural guard, and provenance checks GREEN). The unified official 4-arm run remains blocked only on importing and pinning the OFFICIAL_CONDITIONS_ARTIFACT from the B/D workstream."
+    "official_4arm_execution_ready_note": "Turn AC-OFFICIAL-INTEGRATION-V1: C infrastructure is GREEN (BM25/materialization/dense-off structural guard/provenance) and the OFFICIAL_CONDITIONS_ARTIFACT is now imported+SHA-pinned (see metadata_filter above), but scripts/p11f0-fourarm-preflight.mjs still reports official_4arm_execution_ready=false. The binding blocker is the B/D scorer's own judgement (results/fourarm/judgement.json via ac_scorer_50cc1aa): status=BLOCKED (no hard-safe arm) pending two Owner-only decisions (see domain/agent-comparison/four-arm-ac/four-arm-preflight.mjs's OWNER_PENDING_POLICY) -- this Turn records that state and does not relax it. Separately, real per-question metadata-filter WIRING (corp-name->corp_code resolution, doc_subtype taxonomy alignment) is intentionally not done this Turn (production wiring prohibited) -- see metadata_filter.note."
   }
 }

@@ -1,0 +1,30 @@
+{
+ "version": "v2",
+ "built_at": "2026-09-03T13:44:57",
+ "n_questions": 101,
+ "gold_sha256": "7941144c09ce25debeeab6c3fbdfbd4c16761a6be06ab3a844ad159c832f102b",
+ "universe_sha256": "96560165c836b10e315cb253ab96a99b369478c3f71a0415d16b7b6fadbfa1dc",
+ "code_head": "9d9f7f18adb690034b861c9a5636c2c437420d52",
+ "extractor": "dart_detective.corpus_retriever.CorpusRetriever.conditions (dart_corpus.retrieval.conditions.extract_conditions + question_dates 연도 보정)",
+ "segment_rule": "dart_corpus.retrieval.segments.hard_condition_count: len(corps) + [years|year_months] + [doc_groups|periodic_subtypes|exchange_subtypes|major_labels]; LOW = <=2",
+ "segments": {
+  "HIGH": 81,
+  "LOW": 20
+ },
+ "n_hard_conditions_hist": {
+  "1": 2,
+  "2": 18,
+  "3": 80,
+  "4": 1
+ },
+ "n_without_corp": 5,
+ "without_corp_question_ids": [
+  "author_4dae7a49dd14e226926c4edf",
+  "author_bfc0f3bb801bc9eab3faaa3c",
+  "author_f1f0a9f6462da34342fd2cc4",
+  "author_f61f83f3af47bd86817b5358",
+  "gold_b_a534bc30d3414f2d094e7461"
+ ],
+ "output_sha256": "83d5b8a02de2e3e79e388ec417ed104c81b08eb0a8dc8a8366b020df36b5e527",
+ "elapsed_s": 2.9
+}
