@@ -28,7 +28,8 @@ from dart_corpus.retrieval.conditions import QueryConditions
 from dart_corpus.retrieval.lexical import tokenize
 
 from ..corpus_retriever import (CorpusRetriever, RetrievedChunk, chunk_lines,
-                               DISCLOSURE_ITEMS, extract_disclosure_items)
+                               DISCLOSURE_ITEMS, extract_disclosure_items,
+                               question_dates)
 from ..llm import LLMResult, LLMUnavailable
 from .. import fallback as fallback_chain, grounded_answer, routing
 from . import calculator, confidence, tables, validator
@@ -202,26 +203,64 @@ class AgentState:
 
 # ---------- 1. 질문 이해 ----------
 
+# 질문이 서식 항목 이름으로 부르는데 corpus_retriever.DISCLOSURE_ITEMS에 없는 주요사항보고서
+# 반복 서식 필드. **에이전트 층에만 둔다** — DISCLOSURE_ITEMS를 늘리면 4-arm B/D가 공유하는
+# retrieve()의 항목 가산 분기가 바뀐다(코덱스 재배포 검수 BLOCKER 2: 동결 중 검색 변경 금지).
+# 라벨은 실물 서식과 대조했다: 자기주식취득 major_20241115000375 · 신탁해지 major_20230424000440 ·
+# 전환사채 major_20230630000403 · 회사분할 major_20240624000362 · 자기주식처분(신한지주 문항).
+_AGENT_ITEM_WORDS: dict[str, str] = {
+    "취득목적": "취득목적", "취득 목적": "취득목적", "취득방법": "취득방법",
+    "취득예정금액": "취득예정금액", "취득예정주식": "취득예정주식",
+    "처분목적": "처분목적", "처분 결정의 목적": "처분목적", "처분방법": "처분방법",
+    "처분예정금액": "처분예정금액", "처분예정주식": "처분예정주식",
+    "해지목적": "해지목적", "해지기관": "해지기관", "해지예정일": "해지예정일자",
+    "분할방법": "분할방법", "분할목적": "분할목적", "분할비율": "분할비율", "분할일정": "분할일정",
+    "사채의 이율": "사채의 이율", "사채만기일": "사채만기일", "전환가액": "전환가액",
+    "권면총액": "권면(전자등록)총액", "사채총액": "권면(전자등록)총액",
+    "자금조달의 목적": "자금조달", "자금조달 목적": "자금조달",
+    "납입일": "납입일", "청약일": "청약일",
+}
+# 재무제표 지표와 이름이 겹치는 항목 — 이것만으로는 항목 우선 전환을 하지 않는다
+# ("2023년과 2025년 자기자본 비교" 같은 지표×연도 질문이 항목 경로로 새면 연도 자리를 잃는다).
+_METRIC_LIKE_ITEMS = frozenset({"자기자본"})
+
+
+def planned_form_items(question: str) -> tuple[str, ...]:
+    """질문에 **직접 적힌** 공시 서식 항목. 검색 코어의 사전 + 에이전트 층 사전의 합집합.
+
+    '계약기간'은 서식이 '5. 계약기간 | 시작일/종료일' 두 행이므로 두 자리로 확장한다 —
+    질문이 시작일·종료일 중 하나를 이미 집었으면 확장하지 않는다(그 자리만 요구한 것).
+    """
+    items = list(extract_disclosure_items(question))
+    items += [norm for word, norm in _AGENT_ITEM_WORDS.items() if word in question]
+    if "계약기간" in question and not ({"시작일", "종료일"} & set(items)):
+        items += ["시작일", "종료일"]
+    items = list(dict.fromkeys(items))
+    if all(i in _METRIC_LIKE_ITEMS for i in items):
+        return ()
+    return tuple(items)
+
+
 def plan_slots(question: str, conditions: QueryConditions) -> tuple[str, ...]:
     """질문이 요구하는 근거 자리(slot)를 정한다.
 
-    지표 추출은 Retrieval의 `infer_metrics`를 그대로 쓴다 — parser를 새로 만들지 않는다.
-    지표 × 연도로 자리를 만들고(예: 영업이익_2025), 지표가 없으면 공시 항목을 본다
-    (예: 계약금액·해지일자). 둘 다 없으면 자리 하나로 둔다.
+    서식 항목이 직접 적혀 있으면 항목 자리가 우선이다(코덱스 재배포 검수 P0: "계약상대방·
+    계약금액·계약기간과 최근 매출액 대비 비율" 문형 14문항이 infer_metrics의 '매출액'에 걸려
+    전부 '매출액_연도' 자리 하나로 변질 — '매출액 대비'는 재무제표 매출액이 아니라 공시 서식의
+    '매출액대비(%)' 필드다). 항목이 없으면 지표 × 연도(예: 영업이익_2025), 둘 다 없으면 자유
+    자리 하나. 항목 자리 뒤의 자유 자리는 항목 이름으로 말하지 않은 요구("…와 사유는?")를 받는다.
     """
     metrics = infer_metrics(question)
     years = sorted(conditions.years)
     corps = sorted(conditions.corps)
-    if not metrics:
-        # 항목 자리 뒤에 자유 자리를 하나 붙인다. 질문이 항목 이름으로 말하지 않은 것
-        # ("…해지의 해지금액과 사유는?"의 '사유')을 그 자리가 받는다.
-        items = extract_disclosure_items(question)
-        if not items:
-            return (ANSWER_SLOT,)
+    items = planned_form_items(question)
+    if items:
         if len(corps) >= 2:
             # 두 기업을 비교하는 질문 — 같은 항목이라도 회사마다 자리를 따로 둔다.
             return (*(f"{item}@{corp}" for item in items for corp in corps), ANSWER_SLOT)
         return (*items, ANSWER_SLOT)
+    if not metrics:
+        return (ANSWER_SLOT,)
     if not years:
         return tuple(metrics)
     return tuple(f"{m}_{y}" for m in metrics for y in years)
@@ -518,6 +557,51 @@ def match_evidence(slots: Sequence[str], chunks: Sequence[RetrievedChunk],
         seen = {m.evidence_text for m in matches}
         q_tokens = set(tokenize(question)) - drop if question else set()
         want_value = asks_for_value(question)
+        per_doc: dict[str, int] = {}
+
+        def _take_line(chunk: RetrievedChunk, line: str, rank: int, why: str) -> bool:
+            if not line or line in seen or per_doc.get(chunk.doc_id, 0) >= 4 \
+                    or len(matches) >= limit:
+                return False
+            seen.add(line)
+            per_doc[chunk.doc_id] = per_doc.get(chunk.doc_id, 0) + 1
+            matches.append(EvidenceMatch(
+                slot=ANSWER_SLOT, chunk_id=chunk.chunk_id, doc_id=chunk.doc_id,
+                evidence_text=line, section_path=chunk.section_path,
+                node_index=chunk.node_index,
+                rcept_no=str(chunk.metadata.get("rcept_no") or ""),
+                confidence=round(1.0 / rank, 4), reason=why))
+            return True
+
+        # ① 앵커 보장(코덱스 P1: 검색은 됐는데 전역 점수 선발에서 탈락한 slot 45) — 질문이
+        #    날짜로 못 박은 공시에서 최소 1줄을 전역 경쟁 **전에** 확보한다. gold 정보는 쓰지
+        #    않는다 — 질문 텍스트와 문서 메타데이터(접수번호 앞 8자리 = 접수일)만 본다.
+        #    접수일은 공시 이벤트일 다음 날인 실물이 많아 ±1일까지 같은 앵커로 본다(선발
+        #    단계 전용 — 4-arm이 공유하는 검색 코어 retrieve()는 건드리지 않는다).
+        if question:
+            import datetime as _dt
+            anchor_days: dict[str, str] = {}
+            for y, mo, d in question_dates(question):
+                try:
+                    base = _dt.date(y, mo, d)
+                except ValueError:
+                    continue
+                key = base.isoformat()
+                for off in (-1, 0, 1):
+                    day = base + _dt.timedelta(days=off)
+                    anchor_days.setdefault(
+                        f"{day.year:04d}{day.month:02d}{day.day:02d}", key)
+            served: set[str] = set()
+            for rank, chunk in enumerate(chunks, start=1):
+                day8 = str(chunk.metadata.get("rcept_no") or "")[:8]
+                anchor = anchor_days.get(day8)
+                if anchor is None or anchor in served:
+                    continue
+                best = next(iter(_best_lines(chunk, question, drop, 1)), "")
+                if _take_line(chunk, best, rank,
+                              f"질문 날짜 {anchor} 접수 공시(앵커 보장) · Retrieval {rank}위"):
+                    served.add(anchor)
+
         candidates: list[tuple[float, int, int, RetrievedChunk, str]] = []
         for rank, chunk in enumerate(list(chunks)[:ANSWER_CHUNKS], start=1):
             lines = chunk_lines(chunk)
@@ -528,7 +612,6 @@ def match_evidence(slots: Sequence[str], chunks: Sequence[RetrievedChunk],
                          if q_tokens else 0.0)
                 candidates.append((score, rank, order, chunk, line))
         candidates.sort(key=lambda c: (-c[0], c[1], c[2]))
-        per_doc: dict[str, int] = {}
         for score, rank, order, chunk, line in candidates:
             if line in seen or per_doc.get(chunk.doc_id, 0) >= 4:
                 continue
@@ -777,6 +860,46 @@ def fallback_answer(matches: Sequence[EvidenceMatch],
         parts.append("(위 줄은 공시 원문 표기 그대로이며, '|'는 표의 칸 구분이다.)")
     return ("\n".join(parts),
             "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.")
+
+
+def _item_cell_value(m: EvidenceMatch) -> str:
+    """서식 행에서 항목 값을 읽는다 — picked_value(숫자·날짜)가 없으면 마지막 칸의 텍스트.
+
+    '3. 계약상대 | 3. 계약상대 | -'처럼 값 칸이 '-'거나, 마지막 칸이 라벨 반복이면 값이
+    아니다(fail-closed — 조립하지 않고 기존 경로로 넘긴다).
+    """
+    if m.picked_value:
+        return m.picked_value
+    cells = [c.strip() for c in m.evidence_text.split("|") if c.strip()]
+    if len(cells) < 2:
+        return ""
+    value = cells[-1]
+    item, _year = split_slot(split_entity(m.slot)[0])
+    if value in _DASH or item in value or len(value) > 120:
+        return ""
+    return value
+
+
+def assemble_item_answer(items: Sequence[str],
+                         matches: Sequence[EvidenceMatch]) -> str | None:
+    """항목 자리가 전부 **한 문서**의 서식 값으로 확정됐으면 결정론 문장으로 조립한다.
+
+    코덱스 재배포 검수 P0: 단일판매·공급계약 군집은 문서가 검색돼도 FC claim 채택/폐기가
+    실행마다 흔들려 full↔partial을 오갔다 — 대량보유(holding_all_slots_filled)와 같은 원리로,
+    값이 전부 원문에서 확정되면 LLM을 부르지 않는다. 하나라도 비면 None(기존 경로).
+    """
+    by: dict[str, str] = {}
+    docs: set[str] = set()
+    for m in matches:
+        if m.slot in items and m.slot not in by:
+            value = _item_cell_value(m)
+            if value:
+                by[m.slot] = value
+                docs.add(m.doc_id)
+    if not items or any(i not in by for i in items) or len(docs) != 1:
+        return None
+    return ("공시 서식에서 확인한 값:\n"
+            + "\n".join(f"- {slot_label(i)}: {by[i]}" for i in items))
 
 
 # ---------- 3-1. 대량보유 서식 파서 배선 (docs/plans/2026-09-05-holding-parser.md) ----------
@@ -1407,6 +1530,15 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
                     reason=BINARY_EVIDENCE_REASON,
                     node_index=src_chunk.node_index,
                     rcept_no=str(src_chunk.metadata.get("rcept_no") or "")))
+    assembled = None
+    if not binary and not holding:
+        form_items = planned_form_items(question)
+        # 항목 자리가 전부 한 문서 서식 값으로 확정 — LLM 없이 결정론 문장으로 답한다(P0).
+        assembled = (assemble_item_answer(form_items, state.evidence_matches)
+                     if form_items else None)
+        if assembled:
+            answer = assembled
+            uncertainty = "값은 공시 서식 필드에서 원문 그대로 추출했다."
     det_template = (answer, uncertainty)     # ⑨ 폴백 ②단(템플릿)도 같은 결정론 답을 쓴다
     if state.derived:
         answer = calculator.describe(state.derived) + "\n\n" + answer
@@ -1437,13 +1569,16 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
     # 함께 물으면, 계산이 있어도 그 항목을 위해 LLM을 부른다 — 발췌는 대상 문서로 제한돼 있다.
     llm_topics = _holding_llm_topics(question, holding) if holding else ()
     if llm is not None and (binary or (holding and not llm_topics)
-                            or (not holding and state.derived)):
+                            or (not holding and state.derived)
+                            or (not holding and assembled)):
         # 대량보유: 질문의 요구 항목을 파서가 전부 채웠으면 계산이 없어도 LLM을 부르지 않는다 —
         # 같은 문서의 과거 연혁값을 직전값으로 재주장하는 경로 자체를 없앤다(재검수 BLOCKER 1-a).
         # 이분 판정(신청/승인)이 서식 필드로 확정된 질문도 LLM이 더할 것이 없다(자체 검증).
+        # 서식 항목 조립(assembled)도 같다 — FC 실행 간 변동으로 확정값이 흔들릴 이유가 없다.
         state.llm = {"used": False, "skipped": (
             "binary_verdict" if binary else
-            "deterministic_calculation" if state.derived else "holding_all_slots_filled")}
+            "deterministic_calculation" if state.derived else
+            "holding_all_slots_filled" if holding else "items_all_slots_filled")}
         llm = None
 
     if llm is not None and state.evidence_matches:

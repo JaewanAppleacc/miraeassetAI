@@ -1,0 +1,177 @@
+"""계약·서식 항목 슬롯 계획 + 결정론 조립 (코덱스 재배포 검수 P0 반영).
+
+배경 실측: "계약상대방, 계약금액, 계약기간과 최근 매출액 대비 비율" 문형 14문항이
+infer_metrics의 '매출액'에 걸려 전부 '매출액_연도' 슬롯 하나로 변질 — gold 문서가
+검색돼도 근거 선발에 오르지 못했다(retrieved_context 1/14). LG에너지솔루션
+exchange_20250730800046 실물 서식 행으로 잠근다.
+"""
+from __future__ import annotations
+
+from dart_corpus.retrieval import DocumentIndex, IndexedDocument
+from dart_corpus.retrieval.conditions import QueryConditions
+from dart_corpus.retrieval.corp_dictionary import CorpDictionary
+from dart_detective.agents import qa_agent
+from dart_detective.agents.qa_agent import EvidenceMatch
+from dart_detective.corpus_retriever import CorpusRetriever
+
+LGES_QUESTION = ("LG에너지솔루션의 2025-07-30 LFP 배터리 공급계약 공시에서 "
+                 "계약상대방, 계약금액, 계약기간과 최근 매출액 대비 비율을 알려줘.")
+
+# exchange_20250730800046 실물 행(계약상대는 실제로 '-')
+LGES_FORM = ("1. 판매ㆍ공급계약 구분 | 1. 판매ㆍ공급계약 구분 | 기타 판매ㆍ공급계약\n"
+             "2. 계약내역 | 계약금액(원) | 5,944,227,336,000\n"
+             "2. 계약내역 | 최근매출액(원) | 25,619,585,140,102\n"
+             "2. 계약내역 | 매출액대비(%) | 23.2\n"
+             "3. 계약상대 | 3. 계약상대 | -\n"
+             "5. 계약기간 | 시작일 | 2027-08-01\n"
+             "5. 계약기간 | 종료일 | 2030-07-31\n"
+             "8. 공시유보 관련내용 | 유보사유 | 경영상 비밀유지\n"
+             "8. 공시유보 관련내용 | 유보기한 | 2030-07-31")
+
+
+def conditions(years=(), corps=()) -> QueryConditions:
+    return QueryConditions(corps=frozenset(corps), years=frozenset(years))
+
+
+# ---------- 슬롯 계획: 항목이 지표 추론보다 우선 ----------
+
+def test_contract_question_plans_item_slots_not_metric_year():
+    slots = qa_agent.plan_slots(LGES_QUESTION, conditions(years=[2025]))
+    assert "매출액_2025" not in slots                      # 종전 오동작(유일 슬롯)
+    assert {"계약금액", "계약상대", "매출액대비", "시작일", "종료일"} <= set(slots)
+    assert slots[-1] == qa_agent.ANSWER_SLOT
+
+
+def test_contract_period_expands_to_start_end_only_when_not_named():
+    assert {"시작일", "종료일"} <= set(qa_agent.planned_form_items("계약기간과 계약금액은?"))
+    # 종료일을 콕 집은 질문에 시작일을 끼워 넣지 않는다(기존 테스트 동작 유지)
+    assert qa_agent.planned_form_items("계약기간 종료일은 언제인가?") == ("종료일",)
+
+
+def test_metric_like_item_alone_does_not_switch_to_item_path():
+    """'자기자본'은 재무제표 지표와 이름이 겹친다 — 단독으로는 항목 경로로 넘기지 않는다."""
+    assert qa_agent.planned_form_items("2023년과 2025년 사이 자기자본은 얼마나 변동했는가?") == ()
+    assert "자기자본대비" in qa_agent.planned_form_items("투자금액과 자기자본 대비 비율은?")
+
+
+def test_major_report_fields_become_slots():
+    """주요사항보고서 반복 서식 필드(실물 라벨 대조) — 에이전트 층 사전으로만 확장한다."""
+    q = ("신한지주가 2024년 4월 26일 결의한 자기주식 처분 결정의 목적과 "
+         "처분예정주식수, 처분방법은 각각 무엇인가?")
+    assert {"처분목적", "처분예정주식", "처분방법"} <= set(qa_agent.planned_form_items(q))
+
+
+def test_agent_items_do_not_touch_retrieval_dictionary():
+    """검색 코어 사전(DISCLOSURE_ITEMS)은 4-arm이 공유한다 — 에이전트 확장이 새면 안 된다."""
+    assert "처분목적" not in qa_agent.DISCLOSURE_ITEMS
+    assert "계약기간" not in qa_agent.DISCLOSURE_ITEMS
+
+
+# ---------- 결정론 조립 ----------
+
+def _m(slot, line, doc="exchange_1", value=None):
+    return EvidenceMatch(slot=slot, chunk_id=f"{doc}::c0", doc_id=doc,
+                         evidence_text=line, section_path=(), confidence=0.9,
+                         reason="test", picked_value=value)
+
+
+def test_assemble_when_all_item_slots_have_values():
+    items = ("계약금액", "매출액대비", "시작일", "종료일")
+    matches = [
+        _m("계약금액", "2. 계약내역 | 계약금액(원) | 5,944,227,336,000", value="5,944,227,336,000"),
+        _m("매출액대비", "2. 계약내역 | 매출액대비(%) | 23.2", value="23.2"),
+        _m("시작일", "5. 계약기간 | 시작일 | 2027-08-01", value="2027-08-01"),
+        _m("종료일", "5. 계약기간 | 종료일 | 2030-07-31", value="2030-07-31"),
+    ]
+    got = qa_agent.assemble_item_answer(items, matches)
+    assert got is not None
+    assert "계약금액: 5,944,227,336,000" in got and "종료일: 2030-07-31" in got
+
+
+def test_assemble_reads_text_cell_when_no_numeric_value():
+    got = qa_agent.assemble_item_answer(
+        ("계약상대",), [_m("계약상대", "3. 계약상대 | 3. 계약상대 | 현대자동차(주)")])
+    assert got is not None and "계약상대: 현대자동차(주)" in got
+
+
+def test_assemble_fails_closed_on_dash_or_missing_slot():
+    dash = [_m("계약상대", "3. 계약상대 | 3. 계약상대 | -"),
+            _m("계약금액", "2. 계약내역 | 계약금액(원) | 100", value="100")]
+    assert qa_agent.assemble_item_answer(("계약상대", "계약금액"), dash) is None
+    assert qa_agent.assemble_item_answer(("계약금액", "시작일"), dash[1:]) is None
+
+
+def test_assemble_fails_closed_on_mixed_documents():
+    mixed = [_m("계약금액", "계약금액(원) | 100", doc="exchange_1", value="100"),
+             _m("시작일", "시작일 | 2027-08-01", doc="exchange_2", value="2027-08-01")]
+    assert qa_agent.assemble_item_answer(("계약금액", "시작일"), mixed) is None
+
+
+# ---------- 자유 자리 앵커: 질문 날짜 공시의 행을 전역 점수 경쟁 전에 확보 ----------
+
+def _chunk(cid, doc, text, rcept, score=1.0):
+    from dart_detective.corpus_retriever import RetrievedChunk
+    return RetrievedChunk(chunk_id=cid, doc_id=doc, score=score, section_path=(),
+                          row_labels=(), evidence_text=text,
+                          metadata={"rcept_no": rcept, "corp_name": "X"})
+
+
+def test_free_slot_guarantees_line_from_question_date_document():
+    """검색 20위 안에 있어도 전역 줄 점수에서 밀려 선발 탈락하던 접수일 일치 문서(코덱스 P1:
+    raw에 있었지만 탈락 45 slot) — 날짜 앵커가 최소 1줄을 보장한다. 접수일이 이벤트일
+    다음 날인 실물(±1일)도 같은 앵커다. 검색 코어는 무변경(선발 단계 전용)."""
+    noise = [_chunk(f"n{i}", f"periodic_{i}", "매출액 실적 계약 공급 관련 요약 | 999", "20240101000001")
+             for i in range(6)]
+    target = _chunk("g1", "exchange_gold", "계약 체결 내용 | 세부", "20250318000009", score=0.1)
+    matches = qa_agent.match_evidence(
+        (qa_agent.ANSWER_SLOT,), noise + [target],
+        question="삼성중공업의 2025-03-17 에탄운반선 공급계약 공시에서 내용을 알려줘")
+    assert any(m.doc_id == "exchange_gold" for m in matches)
+    anchored = next(m for m in matches if m.doc_id == "exchange_gold")
+    assert "앵커" in anchored.reason
+
+
+def test_free_slot_without_question_date_behaves_as_before():
+    noise = [_chunk(f"n{i}", f"periodic_{i}", "매출액 | 999", "20240101000001") for i in range(3)]
+    matches = qa_agent.match_evidence((qa_agent.ANSWER_SLOT,), noise,
+                                      question="회사의 매출액 추이는?")
+    assert all("앵커" not in m.reason for m in matches)
+
+
+# ---------- 통합: LGES 실물 서식 → 유보 + 확정값 보존, LLM 미호출 ----------
+
+UNIVERSE_ROWS = [{"corp_name": "LG에너지솔루션", "listed_name": "LG에너지솔루션",
+                  "stock_code": "373220"}]
+
+
+def lges_retriever() -> CorpusRetriever:
+    corp_dict = CorpDictionary.from_rows(UNIVERSE_ROWS)
+    doc = IndexedDocument(
+        doc_id="exchange_20250730800046", corp_name="LG에너지솔루션",
+        corp_code="LG에너지솔루션", filer_name="LG에너지솔루션",
+        doc_group="exchange", doc_subtype="단일판매ㆍ공급계약체결",
+        report_nm="단일판매ㆍ공급계약체결", rcept_dt="20250730",
+        base_year=2025, base_month=7, is_correction=False, text=LGES_FORM)
+    index = DocumentIndex([doc], corp_dict)
+    docs_by_id = {"exchange_20250730800046": {
+        "doc_id": "exchange_20250730800046", "doc_group": "exchange",
+        "nodes": [{"node_index": 0, "kind": "table",
+                   "section_hierarchy": [], "text": LGES_FORM}]}}
+    return CorpusRetriever(document_index=index, corp_dict=corp_dict,
+                           docs_by_id=docs_by_id)
+
+
+class BoomLLM:
+    provider = "fake"
+
+    def complete_json(self, system, user, schema):  # pragma: no cover - 호출되면 실패
+        raise AssertionError("유보 확정 질문에서 LLM이 호출되면 안 된다")
+
+
+def test_lges_contract_question_end_to_end_is_withheld_with_values():
+    state = qa_agent.answer_question(LGES_QUESTION, lges_retriever(), llm=BoomLLM())
+    assert state.answerability == "WITHHELD"               # 계약상대 '-' + 유보사유 존재
+    assert (state.llm or {}).get("used") is False
+    assert "5,944,227,336,000" in state.answer             # 유보되지 않은 확정 값 보존
+    assert "23.2" in state.answer
+    assert "매출액_2025" not in state.slots
