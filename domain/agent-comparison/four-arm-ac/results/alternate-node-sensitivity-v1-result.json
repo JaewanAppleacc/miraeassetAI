@@ -1,0 +1,36 @@
+{
+  "schema_version": "fourarm.alternate-node-sensitivity-result.v1",
+  "status": "NO_SELECTION_BLOCKED",
+  "winner": null,
+  "population_packet_count": 26,
+  "population_packet_combined_sha256": "20b6b943a6b8d71f88fe9b347010f2dd41f598e034bc36aae1c3a842b5315e2e",
+  "reviewer_consensus_count": 24,
+  "owner_override_count": 2,
+  "owner_review_required_count": 0,
+  "outcome_distribution": {
+    "SUPPORTED_ALTERNATE_NODE": 19,
+    "ARM_SPECIFIC_CRITICAL": 4,
+    "ARM_SPECIFIC_NON_CRITICAL": 3,
+    "UNKNOWN": 0
+  },
+  "metrics": {
+    "A": {"recall_at_5": 0.7552, "recall_at_10": 0.8217, "recall_at_20": 0.8531, "high_recall_at_10": 0.808, "low_recall_at_10": 0.9167, "low_all_found_at_10": "16/19", "critical": 2, "minor": 20, "unresolved": 0},
+    "B": {"recall_at_5": 0.479, "recall_at_10": 0.5769, "recall_at_20": 0.6608, "high_recall_at_10": 0.576, "low_recall_at_10": 0.5833, "low_all_found_at_10": "10/19", "critical": 2, "minor": 12, "unresolved": 0},
+    "C": {"recall_at_5": 0.7238, "recall_at_10": 0.7587, "recall_at_20": 0.8636, "high_recall_at_10": 0.748, "low_recall_at_10": 0.8333, "low_all_found_at_10": "14/19", "critical": 1, "minor": 15, "unresolved": 1},
+    "D": {"recall_at_5": 0.486, "recall_at_10": 0.5839, "recall_at_20": 0.6678, "high_recall_at_10": 0.576, "low_recall_at_10": 0.6389, "low_all_found_at_10": "9/19", "critical": 2, "minor": 11, "unresolved": 0}
+  },
+  "artifacts": {
+    "final_decisions_sha256": "04b3628c7e58d8a864c94315ccabe0d0f2b4835d91595d6eb4edd5656d6246d1",
+    "judgement_sha256": "df2201a62a889d31e3137e5237993b131a9a35a9da1cf85558538acfc7ae3cab",
+    "score_a_sha256": "3c00a371259ba96877cbf4bd6c985512ba9744bed488fbe0da33578aec49efdb",
+    "score_b_sha256": "38418a2ea9d11f66460e7f92e0126903caae6b2bf9a34a28e2f4897d30876eec",
+    "score_c_sha256": "bab16594bc97b8366d45bb747904b5f0b8857c5d7b6ac81b6739689c703c4d7f",
+    "score_d_sha256": "435a956fb7a64890500ef50b1def0bfa5dd0ef53444ec605e491ae1121904c02"
+  },
+  "original_result_run_files_modified": false,
+  "frozen_scorer_modified": false,
+  "retrieval_embedding_ranking_rerun": false,
+  "dev_check_holdout_access": false,
+  "dev_check_executed": false,
+  "production_wiring": false
+}

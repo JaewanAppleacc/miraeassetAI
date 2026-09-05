@@ -1,0 +1,20 @@
+{
+  "schema_version": "fourarm.alternate-node-owner-overrides.v1",
+  "policy_sha256": "c854197b8fc69870cd92338a129740ab276ca6cf26166aa9eb9edba2be2898c9",
+  "packet_combined_sha256": "20b6b943a6b8d71f88fe9b347010f2dd41f598e034bc36aae1c3a842b5315e2e",
+  "approved_at": "2026-09-05T23:09:07Z",
+  "approval_source": "HUMAN_OWNER_IN_CURRENT_THREAD",
+  "owner_confirmed": true,
+  "overrides": [
+    {
+      "packet_id": "u-192d06b044ea",
+      "sensitivity_outcome": "SUPPORTED_ALTERNATE_NODE",
+      "basis": "The original frozen retrieval chunk, not the 400-character review export, contains the complete required operating-income value."
+    },
+    {
+      "packet_id": "u-6ebd6ff8de67",
+      "sensitivity_outcome": "SUPPORTED_ALTERNATE_NODE",
+      "basis": "The original frozen retrieval chunk, not the 400-character review export, contains the complete required operating-income value."
+    }
+  ]
+}
