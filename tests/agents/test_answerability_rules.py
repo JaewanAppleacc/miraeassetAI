@@ -115,6 +115,28 @@ def test_withheld_prose_when_question_asks_if_available():
     assert "유보문장" in found
 
 
+def test_withheld_prose_inside_table_cell():
+    """알테오젠 ALT-B4 실물 회귀(코덱스 재배포 검수 BLOCKER 1) — 유보 문장이 '|' 표 셀 안에
+    있다. 종전 코드는 '|' 줄 전체를 본문 탐지에서 제외해 기대 WITHHELD가 SUPPORTED로 나갔다."""
+    cell = ("1. 상기 마일스톤 대금은 미화 $3,000,000(약 39.5억원)입니다."
+            "2. 사실확인일은 계약상대방회사의 마일스톤 통지를 받고 인보이스를 발행한 날짜입니다."
+            "3. 계약상대방회사의 이름과 신약 개발품목 등의 정보는 계약상 영업비밀유지 사항에 "
+            "속하며 해당 내역은 공시유보사항에 해당합니다.")
+    line = f"{cell} | {cell}"                      # 실물 node 0: 같은 내용이 두 셀로 병합된 표 행
+    found = qa_agent.detect_withheld(
+        "알테오젠의 ALT-B4 마일스톤 기술료 수령 공시에서, 기술을 이전받은 계약상대방 회사명은 "
+        "공시상 확인 가능한가?", [_chunk("d1", line)], [])
+    assert "유보문장" in found and "공시유보사항에 해당" in found["유보문장"]
+
+
+def test_table_section_title_cell_alone_is_not_withheld():
+    """셀 단위 탐지가 섹션 제목 셀('8. 공시유보 관련내용')만으로 오발동하지 않는다 —
+    유보사유가 '-'(유보 없음)인 계약 공시가 WITHHELD로 뒤집히면 안 된다."""
+    table = "계약금액(원) | 5,944,227,336,000\n8. 공시유보 관련내용 | 유보사유 | -"
+    assert qa_agent.detect_withheld("계약금액은 얼마인가?", [_chunk("d1", table)],
+                                    [_match("d1", "계약금액", "5,944,227,336,000")]) == {}
+
+
 def test_no_withheld_marker_means_nothing():
     assert qa_agent.detect_withheld("계약금액은?", [_chunk("d1", "계약금액(원) | 100")],
                                     [_match("d1", "계약금액", "100")]) == {}

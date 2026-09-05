@@ -28,7 +28,8 @@ from dart_corpus.retrieval.conditions import QueryConditions
 from dart_corpus.retrieval.lexical import tokenize
 
 from ..corpus_retriever import (CorpusRetriever, RetrievedChunk, chunk_lines,
-                               DISCLOSURE_ITEMS, extract_disclosure_items)
+                               DISCLOSURE_ITEMS, extract_disclosure_items,
+                               question_dates)
 from ..llm import LLMResult, LLMUnavailable
 from .. import fallback as fallback_chain, grounded_answer, routing
 from . import calculator, confidence, tables, validator
@@ -202,26 +203,64 @@ class AgentState:
 
 # ---------- 1. 질문 이해 ----------
 
+# 질문이 서식 항목 이름으로 부르는데 corpus_retriever.DISCLOSURE_ITEMS에 없는 주요사항보고서
+# 반복 서식 필드. **에이전트 층에만 둔다** — DISCLOSURE_ITEMS를 늘리면 4-arm B/D가 공유하는
+# retrieve()의 항목 가산 분기가 바뀐다(코덱스 재배포 검수 BLOCKER 2: 동결 중 검색 변경 금지).
+# 라벨은 실물 서식과 대조했다: 자기주식취득 major_20241115000375 · 신탁해지 major_20230424000440 ·
+# 전환사채 major_20230630000403 · 회사분할 major_20240624000362 · 자기주식처분(신한지주 문항).
+_AGENT_ITEM_WORDS: dict[str, str] = {
+    "취득목적": "취득목적", "취득 목적": "취득목적", "취득방법": "취득방법",
+    "취득예정금액": "취득예정금액", "취득예정주식": "취득예정주식",
+    "처분목적": "처분목적", "처분 결정의 목적": "처분목적", "처분방법": "처분방법",
+    "처분예정금액": "처분예정금액", "처분예정주식": "처분예정주식",
+    "해지목적": "해지목적", "해지기관": "해지기관", "해지예정일": "해지예정일자",
+    "분할방법": "분할방법", "분할목적": "분할목적", "분할비율": "분할비율", "분할일정": "분할일정",
+    "사채의 이율": "사채의 이율", "사채만기일": "사채만기일", "전환가액": "전환가액",
+    "권면총액": "권면(전자등록)총액", "사채총액": "권면(전자등록)총액",
+    "자금조달의 목적": "자금조달", "자금조달 목적": "자금조달",
+    "납입일": "납입일", "청약일": "청약일",
+}
+# 재무제표 지표와 이름이 겹치는 항목 — 이것만으로는 항목 우선 전환을 하지 않는다
+# ("2023년과 2025년 자기자본 비교" 같은 지표×연도 질문이 항목 경로로 새면 연도 자리를 잃는다).
+_METRIC_LIKE_ITEMS = frozenset({"자기자본"})
+
+
+def planned_form_items(question: str) -> tuple[str, ...]:
+    """질문에 **직접 적힌** 공시 서식 항목. 검색 코어의 사전 + 에이전트 층 사전의 합집합.
+
+    '계약기간'은 서식이 '5. 계약기간 | 시작일/종료일' 두 행이므로 두 자리로 확장한다 —
+    질문이 시작일·종료일 중 하나를 이미 집었으면 확장하지 않는다(그 자리만 요구한 것).
+    """
+    items = list(extract_disclosure_items(question))
+    items += [norm for word, norm in _AGENT_ITEM_WORDS.items() if word in question]
+    if "계약기간" in question and not ({"시작일", "종료일"} & set(items)):
+        items += ["시작일", "종료일"]
+    items = list(dict.fromkeys(items))
+    if all(i in _METRIC_LIKE_ITEMS for i in items):
+        return ()
+    return tuple(items)
+
+
 def plan_slots(question: str, conditions: QueryConditions) -> tuple[str, ...]:
     """질문이 요구하는 근거 자리(slot)를 정한다.
 
-    지표 추출은 Retrieval의 `infer_metrics`를 그대로 쓴다 — parser를 새로 만들지 않는다.
-    지표 × 연도로 자리를 만들고(예: 영업이익_2025), 지표가 없으면 공시 항목을 본다
-    (예: 계약금액·해지일자). 둘 다 없으면 자리 하나로 둔다.
+    서식 항목이 직접 적혀 있으면 항목 자리가 우선이다(코덱스 재배포 검수 P0: "계약상대방·
+    계약금액·계약기간과 최근 매출액 대비 비율" 문형 14문항이 infer_metrics의 '매출액'에 걸려
+    전부 '매출액_연도' 자리 하나로 변질 — '매출액 대비'는 재무제표 매출액이 아니라 공시 서식의
+    '매출액대비(%)' 필드다). 항목이 없으면 지표 × 연도(예: 영업이익_2025), 둘 다 없으면 자유
+    자리 하나. 항목 자리 뒤의 자유 자리는 항목 이름으로 말하지 않은 요구("…와 사유는?")를 받는다.
     """
     metrics = infer_metrics(question)
     years = sorted(conditions.years)
     corps = sorted(conditions.corps)
-    if not metrics:
-        # 항목 자리 뒤에 자유 자리를 하나 붙인다. 질문이 항목 이름으로 말하지 않은 것
-        # ("…해지의 해지금액과 사유는?"의 '사유')을 그 자리가 받는다.
-        items = extract_disclosure_items(question)
-        if not items:
-            return (ANSWER_SLOT,)
+    items = planned_form_items(question)
+    if items:
         if len(corps) >= 2:
             # 두 기업을 비교하는 질문 — 같은 항목이라도 회사마다 자리를 따로 둔다.
             return (*(f"{item}@{corp}" for item in items for corp in corps), ANSWER_SLOT)
         return (*items, ANSWER_SLOT)
+    if not metrics:
+        return (ANSWER_SLOT,)
     if not years:
         return tuple(metrics)
     return tuple(f"{m}_{y}" for m in metrics for y in years)
@@ -486,13 +525,21 @@ def corp_tokens(corps: Sequence[str]) -> frozenset[str]:
     return frozenset(t for corp in corps for t in tokenize(corp))
 
 
+def _chunk_day(chunk: RetrievedChunk) -> str:
+    """청크가 속한 문서의 접수일 YYYYMMDD — rcept_dt가 정본, 없으면 접수번호 앞 8자리."""
+    return (str(chunk.metadata.get("rcept_dt") or "")[:8]
+            or str(chunk.metadata.get("rcept_no") or "")[:8])
+
+
 def match_evidence(slots: Sequence[str], chunks: Sequence[RetrievedChunk],
                    *, limit: int = MAX_EVIDENCE, question: str = "",
                    drop: frozenset[str] = frozenset(),
                    scopes: Mapping[str, Mapping[int, str]] | None = None,
                    bind_doc_year: bool = False,
                    bind_months: frozenset[int] = frozenset(),
-                   prefer_annual: bool = False) -> list[EvidenceMatch]:
+                   prefer_annual: bool = False,
+                   bind_days: frozenset[str] = frozenset(),
+                   prefer_doc: str = "") -> list[EvidenceMatch]:
     """slot마다 가장 잘 맞는 청크를 고른다. 근거가 없으면 그 slot은 비운다.
 
     선택은 결정론적이다 — 지표가 행 레이블에 있는지, 연도가 청크/문서에 있는지,
@@ -506,6 +553,9 @@ def match_evidence(slots: Sequence[str], chunks: Sequence[RetrievedChunk],
     used: set[tuple[str, str, int | None]] = set()
     used_chunks: set[str] = set()
     want_scope = wanted_scope(question)
+    # bind_days 항목 자리의 문서 일관성 — 호출자가 해소한 문서(prefer_doc)가 있으면 그것,
+    # 없으면 첫 항목 자리가 고른 문서로 이후 항목 자리를 전부 결박한다(문서 혼합 차단).
+    item_doc: str | None = prefer_doc or None
 
     def fill_free_slot() -> None:
         """자유 자리 — 상위 ANSWER_CHUNKS개 청크의 후보 줄을 **전역 점수순**으로 채운다.
@@ -518,6 +568,58 @@ def match_evidence(slots: Sequence[str], chunks: Sequence[RetrievedChunk],
         seen = {m.evidence_text for m in matches}
         q_tokens = set(tokenize(question)) - drop if question else set()
         want_value = asks_for_value(question)
+        per_doc: dict[str, int] = {}
+
+        def _take_line(chunk: RetrievedChunk, line: str, rank: int, why: str) -> bool:
+            if not line or line in seen or per_doc.get(chunk.doc_id, 0) >= 4 \
+                    or len(matches) >= limit:
+                return False
+            seen.add(line)
+            per_doc[chunk.doc_id] = per_doc.get(chunk.doc_id, 0) + 1
+            matches.append(EvidenceMatch(
+                slot=ANSWER_SLOT, chunk_id=chunk.chunk_id, doc_id=chunk.doc_id,
+                evidence_text=line, section_path=chunk.section_path,
+                node_index=chunk.node_index,
+                rcept_no=str(chunk.metadata.get("rcept_no") or ""),
+                confidence=round(1.0 / rank, 4), reason=why))
+            return True
+
+        # ① 앵커 보장(코덱스 P1: 검색은 됐는데 전역 점수 선발에서 탈락한 slot 45) — 질문이
+        #    날짜로 못 박은 공시에서 최소 1줄을 전역 경쟁 **전에** 확보한다. gold 정보는 쓰지
+        #    않는다 — 질문 텍스트와 문서 메타데이터(접수번호 앞 8자리 = 접수일)만 본다.
+        #    접수일은 공시 이벤트일 다음 날인 실물이 많아 ±1일까지 같은 앵커로 본다(선발
+        #    단계 전용 — 4-arm이 공유하는 검색 코어 retrieve()는 건드리지 않는다).
+        if question:
+            import datetime as _dt
+            anchor_days: dict[str, str] = {}
+            for y, mo, d in question_dates_any(question):
+                try:
+                    base = _dt.date(y, mo, d)
+                except ValueError:
+                    continue
+                key = base.isoformat()
+                for off in (-1, 0, 1):
+                    day = base + _dt.timedelta(days=off)
+                    anchor_days.setdefault(
+                        f"{day.year:04d}{day.month:02d}{day.day:02d}", key)
+            served: dict[str, set[str]] = {}
+            for rank, chunk in enumerate(chunks, start=1):
+                anchor = anchor_days.get(_chunk_day(chunk))
+                if anchor is None:
+                    continue
+                docs = served.setdefault(anchor, set())
+                # 같은 날짜에 서식 공시가 2건인 실물(한미반도체·삼성E&A) — 문서 2건까지
+                # 각각 1줄을 보장해 어느 쪽도 근거에서 사라지지 않게 한다.
+                if chunk.doc_id in docs or len(docs) >= 2:
+                    continue
+                # 같은 서식 2건은 최적 줄이 문자열까지 동일할 수 있다(한미반도체 실물) —
+                # 중복 제거에 걸리면 다음 후보 줄로 내려가 문서가 근거에서 사라지지 않게 한다.
+                for cand in _best_lines(chunk, question, drop, 3):
+                    if _take_line(chunk, cand, rank,
+                                  f"질문 날짜 {anchor} 접수 공시(앵커 보장) · Retrieval {rank}위"):
+                        docs.add(chunk.doc_id)
+                        break
+
         candidates: list[tuple[float, int, int, RetrievedChunk, str]] = []
         for rank, chunk in enumerate(list(chunks)[:ANSWER_CHUNKS], start=1):
             lines = chunk_lines(chunk)
@@ -528,7 +630,6 @@ def match_evidence(slots: Sequence[str], chunks: Sequence[RetrievedChunk],
                          if q_tokens else 0.0)
                 candidates.append((score, rank, order, chunk, line))
         candidates.sort(key=lambda c: (-c[0], c[1], c[2]))
-        per_doc: dict[str, int] = {}
         for score, rank, order, chunk, line in candidates:
             if line in seen or per_doc.get(chunk.doc_id, 0) >= 4:
                 continue
@@ -566,6 +667,17 @@ def match_evidence(slots: Sequence[str], chunks: Sequence[RetrievedChunk],
                 if chunk.metadata.get("corp_name") != want_corp:
                     continue
                 reasons.append(f"기업 '{want_corp}' 공시")
+            if bind_days:
+                # 질문이 날짜를 못 박은 서식 항목 자리 — 그 날짜(±1일) 접수 공시에서만 채운다.
+                # 같은 회사가 같은 서식을 여러 번 내면(자기주식 처분 실측: 현대차·SKT·아모레)
+                # 라벨 일치만으로는 다른 회차의 값이 이 자리에 들어온다(judge27 오귀속 4건).
+                if _chunk_day(chunk) not in bind_days:
+                    continue
+                if item_doc is not None and chunk.doc_id != item_doc:
+                    # 같은 날짜 창에 서식이 2건이면(삼성중공업 0317·0318 실측) 항목 자리마다
+                    # 다른 문서의 값이 섞인다 — 첫 항목 자리가 고른 문서로 전부 결박한다.
+                    continue
+                reasons.append("질문 날짜 접수 공시")
             if metric != ANSWER_SLOT:
                 if metric in chunk.row_labels:
                     weight += 0.5
@@ -656,6 +768,8 @@ def match_evidence(slots: Sequence[str], chunks: Sequence[RetrievedChunk],
         score, chunk, reason, line, column = best
         used.add((chunk.chunk_id, line, column))
         used_chunks.add(chunk.chunk_id)
+        if bind_days and slot != ANSWER_SLOT and item_doc is None:
+            item_doc = chunk.doc_id
         matches.append(EvidenceMatch(
             slot=slot, chunk_id=chunk.chunk_id, doc_id=chunk.doc_id,
             evidence_text=line,
@@ -777,6 +891,186 @@ def fallback_answer(matches: Sequence[EvidenceMatch],
         parts.append("(위 줄은 공시 원문 표기 그대로이며, '|'는 표의 칸 구분이다.)")
     return ("\n".join(parts),
             "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.")
+
+
+_KO_DATE_RE = re.compile(r"((?:19|20)\d{2})\s*년\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일")
+
+
+def question_dates_any(question: str) -> list[tuple[int, int, int]]:
+    """ISO(2023-10-26)와 한글(2023년 10월 26일) 날짜를 함께 읽는다 — 에이전트 층 전용.
+
+    검색 코어의 question_dates는 ISO만 본다(4-arm 동결·무변경). 자기주식 처분 문항은 전부
+    한글 날짜라 결박이 비어 있었고, 조립이 같은 회사의 **다른** 처분 공시 값을 확정하는
+    오귀속이 실측됐다(judge27: 현대차·SKT·아모레·메리츠 4건 full→zero).
+    """
+    out = list(question_dates(question))
+    for y, mo, d in _KO_DATE_RE.findall(question):
+        y, mo, d = int(y), int(mo), int(d)
+        if 1 <= mo <= 12 and 1 <= d <= 31 and (y, mo, d) not in out:
+            out.append((y, mo, d))
+    return out
+
+
+def _question_day_window(question: str) -> frozenset[str]:
+    """질문 날짜(ISO·한글) ±1일 YYYYMMDD 집합 — 접수일이 공시 이벤트일 다음 날인 실물이 많다."""
+    import datetime as _dt
+    out: set[str] = set()
+    for y, mo, d in question_dates_any(question):
+        try:
+            base = _dt.date(y, mo, d)
+        except ValueError:
+            continue
+        for off in (-1, 0, 1):
+            day = base + _dt.timedelta(days=off)
+            out.add(f"{day.year:04d}{day.month:02d}{day.day:02d}")
+    return frozenset(out)
+
+
+DATE_ITEM_SUPPLEMENT_DOCS = 2      # 보충 문서 수 상한 — 같은 날 2건(한미반도체 실물)은 둘 다 싣고
+                                   # 조립은 후보 2건 이상이면 fail-closed(오선택 확정 금지)
+DATE_ITEM_SUPPLEMENT_NODES = 4     # 문서당 보충 node 수(원문 공시 서식은 보통 1~2 node)
+DATE_ITEM_SUPPLEMENT_SEARCH_K = 200  # 대상 문서 탐색 깊이 — 검색 코어의 날짜 분기(stage1_k×4)와
+                                     # 같은 폭. 얕으면(top-10) 날짜 문서가 탐색 밖(삼성E&A 실측).
+
+
+def date_item_supplement(question: str, conditions: QueryConditions,
+                         retriever: Any,
+                         chunks: Sequence[RetrievedChunk]) -> list[RetrievedChunk]:
+    """질문이 ISO 날짜와 서식 항목을 함께 못 박았는데 그 날짜(±1일)에 접수된 Stage 1 상위
+    문서의 청크가 후보에 없으면, 그 문서의 원문 node를 근거 후보로 보충한다.
+
+    코덱스 재배포 검수 P0 실측: 단일판매·공급계약 14문항은 gold 문서가 Stage 1 1위인데
+    Stage 2 청크 랭킹에서 재무표에 밀려 전멸했다. 검색 코어(retrieve)는 4-arm 동결이라
+    건드리지 않는다(BLOCKER 2) — 대량보유 파서와 같은 에이전트 층 원문 읽기(docs_by_id)로
+    보충한다. 질문 텍스트와 문서 메타데이터(접수일·Stage 1 순위)만 쓴다.
+    """
+    items = planned_form_items(question)
+    days = _question_day_window(question)
+    if not items or not days:
+        return []
+    docs_by_id = getattr(retriever, "docs_by_id", None) or {}
+    document_index = getattr(retriever, "document_index", None)
+    rcept_of = getattr(retriever, "_rcept_dt", None)
+    if not docs_by_id or document_index is None or rcept_of is None:
+        return []
+    have = {c.doc_id for c in chunks}
+    out: list[RetrievedChunk] = []
+    n_docs = 0
+    for hit in document_index.search(question, k=DATE_ITEM_SUPPLEMENT_SEARCH_K,
+                                     conditions=conditions):
+        doc_id = hit.doc_id
+        if rcept_of(doc_id) not in days or doc_id in have:
+            continue
+        doc = docs_by_id.get(doc_id)
+        if not doc:
+            continue
+        added = False
+        for node in (doc.get("nodes") or [])[:DATE_ITEM_SUPPLEMENT_NODES]:
+            text = str(node.get("text") or "").strip()
+            if not text:
+                continue
+            idx = node.get("node_index")
+            out.append(RetrievedChunk(
+                chunk_id=f"{doc_id}::supp{idx}", doc_id=doc_id, score=0.05,
+                section_path=tuple(node.get("section_hierarchy") or ()),
+                row_labels=(), evidence_text=text,
+                metadata={"rcept_no": doc_id.split("_", 1)[-1],
+                          "rcept_dt": rcept_of(doc_id),
+                          "corp_name": str(getattr(hit, "corp_name", "") or "")},
+                node_index=idx if isinstance(idx, int) else None))
+            added = True
+        if added:
+            n_docs += 1
+            if n_docs >= DATE_ITEM_SUPPLEMENT_DOCS:
+                break
+    return out
+
+
+def _item_cell_value(m: EvidenceMatch) -> str:
+    """서식 행에서 항목 값을 읽는다 — picked_value(숫자·날짜)가 없으면 마지막 칸의 텍스트.
+
+    '3. 계약상대 | 3. 계약상대 | -'처럼 값 칸이 '-'거나, 마지막 칸이 라벨 반복이면 값이
+    아니다(fail-closed — 조립하지 않고 기존 경로로 넘긴다).
+    """
+    if m.picked_value:
+        return m.picked_value
+    cells = [c.strip() for c in m.evidence_text.split("|") if c.strip()]
+    if len(cells) < 2:
+        return ""
+    value = cells[-1]
+    item, _year = split_slot(split_entity(m.slot)[0])
+    if value in _DASH or item in value or len(value) > 120:
+        return ""
+    return value
+
+
+# 항목 라벨이 못 덮는 요구가 질문에 남아 있는지 보는 단어들 — 남아 있으면 조립으로 LLM을
+# 끄지 않는다(judge27 실측: 아모레 '인원수'·메리츠 '계약목적'·효성 '해지 후 상태' 손실).
+_RESIDUAL_ASK_WORDS = ("목적", "사유", "상태", "인원", "대상", "방법", "상호",
+                       "기관", "조건", "경위", "이유", "내용", "배경")
+
+
+def _residual_asks(question: str, items: Sequence[str]) -> bool:
+    covered = " ".join(items)
+    return any(w in question and w not in covered for w in _RESIDUAL_ASK_WORDS)
+
+
+def _resolve_item_doc(question: str, chunks: Sequence[RetrievedChunk],
+                      days: frozenset[str], items: Sequence[str],
+                      drop: frozenset[str],
+                      docs_by_id: Mapping[str, dict] | None = None) -> tuple[set[str], str]:
+    """(날짜 창 안 항목 서식 후보 문서 집합, 질문 토큰 겹침이 유일 최대인 문서 또는 "").
+
+    같은 날 같은 서식이 여러 건이면(한미반도체 06-12 Infineon·Unimicron, 삼성E&A 04-17 2건)
+    질문 본문 토큰("에탄운반선" 등)이 유일하게 더 겹치는 문서만 대상이 된다 — 겹침이 같으면
+    해소하지 않는다(fail-closed: 조립 금지, 두 문서 모두 근거로 남겨 LLM·발췌가 다룬다).
+    gold 정보는 쓰지 않는다 — 질문 텍스트와 문서 본문만 비교한다.
+    """
+    texts: dict[str, list[str]] = {}
+    for c in chunks:
+        if _chunk_day(c) in days and any(i in c.evidence_text for i in items):
+            texts.setdefault(c.doc_id, []).append(c.evidence_text)
+    if not texts:
+        return set(), ""
+    if len(texts) == 1:
+        return set(texts), next(iter(texts))
+    # 대조는 문서 **전체 원문**으로 한다 — 검색된 조각만 비교하면 한쪽은 부분 청크·한쪽은
+    # 보충 node 전체라 커버리지 차이가 가짜 '고유 토큰'을 만든다(삼성E&A 실측 오해소).
+    for doc_id in texts:
+        doc = (docs_by_id or {}).get(doc_id)
+        if doc:
+            texts[doc_id] = [str(n.get("text") or "") for n in doc.get("nodes") or []]
+    q_tokens = set(tokenize(question)) - drop
+    tok = {d: q_tokens & set(tokenize(" ".join(t))) for d, t in texts.items()}
+    # 겹침 '수'가 아니라 **고유 토큰**으로만 해소한다 — 같은 서식 2건은 공통 어휘 겹침 수가
+    # 노이즈 토큰 하나로 갈리는 실측(한미반도체: 질문에 없는 구분 근거인데 Unimicron이 승리).
+    # "에탄운반선"처럼 그 문서에만 있는 질문 토큰(문자 바이그램 2개 이상 — 삼성E&A 실측:
+    # '체결' 바이그램 하나는 서식 우연 일치)을 가진 문서가 유일할 때만 그 문서다.
+    uniq_docs = [d for d, s in tok.items()
+                 if len(s - set().union(*(tok[o] for o in tok if o != d))) >= 2]
+    return set(texts), uniq_docs[0] if len(uniq_docs) == 1 else ""
+
+
+def assemble_item_answer(items: Sequence[str],
+                         matches: Sequence[EvidenceMatch]) -> str | None:
+    """항목 자리가 전부 **한 문서**의 서식 값으로 확정됐으면 결정론 문장으로 조립한다.
+
+    코덱스 재배포 검수 P0: 단일판매·공급계약 군집은 문서가 검색돼도 FC claim 채택/폐기가
+    실행마다 흔들려 full↔partial을 오갔다 — 대량보유(holding_all_slots_filled)와 같은 원리로,
+    값이 전부 원문에서 확정되면 LLM을 부르지 않는다. 하나라도 비면 None(기존 경로).
+    """
+    by: dict[str, str] = {}
+    docs: set[str] = set()
+    for m in matches:
+        if m.slot in items and m.slot not in by:
+            value = _item_cell_value(m)
+            if value:
+                by[m.slot] = value
+                docs.add(m.doc_id)
+    if not items or any(i not in by for i in items) or len(docs) != 1:
+        return None
+    return ("공시 서식에서 확인한 값:\n"
+            + "\n".join(f"- {slot_label(i)}: {by[i]}" for i in items))
 
 
 # ---------- 3-1. 대량보유 서식 파서 배선 (docs/plans/2026-09-05-holding-parser.md) ----------
@@ -1151,6 +1445,9 @@ def corpus_existence(question: str, conditions: QueryConditions,
 # 쓴다. 이때 값을 못 찾은 것이 아니라 "유보됨"이 답이다. Phase1 실측 4문항 전부 이 꼴.
 _WITHHELD_CELL_RE = re.compile(r"(유보사항|유보사유|유보기한)\s*\|\s*([^|]*)")
 _WITHHELD_PROSE_RE = re.compile(r"[^.。\n]*(?:공시유보|유보사항에 해당|공시를 유보)[^.。\n]*")
+# 표 셀 안의 유보 문장용 — 문장형 표현만 잡는다. 섹션 제목 셀("8. 공시유보 관련내용")이
+# '공시유보' 단어만으로 오발동하면 유보 없는 계약 공시까지 WITHHELD가 된다(fail-closed 방향 오류).
+_WITHHELD_CELL_PROSE_RE = re.compile(r"[^.。\n]*(?:유보사항에 해당|공시를 유보|공시유보사항)[^.。\n]*")
 _DASH = {"", "-", "－", "―", "—"}
 _WITHHELD_ASK_RE = re.compile(r"확인 가능|공시되지 않|유보|비공개|알 수 있는가")
 _FIELD_WORDS = ("계약상대", "계약금액", "품목", "회사명", "기술료", "계약기간", "판매", "공급")
@@ -1181,6 +1478,15 @@ def detect_withheld(question: str, chunks: Sequence[RetrievedChunk],
             m = _WITHHELD_PROSE_RE.search(line)
             if m:
                 found.setdefault("유보문장", m.group(0).strip()[:200])
+        elif "유보사유" not in found and "유보문장" not in found:
+            # 표 행이라도 셀 **안**의 본문 문장은 본다(코덱스 재배포 검수 BLOCKER 1:
+            # 알테오젠 ALT-B4 실물은 "…공시유보사항에 해당합니다"가 표 셀에 들어 있어
+            # 줄 단위 '|' 스킵이 탐지를 통째로 놓쳤다 — 기대 WITHHELD가 SUPPORTED로).
+            for cell in line.split("|"):
+                m = _WITHHELD_CELL_PROSE_RE.search(cell)
+                if m:
+                    found.setdefault("유보문장", m.group(0).strip()[:200])
+                    break
         if "|" in line and asked_fields and any(w in line for w in asked_fields):
             cells = [c.strip() for c in line.split("|")]
             if cells[-1] in _DASH:
@@ -1274,6 +1580,12 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
         return state
     t_retrieval = time.perf_counter()
     state.retrieval_results = retriever.retrieve(question, state.conditions, k=k)
+    # 날짜+서식 항목 질문의 대상 문서가 청크 후보에 없으면 원문 node로 보충한다(에이전트 층 —
+    # 검색 코어는 4-arm 동결로 무변경). 뒤에 붙이므로 기존 후보의 순위는 그대로다.
+    supplement = date_item_supplement(question, state.conditions, retriever,
+                                      state.retrieval_results)
+    if supplement:
+        state.retrieval_results = [*state.retrieval_results, *supplement]
     state.timings["retrieval_ms"] = int((time.perf_counter() - t_retrieval) * 1000)
     scopes = {}
     if wanted_scope(question) and hasattr(retriever, "statement_scopes"):
@@ -1285,13 +1597,22 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
     # 없을 때 값을 잃는 회귀를 피한다). judge24 실측: 두산로보틱스 2025 매출액이 분기 값(5,280)으로.
     annual_only = (not same_period and (state.conditions.periodic_subtypes == frozenset({"annual"})
                                         or "연간" in question))
+    form_items = planned_form_items(question)
+    item_days = _question_day_window(question) if form_items else frozenset()
+    corp_drop = corp_tokens(sorted(state.conditions.corps))
+    item_doc_candidates, item_doc_resolved = (
+        _resolve_item_doc(question, state.retrieval_results, item_days,
+                          form_items, corp_drop,
+                          getattr(retriever, "docs_by_id", None) or {})
+        if form_items and item_days else (set(), ""))
     state.evidence_matches = match_evidence(
         state.slots, state.retrieval_results, limit=max_evidence, question=question,
-        drop=corp_tokens(sorted(state.conditions.corps)), scopes=scopes,
+        drop=corp_drop, scopes=scopes,
         bind_doc_year=same_period,
         bind_months=(period_months(question) if same_period
                      else frozenset({12}) if annual_only else frozenset()),
-        prefer_annual=(not same_period and not period_months(question)))
+        prefer_annual=(not same_period and not period_months(question)),
+        bind_days=item_days, prefer_doc=item_doc_resolved)
     docs_by_id = getattr(retriever, "docs_by_id", None) or {}
     # 대량보유 서식 파서 — 값을 뽑으면 근거로 승격한다(프롬프트·검증·발췌 모두가 본다).
     holding, bound_docs = _holding_parse(question, state, docs_by_id)
@@ -1395,6 +1716,20 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
                     reason=BINARY_EVIDENCE_REASON,
                     node_index=src_chunk.node_index,
                     rcept_no=str(src_chunk.metadata.get("rcept_no") or "")))
+    assembled = None
+    if not binary and not holding and form_items and item_days:
+        # 항목 자리가 전부 **질문 날짜에 결박된 한 문서**의 서식 값으로 확정됐고, 질문에
+        # 항목이 못 덮는 요구(인원수·상태 등)가 남아 있지 않을 때만 LLM 없이 결정론 조립.
+        # 날짜 없는 질문·요구 잔여 질문은 기존 경로(발췌 + LLM) 그대로다(judge27 오귀속·
+        # 요구 누락 회귀 5건의 교정 — 조립은 확실할 때만, fail-closed).
+        assembled = assemble_item_answer(form_items, state.evidence_matches)
+        if assembled and _residual_asks(question, form_items):
+            assembled = None
+        if assembled and len(item_doc_candidates) > 1 and not item_doc_resolved:
+            assembled = None        # 같은 날짜 창에 서식 후보 2건 + 질문 토큰으로 해소 불가
+        if assembled:
+            answer = assembled
+            uncertainty = "값은 공시 서식 필드에서 원문 그대로 추출했다."
     det_template = (answer, uncertainty)     # ⑨ 폴백 ②단(템플릿)도 같은 결정론 답을 쓴다
     if state.derived:
         answer = calculator.describe(state.derived) + "\n\n" + answer
@@ -1425,13 +1760,16 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
     # 함께 물으면, 계산이 있어도 그 항목을 위해 LLM을 부른다 — 발췌는 대상 문서로 제한돼 있다.
     llm_topics = _holding_llm_topics(question, holding) if holding else ()
     if llm is not None and (binary or (holding and not llm_topics)
-                            or (not holding and state.derived)):
+                            or (not holding and state.derived)
+                            or (not holding and assembled)):
         # 대량보유: 질문의 요구 항목을 파서가 전부 채웠으면 계산이 없어도 LLM을 부르지 않는다 —
         # 같은 문서의 과거 연혁값을 직전값으로 재주장하는 경로 자체를 없앤다(재검수 BLOCKER 1-a).
         # 이분 판정(신청/승인)이 서식 필드로 확정된 질문도 LLM이 더할 것이 없다(자체 검증).
+        # 서식 항목 조립(assembled)도 같다 — FC 실행 간 변동으로 확정값이 흔들릴 이유가 없다.
         state.llm = {"used": False, "skipped": (
             "binary_verdict" if binary else
-            "deterministic_calculation" if state.derived else "holding_all_slots_filled")}
+            "deterministic_calculation" if state.derived else
+            "holding_all_slots_filled" if holding else "items_all_slots_filled")}
         llm = None
 
     if llm is not None and state.evidence_matches:

@@ -4,40 +4,13 @@
 """
 from __future__ import annotations
 
-from dart_detective import corpus_retriever as cr
 from dart_detective.agents import calculator, qa_agent
 from dart_detective.corpus_retriever import RetrievedChunk
 
-# ---------- 검색 Stage 2: 접수일 허용 오차·1위 문서 청크 보장 ----------
-
-
-def test_question_rcept_dates_tolerate_one_day():
-    """질문은 공시 이벤트일(03-17), 접수일은 하루 뒤(03-18) — 둘 다 대조 집합에 든다."""
-    dates = cr.question_rcept_dates("삼성중공업의 2025-03-17 에탄운반선 공급계약 공시에서")
-    assert {"20250316", "20250317", "20250318"} <= dates
-    assert "20250319" not in dates
-
-
-def test_guarantee_top_doc_moves_quota_chunks_to_front():
-    class C:  # noqa: D401 — 최소 청크 대역
-        def __init__(self, doc_id, cid):
-            self.doc_id, self.chunk_id = doc_id, cid
-    hits = [(0.9, C("periodic_1", "p1")), (0.8, C("periodic_1", "p2")), (0.7, C("exchange_gold", "g1")),
-            (0.6, C("periodic_2", "p3")), (0.5, C("exchange_gold", "g2"))]
-    out = cr.guarantee_top_doc(hits, "exchange_gold", 3)
-    assert [h[1].chunk_id for h in out[:2]] == ["g1", "g2"]    # 1위 문서 청크가 앞으로
-    assert len(out) == len(hits)                              # 유실·중복 없음
-    assert cr.guarantee_top_doc(hits, "", 3) == hits           # 문서 없으면 원형
-
-
-def test_top_doc_quota_applies_only_when_top_doc_matches_question_date(monkeypatch):
-    """날짜 없는 질문에서 1위 문서(정정 사업보고서 등)가 정답 행을 밀어내던 judge24 회귀 3건 —
-    쿼터는 질문 접수일과 맞는 1위 문서에만 준다. retrieve() 내부 규칙을 그대로 재현해 잠근다."""
-    dates = cr.question_rcept_dates("한국항공우주가 2025년 6월 26일 체결한 계약의 계약금액은?")
-    assert dates == set()                                     # 한글 날짜 → 접수일 결박 없음 → 쿼터 없음
-    dates = cr.question_rcept_dates("삼성중공업의 2025-03-17 에탄운반선 공급계약 공시에서")
-    assert "20250318" in dates                                # ISO 날짜 → 접수일(익일)까지 결박 → 쿼터 가능
-
+# 검색 Stage 2 교정(접수일 ±1일·항목 가산 병행·1위 문서 청크 쿼터)과 그 테스트 3종은
+# perf/retrieval-stage2 브랜치로 분리했다 — 4-arm B/D가 같은 retrieve()를 쓰므로 승자 확정
+# 전에는 검색 동작을 바꾸지 않는다(코덱스 재배포 검수 BLOCKER 2). 이 파일에는 검색 코어와
+# 무관한 에이전트 층(match_evidence·calculator) 동작만 남긴다.
 
 # ---------- 비교계산: 분기/반기 월 결박·누적 열·요약재무정보 우선·단위 괴리 가드 ----------
 

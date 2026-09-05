@@ -269,6 +269,25 @@
   results/fourarm 전 파일 byte-identical · scoped 72 passed · full 738 passed/0 failed(26 env error) · SHA256SUMS 55/55.
   판정 BLOCKED(ARM_SPECIFIC critical 2 · UNKNOWN 15 Owner 보류) 그대로. raw Gold/DEV_CHECK/HOLDOUT 비포함(pointer만).
   `ac_scorer_50cc1aa.zip` 실물은 이 호스트에 없어 commit에서 직접 추출. PR 없음. main에는 미병합(파일 추가만이라 충돌 없음).
+- **재배포 검수 반영 라운드(2026-09-05 · judge27→28 · 3d3e2d4…2a456da)**: 코덱스 "재배포 불가" 판정
+  (BLOCKER 2·HIGH 1·MEDIUM 1) + 성능 우선순위 전부 반영. [B2] corpus_retriever를 judge23(5f18ef8)으로
+  복원 — 4-arm B/D가 공유하는 retrieve()는 승자 확정 전 불변(검색 개선은 perf/retrieval-stage2 bf00bb1에
+  보존, 그 브랜치에서 HIGH 3 정확일자 우선·MEDIUM 4 승격 재정렬 점수까지 수정). [B1] 유보 문장 표 셀
+  탐지(알테오젠 ALT-B4 병합 셀 실물 — WITHHELD가 SUPPORTED로 나가던 버그, 제목 셀 오발동 차단 테스트 포함).
+  [P0] plan_slots 항목 우선(단일판매 14문항이 '매출액_연도' 하나로 변질되던 버그·'계약기간'→시작일/종료일
+  확장·주요사항보고서 서식 어휘는 **에이전트 층 사전**으로만 — DISCLOSURE_ITEMS 불변) · 결정론 조립
+  (items_all_slots_filled, LLM 생략) · 날짜+항목 질문의 대상 문서 원문 node 보충(검색 코어 무변경, 대량보유
+  파서와 같은 방식) · 자유 자리 날짜 앵커(±1일, 문서 2건까지). **judge27 실측이 조립 오귀속 7건을 노출**
+  (한글 날짜 미해석 → 같은 회사 다른 회차 확정: 현대차·SKT·아모레·메리츠, 요구 누락: 효성·삼성E&A·한미) →
+  한글 날짜 파싱(question_dates_any)·항목 자리 질문 날짜(±1일) 결박·첫 자리 문서로 전 자리 일관 결박·같은 날
+  서식 2건은 질문 고유 토큰(바이그램 ≥2, 전체 원문 대조)이 유일할 때만 해소(아니면 조립 금지)·항목이 못 덮는
+  요구(_residual_asks) 남으면 LLM 유지로 전부 교정. **judge28: 완전 56·부분 31·미포함 5·가중 71.5·
+  답변가능성 100/101·근거 완전성 73 — 전 지표 역대 최고**(j23 64.5 대비 paired 대량보유 개선 4·악화 1[같은 날
+  2건 fail-closed의 정직한 결과 — j23 partial은 두 보고서 값이 섞인 덤프의 우연], 비대량보유 개선 7·악화 0;
+  j26 69.5 대비 검색 개선 없이 +2.0) · gold25 r2: 핵심값 full 5·partial 17·zero 3(기존 4)·기대 문서 완전
+  포함 10/25(기존 9) · 테스트 832·안전세트 28/28. 잔여: 삼성바이오 정정 체인 1건(원본은 상대방 유보,
+  정정본이 창 밖 — 새 오분류지만 총 답변가능성은 순개선) · 같은 날 같은 보고자 대량보유 2건(고려아연 12-19) ·
+  한미반도체·삼성E&A 같은 날 2건은 질문만으로 구분 불가(fail-closed 유지).
 - **vFINAL 21번 변경 승인(2026-09-04, Owner=팀 대표)**: "FC Native Function Calling 경로에 한해
   전송 maxTokens 최소 1024 적용을 승인한다. 사유는 서비스 앱 API가 1024 미만 요청을 40001로
   거부하기 때문이다. JSON 경로의 v4 §7 예산은 변경하지 않으며 requested/sent 값을 구분해
