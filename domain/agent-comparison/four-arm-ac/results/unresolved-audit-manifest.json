@@ -1,0 +1,138 @@
+{
+ "turn": "FOURARM-AC-UNRESOLVED-AUDIT-V1",
+ "base_head": "080dd18",
+ "invariance_recheck": {
+  "frozen_scorer_commit": "50cc1aac57145ab7fdb825cbb054842cb993c395",
+  "sha256sums_check": "55/55 OK",
+  "judgement_status_raw": "PENDING_UNRESOLVED",
+  "judgement_candidate": "A",
+  "dev_check_holdout_access": {
+   "files_searched": 0,
+   "files_opened": 0
+  },
+  "retrieval_or_scoring_rerun": false
+ },
+ "section_b_low_denominator": {
+  "conditions_artifact_segment_counts": {
+   "HIGH": 81,
+   "LOW": 20
+  },
+  "scorer_segment_denominator": {
+   "HIGH": 81,
+   "LOW": 19
+  },
+  "excluded_questions": [
+   {
+    "question_id": "gold_b_e95de359f794df64ffab5044",
+    "segment": "LOW",
+    "n_slots": 0,
+    "mechanical_reason": "n_slots==0 (Gold required-evidence-slot count is zero) -> QuestionScore.excluded = (n_slots == 0), fourarm.py:260. Recall = found/n_slots is undefined at n_slots=0, so the frozen scorer mechanically drops this question from every segment denominator (ALL/HIGH/LOW), identically for all 4 arms."
+   }
+  ],
+  "verdict": "NORMAL_RULE_APPLICATION (not a bug) -- cited rule: fourarm.py:260 `excluded=(n_slots == 0)`. Applies arm-independently, which is exactly why every arm's LOW segment shows n=19 while the conditions artifact shows LOW=20."
+ },
+ "section_c_unresolved_population": {
+  "A": {
+   "total_packets": 229,
+   "unique_questions": 81,
+   "unique_slots": 229,
+   "reason_distribution": {
+    "no_text_to_verify": 229
+   },
+   "chunk_text_nonempty_count": 0,
+   "locator_format_distribution": {
+    "doc::file::nN": 229
+   },
+   "multi_node_candidate_count": 127,
+   "packets_per_question": {
+    "p50": 2,
+    "p95": 5,
+    "max": 6
+   },
+   "unique_doc_ids": 84
+  },
+  "C": {
+   "total_packets": 216,
+   "unique_questions": 78,
+   "unique_slots": 216,
+   "reason_distribution": {
+    "no_text_to_verify": 216
+   },
+   "chunk_text_nonempty_count": 0,
+   "locator_format_distribution": {
+    "doc::file::nN": 216
+   },
+   "multi_node_candidate_count": 113,
+   "packets_per_question": {
+    "p50": 2,
+    "p95": 5,
+    "max": 6
+   },
+   "unique_doc_ids": 80
+  },
+  "overlap": {
+   "common_packet_ids": 199,
+   "A_only": 30,
+   "C_only": 17
+  },
+  "union": {
+   "total_distinct_packets": 246,
+   "unique_questions": 85,
+   "unique_slots": 242,
+   "duplicate_packet_ids_within_own_arm": {
+    "A": 0,
+    "C": 0
+   },
+   "unique_doc_ids": 90,
+   "doc_group_prefix_distribution": {
+    "major": 35,
+    "exchange": 101,
+    "periodic": 20,
+    "holding": 90
+   },
+   "packets_per_doc_id_p50_p95_max": [
+    2,
+    5,
+    6
+   ]
+  }
+ },
+ "section_d_contract_loss": {
+  "node_indices_preserved": "YES -- verified: A has 127/229 and C has 113/216 multi-node packets where node_indices carries >1 entries; fourarm.py's _result_nodes() (line 164-168) unions node_index with the full node_indices list for membership checks -- confirmed NOT first-node-only.",
+  "provenance_candidate_set_preserved": "NO -- reformat_ac.py's reformat_result_item() (lines 54-89) reads item['provenance']['candidates'] (full per-candidate objects incl. node_id) but only emits a flat int list `node_indices`; the full candidate objects are dropped from the output schema entirely. Currently does not affect any scoring outcome (scorer only needs the int set), but any richer per-candidate metadata that existed in the original raw retrieval output is unrecoverable from the committed results.jsonl alone.",
+  "row_col_span_locator_preserved": "YES -- row/col kept as separate top-level fields (not embedded in the locator string); fourarm.py reads them independently from r.get('row')/r.get('col'), not by re-parsing the locator string, so this representation is scorer-compatible.",
+  "scorer_uses_only_first_node": "NO -- confirmed by source read (_result_nodes, fourarm.py:164-168): unions node_index ∪ node_indices.",
+  "text_field_dropped_at_export": "YES -- ROOT CAUSE. A/C's results.jsonl result-item schema (both pre- and post-reformat) never carries a 'text'/'chunk_text' field -- only chunk_text_sha256 (a deliberate non-leak design for the git-committed artifact from an earlier turn). B/D's own results.jsonl result items DO carry a real 'text' field (verified: 126-char sample). fourarm.py's check_locators() (line 323-327) reads `r.get('text')` directly off the result item -- NOT from the NodeStore -- as its first content-verification gate: `if not text: severity=unresolved, reason=no_text_to_verify`. Because A/C's result items never populate 'text', literally every slot-match candidate fails this gate before the scorer ever reaches its own NodeStore-based text comparison (line 328, store.fetch_node) -- the exact mechanism that works correctly for B/D. This is a single, uniform, 100%-reproducing cause: {'no_text_to_verify': 229} / {'no_text_to_verify': 216} show reason=no_text_to_verify for literally every A/C unresolved packet, and chunk_text is empty in 0/229 (A) and 0/216 (C) cases -- i.e. always.",
+  "recall_metrics_unaffected": "Recall@k/found_at/all_found_at/doc_hit_at are computed by slot_found() (fourarm.py:171-228), which treats a text-less match as span_state='blind' (line 202-203) and still counts it as found via doc_id+node membership alone -- so A/C's reported Recall numbers are NOT contaminated by this defect. Only the separate check_locators() pass (which classifies each match as critical/minor/unresolved for the hard/quality gate) is blind.",
+  "metadata_only_reconstruction_feasible": "YES, in principle -- doc_id+node_index (or node_indices) is already known for every A/C result item, and the same NodeStore the frozen scorer already loads at data/index/ (store.fetch_node(doc_id, node_index)) can supply the exact node text with zero new retrieval calls -- purely a re-export/re-serialization step, structurally identical in kind to this session's prior locator/config_sha256 reformat. NOT performed in this turn (retrieval/scoring rerun is out of scope); whether reconstructed text would actually resolve each packet to verified/critical/minor is unknown without an actual rescoring pass, which this turn does not run.",
+  "bd_control_group": {
+   "B": {
+    "n_unresolved": 15,
+    "reason_distribution": {
+     "duplicate_evidence_different_node": 15
+    },
+    "chunk_text_nonempty_count": 15
+   },
+   "D": {
+    "n_unresolved": 11,
+    "reason_distribution": {
+     "duplicate_evidence_different_node": 11
+    },
+    "chunk_text_nonempty_count": 11
+   }
+  }
+ },
+ "section_e_verdict": {
+  "GENUINE_OWNER_REVIEW_REQUIRED": 0,
+  "METADATA_CONTRACT_DEFECT": 246,
+  "FROZEN_SCORER_CONTRACT_GAP": 0,
+  "total": 246,
+  "classification": "METADATA_CONTRACT_DEFECT (not MIXED -- single cause, 100% of union)",
+  "rationale": "All 246 distinct UNRESOLVED packets in the A/C union share reason=no_text_to_verify with empty chunk_text -- a single, uniform, arm-independent export defect (missing 'text' field), not per-item evidentiary insufficiency. FROZEN_SCORER_CONTRACT_GAP is ruled out: the scorer correctly parses A/C's locator/node_index/node_indices (proven by correct Recall@k numbers); it is not failing to interpret a legitimate provenance format, it is receiving no text to interpret. GENUINE_OWNER_REVIEW_REQUIRED is 0 because no packet in this population has yet been given the input (text) the scorer needs to make even a first-pass determination -- routing these to Owner now would ask a human to judge evidence they cannot see."
+ },
+ "section_f_owner_packets": {
+  "packets_prepared": 0,
+  "reason": "Per Section E, 0 of the 246 UNRESOLVED packets are classified GENUINE_OWNER_REVIEW_REQUIRED this turn. Arm-blind Owner review packets are prepared ONLY for genuinely ambiguous evidence; none of this population qualifies while the underlying METADATA_CONTRACT_DEFECT (missing text field) is unresolved. Forwarding these packets now would be asking Owner to classify COMMON_SOURCE/ARM_SPECIFIC/UNKNOWN without the evidence text needed to judge at all.",
+  "combined_sha256_of_empty_set": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+ }
+}
