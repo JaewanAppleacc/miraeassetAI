@@ -1,0 +1,50 @@
+--- /tmp/fourarm.original.py	2026-09-06 00:38:01
++++ domain/agent-comparison/four-arm-ac/scorer-patch-multinode-v1/fourarm.patched.py	2026-09-06 00:37:37
+@@ -67,8 +67,22 @@
+
+ def norm_text(s: str) -> str:
+     return "".join(unicodedata.normalize("NFC", s or "").split())
++
++
++# ---------- FOURARM-SCORER-MULTINODE-FIX-V1 patch (ac_scorer_50cc1aa+multinode-fix-v1) ----------
++# 근거: SCORER_MULTINODE_FIX_V1_AMENDMENT.md. Fixed-512 multi-node 청크가 검색 index
++# 자체의 테이블 렌더링(빈 셀 표시)과 canonical NodeStore 원문의 렌더링이 달라 claim_text_not_in_node로
++# 오탐되는 문제만 좁게 수정한다. norm_text와 달리 "구조적으로 빈 행"(공백·'|'만 있는 줄)을
++# 줄 단위로 제거한 뒤 공백을 제거한다 — 실제 내용이 있는 줄은 절대 건드리지 않는다.
++_EMPTY_ROW_RE = re.compile(r"^[\s|]*$")
++
+
++def _table_aware_norm(s: str) -> str:
++    s = unicodedata.normalize("NFC", s or "")
++    kept_lines = [ln for ln in s.split("\n") if not _EMPTY_ROW_RE.match(ln)]
++    return "".join("\n".join(kept_lines).split())
+
++
+ def parse_locator(loc: str) -> tuple[str, int, int | None, int | None] | None:
+     m = _LOC_RE.match(loc or "")
+     if not m:
+@@ -328,6 +342,24 @@
+         node_text = "".join(norm_text(store.fetch_node(doc_id, n)["text"]) for n in nodes)
+         head = text[:60]
+         if not (head in node_text or node_text[:60] in text or (len(text) >= 20 and text in node_text)):
++            # multinode-fix-v1: Gold가 지정한 node가 이미 candidate 집합(node_index ∪
++            # node_indices) 안에 있을 때만 시도한다 — 다른 node의 근거는 여전히 자동
++            # 구제하지 않는다(duplicate_evidence_different_node 규칙 불변, 위 조건이
++            # 그 9건에 대해서는 애초에 거짓이므로 이 블록에 도달하지 않는다).
++            gold_node = m.get("gold_node")
++            if gold_node is not None and gold_node in nodes:
++                table_text = _table_aware_norm(r.get("text") or "")
++                table_node_text = "".join(_table_aware_norm(store.fetch_node(doc_id, n)["text"]) for n in nodes)
++                gold_span = m.get("gold_span") or ""
++                gold_line_found = any(_table_aware_norm(ln) in table_text for ln in span_lines(gold_span))
++                if table_text and table_text in table_node_text and gold_line_found:
++                    out.append({**base, "severity": "minor",
++                                "reason": "same_evidence_table_rendering_difference"})
++                    continue
++                # node는 일관되지만(빈 셀 렌더링 차이 제외 원문과 부합) Gold가 요구하는
++                # 근거 줄 자체가 이 청크 안에 없다(예: chunk 경계에서 잘림) — 자동
++                # 완화하지 않는다. 기존 UNRESOLVED(claim_text_not_in_node)로 그대로
++                # 떨어진다 — Owner arm-blind 판정 대상 유지, 자동 분류 없음.
+             out.append({**base, "severity": "unresolved", "reason": "claim_text_not_in_node",
+                         "chunk_text": r.get("text", "")[:400]})
+             continue

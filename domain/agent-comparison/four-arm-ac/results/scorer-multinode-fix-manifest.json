@@ -1,0 +1,363 @@
+{
+ "turn": "FOURARM-SCORER-MULTINODE-FIX-V1",
+ "amendment_commit": "f0cc646",
+ "base_head": "cf46981",
+ "branch": "codex/fourarm-scorer-multinode-fix-v01",
+ "frozen_scorer_commit_upstream": "50cc1aac57145ab7fdb825cbb054842cb993c395",
+ "patched_scorer_version": "ac_scorer_50cc1aa+multinode-fix-v1",
+ "patched_fourarm_py_sha256": "4a717350d697ebac343f80d61bd335e98519dd2884a169316af1284740f9b804",
+ "upstream_fourarm_py_sha256": "d62499328a43e5b9811c98c8fd810d423abc746152843db93880638f4a9dad0e",
+ "score_py_sha256_unchanged": "4f2a4c1063cabbd698e3f548b1ce87d957252736b7f1f34a4e5db77c598de124",
+ "segments": {
+  "A": {
+   "ALL": {
+    "questions": 100,
+    "slots_total": 286,
+    "slots_found@5": 217,
+    "recall@5": 0.7587,
+    "all_found@5": 63,
+    "all_found_rate@5": 0.63,
+    "doc_hit@5": 87,
+    "slots_found@10": 237,
+    "recall@10": 0.8287,
+    "all_found@10": 73,
+    "all_found_rate@10": 0.73,
+    "doc_hit@10": 88,
+    "slots_found@20": 245,
+    "recall@20": 0.8566,
+    "all_found@20": 78,
+    "all_found_rate@20": 0.78,
+    "doc_hit@20": 88
+   },
+   "HIGH": {
+    "questions": 81,
+    "slots_total": 250,
+    "slots_found@5": 186,
+    "recall@5": 0.744,
+    "all_found@5": 49,
+    "all_found_rate@5": 0.6049,
+    "doc_hit@5": 71,
+    "slots_found@10": 204,
+    "recall@10": 0.816,
+    "all_found@10": 57,
+    "all_found_rate@10": 0.7037,
+    "doc_hit@10": 72,
+    "slots_found@20": 212,
+    "recall@20": 0.848,
+    "all_found@20": 62,
+    "all_found_rate@20": 0.7654,
+    "doc_hit@20": 72
+   },
+   "LOW": {
+    "questions": 19,
+    "slots_total": 36,
+    "slots_found@5": 31,
+    "recall@5": 0.8611,
+    "all_found@5": 14,
+    "all_found_rate@5": 0.7368,
+    "doc_hit@5": 16,
+    "slots_found@10": 33,
+    "recall@10": 0.9167,
+    "all_found@10": 16,
+    "all_found_rate@10": 0.8421,
+    "doc_hit@10": 16,
+    "slots_found@20": 33,
+    "recall@20": 0.9167,
+    "all_found@20": 16,
+    "all_found_rate@20": 0.8421,
+    "doc_hit@20": 16
+   }
+  },
+  "B": {
+   "ALL": {
+    "questions": 100,
+    "slots_total": 286,
+    "slots_found@5": 137,
+    "recall@5": 0.479,
+    "all_found@5": 34,
+    "all_found_rate@5": 0.34,
+    "doc_hit@5": 76,
+    "slots_found@10": 168,
+    "recall@10": 0.5874,
+    "all_found@10": 44,
+    "all_found_rate@10": 0.44,
+    "doc_hit@10": 82,
+    "slots_found@20": 192,
+    "recall@20": 0.6713,
+    "all_found@20": 57,
+    "all_found_rate@20": 0.57,
+    "doc_hit@20": 84
+   },
+   "HIGH": {
+    "questions": 81,
+    "slots_total": 250,
+    "slots_found@5": 118,
+    "recall@5": 0.472,
+    "all_found@5": 25,
+    "all_found_rate@5": 0.3086,
+    "doc_hit@5": 64,
+    "slots_found@10": 144,
+    "recall@10": 0.576,
+    "all_found@10": 33,
+    "all_found_rate@10": 0.4074,
+    "doc_hit@10": 67,
+    "slots_found@20": 166,
+    "recall@20": 0.664,
+    "all_found@20": 46,
+    "all_found_rate@20": 0.5679,
+    "doc_hit@20": 69
+   },
+   "LOW": {
+    "questions": 19,
+    "slots_total": 36,
+    "slots_found@5": 19,
+    "recall@5": 0.5278,
+    "all_found@5": 9,
+    "all_found_rate@5": 0.4737,
+    "doc_hit@5": 12,
+    "slots_found@10": 24,
+    "recall@10": 0.6667,
+    "all_found@10": 11,
+    "all_found_rate@10": 0.5789,
+    "doc_hit@10": 15,
+    "slots_found@20": 26,
+    "recall@20": 0.7222,
+    "all_found@20": 11,
+    "all_found_rate@20": 0.5789,
+    "doc_hit@20": 15
+   }
+  },
+  "C": {
+   "ALL": {
+    "questions": 100,
+    "slots_total": 286,
+    "slots_found@5": 207,
+    "recall@5": 0.7238,
+    "all_found@5": 63,
+    "all_found_rate@5": 0.63,
+    "doc_hit@5": 83,
+    "slots_found@10": 217,
+    "recall@10": 0.7587,
+    "all_found@10": 67,
+    "all_found_rate@10": 0.67,
+    "doc_hit@10": 85,
+    "slots_found@20": 247,
+    "recall@20": 0.8636,
+    "all_found@20": 77,
+    "all_found_rate@20": 0.77,
+    "doc_hit@20": 91
+   },
+   "HIGH": {
+    "questions": 81,
+    "slots_total": 250,
+    "slots_found@5": 177,
+    "recall@5": 0.708,
+    "all_found@5": 49,
+    "all_found_rate@5": 0.6049,
+    "doc_hit@5": 68,
+    "slots_found@10": 187,
+    "recall@10": 0.748,
+    "all_found@10": 53,
+    "all_found_rate@10": 0.6543,
+    "doc_hit@10": 70,
+    "slots_found@20": 214,
+    "recall@20": 0.856,
+    "all_found@20": 61,
+    "all_found_rate@20": 0.7531,
+    "doc_hit@20": 75
+   },
+   "LOW": {
+    "questions": 19,
+    "slots_total": 36,
+    "slots_found@5": 30,
+    "recall@5": 0.8333,
+    "all_found@5": 14,
+    "all_found_rate@5": 0.7368,
+    "doc_hit@5": 15,
+    "slots_found@10": 30,
+    "recall@10": 0.8333,
+    "all_found@10": 14,
+    "all_found_rate@10": 0.7368,
+    "doc_hit@10": 15,
+    "slots_found@20": 33,
+    "recall@20": 0.9167,
+    "all_found@20": 16,
+    "all_found_rate@20": 0.8421,
+    "doc_hit@20": 16
+   }
+  },
+  "D": {
+   "ALL": {
+    "questions": 100,
+    "slots_total": 286,
+    "slots_found@5": 139,
+    "recall@5": 0.486,
+    "all_found@5": 34,
+    "all_found_rate@5": 0.34,
+    "doc_hit@5": 79,
+    "slots_found@10": 167,
+    "recall@10": 0.5839,
+    "all_found@10": 42,
+    "all_found_rate@10": 0.42,
+    "doc_hit@10": 83,
+    "slots_found@20": 191,
+    "recall@20": 0.6678,
+    "all_found@20": 56,
+    "all_found_rate@20": 0.56,
+    "doc_hit@20": 85
+   },
+   "HIGH": {
+    "questions": 81,
+    "slots_total": 250,
+    "slots_found@5": 118,
+    "recall@5": 0.472,
+    "all_found@5": 25,
+    "all_found_rate@5": 0.3086,
+    "doc_hit@5": 64,
+    "slots_found@10": 144,
+    "recall@10": 0.576,
+    "all_found@10": 33,
+    "all_found_rate@10": 0.4074,
+    "doc_hit@10": 67,
+    "slots_found@20": 166,
+    "recall@20": 0.664,
+    "all_found@20": 46,
+    "all_found_rate@20": 0.5679,
+    "doc_hit@20": 69
+   },
+   "LOW": {
+    "questions": 19,
+    "slots_total": 36,
+    "slots_found@5": 21,
+    "recall@5": 0.5833,
+    "all_found@5": 9,
+    "all_found_rate@5": 0.4737,
+    "doc_hit@5": 15,
+    "slots_found@10": 23,
+    "recall@10": 0.6389,
+    "all_found@10": 9,
+    "all_found_rate@10": 0.4737,
+    "doc_hit@10": 16,
+    "slots_found@20": 25,
+    "recall@20": 0.6944,
+    "all_found@20": 10,
+    "all_found_rate@20": 0.5263,
+    "doc_hit@20": 16
+   }
+  }
+ },
+ "violations": {
+  "A": {
+   "critical": 0,
+   "minor": 13,
+   "unresolved": 9
+  },
+  "B": {
+   "critical": 2,
+   "minor": 0,
+   "unresolved": 15
+  },
+  "C": {
+   "critical": 1,
+   "minor": 11,
+   "unresolved": 5
+  },
+  "D": {
+   "critical": 2,
+   "minor": 0,
+   "unresolved": 11
+  }
+ },
+ "recall_unchanged_by_patch": true,
+ "judgement_status_raw": "PENDING_UNRESOLVED",
+ "judgement_status_mapped": "READY_FOR_OWNER_FINAL_ADJUDICATION",
+ "judgement_candidate": "A",
+ "judgement_selection_type": "PERFORMANCE_WINNER (held, not finalized)",
+ "hard_gate": {
+  "hard_safe": [
+   "A"
+  ],
+  "failed": [
+   "B",
+   "C",
+   "D"
+  ],
+  "critical_counts": {
+   "A": 0,
+   "B": 2,
+   "C": 1,
+   "D": 2
+  }
+ },
+ "quality_gate": {
+  "passed": [
+   "A"
+  ],
+  "best_all": 0.8287,
+  "best_high": 0.816
+ },
+ "patch_scope_before_after": {
+  "original_22_distribution": {
+   "resolved_to_minor_via_patch": 12,
+   "remain_unresolved": 10
+  },
+  "resolved_packet_ids": [
+   "u-17fecb7b46e3",
+   "u-2345d5c23981",
+   "u-4867fc90e51b",
+   "u-55e4f67d79e1",
+   "u-6bfa78c62c56",
+   "u-91b74251bb8e",
+   "u-a7d3446ba17d",
+   "u-b652c12b86bf",
+   "u-c8642db18cf2",
+   "u-e462edc78fce",
+   "u-ed6afd9b0dd6",
+   "u-f4499ab8f480"
+  ],
+  "remaining_packet_ids": [
+   "u-0d1651be7c2e",
+   "u-14717c25f52d",
+   "u-47511cac6428",
+   "u-6c53d4b6b694",
+   "u-99b67532d0b6",
+   "u-a2e6569d0ac5",
+   "u-bb95a8e2ea07",
+   "u-e4b7183bc619",
+   "u-ea8415e261d8",
+   "u-edcebce21692"
+  ],
+  "remaining_breakdown": {
+   "same_fact_different_node_owner_policy_needed": 7,
+   "clearly_wrong_evidence_recommend_critical": 2,
+   "incomplete_recovery_recommend_arm_specific_critical_false": 1
+  },
+  "generic_rule_hardcoded_packet_ids": false
+ },
+ "owner_packet_prep_v3": {
+  "packets_prepared": 10,
+  "committed_template": "official/unresolved-review-template-v3.json",
+  "draft_sha256": "412c54769078a60096b54461e1d52a1e3ebb3fa982dd86b6aa07ada38194998b",
+  "combined_sha256_of_raw_packet_files": "3b662957dffcaa2a71f183b1a62b0f2e6e8fc887f9b9bd7c6d09927c498d5d09",
+  "ai_recommendation_distribution": {
+   "UNKNOWN": 5,
+   "ARM_SPECIFIC": 3,
+   "COMMON_SOURCE": 2
+  }
+ },
+ "invariance_reverified": {
+  "original_A_C_result_run_sha_unchanged": true,
+  "BD_result_run_sha_unchanged": true,
+  "BD_score_byte_identical_to_canonical_pin": true,
+  "owner_resolutions_json_unchanged": true,
+  "owner_resolutions_owner_json_unchanged": true,
+  "score_py_sha_unchanged": true
+ },
+ "security": {
+  "dev_check_holdout_files_searched": 0,
+  "dev_check_holdout_files_opened": 0,
+  "production_wiring": false,
+  "retrieval_embedding_ranking_rerun": false
+ },
+ "final_status": "READY_FOR_OWNER_FINAL_ADJUDICATION"
+}

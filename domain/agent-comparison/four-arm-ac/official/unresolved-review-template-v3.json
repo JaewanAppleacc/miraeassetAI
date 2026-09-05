@@ -1,0 +1,12 @@
+[
+ ["u-0d1651be7c2e", {"classification": "UNKNOWN", "note": "", "_question_id": "author_52e6c0ca8915c4a28c802e4c", "_slot": "evidence_1", "_reason": "duplicate_evidence_different_node"}],
+ ["u-14717c25f52d", {"classification": "UNKNOWN", "note": "", "_question_id": "gold_b_9d2e358034ea16bcee7d8edf", "_slot": "operating_income_2025q1", "_reason": "duplicate_evidence_different_node"}],
+ ["u-47511cac6428", {"classification": "UNKNOWN", "note": "", "_question_id": "author_14dfddbe1d41275533ae3945", "_slot": "evidence_1", "_reason": "duplicate_evidence_different_node"}],
+ ["u-6c53d4b6b694", {"classification": "UNKNOWN", "note": "", "_question_id": "gold_b_9d2e358034ea16bcee7d8edf", "_slot": "revenue_2025q1", "_reason": "duplicate_evidence_different_node"}],
+ ["u-99b67532d0b6", {"classification": "UNKNOWN", "note": "", "_question_id": "gold_b_9d2e358034ea16bcee7d8edf", "_slot": "revenue_2023q1", "_reason": "duplicate_evidence_different_node"}],
+ ["u-a2e6569d0ac5", {"classification": "UNKNOWN", "note": "", "_question_id": "gold_b_7d494870b3a53946dd2232c8", "_slot": "conversion_terms", "_reason": "claim_text_not_in_node"}],
+ ["u-bb95a8e2ea07", {"classification": "UNKNOWN", "note": "", "_question_id": "gold_b_9d2e358034ea16bcee7d8edf", "_slot": "operating_income_2023q1", "_reason": "duplicate_evidence_different_node"}],
+ ["u-e4b7183bc619", {"classification": "UNKNOWN", "note": "", "_question_id": "author_087a90f5918d4e0b3e00959c", "_slot": "evidence_2", "_reason": "duplicate_evidence_different_node"}],
+ ["u-ea8415e261d8", {"classification": "UNKNOWN", "note": "", "_question_id": "gold_b_926d98d28ea51ea8bb8e6ea1", "_slot": "after_holding", "_reason": "duplicate_evidence_different_node"}],
+ ["u-edcebce21692", {"classification": "UNKNOWN", "note": "", "_question_id": "gold_b_926d98d28ea51ea8bb8e6ea1", "_slot": "before_holding", "_reason": "duplicate_evidence_different_node"}]
+]

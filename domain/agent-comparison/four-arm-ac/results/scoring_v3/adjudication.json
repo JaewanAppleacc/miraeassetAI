@@ -1,0 +1,51 @@
+{
+ "common_qids": [],
+ "limit": 5,
+ "over_limit": false,
+ "per_arm_invalid": {
+  "B": {
+   "author_14dfddbe1d41275533ae3945|evidence_1": [
+    [
+     "periodic_20240321001029",
+     233
+    ]
+   ],
+   "author_a538b0e2240fe01d1a71ebb7|evidence_2": [
+    [
+     "periodic_20250515001309",
+     152
+    ]
+   ]
+  },
+  "D": {
+   "author_14dfddbe1d41275533ae3945|evidence_1": [
+    [
+     "periodic_20240321001029",
+     233
+    ]
+   ],
+   "author_a538b0e2240fe01d1a71ebb7|evidence_2": [
+    [
+     "periodic_20250515001309",
+     152
+    ]
+   ]
+  }
+ },
+ "per_arm_critical": {
+  "B": [
+   "u-1b6cd184a87f",
+   "u-8564414f6080"
+  ],
+  "D": [
+   "u-1b6cd184a87f",
+   "u-8564414f6080"
+  ]
+ },
+ "unknown_per_arm": {
+  "A": 9,
+  "B": 15,
+  "C": 5,
+  "D": 11
+ }
+}
