@@ -912,6 +912,12 @@ def question_dates_any(question: str) -> list[tuple[int, int, int]]:
     return out
 
 
+def _question_exact_days(question: str) -> frozenset[str]:
+    """질문 날짜(ISO·한글) 그대로의 YYYYMMDD 집합(±0)."""
+    return frozenset(f"{y:04d}{mo:02d}{d:02d}" for y, mo, d in question_dates_any(question)
+                     if 1 <= mo <= 12 and 1 <= d <= 31)
+
+
 def _question_day_window(question: str) -> frozenset[str]:
     """질문 날짜(ISO·한글) ±1일 YYYYMMDD 집합 — 접수일이 공시 이벤트일 다음 날인 실물이 많다."""
     import datetime as _dt
@@ -1011,59 +1017,121 @@ def _item_cell_value(m: EvidenceMatch) -> str:
 
 
 _AMBIG_MARKS = "①②③④⑤"
+# 후보 블록 식별자 후보 라벨 — 접수번호(숫자)는 validator 오폭 위험이 있어 서식 텍스트 값을 쓴다.
+_IDENTIFIER_LABELS = ("체결계약명", "계약명", "판매ㆍ공급계약 내용", "공급계약 내용", "계약내용",
+                      "계약상대", "투자대상", "취득목적", "처분목적", "분할목적", "사채의 종류")
+
+
+def _doc_identifier(doc_id: str, chunks: Sequence[RetrievedChunk]) -> str:
+    """후보 블록의 식별자(계약명·계약상대 등 서식 텍스트 값) — 없으면 빈 문자열."""
+    for label in _IDENTIFIER_LABELS:
+        for c in chunks:
+            if c.doc_id != doc_id:
+                continue
+            for ln in chunk_lines(c):
+                if label in ln:
+                    value = _cell_value(label, ln)
+                    if value:
+                        return f"{label}: {value}"
+    return ""
 
 
 def ambiguous_items_answer(items: Sequence[str], candidates: set[str],
-                           chunks: Sequence[RetrievedChunk]
-                           ) -> tuple[str, list[EvidenceMatch]] | None:
-    """같은 날 후보 공시가 해소되지 않을 때 — 문서별로 **분리해** 값을 제시한다.
+                           chunks: Sequence[RetrievedChunk],
+                           days_of: Mapping[str, str] | None = None
+                           ) -> tuple[str, list[EvidenceMatch]]:
+    """후보 공시가 해소되지 않을 때 — 문서별로 **분리해** 값을 제시한다. **항상** 문자열을 돌려준다.
 
     재검수 3차 BLOCKER 1: 미해소 상태에서 LLM·단일 답변 조립을 허용하면 서로 다른 공시의
-    값이 한 답으로 섞여 SUPPORTED로 나간다(삼성E&A·한미반도체 judge31 실물). 혼합 대신
-    후보마다 값 블록을 따로 만들고, 어느 공시인지 특정할 수 없다는 사실을 명시한다.
-    접수번호는 답 본문에 넣지 않는다(숫자라 validator가 원문 밖 수치로 오폭 — 근거의
-    doc_id가 추적을 담당). 두 후보 이상에서 값이 나올 때만 발동한다.
+    값이 한 답으로 섞여 SUPPORTED로 나간다. 재검수 4차 BLOCKER 1: 렌더링 성공 여부에 LLM
+    차단이 종속되면 안 된다 — 값을 못 읽은 항목은 '확인 불가'로 표시하고 후보 전부를
+    블록으로 낸다(렌더링된 후보 수 == 후보 수). 각 문서의 **모든** 항목 행을 본다(첫 매칭
+    행이 머리글뿐인 분리 표 실물). 접수번호는 본문에 넣지 않고(숫자 — validator 오폭) 계약명·
+    계약상대 같은 텍스트 식별자를 붙인다. 후보가 전부 같은 접수일이면 '같은 날짜', 아니면
+    '질문 날짜 전후 1일 범위'라고 정확히 안내한다(재검수 4차 HIGH 3).
     """
+    days_of = days_of or {}
     sections: list[str] = []
     used: list[EvidenceMatch] = []
     used_lines: set[str] = set()
-    for i, doc_id in enumerate(sorted(candidates)[:len(_AMBIG_MARKS)]):
+    docs = sorted(candidates)[:len(_AMBIG_MARKS)]
+    for i, doc_id in enumerate(docs):
         vals: list[str] = []
         for item in items:
+            hit: tuple[RetrievedChunk, str, str] | None = None
             for c in chunks:
                 if c.doc_id != doc_id:
                     continue
-                line = next((ln for ln in chunk_lines(c) if item in ln), "")
-                value = _cell_value(item, line) if line else ""
-                if value:
-                    vals.append(f"- {item}: {value}")
-                    key = f"{doc_id}::{''.join(line.split())}"
-                    if key not in used_lines:       # 한 행에 항목 둘이면 근거는 한 번만
-                        used_lines.add(key)
-                        used.append(EvidenceMatch(
-                            slot=ANSWER_SLOT, chunk_id=c.chunk_id, doc_id=doc_id,
-                            evidence_text=line, section_path=c.section_path,
-                            confidence=0.8, reason=f"같은 날 후보 공시 {_AMBIG_MARKS[i]}",
-                            node_index=c.node_index,
-                            rcept_no=str(c.metadata.get("rcept_no") or "")))
+                for ln in chunk_lines(c):
+                    if item in ln:
+                        value = _cell_value(item, ln)
+                        if value:
+                            hit = (c, ln, value)
+                            break
+                if hit:
                     break
-        if vals:
-            sections.append(f"[후보 공시 {_AMBIG_MARKS[i]}]\n" + "\n".join(vals))
-    if len(sections) < 2:
-        return None
-    header = ("질문이 가리키는 날짜에 같은 서식의 공시가 여러 건 접수되어, 질문 내용만으로는 "
-              "어느 공시인지 특정할 수 없다. 값이 섞이지 않도록 각 공시의 값을 분리해 제시한다.")
+            if hit is None:
+                vals.append(f"- {item}: 이 공시의 원문에서 확인 불가")
+                continue
+            c, ln, value = hit
+            vals.append(f"- {item}: {value}")
+            key = f"{doc_id}::{''.join(ln.split())}"
+            if key not in used_lines:           # 한 행에 항목 둘이면 근거는 한 번만
+                used_lines.add(key)
+                used.append(EvidenceMatch(
+                    slot=ANSWER_SLOT, chunk_id=c.chunk_id, doc_id=doc_id,
+                    evidence_text=ln, section_path=c.section_path,
+                    confidence=0.8, reason=f"후보 공시 {_AMBIG_MARKS[i]}",
+                    node_index=c.node_index,
+                    rcept_no=str(c.metadata.get("rcept_no") or "")))
+        ident = _doc_identifier(doc_id, chunks)
+        head = f"[후보 공시 {_AMBIG_MARKS[i]}]" + (f" ({ident})" if ident else "")
+        sections.append(head + "\n" + "\n".join(vals))
+    same_day = len({days_of.get(d, "") for d in docs}) == 1
+    # 숫자를 쓰지 않는다("1일") — validator가 원문 밖 수치로 잡아 폴백으로 대체된다(실측).
+    scope = "질문이 가리키는 날짜에" if same_day else "질문 날짜 전후 하루 범위에"
+    header = (f"{scope} 같은 서식의 공시가 여러 건 접수되어, 질문 내용만으로는 어느 공시인지 "
+              "특정할 수 없다. 값이 섞이지 않도록 각 공시의 값을 분리해 제시한다.")
     return header + "\n\n" + "\n\n".join(sections), used
 
 
 # 항목 라벨이 못 덮는 요구가 질문에 남아 있는지 보는 단어들 — 남아 있으면 조립으로 LLM을
-# 끄지 않는다(judge27 실측: 아모레 '인원수'·메리츠 '계약목적'·효성 '해지 후 상태' 손실.
-# 재검수 HIGH 2로 서술 요구 어휘(영향·의미·전망·설명 등) 확장 — 단어 목록과 별개로
-# NARRATIVE 전략이면 항상 LLM 서술 경로를 유지한다).
-_RESIDUAL_ASK_WORDS = ("목적", "사유", "상태", "인원", "대상", "방법", "상호",
-                       "기관", "조건", "경위", "이유", "내용", "배경",
-                       "영향", "의미", "전망", "설명", "평가", "요약", "정리",
-                       "추이", "계획", "왜", "어떻게")
+# 끄지 않는다(judge27 실측: 아모레 '인원수'·메리츠 '계약목적'·효성 '해지 후 상태' 손실).
+# 재검수 4차 BLOCKER 2로 두 종류로 나눈다: **추론형**(영향·전망·평가·의미…)은 원문에 그
+# 단어를 담은 문장이 없으면 LLM 없이 "확인할 수 없다"로 종료하고, **텍스트형**(목적·사유·
+# 상태…)은 LLM 답 문장이 그 단어를 담은 인용 quote에 결박돼야 채택한다. (전략 라벨
+# NARRATIVE는 LLM 호출 근거로 쓰지 않는다 — 재검수 3차 BLOCKER 2.)
+_INFERENCE_ASK_WORDS = ("영향", "전망", "평가", "의미", "추이", "왜", "어떻게")
+_TEXT_ASK_WORDS = ("목적", "사유", "상태", "배경", "이유", "경위", "내용", "조건", "방법",
+                   "계획", "설명", "요약", "정리", "인원", "대상", "상호", "기관")
+_RESIDUAL_ASK_WORDS = _INFERENCE_ASK_WORDS + _TEXT_ASK_WORDS
+
+
+def _asks_in(question: str, items: Sequence[str]) -> tuple[list[str], list[str]]:
+    """(추론형 요구 단어, 항목이 못 덮는 텍스트형 요구 단어)."""
+    covered = " ".join(items)
+    inference = [w for w in _INFERENCE_ASK_WORDS if w in question]
+    text = [w for w in _TEXT_ASK_WORDS if w in question and w not in covered]
+    return inference, text
+
+
+def _narrative_unbound(llm_answer: str, llm_citations: Sequence[Mapping[str, Any]],
+                       ask_words: Sequence[str], question: str) -> list[str]:
+    """요구 단어가 든 답 문장은 그 단어를 담은 인용 quote가 있어야 한다(claim–quote 텍스트 결박).
+
+    재검수 4차 BLOCKER 2 재현: 원문에 계약금액만 있는데 "매출 확대에 도움이 된다"를 금액 행
+    인용으로 붙여도 validator(인용 존재+숫자)는 통과했다. 인용 quote 어디에도 '영향'이 없으면
+    그 문장은 근거 없는 서술이다.
+    """
+    quotes = " ".join(str(c.get("quote_or_fact") or "") for c in llm_citations)
+    body = grounded_answer.strip_context_expressions(llm_answer, question)
+    bad: list[str] = []
+    for sent in _HOLDING_SENT_SPLIT_RE.split(body):
+        for w in ask_words:
+            if w in sent and w not in quotes:
+                bad.append(f"'{w}' 문장에 대응 인용 없음: {sent.strip()[:60]}")
+                break
+    return bad
 
 
 def _residual_asks(question: str, items: Sequence[str]) -> bool:
@@ -1074,7 +1142,8 @@ def _residual_asks(question: str, items: Sequence[str]) -> bool:
 def _resolve_item_doc(question: str, chunks: Sequence[RetrievedChunk],
                       days: frozenset[str], items: Sequence[str],
                       drop: frozenset[str],
-                      docs_by_id: Mapping[str, dict] | None = None
+                      docs_by_id: Mapping[str, dict] | None = None,
+                      exact_days: frozenset[str] = frozenset()
                       ) -> tuple[set[str], str, dict[str, str]]:
     """(날짜 창 안 항목 서식 후보 문서 집합, 해소된 문서 또는 "", 후보 문서별 대조용 원문).
 
@@ -1084,9 +1153,11 @@ def _resolve_item_doc(question: str, chunks: Sequence[RetrievedChunk],
     gold 정보는 쓰지 않는다 — 질문 텍스트와 문서 본문만 비교한다.
     """
     texts: dict[str, list[str]] = {}
+    day_of: dict[str, str] = {}
     for c in chunks:
         if _chunk_day(c) in days and any(i in c.evidence_text for i in items):
             texts.setdefault(c.doc_id, []).append(c.evidence_text)
+            day_of[c.doc_id] = _chunk_day(c)
     if not texts:
         return set(), "", {}
     # 대조는 문서 **전체 원문**으로 한다 — 검색된 조각만 비교하면 한쪽은 부분 청크·한쪽은
@@ -1108,7 +1179,17 @@ def _resolve_item_doc(question: str, chunks: Sequence[RetrievedChunk],
     uniq_docs = [d for d, s in tok.items()
                  if len(s - set().union(*(tok[o] for o in tok if o != d))) >= 2]
     joined = {d: " ".join(t) for d, t in texts.items()}
-    return set(texts), uniq_docs[0] if len(uniq_docs) == 1 else "", joined
+    resolved = uniq_docs[0] if len(uniq_docs) == 1 else ""
+    cands = set(texts)
+    if not resolved and exact_days:
+        # 재검수 4차 HIGH 3: 고유 토큰으로 못 가리면 **정확 일자** 접수 후보를 우선한다 —
+        # 하나면 해소, 둘 이상이면 그 안에서만 모호(±1일 후보는 정확 일자 후보가 없을 때만).
+        exact = {d for d in cands if day_of.get(d) in exact_days}
+        if len(exact) == 1:
+            resolved, cands = next(iter(exact)), exact
+        elif len(exact) >= 2:
+            cands = exact
+    return cands, resolved, {d: joined[d] for d in cands}
 
 
 def _item_doc_conflicts(llm_answer: str, llm_citations: Sequence[Mapping[str, Any]],
@@ -1720,7 +1801,8 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
     item_doc_candidates, item_doc_resolved, item_doc_texts = (
         _resolve_item_doc(question, state.retrieval_results, item_days,
                           form_items, corp_drop,
-                          getattr(retriever, "docs_by_id", None) or {})
+                          getattr(retriever, "docs_by_id", None) or {},
+                          exact_days=_question_exact_days(question))
         if form_items and item_days else (set(), "", {}))
     state.evidence_matches = match_evidence(
         state.slots, state.retrieval_results, limit=max_evidence, question=question,
@@ -1745,7 +1827,8 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
                            for doc_id in {c.doc_id for c in expanded}}
             cand2, resolved2, texts2 = (
                 _resolve_item_doc(question, expanded, item_days, form_items, corp_drop,
-                                  getattr(retriever, "docs_by_id", None) or {})
+                                  getattr(retriever, "docs_by_id", None) or {},
+                                  exact_days=_question_exact_days(question))
                 if form_items and item_days else (set(), "", {}))
             rematched = match_evidence(
                 state.slots, expanded, limit=max_evidence, question=question,
@@ -1878,36 +1961,48 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
                     node_index=src_chunk.node_index,
                     rcept_no=str(src_chunk.metadata.get("rcept_no") or "")))
     assembled = None
-    ambiguous = None
     assembled_skips_llm = False
-    if not binary and not holding and form_items and item_days:
-        if len(item_doc_candidates) > 1 and not item_doc_resolved:
-            # 재검수 3차 BLOCKER 1: 미해소 복수 후보에서 LLM·단일 답변 조립을 허용하면
-            # 서로 다른 공시의 값이 한 답으로 섞여 SUPPORTED로 나간다(텍스트 필드는 숫자
-            # 게이트가 못 잡는다 — "A 금액 인용 + B 상대방 주장" 재현). 문서별로 값을
-            # 분리한 모호성 답변으로 종료하고 LLM은 부르지 않는다(fail-closed).
-            ambiguous = ambiguous_items_answer(form_items, item_doc_candidates,
-                                               state.retrieval_results)
-            if ambiguous:
-                answer, amb_matches = ambiguous
-                seen_lines = {"".join(m.evidence_text.split())
-                              for m in state.evidence_matches}
-                state.evidence_matches = state.evidence_matches + [
-                    m for m in amb_matches
-                    if "".join(m.evidence_text.split()) not in seen_lines]
-                uncertainty = ("같은 날짜에 같은 서식의 공시가 여러 건이라 대상을 특정할 수 "
-                               "없어, 값을 공시별로 분리해 제시했다(혼합 방지).")
-        else:
-            # 항목 자리가 전부 **질문 날짜에 결박된 한 문서**의 서식 값으로 확정되면 결정론
-            # 조립을 기본 답으로 쓴다. 날짜 없는 질문은 기존 경로(발췌 + LLM) 그대로다.
-            assembled = assemble_item_answer(form_items, state.evidence_matches)
-            if assembled:
-                answer = assembled
-                uncertainty = "값은 공시 서식 필드에서 원문 그대로 추출했다."
-                # LLM 생략은 실제 미충족 서술 요구가 없을 때다(재검수 3차 BLOCKER 2:
-                # 라우터는 값 슬롯 3개 이상 단순 질문도 NARRATIVE로 보내므로, 전략만으로
-                # LLM을 강제하면 근거 없는 설명이 붙는다 — 전략 조건은 쓰지 않는다).
-                assembled_skips_llm = not _residual_asks(question, form_items)
+    narrative_note = ""
+    ask_binding_words: list[str] = []
+    # 재검수 4차 BLOCKER 1: 미해소 복수 후보 상태는 **렌더링과 무관하게** 별도 불리언으로
+    # 확정한다 — LLM 차단이 분리 답변 생성 성공 여부에 종속되면 안 된다.
+    unresolved_multi_doc = bool(form_items and item_days
+                                and len(item_doc_candidates) > 1 and not item_doc_resolved)
+    if not binary and not holding and unresolved_multi_doc:
+        # 재검수 3차 BLOCKER 1: 미해소 복수 후보에서 LLM·단일 답변 조립을 허용하면 서로 다른
+        # 공시의 값이 한 답으로 섞여 SUPPORTED로 나간다(텍스트 필드는 숫자 게이트가 못 잡는다).
+        # 문서별로 값을 분리한 모호성 답변으로 종료하고 LLM은 부르지 않는다(fail-closed).
+        answer, amb_matches = ambiguous_items_answer(
+            form_items, item_doc_candidates, state.retrieval_results,
+            {c.doc_id: _chunk_day(c) for c in state.retrieval_results})
+        seen_lines = {"".join(m.evidence_text.split()) for m in state.evidence_matches}
+        state.evidence_matches = state.evidence_matches + [
+            m for m in amb_matches if "".join(m.evidence_text.split()) not in seen_lines]
+        uncertainty = ("같은 서식의 후보 공시가 여러 건이라 대상을 특정할 수 없어, 값을 "
+                       "공시별로 분리해 제시했다(혼합 방지).")
+    elif not binary and not holding and form_items and item_days:
+        # 항목 자리가 전부 **질문 날짜에 결박된 한 문서**의 서식 값으로 확정되면 결정론
+        # 조립을 기본 답으로 쓴다. 날짜 없는 질문은 기존 경로(발췌 + LLM) 그대로다.
+        assembled = assemble_item_answer(form_items, state.evidence_matches)
+        # 재검수 4차 BLOCKER 2: 추론형 요구(영향·전망·평가·의미)는 원문에 그 단어를 담은
+        # 문장이 없으면 LLM이 지어낼 수밖에 없다 — "확인할 수 없다"로 결정론 종료한다.
+        # 원문에 있거나 텍스트형 요구(목적·사유·상태·인원…)는 LLM을 부르되, 답 문장이 그
+        # 단어를 담은 인용 quote에 결박돼야 채택한다(narrative_unbound 게이트).
+        inference_asks, text_asks = _asks_in(question, form_items)
+        support = " ".join(c.evidence_text for c in context_pool)
+        missing_inf = [w for w in inference_asks if w not in support]
+        if missing_inf:
+            narrative_note = "\n\n" + "\n".join(
+                f"'{w}'에 관한 서술은 공시 원문에서 확인할 수 없다." for w in missing_inf)
+        ask_binding_words = [w for w in inference_asks if w in support] + text_asks
+        if assembled:
+            answer = assembled + narrative_note
+            uncertainty = "값은 공시 서식 필드에서 원문 그대로 추출했다."
+            # LLM 생략은 실제 미충족 요구가 남지 않을 때다(전략 라벨은 근거로 쓰지 않는다 —
+            # 재검수 3차 BLOCKER 2: 라우터는 값 슬롯 3개 이상 단순 질문도 NARRATIVE로 보낸다).
+            assembled_skips_llm = not ask_binding_words
+        elif narrative_note:
+            answer = answer + narrative_note
     det_template = (answer, uncertainty)     # ⑨ 폴백 ②단(템플릿)도 같은 결정론 답을 쓴다
     if state.derived:
         answer = calculator.describe(state.derived) + "\n\n" + answer
@@ -1940,14 +2035,14 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
     if llm is not None and (binary or (holding and not llm_topics)
                             or (not holding and state.derived)
                             or (not holding and assembled_skips_llm)
-                            or (not holding and ambiguous)):
+                            or (not holding and unresolved_multi_doc)):
         # 대량보유: 질문의 요구 항목을 파서가 전부 채웠으면 계산이 없어도 LLM을 부르지 않는다 —
         # 같은 문서의 과거 연혁값을 직전값으로 재주장하는 경로 자체를 없앤다(재검수 BLOCKER 1-a).
         # 이분 판정(신청/승인)이 서식 필드로 확정된 질문도 LLM이 더할 것이 없다(자체 검증).
         # 서식 항목 조립(assembled)도 같다 — FC 실행 간 변동으로 확정값이 흔들릴 이유가 없다.
         state.llm = {"used": False, "skipped": (
             "binary_verdict" if binary else
-            "items_ambiguous_docs" if ambiguous else
+            "items_ambiguous_docs" if unresolved_multi_doc else
             "deterministic_calculation" if state.derived else
             "holding_all_slots_filled" if holding else "items_all_slots_filled")}
         llm = None
@@ -2037,6 +2132,16 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
                 state.llm["degraded_reason"] = "item_doc_conflict"
                 state.llm["degraded_detail"] = item_conflicts[:5]
                 state.llm["degraded_answer"] = llm_answer
+            elif (not holding and form_items and ask_binding_words
+                  and (unbound := _narrative_unbound(llm_answer, llm_citations,
+                                                     ask_binding_words, question))):
+                # 재검수 4차 BLOCKER 2: 요구 단어(영향·목적·사유…)가 든 문장은 그 단어를 담은
+                # 인용 quote에 결박돼야 한다 — 금액 행 인용으로 "매출 확대에 도움" 같은 서술을
+                # 붙이는 경로 차단. 폐기하면 결정론 답(조립+확인 불가 노트)이 최종본이다.
+                state.llm["degraded"] = True
+                state.llm["degraded_reason"] = "narrative_unbound"
+                state.llm["degraded_detail"] = unbound[:5]
+                state.llm["degraded_answer"] = llm_answer
             elif not llm_citations or any(
                     c.get("check") in ("quote_grounded", "citation_present")
                     and not c.get("passed") for c in check["checks"]):
@@ -2062,7 +2167,7 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
                 if assembled:
                     # 결정론 값 블록은 채택 후에도 앞에 유지한다(재검수 HIGH 2) — 값은
                     # 서식에서, 서술은 LLM에서. 항목 근거를 인용에도 함께 싣는다.
-                    answer = f"{assembled}\n\n{llm_answer}"
+                    answer = f"{assembled}{narrative_note}\n\n{llm_answer}"
                     citations = citations + [
                         {"document_id": m.doc_id, "quote_or_fact": m.evidence_text}
                         for m in state.evidence_matches if m.slot != ANSWER_SLOT]

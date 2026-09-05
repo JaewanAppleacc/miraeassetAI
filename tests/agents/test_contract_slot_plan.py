@@ -351,28 +351,136 @@ class EchoLLM:
                          latency_ms=1, raw_text=_json.dumps(payload, ensure_ascii=False))
 
 
-def test_narrative_residual_keeps_llm_after_assembly():
-    """"계약금액과 이 계약이 실적에 미칠 영향은?" — 값은 조립돼도 '영향' 요구가 남아
-    LLM 서술 경로가 유지돼야 한다(재검수 HIGH 2: 조용한 요구 삭제 금지)."""
+def _single_doc_retriever(form: str, doc_id: str = "exchange_a", rcept_dt: str = "20240417"):
     corp_dict = CorpDictionary.from_rows(
         [{"corp_name": "한화오션", "listed_name": "한화오션", "stock_code": "042660"}])
     doc = IndexedDocument(
-        doc_id="exchange_a", corp_name="한화오션", corp_code="한화오션", filer_name="한화오션",
+        doc_id=doc_id, corp_name="한화오션", corp_code="한화오션", filer_name="한화오션",
         doc_group="exchange", doc_subtype="단일판매ㆍ공급계약체결",
-        report_nm="단일판매ㆍ공급계약체결", rcept_dt="20240417",
-        base_year=2024, base_month=4, is_correction=False, text=DOC_A_FORM)
-    r = CorpusRetriever(document_index=DocumentIndex([doc], corp_dict), corp_dict=corp_dict,
-                        docs_by_id={"exchange_a": {"doc_id": "exchange_a", "doc_group": "exchange",
-                                                   "nodes": [{"node_index": 0,
-                                                              "section_hierarchy": [],
-                                                              "text": DOC_A_FORM}]}})
+        report_nm="단일판매ㆍ공급계약체결", rcept_dt=rcept_dt,
+        base_year=2024, base_month=4, is_correction=False, text=form)
+    return CorpusRetriever(document_index=DocumentIndex([doc], corp_dict), corp_dict=corp_dict,
+                           docs_by_id={doc_id: {"doc_id": doc_id, "doc_group": "exchange",
+                                                "nodes": [{"node_index": 0,
+                                                           "section_hierarchy": [],
+                                                           "text": form}]}})
+
+
+IMPACT_QUESTION = "한화오션의 2024-04-17 공급계약 공시에서 계약금액과 이 계약이 실적에 미칠 영향은?"
+IMPACT_LINE = "본 계약은 향후 매출 확대에 긍정적 영향이 예상됩니다."
+
+
+def test_inference_ask_without_source_sentence_closes_without_llm():
+    """재검수 4차 BLOCKER 2(음성): 원문에 계약금액만 있고 '영향' 문장이 없으면 LLM을 부르지
+    않고 "확인할 수 없다"로 종료한다 — 금액 행 인용으로 영향을 지어내는 경로가 성립하지 않는다."""
     llm = EchoLLM()
-    state = qa_agent.answer_question(
-        "한화오션의 2024-04-17 공급계약 공시에서 계약금액과 이 계약이 실적에 미칠 영향은?", r, llm=llm)
-    assert llm.called == 1                                   # 조립이 LLM을 끄지 않았다
-    assert (state.llm or {}).get("skipped") is None
-    assert "계약금액: 100" in state.answer                    # 결정론 값 블록 유지
-    assert "영향" in state.answer                            # 서술도 답에 남는다
+    state = qa_agent.answer_question(IMPACT_QUESTION, _single_doc_retriever(DOC_A_FORM), llm=llm)
+    assert llm.called == 0
+    assert "계약금액: 100" in state.answer
+    assert "'영향'에 관한 서술은 공시 원문에서 확인할 수 없다" in state.answer
+    assert "긍정적 영향" not in state.answer
+
+
+class ImpactLLM:
+    """원문의 영향 문장을 인용하며 서술하는 정직한 모델 / 금액 행만 인용하는 나쁜 모델."""
+
+    provider = "fake"
+
+    def __init__(self, quote: str):
+        self.quote, self.called = quote, 0
+
+    def complete_json(self, system, user, schema):
+        self.called += 1
+        payload = {"answer": "이 계약은 향후 매출 확대에 긍정적 영향이 예상된다고 공시에 서술되어 있다.",
+                   "evidence": [{"document_id": "exchange_a", "quote_or_fact": self.quote}],
+                   "uncertainty": ""}
+        return LLMResult(data=payload, provider=self.provider, model="fake-1",
+                         latency_ms=1, raw_text=_json.dumps(payload, ensure_ascii=False))
+
+
+def test_inference_ask_with_source_sentence_is_adopted_when_quote_binds():
+    """원문에 '영향' 문장이 있고 LLM이 그 문장을 인용하면 채택 — 값 블록 + 서술 조합."""
+    llm = ImpactLLM(IMPACT_LINE)
+    state = qa_agent.answer_question(IMPACT_QUESTION,
+                                     _single_doc_retriever(DOC_A_FORM + "\n" + IMPACT_LINE), llm=llm)
+    assert llm.called == 1 and not (state.llm or {}).get("degraded")
+    assert "계약금액: 100" in state.answer and "긍정적 영향" in state.answer
+
+
+def test_inference_claim_citing_only_amount_row_is_rejected():
+    """원문에 '영향' 문장이 있어도 LLM이 금액 행만 인용하며 영향을 서술하면 narrative_unbound로
+    폐기 — 인용 존재만으로는 서술 claim을 지지하지 못한다(claim–quote 텍스트 결박)."""
+    llm = ImpactLLM("2. 계약내역 | 계약금액(원) | 100")
+    state = qa_agent.answer_question(IMPACT_QUESTION,
+                                     _single_doc_retriever(DOC_A_FORM + "\n" + IMPACT_LINE), llm=llm)
+    assert llm.called == 1
+    assert (state.llm or {}).get("degraded_reason") == "narrative_unbound"
+    assert "긍정적 영향" not in state.answer and "계약금액: 100" in state.answer
+
+
+# ---------- 재검수 4차 BLOCKER 1: 렌더링과 무관한 차단·전 후보 렌더링 ----------
+
+def _multi_doc_retriever(docs: dict[str, tuple[str, str]]):
+    """docs: doc_id -> (rcept_dt, form text)."""
+    corp_dict = CorpDictionary.from_rows(
+        [{"corp_name": "한화오션", "listed_name": "한화오션", "stock_code": "042660"}])
+    indexed = [IndexedDocument(
+        doc_id=d, corp_name="한화오션", corp_code="한화오션", filer_name="한화오션",
+        doc_group="exchange", doc_subtype="단일판매ㆍ공급계약체결",
+        report_nm="단일판매ㆍ공급계약체결", rcept_dt=dt, base_year=int(dt[:4]),
+        base_month=int(dt[4:6]), is_correction=False, text=t) for d, (dt, t) in docs.items()]
+    return CorpusRetriever(document_index=DocumentIndex(indexed, corp_dict), corp_dict=corp_dict,
+                           docs_by_id={d: {"doc_id": d, "doc_group": "exchange",
+                                           "nodes": [{"node_index": 0, "section_hierarchy": [],
+                                                      "text": t}]}
+                                       for d, (dt, t) in docs.items()})
+
+
+def test_split_table_candidate_still_blocks_llm_and_renders_all_candidates():
+    """검수 재현: 후보 B의 머리글과 값이 다른 줄로 분리돼 값을 못 읽어도 LLM 차단은 유지되고,
+    후보 전부가 블록으로 렌더링된다('확인 불가' 표시) — 렌더링된 후보 수 == 후보 수."""
+    r = _multi_doc_retriever({
+        "exchange_a": ("20240417", "2. 계약내역 | 계약금액(원) | 100"),
+        "exchange_b": ("20240417", "2. 계약내역 | 계약금액(원)\n200"),   # 머리글/값 분리 표
+    })
+    llm = TextMixLLM()
+    state = qa_agent.answer_question("한화오션의 2024-04-17 공급계약 공시에서 계약금액을 알려줘.",
+                                     r, llm=llm)
+    assert llm.called == 0
+    assert (state.llm or {}).get("skipped") == "items_ambiguous_docs"
+    assert state.answer.count("[후보 공시") == 2                  # 렌더링된 후보 수 == 후보 수
+    assert "확인 불가" in state.answer                            # 파싱 실패 후보도 버리지 않는다
+    assert "계약금액은 100원" not in state.answer
+
+
+def test_exact_date_candidate_wins_over_adjacent_days():
+    """재검수 4차 HIGH 3: 같은 서식 공시가 25·26·27일에 각각 있고 질문이 26일이면(고유 토큰
+    없음) 정확 일자 후보로 해소한다 — ±1일 후보는 정확 일자 후보가 없을 때만."""
+    form = "2. 계약내역 | 계약금액(원) | {v}\n3. 계약상대 | 3. 계약상대 | 방위사업청"
+    r = _multi_doc_retriever({
+        "exchange_25": ("20250625", form.format(v="100")),
+        "exchange_26": ("20250626", form.format(v="200")),
+        "exchange_27": ("20250627", form.format(v="300")),
+    })
+    state = qa_agent.answer_question("한화오션의 2025-06-26 공급계약 공시에서 계약금액을 알려줘.",
+                                     r, llm=BoomLLM())
+    assert (state.llm or {}).get("skipped") == "items_all_slots_filled"
+    assert "계약금액: 200" in state.answer and "특정할 수 없다" not in state.answer
+
+
+def test_adjacent_day_candidates_are_labelled_as_window_not_same_day():
+    """정확 일자 후보가 없고 ±1일 후보만 둘이면 '질문 날짜 전후 1일 범위'라고 정확히 안내하고,
+    후보 블록에 계약상대 같은 텍스트 식별자를 붙인다."""
+    form = "2. 계약내역 | 계약금액(원) | {v}\n3. 계약상대 | 3. 계약상대 | {p}"
+    r = _multi_doc_retriever({
+        "exchange_16": ("20240416", form.format(v="100", p="에이회사")),
+        "exchange_18": ("20240418", form.format(v="200", p="비회사")),
+    })
+    state = qa_agent.answer_question("한화오션의 2024-04-17 공급계약 공시에서 계약금액을 알려줘.",
+                                     r, llm=BoomLLM())
+    assert "질문 날짜 전후 하루 범위" in state.answer
+    assert state.validation["status"] == "SUPPORTED"          # 머리말에 숫자가 없어 폴백 없음
+    assert "(계약상대: 에이회사)" in state.answer and "(계약상대: 비회사)" in state.answer
 
 
 # ---------- 통합: LGES 실물 서식 → 유보 + 확정값 보존, LLM 미호출 ----------
