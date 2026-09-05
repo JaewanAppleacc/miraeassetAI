@@ -259,6 +259,16 @@
   검색+다문서 조립) · 같은 날 같은 보고자 2건(접수번호/일반·약식 2차 결박) · 근거 선발 예산 · 3분기 4열 요약표 ·
   단일판매 군집은 문서가 검색돼도 FC 채택/폐기가 실행마다 흔들림(j24 full↔j26 partial 2건) → 항목 slot 값이
   전부 확정되면 대량보유처럼 LLM을 건너뛰는 결정론 조립이 다음 레버.
+- **B/D 4-arm 동결 인계 패키지(2026-09-05 · 브랜치 codex/fourarm-bd-final-handoff-v01 · 1a7c41f, base 56f776f)**:
+  Turn BD-FINAL-HANDOFF-FOR-4ARM-INTEGRATION. A/C 완료 연락(브랜치 codex/fourarm-ac-vector-import-v01 · 44f0523 ·
+  A/C readiness GREEN · 별개 히스토리, 무접촉)에 맞춰 B/D를 **재실행 없이** `handoff/fourarm_bd_final_v01/`(+결정론 zip,
+  SHA f7c4c456…)로 고정. 내용: conditions v2·universe 원본, scorer 사본(50cc1aa git blob과 byte-identical —
+  evaluation/·retrieval/ __init__은 의도적으로 제외해 namespace import), interfaces.md 계약, B/D result/run 4개
+  (registry·run.json·디스크·패키지 SHA 전부 동일: B de661a1c… / D 0f111221…), 채점 리포트 8개, Owner 패킷 17 +
+  resolutions.json, MANIFEST.json·SHA256SUMS·불변 증명·테스트 요약. 검증: bd_results+resolutions만으로 채점기 재실행 →
+  results/fourarm 전 파일 byte-identical · scoped 72 passed · full 738 passed/0 failed(26 env error) · SHA256SUMS 55/55.
+  판정 BLOCKED(ARM_SPECIFIC critical 2 · UNKNOWN 15 Owner 보류) 그대로. raw Gold/DEV_CHECK/HOLDOUT 비포함(pointer만).
+  `ac_scorer_50cc1aa.zip` 실물은 이 호스트에 없어 commit에서 직접 추출. PR 없음. main에는 미병합(파일 추가만이라 충돌 없음).
 - **vFINAL 21번 변경 승인(2026-09-04, Owner=팀 대표)**: "FC Native Function Calling 경로에 한해
   전송 maxTokens 최소 1024 적용을 승인한다. 사유는 서비스 앱 API가 1024 미만 요청을 40001로
   거부하기 때문이다. JSON 경로의 v4 §7 예산은 변경하지 않으며 requested/sent 값을 구분해
