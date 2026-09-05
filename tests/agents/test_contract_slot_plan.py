@@ -259,11 +259,67 @@ class MixLLM:
 
 
 def test_mixed_document_answer_is_rejected_not_supported():
-    """재검수 BLOCKER 1 재현 시나리오: 문서 A 계약금액 100·문서 B 상대방 — LLM이 섞으면
-    validator 이전에 item_doc_conflict로 폐기돼야 하고, 섞인 답이 최종본이 되면 안 된다."""
+    """재검수 3차 BLOCKER 1: 미해소 복수 후보에서는 LLM을 아예 부르지 않는다(숫자 게이트는
+    텍스트 필드 혼합 — "A 금액 인용 + B 상대방 주장" — 을 못 잡는다). 문서별 분리 답으로
+    종료하고, 섞인 문장이 최종본이 되면 안 된다."""
     state = qa_agent.answer_question(MIX_QUESTION, two_doc_retriever(), llm=MixLLM())
-    assert (state.llm or {}).get("degraded_reason") == "item_doc_conflict"
+    assert (state.llm or {}).get("used") is False
+    assert (state.llm or {}).get("skipped") == "items_ambiguous_docs"
     assert "100원이고 계약상대는 비회사" not in state.answer
+    assert "특정할 수 없다" in state.answer
+    assert "후보 공시 ①" in state.answer and "후보 공시 ②" in state.answer
+
+
+class TextMixLLM:
+    """검수 3차 재현: 인용은 문서 A의 금액 행만, 주장은 문서 B의 상대방(텍스트 혼합)."""
+
+    provider = "fake"
+
+    def __init__(self):
+        self.called = 0
+
+    def complete_json(self, system, user, schema):
+        self.called += 1
+        payload = {"answer": "계약금액은 100원이고 계약상대는 비회사입니다.",
+                   "evidence": [{"document_id": "exchange_a",
+                                 "quote_or_fact": "2. 계약내역 | 계약금액(원) | 100"}],
+                   "uncertainty": ""}
+        return LLMResult(data=payload, provider=self.provider, model="fake-1",
+                         latency_ms=1, raw_text=_json.dumps(payload, ensure_ascii=False))
+
+
+def test_text_field_mixing_path_is_closed_llm_never_called():
+    """숫자는 인용 문서 것이고 텍스트만 라이벌 것인 혼합 — 미해소면 LLM 호출 자체가 없어
+    이 경로가 성립하지 않는다."""
+    llm = TextMixLLM()
+    state = qa_agent.answer_question(MIX_QUESTION, two_doc_retriever(), llm=llm)
+    assert llm.called == 0
+    assert "비회사입니다" not in state.answer
+
+
+def test_closed_multi_item_question_skips_llm_even_when_narrative_routed():
+    """재검수 3차 BLOCKER 2: 값 슬롯 3개 이상이면 라우터가 NARRATIVE로 보내지만, 서식
+    항목이 전부 결정론으로 채워진 폐쇄형 질문은 전략과 무관하게 LLM을 생략해야 한다."""
+    corp_dict = CorpDictionary.from_rows(
+        [{"corp_name": "한화오션", "listed_name": "한화오션", "stock_code": "042660"}])
+    form = ("2. 계약내역 | 계약금액(원) | 100\n"
+            "3. 계약상대 | 3. 계약상대 | 에이회사\n"
+            "5. 계약기간 | 종료일 | 2030-07-31")
+    doc = IndexedDocument(
+        doc_id="exchange_only", corp_name="한화오션", corp_code="한화오션",
+        filer_name="한화오션", doc_group="exchange", doc_subtype="단일판매ㆍ공급계약체결",
+        report_nm="단일판매ㆍ공급계약체결", rcept_dt="20240417",
+        base_year=2024, base_month=4, is_correction=False, text=form)
+    r = CorpusRetriever(document_index=DocumentIndex([doc], corp_dict), corp_dict=corp_dict,
+                        docs_by_id={"exchange_only": {
+                            "doc_id": "exchange_only", "doc_group": "exchange",
+                            "nodes": [{"node_index": 0, "section_hierarchy": [],
+                                       "text": form}]}})
+    q = "한화오션의 2024-04-17 공급계약 공시에서 계약금액, 계약상대방, 계약기간 종료일을 알려줘."
+    state = qa_agent.answer_question(q, r, llm=BoomLLM())
+    assert state.route.strategy == "NARRATIVE"               # 라우터 기본 분류 그대로
+    assert (state.llm or {}).get("skipped") == "items_all_slots_filled"
+    assert "계약금액: 100" in state.answer and "에이회사" in state.answer
 
 
 def test_resolved_item_doc_bounds_context_and_sources():

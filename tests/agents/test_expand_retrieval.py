@@ -13,14 +13,25 @@ from dart_detective.corpus_retriever import RetrievedChunk
 
 
 @pytest.fixture(autouse=True)
-def _enable_late_expansion(monkeypatch):
-    """확장 재검색은 Late Expansion 스위치 뒤에 있다(기본 OFF — 재검수 HIGH 3)."""
-    monkeypatch.setenv("DART_QA_LATE_EXPANSION", "1")
+def _enable_expanded_retrieval(monkeypatch):
+    """확장 재검색은 **원문 보충과 별도의** 스위치 뒤에 있다(기본 OFF — 재검수 3차 MEDIUM 4:
+    측정된 보충 승인에 미측정 k=40 확장이 끼워 켜지지 않도록 플래그 분리)."""
+    monkeypatch.setenv("DART_QA_EXPANDED_RETRIEVAL", "1")
 
 
-def test_late_expansion_is_off_by_default(monkeypatch):
-    """스위치 없이는 확장 재검색이 발동하지 않는다 — 4-arm 최종·Owner 승인 전 기본값."""
+def test_expanded_retrieval_is_off_by_default(monkeypatch):
+    """스위치 없이는 확장 재검색이 발동하지 않는다 — 별도 실측·승인 전 기본값."""
+    monkeypatch.delenv("DART_QA_EXPANDED_RETRIEVAL", raising=False)
     monkeypatch.delenv("DART_QA_LATE_EXPANSION", raising=False)
+    r = StubRetriever(narrow=NOISE, wide=NOISE + [_chunk("hit", VALUE_LINE)])
+    _ask(r)
+    assert r.calls == [None]
+
+
+def test_late_expansion_flag_alone_does_not_enable_k40(monkeypatch):
+    """보충 플래그(DART_QA_LATE_EXPANSION)만으로는 k=40 재검색이 켜지지 않는다."""
+    monkeypatch.delenv("DART_QA_EXPANDED_RETRIEVAL", raising=False)
+    monkeypatch.setenv("DART_QA_LATE_EXPANSION", "1")
     r = StubRetriever(narrow=NOISE, wide=NOISE + [_chunk("hit", VALUE_LINE)])
     _ask(r)
     assert r.calls == [None]

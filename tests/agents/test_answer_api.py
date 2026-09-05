@@ -188,3 +188,26 @@ def test_readiness_degrades_instead_of_raising(monkeypatch):
     monkeypatch.setattr(answer_api, "_get_retriever", boom)
     r = answer_api.readiness()
     assert r["ready"] is False and r["mode"] == "degraded" and "pins" in r
+
+
+def test_late_expansion_flags_are_in_cache_pins(monkeypatch):
+    """검색 동작을 바꾸는 플래그는 캐시 pin에 있어야 한다(재검수 3차 HIGH 3) —
+    같은 code SHA에서 OFF↔ON을 바꾸면 pin 해시(캐시 키)가 달라져 이전 모드 캐시가
+    재사용되지 않는다."""
+    import hashlib
+    import json as _json
+
+    def pins_hash():
+        pins = answer_api.readiness()["pins"]
+        assert "late_expansion" in pins and "expanded_retrieval" in pins
+        return hashlib.sha256(
+            _json.dumps(pins, sort_keys=True, default=str).encode()).hexdigest()
+
+    monkeypatch.delenv("DART_QA_LATE_EXPANSION", raising=False)
+    monkeypatch.delenv("DART_QA_EXPANDED_RETRIEVAL", raising=False)
+    off = pins_hash()
+    monkeypatch.setenv("DART_QA_LATE_EXPANSION", "1")
+    on = pins_hash()
+    monkeypatch.setenv("DART_QA_EXPANDED_RETRIEVAL", "1")
+    on_both = pins_hash()
+    assert off != on and on != on_both and off != on_both

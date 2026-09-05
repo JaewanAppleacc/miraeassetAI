@@ -987,22 +987,73 @@ def date_item_supplement(question: str, conditions: QueryConditions,
     return out
 
 
-def _item_cell_value(m: EvidenceMatch) -> str:
-    """서식 행에서 항목 값을 읽는다 — picked_value(숫자·날짜)가 없으면 마지막 칸의 텍스트.
+def _cell_value(item: str, line: str) -> str:
+    """서식 행에서 항목 값을 읽는다 — 마지막 칸의 텍스트(숫자·날짜·문자 공통).
 
     '3. 계약상대 | 3. 계약상대 | -'처럼 값 칸이 '-'거나, 마지막 칸이 라벨 반복이면 값이
-    아니다(fail-closed — 조립하지 않고 기존 경로로 넘긴다).
+    아니다(fail-closed).
     """
-    if m.picked_value:
-        return m.picked_value
-    cells = [c.strip() for c in m.evidence_text.split("|") if c.strip()]
+    cells = [c.strip() for c in line.split("|") if c.strip()]
     if len(cells) < 2:
         return ""
     value = cells[-1]
-    item, _year = split_slot(split_entity(m.slot)[0])
     if value in _DASH or item in value or len(value) > 120:
         return ""
     return value
+
+
+def _item_cell_value(m: EvidenceMatch) -> str:
+    """EvidenceMatch에서 항목 값 — picked_value(숫자·날짜) 우선, 없으면 셀 텍스트."""
+    if m.picked_value:
+        return m.picked_value
+    item, _year = split_slot(split_entity(m.slot)[0])
+    return _cell_value(item, m.evidence_text)
+
+
+_AMBIG_MARKS = "①②③④⑤"
+
+
+def ambiguous_items_answer(items: Sequence[str], candidates: set[str],
+                           chunks: Sequence[RetrievedChunk]
+                           ) -> tuple[str, list[EvidenceMatch]] | None:
+    """같은 날 후보 공시가 해소되지 않을 때 — 문서별로 **분리해** 값을 제시한다.
+
+    재검수 3차 BLOCKER 1: 미해소 상태에서 LLM·단일 답변 조립을 허용하면 서로 다른 공시의
+    값이 한 답으로 섞여 SUPPORTED로 나간다(삼성E&A·한미반도체 judge31 실물). 혼합 대신
+    후보마다 값 블록을 따로 만들고, 어느 공시인지 특정할 수 없다는 사실을 명시한다.
+    접수번호는 답 본문에 넣지 않는다(숫자라 validator가 원문 밖 수치로 오폭 — 근거의
+    doc_id가 추적을 담당). 두 후보 이상에서 값이 나올 때만 발동한다.
+    """
+    sections: list[str] = []
+    used: list[EvidenceMatch] = []
+    used_lines: set[str] = set()
+    for i, doc_id in enumerate(sorted(candidates)[:len(_AMBIG_MARKS)]):
+        vals: list[str] = []
+        for item in items:
+            for c in chunks:
+                if c.doc_id != doc_id:
+                    continue
+                line = next((ln for ln in chunk_lines(c) if item in ln), "")
+                value = _cell_value(item, line) if line else ""
+                if value:
+                    vals.append(f"- {item}: {value}")
+                    key = f"{doc_id}::{''.join(line.split())}"
+                    if key not in used_lines:       # 한 행에 항목 둘이면 근거는 한 번만
+                        used_lines.add(key)
+                        used.append(EvidenceMatch(
+                            slot=ANSWER_SLOT, chunk_id=c.chunk_id, doc_id=doc_id,
+                            evidence_text=line, section_path=c.section_path,
+                            confidence=0.8, reason=f"같은 날 후보 공시 {_AMBIG_MARKS[i]}",
+                            node_index=c.node_index,
+                            rcept_no=str(c.metadata.get("rcept_no") or "")))
+                    break
+        if vals:
+            sections.append(f"[후보 공시 {_AMBIG_MARKS[i]}]\n" + "\n".join(vals))
+    if len(sections) < 2:
+        return None
+    header = ("질문이 가리키는 날짜에 같은 서식의 공시가 여러 건 접수되어, 질문 내용만으로는 "
+              "어느 공시인지 특정할 수 없다. 값이 섞이지 않도록 각 공시의 값을 분리해 제시한다.")
+    return header + "\n\n" + "\n\n".join(sections), used
 
 
 # 항목 라벨이 못 덮는 요구가 질문에 남아 있는지 보는 단어들 — 남아 있으면 조립으로 LLM을
@@ -1588,13 +1639,24 @@ EXPANDED_RETRIEVE_K = 40     # 요구 슬롯 미충족 시 1회 확장 폭. 상�
 
 
 def late_expansion_enabled() -> bool:
-    """에이전트 층 추가 검색(대상 문서 원문 보충·확장 재검색 k=40)의 스위치 — **기본 OFF**.
+    """날짜+서식 대상 문서 **원문 보충**(k=200 문서 탐색)의 스위치 — **기본 OFF**.
 
     코덱스 재검수 HIGH 3: v4는 Late Expansion을 X0/X1 별도 실험으로 두고 코어 점수와
     혼합하지 않는다. 4-arm 최종 확정·Owner 승인 전에는 서빙 기본값에서 끈다.
-    실험·승인 후 적용은 env DART_QA_LATE_EXPANSION=1. 발동 수는 timings에 기록된다.
+    실험·승인 후 적용은 env DART_QA_LATE_EXPANSION=1. 발동 수는 timings→meta에 기록되고,
+    boolean 값은 readiness pins에 들어가 OFF↔ON 캐시가 섞이지 않는다(재검수 3차 HIGH 3).
     """
     return os.environ.get("DART_QA_LATE_EXPANSION", "") == "1"
+
+
+def expanded_retrieval_enabled() -> bool:
+    """요구 슬롯 미충족 시 **확장 재검색**(k=40)의 스위치 — **기본 OFF, 별도 플래그**.
+
+    재검수 3차 MEDIUM 4: judge31 실측에서 효과는 원문 보충(16문항)에서 났고 k=40 재검색은
+    발동 0회 — 측정되지 않은 동작을 보충 승인에 끼워 켜지 않도록 플래그를 분리한다.
+    적용은 env DART_QA_EXPANDED_RETRIEVAL=1(별도 실측·승인 후).
+    """
+    return os.environ.get("DART_QA_EXPANDED_RETRIEVAL", "") == "1"
 
 
 def unfilled_slots(slots: Sequence[str], matches: Sequence[EvidenceMatch]) -> tuple[str, ...]:
@@ -1672,7 +1734,7 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
     # 검수 브랜치 review/qa-649d1cd-daeun 반영). 채움이 **늘 때만** 채택한다(잡음 채택 금지).
     # 호출자가 k를 고정했으면 확장하지 않는다(실험 재현성 — 러너가 폭을 통제한다).
     missing = unfilled_slots(state.slots, state.evidence_matches)
-    if missing and k is None and state.retrieval_results and late_expansion_enabled():
+    if missing and k is None and state.retrieval_results and expanded_retrieval_enabled():
         expanded = list(retriever.retrieve(question, state.conditions,
                                            k=EXPANDED_RETRIEVE_K))
         expanded += date_item_supplement(question, state.conditions, retriever, expanded)
@@ -1816,22 +1878,36 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
                     node_index=src_chunk.node_index,
                     rcept_no=str(src_chunk.metadata.get("rcept_no") or "")))
     assembled = None
+    ambiguous = None
     assembled_skips_llm = False
     if not binary and not holding and form_items and item_days:
-        # 항목 자리가 전부 **질문 날짜에 결박된 한 문서**의 서식 값으로 확정되면 결정론 조립을
-        # 기본 답으로 쓴다. 날짜 없는 질문·후보 미해소 질문은 기존 경로(발췌 + LLM) 그대로다.
-        assembled = assemble_item_answer(form_items, state.evidence_matches)
-        if assembled and len(item_doc_candidates) > 1 and not item_doc_resolved:
-            assembled = None        # 같은 날짜 창에 서식 후보 2건 + 질문 토큰으로 해소 불가
-        if assembled:
-            answer = assembled
-            uncertainty = "값은 공시 서식 필드에서 원문 그대로 추출했다."
-            # LLM 생략은 **닫힌 값 질문에서만**(재검수 HIGH 2): 항목이 못 덮는 서술 요구
-            # (영향·의미·전망·설명·인원수 등)가 남아 있거나 NARRATIVE 전략이면 결정론 값
-            # 블록 뒤에 LLM 서술 경로를 유지한다 — 조립이 질문 일부를 조용히 지우면 안 된다.
-            assembled_skips_llm = (not _residual_asks(question, form_items)
-                                   and (state.route is None
-                                        or state.route.strategy != "NARRATIVE"))
+        if len(item_doc_candidates) > 1 and not item_doc_resolved:
+            # 재검수 3차 BLOCKER 1: 미해소 복수 후보에서 LLM·단일 답변 조립을 허용하면
+            # 서로 다른 공시의 값이 한 답으로 섞여 SUPPORTED로 나간다(텍스트 필드는 숫자
+            # 게이트가 못 잡는다 — "A 금액 인용 + B 상대방 주장" 재현). 문서별로 값을
+            # 분리한 모호성 답변으로 종료하고 LLM은 부르지 않는다(fail-closed).
+            ambiguous = ambiguous_items_answer(form_items, item_doc_candidates,
+                                               state.retrieval_results)
+            if ambiguous:
+                answer, amb_matches = ambiguous
+                seen_lines = {"".join(m.evidence_text.split())
+                              for m in state.evidence_matches}
+                state.evidence_matches = state.evidence_matches + [
+                    m for m in amb_matches
+                    if "".join(m.evidence_text.split()) not in seen_lines]
+                uncertainty = ("같은 날짜에 같은 서식의 공시가 여러 건이라 대상을 특정할 수 "
+                               "없어, 값을 공시별로 분리해 제시했다(혼합 방지).")
+        else:
+            # 항목 자리가 전부 **질문 날짜에 결박된 한 문서**의 서식 값으로 확정되면 결정론
+            # 조립을 기본 답으로 쓴다. 날짜 없는 질문은 기존 경로(발췌 + LLM) 그대로다.
+            assembled = assemble_item_answer(form_items, state.evidence_matches)
+            if assembled:
+                answer = assembled
+                uncertainty = "값은 공시 서식 필드에서 원문 그대로 추출했다."
+                # LLM 생략은 실제 미충족 서술 요구가 없을 때다(재검수 3차 BLOCKER 2:
+                # 라우터는 값 슬롯 3개 이상 단순 질문도 NARRATIVE로 보내므로, 전략만으로
+                # LLM을 강제하면 근거 없는 설명이 붙는다 — 전략 조건은 쓰지 않는다).
+                assembled_skips_llm = not _residual_asks(question, form_items)
     det_template = (answer, uncertainty)     # ⑨ 폴백 ②단(템플릿)도 같은 결정론 답을 쓴다
     if state.derived:
         answer = calculator.describe(state.derived) + "\n\n" + answer
@@ -1863,13 +1939,15 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
     llm_topics = _holding_llm_topics(question, holding) if holding else ()
     if llm is not None and (binary or (holding and not llm_topics)
                             or (not holding and state.derived)
-                            or (not holding and assembled_skips_llm)):
+                            or (not holding and assembled_skips_llm)
+                            or (not holding and ambiguous)):
         # 대량보유: 질문의 요구 항목을 파서가 전부 채웠으면 계산이 없어도 LLM을 부르지 않는다 —
         # 같은 문서의 과거 연혁값을 직전값으로 재주장하는 경로 자체를 없앤다(재검수 BLOCKER 1-a).
         # 이분 판정(신청/승인)이 서식 필드로 확정된 질문도 LLM이 더할 것이 없다(자체 검증).
         # 서식 항목 조립(assembled)도 같다 — FC 실행 간 변동으로 확정값이 흔들릴 이유가 없다.
         state.llm = {"used": False, "skipped": (
             "binary_verdict" if binary else
+            "items_ambiguous_docs" if ambiguous else
             "deterministic_calculation" if state.derived else
             "holding_all_slots_filled" if holding else "items_all_slots_filled")}
         llm = None

@@ -250,6 +250,10 @@ def readiness() -> dict[str, Any]:
                      "fc_fingerprint": grounded_answer.fc_fingerprint(),
                      # 모델·코드가 바뀌면 캐시가 자동 무효화되도록 pin에 넣는다(검수 3차 발견 8).
                      "llm": f"{getattr(llm, 'provider', '')}:{getattr(llm, 'model', '')}",
+                     # 검색 동작을 바꾸는 플래그는 캐시 키에 들어가야 한다(재검수 3차 HIGH 3:
+                     # 같은 code SHA에서 OFF↔ON 전환 시 이전 모드 캐시 재사용 차단).
+                     "late_expansion": qa_agent.late_expansion_enabled(),
+                     "expanded_retrieval": qa_agent.expanded_retrieval_enabled(),
                      "code_sha": _get_code_sha(),
                      "corpus_cutoff": policy_gate.CORPUS_CUTOFF},
         }
