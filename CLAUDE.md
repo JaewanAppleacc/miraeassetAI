@@ -288,6 +288,19 @@
   포함 10/25(기존 9) · 테스트 832·안전세트 28/28. 잔여: 삼성바이오 정정 체인 1건(원본은 상대방 유보,
   정정본이 창 밖 — 새 오분류지만 총 답변가능성은 순개선) · 같은 날 같은 보고자 대량보유 2건(고려아연 12-19) ·
   한미반도체·삼성E&A 같은 날 2건은 질문만으로 구분 불가(fail-closed 유지).
+- **팀원 검수 브랜치 반영(2026-09-05 · review/qa-649d1cd-daeun → 6e3bea4 · judge29)**: 649d1cd(judge15
+  시대) 기반 팀원 개선 4건 중 타당분 3건만 현재 코드에 이식 — ① 클린 클론 이식성(실측 산출물 의존
+  test_score_final_cli skipif — 실측 파일 없는 worktree에서 4건 실패 관측·DocumentIR 경로 후보 체인)
+  ② 요구 슬롯 미충족 시 1회 확장 재검색 k=40(현재 배선(bind_days·prefer_doc·원문 보충)에 맞춰 개작,
+  채움이 늘 때만 채택·k 고정 시 금지, 경계 테스트 4종) ③ FC 지문 fc-2026-09-05.1(숫자 없는 요구 항목도
+  claim으로 — 재배포 시 지문 pin 변경으로 캐시 자동 무효화). [기각] 라우팅 계산어 우선(a17b740) —
+  v4 §7 전략 순서 예외를 만드는 스펙 사안 + 근거가 judge15 분석뿐 + 현 코드는 계산을 라우팅과 무관하게
+  수행(재론 시 실측 먼저). **judge29: 완전 56·부분 31·미포함 5·가중 71.5·답변가능성 100 — judge28과
+  동일(paired 1↑/1↓ 잡음, PASS)** · unsupported 외 게이트 발동 감소(citation_unbound 9→4·
+  LLM_PATH_FAILED 20→17) · gold25 r3: full 5·partial 16·zero 4(r2 대비 Q06 1건 — FC 간헐 실패→JSON
+  폴백의 실행 변동, 코드 무관) · 테스트 836·안전세트 28/28. 4-arm 최종: 팀원1 통보 — B/D
+  HARD_GATE_FAILED(우리 동결 인계의 BLOCKED 판정과 일치), B/D 검색·scorer 작업 종료, 승자는 A/C에서.
+  검색 코어 동결 사유는 최종 판정 종결 시 소멸 — perf/retrieval-stage2(bf00bb1) 적용은 Owner 결정 대기.
 - **vFINAL 21번 변경 승인(2026-09-04, Owner=팀 대표)**: "FC Native Function Calling 경로에 한해
   전송 maxTokens 최소 1024 적용을 승인한다. 사유는 서비스 앱 API가 1024 미만 요청을 40001로
   거부하기 때문이다. JSON 경로의 v4 §7 예산은 변경하지 않으며 requested/sent 값을 구분해
