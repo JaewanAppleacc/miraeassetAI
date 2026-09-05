@@ -128,40 +128,6 @@ def question_dates(question: str) -> list[tuple[int, int, int]]:
         if 1 <= m <= 12 and 1 <= d <= 31:
             out.append((y, m, d))
     return out
-
-
-# 질문 날짜와 접수일의 허용 오차(일). 실측(DEV_TUNE 단일판매·공급계약 14문항): 질문은 공시
-# 이벤트일("2025-03-17 공시")을 적는데 접수일은 하루 뒤(03-18)라 정확 일치 가산이 전부 빗나갔다.
-DATE_TOLERANCE_DAYS = 1
-# Stage 1 문서 1위의 청크를 절단 앞에 보장하는 수. 실측: 1위 문서(점수 0.95)의 청크가 top-20에
-# 하나도 없던 문항이 14건 — '매출액' 어휘에 끌린 재무표 청크가 자리를 독식했다.
-TOP_DOC_QUOTA = 3
-
-
-def question_rcept_dates(question: str) -> set[str]:
-    """질문 날짜 ± 허용 오차의 YYYYMMDD 집합(접수일 대조용)."""
-    import datetime
-    out: set[str] = set()
-    for y, m, d in question_dates(question):
-        try:
-            base = datetime.date(y, m, d)
-        except ValueError:
-            continue
-        for off in range(-DATE_TOLERANCE_DAYS, DATE_TOLERANCE_DAYS + 1):
-            dd = base + datetime.timedelta(days=off)
-            out.add(f"{dd.year:04d}{dd.month:02d}{dd.day:02d}")
-    return out
-
-
-def guarantee_top_doc(hits: list, top_doc: str, quota: int) -> list:
-    """Stage 1 1위 문서의 상위 청크 quota개를 절단 앞으로 당긴다(순서만 바꾸고 점수는 유지)."""
-    if not top_doc or quota <= 0:
-        return hits
-    guaranteed = [h for h in hits if h[1].doc_id == top_doc][:quota]
-    if not guaranteed:
-        return hits
-    keys = {id(h) for h in guaranteed}
-    return guaranteed + [h for h in hits if id(h) not in keys]
 PRIMARY_DOC_GROUPS = ("exchange", "major")
 
 
@@ -292,10 +258,10 @@ class CorpusRetriever:
     def retrieve(self, question: str, conditions: QueryConditions | None = None,
                  *, k: int | None = None) -> list[RetrievedChunk]:
         cond = conditions or self.conditions(question)
-        # 질문이 접수일을 날짜로 못 박았으면(2024-04-17) 그 날(±허용 오차) 접수된 공시를
-        # Stage 1 절단 앞으로 당긴다. 같은 회사가 한 해에 같은 유형 공시를 수십 건 내는 경우
+        dates = {f"{y:04d}{m:02d}{d:02d}" for y, m, d in question_dates(question)}
+        # 질문이 접수일을 날짜로 못 박았으면(2024-04-17) 그 날 접수된 공시를 Stage 1
+        # 절단 앞으로 당긴다. 같은 회사가 한 해에 같은 유형 공시를 수십 건 내는 경우
         # BM25만으로는 특정 날짜 문서가 50위 안에 못 든다(Phase1 실측 2건).
-        dates = question_rcept_dates(question)
         stage1_k = self.stage1_k * (4 if dates else 1)
         top_docs = [h.doc_id for h in self.document_index.search(
             question, k=stage1_k, conditions=cond)]
@@ -307,36 +273,30 @@ class CorpusRetriever:
             return []
         chunk_index = ChunkIndex.from_documents(usable, strategy=self.strategy)
         want = k or self.chunk_k
+        if dates:
+            # 청크 단계에서도 접수일 일치 문서를 절단 전에 가산한다(ITEM_DOC_BONUS와 같은 틀).
+            date_docs = {d for d in top_docs if self._rcept_dt(d) in dates}
+            hits = chunk_index.search(question, k=len(chunk_index.chunks),
+                                      section_alpha=self.section_alpha)
+            hits = sorted(((score * (1.0 + DATE_DOC_BONUS)
+                            if chunk.doc_id in date_docs else score, chunk)
+                           for score, chunk in hits), key=lambda x: -x[0])[:want]
+            hits = supplement_hits(question, hits, chunk_index.chunks, want)
+            return [self._to_chunk(score, chunk) for score, chunk in hits]
         # 계약금액·투자금액 같은 항목 질문의 답은 원문 공시(exchange/major) 서식에 있다.
         # 사업보고서의 요약 한 줄이 짧아서(BM25 길이 정규화) 원문을 이기는 실측(N05)이
         # 있어, 항목이 잡힌 질문에서만 원문 공시 조각을 절단 전에 가산한다.
         # beta 스윕(0/0.15/0.3/0.5) 실측: gold25 E-R 전 구간 완전 불변,
         # 새 24문항 상위20 35->36/36. 최소 유효값 0.15를 쓴다.
-        # 날짜 분기와 항목 가산은 **병행**한다 — 종전엔 날짜가 있으면 항목 가산을 건너뛰어
-        # "2025-03-17 공시한 공급계약의 계약금액" 문형 14문항이 전부 재무표 청크에 밀렸다.
-        items = bool(extract_disclosure_items(question))
-        date_docs = {d for d in top_docs if self._rcept_dt(d) in dates} if dates else set()
-        if dates or items:
+        if extract_disclosure_items(question):
             hits = chunk_index.search(question, k=len(chunk_index.chunks),
                                       section_alpha=self.section_alpha)
-
-            def _boost(score: float, chunk) -> float:
-                if chunk.doc_id in date_docs:
-                    score *= (1.0 + DATE_DOC_BONUS)
-                if items and chunk.doc_group in PRIMARY_DOC_GROUPS:
-                    score *= (1.0 + ITEM_DOC_BONUS)
-                return score
-
-            hits = sorted(((_boost(score, chunk), chunk) for score, chunk in hits),
-                          key=lambda x: -x[0])
+            hits = sorted(((score * (1.0 + ITEM_DOC_BONUS)
+                            if chunk.doc_group in PRIMARY_DOC_GROUPS else score, chunk)
+                           for score, chunk in hits), key=lambda x: -x[0])[:want]
         else:
-            hits = chunk_index.search(question, k=max(want, TOP_DOC_QUOTA * 4),
+            hits = chunk_index.search(question, k=want,
                                       section_alpha=self.section_alpha)
-        # Stage 1 1위 문서의 청크를 보장한다 — 문서 랭킹이 옳아도 청크 랭킹에서 전멸하던 실측.
-        # 단, 질문이 접수일을 못 박았고 1위 문서가 그 날 접수된 공시일 때만: 날짜 없는 질문에서
-        # 1위가 정정 사업보고서 같은 오답 문서면 그 청크가 정답 행을 밀어냈다(judge24 실측 3건).
-        top1 = top_docs[0] if top_docs and dates and top_docs[0] in date_docs else ""
-        hits = guarantee_top_doc(list(hits), top1, TOP_DOC_QUOTA)[:want]
         hits = supplement_hits(question, hits, chunk_index.chunks, want)
         return [self._to_chunk(score, chunk) for score, chunk in hits]
 
