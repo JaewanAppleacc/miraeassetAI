@@ -19,10 +19,11 @@ const SHA256_RE = /^[0-9a-f]{64}$/;
 const SHORT_SHA_RE = /^[0-9a-f]{7,64}$/; // git commit SHAs seen in B/D run.json are 20-hex-char shortened forms
 
 export const LEDGER_ENTRY_STATUSES = Object.freeze([
-  "NOT_EXECUTED_PENDING_DEVTUNE", // A/C: infra ready, no evaluation run yet
-  "REUSED_VERIFIED",              // B/D: prior result reused, SHA-verified byte-identical
-  "EXECUTED",                     // a real evaluation run happened in this ledger entry
-  "BLOCKED",                      // could not produce a usable entry at all
+  "NOT_EXECUTED_PENDING_DEVTUNE",      // A/C: infra ready, no evaluation run yet
+  "RETRIEVAL_EXECUTED_PENDING_SCORING", // A/C: real retrieval run completed, frozen scorer not yet applied (Gold access lives outside this environment)
+  "REUSED_VERIFIED",                   // B/D: prior result reused, SHA-verified byte-identical
+  "EXECUTED",                          // a real evaluation run AND scoring happened in this ledger entry
+  "BLOCKED",                           // could not produce a usable entry at all
 ]);
 
 export const LEDGER_ENTRY_ROLES = Object.freeze(["AC_LIVE", "BD_IMPORTED_REFERENCE"]);
@@ -79,7 +80,7 @@ export function validateLedgerEntry(entry) {
   if (entry.results_sha256 !== null && (typeof entry.results_sha256 !== "string" || !SHA256_RE.test(entry.results_sha256))) {
     throw new RunLedgerValidationError("ledger entry results_sha256 must be null or a valid sha256", "LEDGER_ENTRY_INVALID_RESULTS_SHA");
   }
-  if ((entry.status === "EXECUTED" || entry.status === "REUSED_VERIFIED") && entry.results_sha256 === null) {
+  if (["EXECUTED", "REUSED_VERIFIED", "RETRIEVAL_EXECUTED_PENDING_SCORING"].includes(entry.status) && entry.results_sha256 === null) {
     throw new RunLedgerValidationError(`ledger entry status=${entry.status} requires a non-null results_sha256`, "LEDGER_ENTRY_MISSING_RESULTS_SHA_FOR_STATUS");
   }
   return true;

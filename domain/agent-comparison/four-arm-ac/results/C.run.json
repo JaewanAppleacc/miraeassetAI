@@ -1,0 +1,23 @@
+{
+  "arm": "C",
+  "batch_id": "35b588e42086e728302c47f0b5d307b7",
+  "started_at": "2026-09-05T09:03:23.206Z",
+  "finished_at": "2026-09-05T09:03:38.040Z",
+  "host": "choejaewan-ui-MacBookAir.local",
+  "platform": "Darwin-25.2.0-arm64",
+  "node": "v26.0.0",
+  "code_sha256": "a5c1c8730225d0905b37c0ee8561e9563a56a30d",
+  "config_sha256": "f2b58ced2076e5d0363e4ffcec5152b657198591a3ba580df8cff6e443d28c95",
+  "input_sha256": {
+    "conditions": "83d5b8a02de2e3e79e388ec417ed104c81b08eb0a8dc8a8366b020df36b5e527",
+    "config": "f2b58ced2076e5d0363e4ffcec5152b657198591a3ba580df8cff6e443d28c95"
+  },
+  "n_questions": 101,
+  "n_errors": 0,
+  "latency_ms": {
+    "p50": 62,
+    "p95": 584,
+    "max": 930
+  },
+  "results_sha256": "564bdbe4226dc2a6df7409279d7218c7cc6a2448f1fdf4ca58454a378b1a50f7"
+}

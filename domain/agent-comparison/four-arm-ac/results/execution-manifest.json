@@ -1,0 +1,257 @@
+{
+  "schema_version": "0.1.0",
+  "turn": "FOURARM-AC-OFFICIAL-DEVTUNE-AND-SELECTION-V1",
+  "batch_id": "35b588e42086e728302c47f0b5d307b7",
+  "cutoff_contract": {
+    "retrieval_output_k": 20,
+    "primary_evaluation_k": 10,
+    "reported_cutoffs": [
+      5,
+      10,
+      20
+    ]
+  },
+  "segments": {
+    "HIGH": 81,
+    "LOW": 20
+  },
+  "checkpoint_integrity": {
+    "A": {
+      "arm": "A",
+      "ok": true,
+      "issues": [],
+      "row_count": 101,
+      "unique_question_ids": 101,
+      "error_rows": 0
+    },
+    "C": {
+      "arm": "C",
+      "ok": true,
+      "issues": [],
+      "row_count": 101,
+      "unique_question_ids": 101,
+      "error_rows": 0
+    }
+  },
+  "locator_provenance": {
+    "A": {
+      "questions_with_results": 95,
+      "questions_with_empty_result": 6,
+      "empty_result_question_ids": [
+        "author_41f346723847e84a051e614a",
+        "author_642b260aa50968143920281b",
+        "author_a24879dc628ff582fdeba8b5",
+        "author_d640cbedd7330f4b9bcfeeb7",
+        "author_f119c5d79a4e52a359a84caa",
+        "author_ffcc4093fb37a87f1a40322d"
+      ],
+      "total_result_chunks": 1869,
+      "locator_status_distribution": {
+        "MULTI_NODE_AMBIGUOUS": 1174,
+        "NODE_RESOLVED_ROW_AMBIGUOUS": 682,
+        "NODE_AND_ROW_RESOLVED": 13
+      },
+      "unresolved_chunk_count": 0,
+      "locator_hard_gate": "PASSED"
+    },
+    "C": {
+      "questions_with_results": 95,
+      "questions_with_empty_result": 6,
+      "empty_result_question_ids": [
+        "author_41f346723847e84a051e614a",
+        "author_642b260aa50968143920281b",
+        "author_a24879dc628ff582fdeba8b5",
+        "author_d640cbedd7330f4b9bcfeeb7",
+        "author_f119c5d79a4e52a359a84caa",
+        "author_ffcc4093fb37a87f1a40322d"
+      ],
+      "total_result_chunks": 1869,
+      "locator_status_distribution": {
+        "MULTI_NODE_AMBIGUOUS": 1229,
+        "NODE_RESOLVED_ROW_AMBIGUOUS": 613,
+        "NODE_AND_ROW_RESOLVED": 27
+      },
+      "unresolved_chunk_count": 0,
+      "locator_hard_gate": "PASSED"
+    }
+  },
+  "dense_embedding_call_counts": {
+    "A": 101,
+    "C": 0
+  },
+  "latency_ms": {
+    "A": {
+      "p50": 205,
+      "p95": 1593,
+      "max": 2995
+    },
+    "C": {
+      "p50": 62,
+      "p95": 584,
+      "max": 930
+    }
+  },
+  "rss": {
+    "A": "NOT_TRACKED_BY_THIS_RUNNER",
+    "C": "NOT_TRACKED_BY_THIS_RUNNER"
+  },
+  "ledger": {
+    "batch": {
+      "batch_id": "35b588e42086e728302c47f0b5d307b7",
+      "arms": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ]
+    },
+    "entries": [
+      {
+        "arm": "A",
+        "role": "AC_LIVE",
+        "batch_id": "35b588e42086e728302c47f0b5d307b7",
+        "status": "RETRIEVAL_EXECUTED_PENDING_SCORING",
+        "code_sha256": "a5c1c8730225d0905b37c0ee8561e9563a56a30d",
+        "config_sha256": "d4ebfecdb11f3ce41be8028f356f54e71907242a6f4d92c961a895be74d6f4e7",
+        "input_sha256": {
+          "conditions": "83d5b8a02de2e3e79e388ec417ed104c81b08eb0a8dc8a8366b020df36b5e527",
+          "universe": "96560165c836b10e315cb253ab96a99b369478c3f71a0415d16b7b6fadbfa1dc",
+          "corpus_manifest": "8cc6628eb38fff0ee48cf138a586978a627260a7e41157dddd45e52f97761d4e"
+        },
+        "index_sha256": "8cc6628eb38fff0ee48cf138a586978a627260a7e41157dddd45e52f97761d4e",
+        "results_sha256": "4213781f18afec47e9fc31ac02f17ae7ee83130e4e33871b9f444724a55c4326",
+        "infra_readiness": {
+          "official_experiment_ready": true,
+          "reasons": []
+        }
+      },
+      {
+        "arm": "C",
+        "role": "AC_LIVE",
+        "batch_id": "35b588e42086e728302c47f0b5d307b7",
+        "status": "RETRIEVAL_EXECUTED_PENDING_SCORING",
+        "code_sha256": "a5c1c8730225d0905b37c0ee8561e9563a56a30d",
+        "config_sha256": "f2b58ced2076e5d0363e4ffcec5152b657198591a3ba580df8cff6e443d28c95",
+        "input_sha256": {
+          "conditions": "83d5b8a02de2e3e79e388ec417ed104c81b08eb0a8dc8a8366b020df36b5e527",
+          "universe": "96560165c836b10e315cb253ab96a99b369478c3f71a0415d16b7b6fadbfa1dc",
+          "corpus_manifest": "8cc6628eb38fff0ee48cf138a586978a627260a7e41157dddd45e52f97761d4e"
+        },
+        "index_sha256": "8cc6628eb38fff0ee48cf138a586978a627260a7e41157dddd45e52f97761d4e",
+        "results_sha256": "564bdbe4226dc2a6df7409279d7218c7cc6a2448f1fdf4ca58454a378b1a50f7",
+        "infra_readiness": {
+          "official_experiment_ready": true,
+          "reasons": []
+        }
+      },
+      {
+        "arm": "B",
+        "role": "BD_IMPORTED_REFERENCE",
+        "batch_id": "35b588e42086e728302c47f0b5d307b7",
+        "status": "REUSED_VERIFIED",
+        "code_sha256": "04b847c4a2e61042da9f025735af8b2e2e56311e",
+        "config_sha256": "fd23dd8be268a694465a97b4e73bfb48b36bbbb1dfcaa73d97e152a8641fb6b8",
+        "input_sha256": {
+          "conditions": "83d5b8a02de2e3e79e388ec417ed104c81b08eb0a8dc8a8366b020df36b5e527",
+          "universe": "96560165c836b10e315cb253ab96a99b369478c3f71a0415d16b7b6fadbfa1dc",
+          "document_ir_manifest": "04750795e1a2d5c35f73e4bb7766ebede02ff3512d33c382bd4c3a51daba3364"
+        },
+        "index_sha256": null,
+        "results_sha256": "de661a1cbd20d8de268e24b84ccac8ab41feeace0af2502891d401a2c0898985"
+      },
+      {
+        "arm": "D",
+        "role": "BD_IMPORTED_REFERENCE",
+        "batch_id": "35b588e42086e728302c47f0b5d307b7",
+        "status": "REUSED_VERIFIED",
+        "code_sha256": "04b847c4a2e61042da9f025735af8b2e2e56311e",
+        "config_sha256": "f4914226620b425dbe1e13da5c2c6921391fe2afbf33ae83e80f9bc9146389b2",
+        "input_sha256": {
+          "conditions": "83d5b8a02de2e3e79e388ec417ed104c81b08eb0a8dc8a8366b020df36b5e527",
+          "universe": "96560165c836b10e315cb253ab96a99b369478c3f71a0415d16b7b6fadbfa1dc",
+          "document_ir_manifest": "04750795e1a2d5c35f73e4bb7766ebede02ff3512d33c382bd4c3a51daba3364"
+        },
+        "index_sha256": null,
+        "results_sha256": "0f1112219d28442115f0bc07924d580320c40303b365ef1f2325fc5afa29cf6b"
+      }
+    ]
+  },
+  "arm_states": [
+    {
+      "arm": "A",
+      "arm_execution_state": "RETRIEVAL_EXECUTED_PENDING_SCORING",
+      "arm_hard_gate_state": "HARD_GATE_PENDING_EXECUTION",
+      "arm_selection_eligible": null,
+      "failure_reason": null,
+      "quality_metrics": null
+    },
+    {
+      "arm": "C",
+      "arm_execution_state": "RETRIEVAL_EXECUTED_PENDING_SCORING",
+      "arm_hard_gate_state": "HARD_GATE_PENDING_EXECUTION",
+      "arm_selection_eligible": null,
+      "failure_reason": null,
+      "quality_metrics": null
+    },
+    {
+      "arm": "B",
+      "arm_execution_state": "REUSED_VERIFIED",
+      "arm_hard_gate_state": "HARD_GATE_FAILED",
+      "arm_selection_eligible": false,
+      "failure_reason": "ARM_SPECIFIC_CRITICAL_2",
+      "quality_metrics": null
+    },
+    {
+      "arm": "D",
+      "arm_execution_state": "REUSED_VERIFIED",
+      "arm_hard_gate_state": "HARD_GATE_FAILED",
+      "arm_selection_eligible": false,
+      "failure_reason": "ARM_SPECIFIC_CRITICAL_2",
+      "quality_metrics": null
+    }
+  ],
+  "owner_resolutions_artifact": {
+    "file_sha256": "90940c7d514220169c2873d14a3aecd1dda328b8782b808697f65036b6cceeba",
+    "packet_combined_sha256": "e65cf7f5372cb007f4e94ef70542a0492ee147d980dea5d56f22c7ffc0c3b2a4",
+    "adjudicated_at": "2026-09-05T06:08:29Z",
+    "method": "arm-blind review of frozen packet content only; no retrieval/search re-run, no scorer re-run, no code or B/D result modification",
+    "equivalent_evidence_rejected": true,
+    "packet_count": 17,
+    "distribution": {
+      "COMMON_SOURCE": 0,
+      "ARM_SPECIFIC": 2,
+      "UNKNOWN": 15,
+      "critical": 2
+    },
+    "critical_packet_ids": [
+      "u-1b6cd184a87f",
+      "u-8564414f6080"
+    ],
+    "unknown_packet_ids": [
+      "u-0242ed257328",
+      "u-0f63a81df003",
+      "u-192d06b044ea",
+      "u-306d35a3890d",
+      "u-563f0c29d422",
+      "u-63cddb9b0159",
+      "u-63efc7b71368",
+      "u-6ebd6ff8de67",
+      "u-893641aa1791",
+      "u-896a2a3163e6",
+      "u-aa1e331b4d22",
+      "u-bb1d59b61b69",
+      "u-c55cdd9aa429",
+      "u-cdf167178203",
+      "u-f49512b5641c"
+    ],
+    "common_source_packet_ids": [],
+    "official_execution_ready": true,
+    "source": "OWNER_RATIFIED_RESOLUTIONS"
+  },
+  "official_batch_execution_ready": true,
+  "blockers_from_preflight_layer": [],
+  "scoring_status": "BLOCKED_CONTRACT",
+  "scoring_blocker_reason": "Gold DEV_TUNE-101 content was never provided to this environment (only its SHA-256 pointer, 7941144c09ce25debeeab6c3fbdfbd4c16761a6be06ab3a844ad159c832f102b) -- by the same non-leak design that keeps DEV_CHECK/HOLDOUT out of reach. Recall@5/10/20, HIGH Recall@10, LOW all-required-slots-found, required-evidence critical checks, and hard/quality gate PASS/FAIL for A/C cannot be computed without it. The locator/provenance hard gate (the one hard-gate component that does NOT need Gold) is reported above and PASSED for both arms.",
+  "final_status": "BLOCKED_CONTRACT",
+  "dev_check_dev_tune_note": "DEV_TUNE-101 retrieval WAS executed (this Turn's actual scope). DEV_CHECK/HOLDOUT were never accessed."
+}

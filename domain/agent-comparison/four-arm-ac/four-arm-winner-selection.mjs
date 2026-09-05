@@ -5,7 +5,17 @@
 // A hard-gate-failed arm can never be selected, structurally -- not by a
 // convention selectWinner happens to follow, but because ineligible arms
 // are filtered out before any metric comparison ever runs.
-export const EXECUTION_STATES = Object.freeze(["NOT_EXECUTED_PENDING_DEVTUNE", "EXECUTED", "REUSED_VERIFIED"]);
+// RETRIEVAL_EXECUTED_PENDING_SCORING: the real DEV_TUNE-101 retrieval run
+// completed (checkpoint-complete, 0 errors) but the frozen scorer has not
+// been applied yet -- distinct from EXECUTED, which this module treats as
+// "retrieval AND scoring both done, a hard-gate verdict must exist" (see
+// the throw below). This state exists because scoring requires Gold
+// access this integration environment intentionally does not have (same
+// non-leak boundary as DEV_CHECK/HOLDOUT) -- the actual scoring pass runs
+// wherever Gold legitimately lives, against these same results files.
+export const EXECUTION_STATES = Object.freeze([
+  "NOT_EXECUTED_PENDING_DEVTUNE", "RETRIEVAL_EXECUTED_PENDING_SCORING", "EXECUTED", "REUSED_VERIFIED",
+]);
 export const HARD_GATE_STATES = Object.freeze(["HARD_GATE_PENDING_EXECUTION", "HARD_GATE_PASSED", "HARD_GATE_FAILED"]);
 export const SELECTION_STATUSES = Object.freeze(["EXECUTION_PENDING", "NO_SELECTION_BLOCKED", "PROVISIONAL_WINNER"]);
 
@@ -30,6 +40,11 @@ export function deriveArmSelectionState({ arm, executionState, hardGateState, fa
   if (!HARD_GATE_STATES.includes(hardGateState)) {
     throw new WinnerSelectionError(`invalid hardGateState ${JSON.stringify(hardGateState)} for arm ${arm}`, "SELECTION_INVALID_HARD_GATE_STATE");
   }
+  // "executed" here means "scoring is expected to be final" -- a retrieval
+  // run alone (RETRIEVAL_EXECUTED_PENDING_SCORING) is deliberately NOT in
+  // this set, so it behaves like NOT_EXECUTED_PENDING_DEVTUNE for
+  // eligibility purposes (selection_eligible stays null/pending) even
+  // though the retrieval itself already succeeded.
   const executed = executionState === "EXECUTED" || executionState === "REUSED_VERIFIED";
   let selectionEligible = null;
   if (executed && hardGateState === "HARD_GATE_PASSED") selectionEligible = true;

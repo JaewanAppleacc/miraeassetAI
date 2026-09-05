@@ -144,3 +144,34 @@ test("deriveLowUnderpowered rejects a negative or non-integer count", () => {
   assert.throws(() => deriveLowUnderpowered(-1), (e) => e.code === "LOW_UNDERPOWERED_INVALID_COUNT");
   assert.throws(() => deriveLowUnderpowered(1.5), (e) => e.code === "LOW_UNDERPOWERED_INVALID_COUNT");
 });
+
+// --- RETRIEVAL_EXECUTED_PENDING_SCORING: a real retrieval run completed
+// but the frozen scorer (which needs Gold) has not been applied yet ---
+
+test("a completed retrieval run with scoring still pending behaves like not-yet-executed for ELIGIBILITY (selection_eligible stays null, not true/false)", () => {
+  const s = state("A", "RETRIEVAL_EXECUTED_PENDING_SCORING", "HARD_GATE_PENDING_EXECUTION");
+  assert.equal(s.arm_execution_state, "RETRIEVAL_EXECUTED_PENDING_SCORING");
+  assert.equal(s.arm_hard_gate_state, "HARD_GATE_PENDING_EXECUTION");
+  assert.equal(s.arm_selection_eligible, null);
+});
+
+test("RETRIEVAL_EXECUTED_PENDING_SCORING never throws SELECTION_EXECUTED_WITHOUT_HARD_GATE -- unlike EXECUTED, it does not assert scoring is final", () => {
+  // This is the whole point of the distinct state: EXECUTED with a
+  // pending hard gate is a contract violation (scoring was supposed to
+  // have happened), but a retrieval-only completion with scoring
+  // deliberately deferred (Gold lives outside this environment) is not.
+  const s = state("A", "RETRIEVAL_EXECUTED_PENDING_SCORING", "HARD_GATE_PENDING_EXECUTION");
+  assert.equal(s.arm_selection_eligible, null);
+});
+
+test("selectWinner reports EXECUTION_PENDING when an arm's retrieval finished but scoring did not", () => {
+  const arms = [
+    state("A", "RETRIEVAL_EXECUTED_PENDING_SCORING", "HARD_GATE_PENDING_EXECUTION"),
+    state("C", "RETRIEVAL_EXECUTED_PENDING_SCORING", "HARD_GATE_PENDING_EXECUTION"),
+    state("B", "REUSED_VERIFIED", "HARD_GATE_FAILED", { failureReason: "ARM_SPECIFIC_CRITICAL_2" }),
+    state("D", "REUSED_VERIFIED", "HARD_GATE_FAILED", { failureReason: "ARM_SPECIFIC_CRITICAL_2" }),
+  ];
+  const result = selectWinner(arms);
+  assert.equal(result.status, "EXECUTION_PENDING");
+  assert.equal(result.winner, null);
+});
