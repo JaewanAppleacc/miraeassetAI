@@ -1151,6 +1151,9 @@ def corpus_existence(question: str, conditions: QueryConditions,
 # 쓴다. 이때 값을 못 찾은 것이 아니라 "유보됨"이 답이다. Phase1 실측 4문항 전부 이 꼴.
 _WITHHELD_CELL_RE = re.compile(r"(유보사항|유보사유|유보기한)\s*\|\s*([^|]*)")
 _WITHHELD_PROSE_RE = re.compile(r"[^.。\n]*(?:공시유보|유보사항에 해당|공시를 유보)[^.。\n]*")
+# 표 셀 안의 유보 문장용 — 문장형 표현만 잡는다. 섹션 제목 셀("8. 공시유보 관련내용")이
+# '공시유보' 단어만으로 오발동하면 유보 없는 계약 공시까지 WITHHELD가 된다(fail-closed 방향 오류).
+_WITHHELD_CELL_PROSE_RE = re.compile(r"[^.。\n]*(?:유보사항에 해당|공시를 유보|공시유보사항)[^.。\n]*")
 _DASH = {"", "-", "－", "―", "—"}
 _WITHHELD_ASK_RE = re.compile(r"확인 가능|공시되지 않|유보|비공개|알 수 있는가")
 _FIELD_WORDS = ("계약상대", "계약금액", "품목", "회사명", "기술료", "계약기간", "판매", "공급")
@@ -1181,6 +1184,15 @@ def detect_withheld(question: str, chunks: Sequence[RetrievedChunk],
             m = _WITHHELD_PROSE_RE.search(line)
             if m:
                 found.setdefault("유보문장", m.group(0).strip()[:200])
+        elif "유보사유" not in found and "유보문장" not in found:
+            # 표 행이라도 셀 **안**의 본문 문장은 본다(코덱스 재배포 검수 BLOCKER 1:
+            # 알테오젠 ALT-B4 실물은 "…공시유보사항에 해당합니다"가 표 셀에 들어 있어
+            # 줄 단위 '|' 스킵이 탐지를 통째로 놓쳤다 — 기대 WITHHELD가 SUPPORTED로).
+            for cell in line.split("|"):
+                m = _WITHHELD_CELL_PROSE_RE.search(cell)
+                if m:
+                    found.setdefault("유보문장", m.group(0).strip()[:200])
+                    break
         if "|" in line and asked_fields and any(w in line for w in asked_fields):
             cells = [c.strip() for c in line.split("|")]
             if cells[-1] in _DASH:
