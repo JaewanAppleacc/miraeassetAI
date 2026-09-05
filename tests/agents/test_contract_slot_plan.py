@@ -138,6 +138,35 @@ def test_free_slot_without_question_date_behaves_as_before():
     assert all("앵커" not in m.reason for m in matches)
 
 
+# ---------- 날짜+항목 원문 보충: 검색 후보에 없는 대상 문서를 node에서 읽는다 ----------
+
+def test_date_item_supplement_pulls_stage1_doc_missing_from_chunks():
+    """gold 문서가 Stage 1 1위인데 청크 후보에 없던 실물(단일판매 14문항) — 접수일이
+    이벤트일 다음 날(±1일)이어도 보충한다. 검색 코어(retrieve)는 호출하지 않는다."""
+    from types import SimpleNamespace
+    q = "삼성중공업의 2025-03-17 에탄운반선 공급계약 공시에서 계약금액을 알려줘."
+    hit = SimpleNamespace(doc_id="exchange_gold", corp_name="삼성중공업")
+    retriever = SimpleNamespace(
+        docs_by_id={"exchange_gold": {"nodes": [
+            {"node_index": 0, "section_hierarchy": [],
+             "text": "2. 계약내역 | 계약금액(원) | 466,100,000,000"}]}},
+        document_index=SimpleNamespace(search=lambda question, k, conditions: [hit]),
+        _rcept_dt=lambda doc_id: "20250318")           # 접수일 = 이벤트일 + 1일
+    got = qa_agent.date_item_supplement(q, conditions(), retriever, chunks=[])
+    assert len(got) == 1 and got[0].doc_id == "exchange_gold"
+    assert "466,100,000,000" in got[0].evidence_text
+
+    # 이미 후보에 있으면 보충하지 않는다(중복 금지)
+    have = [got[0]]
+    assert qa_agent.date_item_supplement(q, conditions(), retriever, have) == []
+    # 날짜가 어긋나면(±1일 밖) 보충하지 않는다
+    retriever._rcept_dt = lambda doc_id: "20250320"
+    assert qa_agent.date_item_supplement(q, conditions(), retriever, []) == []
+    # 서식 항목이 없는 질문은 보충하지 않는다
+    assert qa_agent.date_item_supplement(
+        "삼성중공업의 2025-03-17 공시 내용을 요약해줘", conditions(), retriever, []) == []
+
+
 # ---------- 통합: LGES 실물 서식 → 유보 + 확정값 보존, LLM 미호출 ----------
 
 UNIVERSE_ROWS = [{"corp_name": "LG에너지솔루션", "listed_name": "LG에너지솔루션",

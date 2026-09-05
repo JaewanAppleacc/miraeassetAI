@@ -862,6 +862,71 @@ def fallback_answer(matches: Sequence[EvidenceMatch],
             "값과 인용은 원문 그대로다. 출처는 evidence의 doc_id/section_path에 있다.")
 
 
+def _question_day_window(question: str) -> frozenset[str]:
+    """질문의 ISO 날짜 ±1일 YYYYMMDD 집합 — 접수일이 공시 이벤트일 다음 날인 실물이 많다."""
+    import datetime as _dt
+    out: set[str] = set()
+    for y, mo, d in question_dates(question):
+        try:
+            base = _dt.date(y, mo, d)
+        except ValueError:
+            continue
+        for off in (-1, 0, 1):
+            day = base + _dt.timedelta(days=off)
+            out.add(f"{day.year:04d}{day.month:02d}{day.day:02d}")
+    return frozenset(out)
+
+
+DATE_ITEM_SUPPLEMENT_DOCS = 1      # 보충하는 문서 수 — 날짜가 못 박힌 질문의 대상은 한 건이다
+DATE_ITEM_SUPPLEMENT_NODES = 4     # 문서당 보충 node 수(원문 공시 서식은 보통 1~2 node)
+
+
+def date_item_supplement(question: str, conditions: QueryConditions,
+                         retriever: Any,
+                         chunks: Sequence[RetrievedChunk]) -> list[RetrievedChunk]:
+    """질문이 ISO 날짜와 서식 항목을 함께 못 박았는데 그 날짜(±1일)에 접수된 Stage 1 상위
+    문서의 청크가 후보에 없으면, 그 문서의 원문 node를 근거 후보로 보충한다.
+
+    코덱스 재배포 검수 P0 실측: 단일판매·공급계약 14문항은 gold 문서가 Stage 1 1위인데
+    Stage 2 청크 랭킹에서 재무표에 밀려 전멸했다. 검색 코어(retrieve)는 4-arm 동결이라
+    건드리지 않는다(BLOCKER 2) — 대량보유 파서와 같은 에이전트 층 원문 읽기(docs_by_id)로
+    보충한다. 질문 텍스트와 문서 메타데이터(접수일·Stage 1 순위)만 쓴다.
+    """
+    items = planned_form_items(question)
+    days = _question_day_window(question)
+    if not items or not days:
+        return []
+    docs_by_id = getattr(retriever, "docs_by_id", None) or {}
+    document_index = getattr(retriever, "document_index", None)
+    rcept_of = getattr(retriever, "_rcept_dt", None)
+    if not docs_by_id or document_index is None or rcept_of is None:
+        return []
+    have = {c.doc_id for c in chunks}
+    out: list[RetrievedChunk] = []
+    for hit in document_index.search(question, k=10, conditions=conditions):
+        doc_id = hit.doc_id
+        if rcept_of(doc_id) not in days or doc_id in have:
+            continue
+        doc = docs_by_id.get(doc_id)
+        if not doc:
+            continue
+        for node in (doc.get("nodes") or [])[:DATE_ITEM_SUPPLEMENT_NODES]:
+            text = str(node.get("text") or "").strip()
+            if not text:
+                continue
+            idx = node.get("node_index")
+            out.append(RetrievedChunk(
+                chunk_id=f"{doc_id}::supp{idx}", doc_id=doc_id, score=0.05,
+                section_path=tuple(node.get("section_hierarchy") or ()),
+                row_labels=(), evidence_text=text,
+                metadata={"rcept_no": doc_id.split("_", 1)[-1],
+                          "corp_name": str(getattr(hit, "corp_name", "") or "")},
+                node_index=idx if isinstance(idx, int) else None))
+        if out:
+            break                   # 날짜가 맞는 최상위 문서 하나만
+    return out
+
+
 def _item_cell_value(m: EvidenceMatch) -> str:
     """서식 행에서 항목 값을 읽는다 — picked_value(숫자·날짜)가 없으면 마지막 칸의 텍스트.
 
@@ -1409,6 +1474,12 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
         return state
     t_retrieval = time.perf_counter()
     state.retrieval_results = retriever.retrieve(question, state.conditions, k=k)
+    # 날짜+서식 항목 질문의 대상 문서가 청크 후보에 없으면 원문 node로 보충한다(에이전트 층 —
+    # 검색 코어는 4-arm 동결로 무변경). 뒤에 붙이므로 기존 후보의 순위는 그대로다.
+    supplement = date_item_supplement(question, state.conditions, retriever,
+                                      state.retrieval_results)
+    if supplement:
+        state.retrieval_results = [*state.retrieval_results, *supplement]
     state.timings["retrieval_ms"] = int((time.perf_counter() - t_retrieval) * 1000)
     scopes = {}
     if wanted_scope(question) and hasattr(retriever, "statement_scopes"):
