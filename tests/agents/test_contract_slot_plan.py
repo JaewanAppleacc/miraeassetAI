@@ -138,6 +138,52 @@ def test_free_slot_without_question_date_behaves_as_before():
     assert all("앵커" not in m.reason for m in matches)
 
 
+# ---------- judge27 오귀속 회귀 잠금: 날짜 결박·요구 잔여 시 조립 금지 ----------
+
+def _form_chunk(doc, text, rcept_dt):
+    from dart_detective.corpus_retriever import RetrievedChunk
+    return RetrievedChunk(chunk_id=f"{doc}::c0", doc_id=doc, score=1.0, section_path=(),
+                          row_labels=(), evidence_text=text,
+                          metadata={"rcept_dt": rcept_dt, "corp_name": "현대자동차"})
+
+
+def test_korean_dates_are_parsed_at_agent_layer():
+    assert (2023, 10, 26) in qa_agent.question_dates_any("현대자동차가 2023년 10월 26일 결의한")
+    assert (2025, 7, 30) in qa_agent.question_dates_any("2025-07-30 공시")
+
+
+def test_item_slots_bind_to_question_date_document():
+    """judge27 실측(현대차·SKT·아모레·메리츠 full→zero): 같은 회사의 **다른 회차** 처분
+    공시 값이 항목 자리에 들어와 결정론 조립으로 확정됐다 — 질문 날짜(±1일) 접수 공시로 결박."""
+    wrong = _form_chunk("major_wrong", "2. 처분예정금액(원) | 959,500,000", "20240702")
+    right = _form_chunk("major_right", "2. 처분예정금액(원) | 175,380,660,000", "20231026")
+    q = "현대자동차가 2023년 10월 26일 결의한 자기주식 처분 결정의 처분예정금액은?"
+    matches = qa_agent.match_evidence(("처분예정금액", qa_agent.ANSWER_SLOT), [wrong, right],
+                                      question=q, bind_days=qa_agent._question_day_window(q))
+    filled = [m for m in matches if m.slot == "처분예정금액"]
+    assert filled and filled[0].doc_id == "major_right"
+    assert filled[0].picked_value == "175,380,660,000"
+
+
+def test_residual_ask_words_disable_llm_skip():
+    """항목이 못 덮는 요구가 남으면 조립으로 LLM을 끄지 않는다(아모레 '인원수'·메리츠
+    '계약목적'·효성 '해지 후 상태' 손실 실측)."""
+    assert qa_agent._residual_asks(
+        "자기주식 처분 결정의 목적과 처분예정주식수, 지급 대상 인원수는?",
+        ("처분목적", "처분예정주식"))
+    assert qa_agent._residual_asks(
+        "자기주식취득 신탁계약의 계약금액과 계약목적은 무엇인가?", ("계약금액",))
+    assert qa_agent._residual_asks(
+        "어떤 원계약을 해지했으며, 해지 사유와 해지 후 상태는 무엇인가?", ("해지 주요사유",))
+    # 항목이 요구를 전부 덮으면(단일판매 문형) 잔여 없음 — 조립·LLM 생략 유지
+    assert not qa_agent._residual_asks(
+        "계약상대방, 계약금액, 계약기간과 최근 매출액 대비 비율을 알려줘.",
+        ("계약금액", "매출액대비", "계약상대", "시작일", "종료일"))
+    assert not qa_agent._residual_asks(
+        "자기주식 처분 결정의 목적과 처분예정주식수, 처분예정금액은 각각 무엇인가?",
+        ("처분목적", "처분예정주식", "처분예정금액"))
+
+
 # ---------- 날짜+항목 원문 보충: 검색 후보에 없는 대상 문서를 node에서 읽는다 ----------
 
 def test_date_item_supplement_pulls_stage1_doc_missing_from_chunks():
