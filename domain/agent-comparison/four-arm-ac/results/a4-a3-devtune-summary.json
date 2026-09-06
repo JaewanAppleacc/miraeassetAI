@@ -1,0 +1,80 @@
+{
+  "turn": "A4-A3-INTEGRATION-AND-DEVTUNE-V1",
+  "base_sha": "0e4acf0e4d82cf6362e16ad90f6d6f7e6d9c8ee5",
+  "amendment_commit": "9d4afac",
+  "source_pins": {
+    "a4_wide_pool": { "branch": "codex/fourarm-a4-wide-pool-v01", "commit": "c9b4cb0e67cc3a87a7ab250d6c1adacd5723aa56" },
+    "a4_reranker": { "branch": "codex/fourarm-a4-reranker-v01", "commit": "0e4acf0e4d82cf6362e16ad90f6d6f7e6d9c8ee5" },
+    "a3_contradiction_guard": { "branch": "codex/fourarm-a3-contradiction-guard-v01", "commit": "9358e2077397675febc82ae5fbc5240f32bc198a" }
+  },
+  "config_registry_sha256": "4572fcf3c574a8422af153559e218f86126c62c97a0b823b8a0e01884b8ac0f4",
+  "config_count": 6,
+  "n_questions_processed": 101,
+  "n_questions_scored": 100,
+  "n_questions_excluded_zero_slots": 1,
+  "embed_query_call_count": 101,
+  "embed_document_call_count": 0,
+  "db_write_count": 0,
+  "gold_sha256": "7941144c09ce25debeeab6c3fbdfbd4c16761a6be06ab3a844ad159c832f102b",
+  "conditions_sha256": "83d5b8a02de2e3e79e388ec417ed104c81b08eb0a8dc8a8366b020df36b5e527",
+  "universe_sha256": "96560165c836b10e315cb253ab96a99b369478c3f71a0415d16b7b6fadbfa1dc",
+  "same_run_a_baseline": {
+    "recall@5": 0.7587, "recall@10": 0.8287, "recall@20": 0.8566,
+    "high_recall@10": 0.816, "low_recall@10": 0.9167, "low_all_found@10": "16/19",
+    "critical": 0, "minor": 0, "unresolved": 0
+  },
+  "configs": {
+    "R0_original_a_baseline": {
+      "raw": { "recall@5": 0.7587, "recall@10": 0.8287, "recall@20": 0.8566, "high_recall@10": 0.816, "low_recall@10": 0.9167, "low_all_found@10": "16/19" },
+      "final": { "recall@5": 0.7552, "recall@10": 0.8217, "recall@20": 0.8531, "high_recall@10": 0.808, "low_recall@10": 0.9167, "low_all_found@10": "16/19", "critical": 0, "minor": 0, "unresolved": 0 },
+      "a3": { "pass": 9813, "reject": 174, "keep_unknown": 1737, "stable_refill_count": 25, "final_shortfall_question_count": 8 },
+      "eligible": false, "eligibility_failure": "recall@10 0.8217 < same-run A 0.8287"
+    },
+    "R1_bm25_dense_original_rrf": {
+      "raw": { "recall@5": 0.7867, "recall@10": 0.8462, "recall@20": 0.8846, "high_recall@10": 0.836, "low_recall@10": 0.9167, "low_all_found@10": "16/19" },
+      "final": { "recall@5": 0.7832, "recall@10": 0.8392, "recall@20": 0.8846, "high_recall@10": 0.828, "low_recall@10": 0.9167, "low_all_found@10": "16/19", "critical": 0, "minor": 0, "unresolved": 0 },
+      "a3": { "pass": 9813, "reject": 174, "keep_unknown": 1737, "stable_refill_count": 24, "final_shortfall_question_count": 8 },
+      "eligible": true, "improvement_vs_same_run_a": 0.0105, "clear_improvement": true
+    },
+    "R2_plus_lexical_term_coverage": {
+      "raw": { "recall@5": 0.7832, "recall@10": 0.8566, "recall@20": 0.8986, "high_recall@10": 0.848, "low_recall@10": 0.9167, "low_all_found@10": "16/19" },
+      "final": { "recall@5": 0.7797, "recall@10": 0.8497, "recall@20": 0.8951, "high_recall@10": 0.84, "low_recall@10": 0.9167, "low_all_found@10": "16/19", "critical": 0, "minor": 0, "unresolved": 0 },
+      "a3": { "pass": 9813, "reject": 174, "keep_unknown": 1737, "stable_refill_count": 25, "final_shortfall_question_count": 8 },
+      "eligible": true, "improvement_vs_same_run_a": 0.021, "clear_improvement": true
+    },
+    "R3_plus_metadata_consistency": {
+      "raw": { "recall@5": 0.7832, "recall@10": 0.8531, "recall@20": 0.9126, "high_recall@10": 0.844, "low_recall@10": 0.9167, "low_all_found@10": "16/19" },
+      "final": { "recall@5": 0.7797, "recall@10": 0.8462, "recall@20": 0.9091, "high_recall@10": 0.836, "low_recall@10": 0.9167, "low_all_found@10": "16/19", "critical": 0, "minor": 0, "unresolved": 0 },
+      "a3": { "pass": 9813, "reject": 174, "keep_unknown": 1737, "stable_refill_count": 26, "final_shortfall_question_count": 8 },
+      "eligible": true, "improvement_vs_same_run_a": 0.0175, "clear_improvement": true
+    },
+    "R4_wide_rrf_centric": {
+      "raw": { "recall@5": 0.8147, "recall@10": 0.8811, "recall@20": 0.9091, "high_recall@10": 0.876, "low_recall@10": 0.9167, "low_all_found@10": "16/19" },
+      "final": { "recall@5": 0.8112, "recall@10": 0.8776, "recall@20": 0.9021, "high_recall@10": 0.872, "low_recall@10": 0.9167, "low_all_found@10": "16/19", "critical": 0, "minor": 0, "unresolved": 0 },
+      "a3": { "pass": 9813, "reject": 174, "keep_unknown": 1737, "stable_refill_count": 20, "final_shortfall_question_count": 8 },
+      "eligible": true, "improvement_vs_same_run_a": 0.0489, "clear_improvement": true,
+      "winner": true
+    },
+    "R5_reciprocal_fusion_plus_coverage": {
+      "raw": { "recall@5": 0.7797, "recall@10": 0.8636, "recall@20": 0.9161, "high_recall@10": 0.856, "low_recall@10": 0.9167, "low_all_found@10": "16/19" },
+      "final": { "recall@5": 0.7762, "recall@10": 0.8566, "recall@20": 0.9091, "high_recall@10": 0.848, "low_recall@10": 0.9167, "low_all_found@10": "16/19", "critical": 0, "minor": 0, "unresolved": 0 },
+      "a3": { "pass": 9813, "reject": 174, "keep_unknown": 1737, "stable_refill_count": 23, "final_shortfall_question_count": 8 },
+      "eligible": true, "improvement_vs_same_run_a": 0.0279, "clear_improvement": true
+    }
+  },
+  "latency_ms": { "p50": 317, "p95": 1527, "max": 2648 },
+  "winning_config": "R4_wide_rrf_centric",
+  "winning_variant": "final (A3-applied)",
+  "net_change_vs_same_run_a_top10": {
+    "slots_gained": 18,
+    "slots_lost": 4,
+    "slots_unchanged": 264,
+    "net_change": 14
+  },
+  "a3_rejected_candidates_that_were_also_a_correct_slot_match": 2,
+  "target_recall_at_10_0.90_achieved": false,
+  "target_recall_at_10_0.90_note": "R4 final Recall@10 = 0.8776, short of the 0.90 target; reported as-is, no rule/weight/config change made to close the gap",
+  "verdict": "A4_A3_SELECTED_FOR_QA_INTEGRATION",
+  "existing_result_files_sha256_unchanged": true,
+  "dev_check_holdout_accessed": false
+}
