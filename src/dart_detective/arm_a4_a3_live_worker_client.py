@@ -2,7 +2,11 @@
 DEV_TUNE-101-selected ARM_A4_A3_LIVE backend (A4 wide pool + R4_wide_rrf_centric reranker
 + A3 contradiction guard, live).
 
-Turn A4-A3-PLUS-QA-FINAL-INTEGRATION-V1. Structurally identical to
+Turn A4-A3-PLUS-QA-FINAL-INTEGRATION-V1, made self-contained in
+A4-A3-PLUS-QA-SELF-CONTAINED-AND-JUDGE-V1 (the worker no longer needs an external
+ARM_A4_A3_LIVE_IMPL_ROOT — every four-arm-ac production module it imports is vendored
+byte-identical into this repository under domain/, see
+config/a4-a3-runtime-source-manifest.v1.json). Structurally identical to
 arm_a_live_worker_client.py (spawns `scripts/arm_a4_a3_live_worker.mjs` **once**, keeps it
 alive for the process lifetime, one request in flight at a time, respawns transparently on
 crash/timeout) — duplicated rather than parameterized because the two backends have
@@ -23,7 +27,6 @@ from typing import Any, Mapping
 logger = logging.getLogger(__name__)
 
 REQUIRED_ENV_VARS = (
-    "ARM_A4_A3_LIVE_IMPL_ROOT",
     "ARM_A4_A3_LIVE_DATABASE_URL",
     "ARM_A4_A3_LIVE_RETRIEVAL_INDEX_ID",
     "ARM_A4_A3_LIVE_LOAD_SESSION_ID",

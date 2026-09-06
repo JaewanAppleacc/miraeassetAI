@@ -1,0 +1,242 @@
+{
+  "turn": "A4-A3-PLUS-QA-SELF-CONTAINED-AND-JUDGE-V1",
+  "purpose": "Full provenance record for every four-arm-ac production file vendored byte-identical into this repository under domain/, replacing the ARM_A4_A3_LIVE_IMPL_ROOT dynamic-import-from-sibling-worktree pattern.",
+  "component_pins": {
+    "wide_pool_source_commit": "c9b4cb0e67cc3a87a7ab250d6c1adacd5723aa56",
+    "reranker_source_commit": "0e4acf0e4d82cf6362e16ad90f6d6f7e6d9c8ee5",
+    "a3_guard_source_commit": "9358e2077397675febc82ae5fbc5240f32bc198a",
+    "integrated_pipeline_config_source_commit": "3ee4462026126a0dd8fc5c99a6d83df510a84058",
+    "note": "All 23 files below are read from the blob each held at 3ee4462026126a0dd8fc5c99a6d83df510a84058 (the branch head that already contains all three earlier component commits merged in) -- this is the single, directly-verifiable commit each blob sha is taken from; the three earlier commits above are the historical lineage anchors for the wide-pool/reranker/A3-guard components specifically, already recorded the same way in docs/A4_A3_PLUS_QA_FINAL_V1_FREEZE.md."
+  },
+  "files": [
+    {
+      "local_path": "domain/agent-comparison/chunking-comparison/bm25.mjs",
+      "source_branch": "codex/fourarm-a4-a3-devtune-v01",
+      "source_commit": "3ee4462026126a0dd8fc5c99a6d83df510a84058",
+      "source_path": "domain/agent-comparison/chunking-comparison/bm25.mjs",
+      "source_git_blob_sha": "5921552f20951d0fa22a3f444295dc61387332b0",
+      "local_git_blob_sha": "5921552f20951d0fa22a3f444295dc61387332b0",
+      "byte_identical": true
+    },
+    {
+      "local_path": "domain/agent-comparison/chunking-comparison/rrf.mjs",
+      "source_branch": "codex/fourarm-a4-a3-devtune-v01",
+      "source_commit": "3ee4462026126a0dd8fc5c99a6d83df510a84058",
+      "source_path": "domain/agent-comparison/chunking-comparison/rrf.mjs",
+      "source_git_blob_sha": "7e85fba4b801a44f1b6be1520a83989bb6134bc4",
+      "local_git_blob_sha": "7e85fba4b801a44f1b6be1520a83989bb6134bc4",
+      "byte_identical": true
+    },
+    {
+      "local_path": "domain/agent-comparison/four-arm-ac/a3-evidence-contradiction-guard.mjs",
+      "source_branch": "codex/fourarm-a4-a3-devtune-v01",
+      "source_commit": "3ee4462026126a0dd8fc5c99a6d83df510a84058",
+      "source_path": "domain/agent-comparison/four-arm-ac/a3-evidence-contradiction-guard.mjs",
+      "source_git_blob_sha": "7dc7ce510e8c399c2de206870fb479ca1e9a506a",
+      "local_git_blob_sha": "7dc7ce510e8c399c2de206870fb479ca1e9a506a",
+      "byte_identical": true
+    },
+    {
+      "local_path": "domain/agent-comparison/four-arm-ac/a4-a3-retrieval-pipeline.mjs",
+      "source_branch": "codex/fourarm-a4-a3-devtune-v01",
+      "source_commit": "3ee4462026126a0dd8fc5c99a6d83df510a84058",
+      "source_path": "domain/agent-comparison/four-arm-ac/a4-a3-retrieval-pipeline.mjs",
+      "source_git_blob_sha": "a0fa3c8a30321677c6769ef3e9f3aed741cbcf7a",
+      "local_git_blob_sha": "a0fa3c8a30321677c6769ef3e9f3aed741cbcf7a",
+      "byte_identical": true
+    },
+    {
+      "local_path": "domain/agent-comparison/four-arm-ac/a4-reranker-engine.mjs",
+      "source_branch": "codex/fourarm-a4-a3-devtune-v01",
+      "source_commit": "3ee4462026126a0dd8fc5c99a6d83df510a84058",
+      "source_path": "domain/agent-comparison/four-arm-ac/a4-reranker-engine.mjs",
+      "source_git_blob_sha": "bb7e735d6444fe79fdc22b2e1a6d3ad97684b317",
+      "local_git_blob_sha": "bb7e735d6444fe79fdc22b2e1a6d3ad97684b317",
+      "byte_identical": true
+    },
+    {
+      "local_path": "domain/agent-comparison/four-arm-ac/a4-reranker-features.mjs",
+      "source_branch": "codex/fourarm-a4-a3-devtune-v01",
+      "source_commit": "3ee4462026126a0dd8fc5c99a6d83df510a84058",
+      "source_path": "domain/agent-comparison/four-arm-ac/a4-reranker-features.mjs",
+      "source_git_blob_sha": "205fda1c2760b79bb408bf169a6dff7d857c45b5",
+      "local_git_blob_sha": "205fda1c2760b79bb408bf169a6dff7d857c45b5",
+      "byte_identical": true
+    },
+    {
+      "local_path": "domain/agent-comparison/four-arm-ac/a4-reranker-configs.v1.json",
+      "source_branch": "codex/fourarm-a4-a3-devtune-v01",
+      "source_commit": "3ee4462026126a0dd8fc5c99a6d83df510a84058",
+      "source_path": "domain/agent-comparison/four-arm-ac/a4-reranker-configs.v1.json",
+      "source_git_blob_sha": "ded8ac0535f2958fb1357b336f0348a32dada03a",
+      "local_git_blob_sha": "ded8ac0535f2958fb1357b336f0348a32dada03a",
+      "byte_identical": true
+    },
+    {
+      "local_path": "domain/agent-comparison/four-arm-ac/a4-wide-candidate-pool.mjs",
+      "source_branch": "codex/fourarm-a4-a3-devtune-v01",
+      "source_commit": "3ee4462026126a0dd8fc5c99a6d83df510a84058",
+      "source_path": "domain/agent-comparison/four-arm-ac/a4-wide-candidate-pool.mjs",
+      "source_git_blob_sha": "fedcfcbbafca5cdc873b5c32ec691419b144d4d7",
+      "local_git_blob_sha": "fedcfcbbafca5cdc873b5c32ec691419b144d4d7",
+      "byte_identical": true
+    },
+    {
+      "local_path": "domain/agent-comparison/four-arm-ac/arm-retriever-adapter.mjs",
+      "source_branch": "codex/fourarm-a4-a3-devtune-v01",
+      "source_commit": "3ee4462026126a0dd8fc5c99a6d83df510a84058",
+      "source_path": "domain/agent-comparison/four-arm-ac/arm-retriever-adapter.mjs",
+      "source_git_blob_sha": "4b62a723201ac7da71f72509de3a6fa0aa4a6fde",
+      "local_git_blob_sha": "4b62a723201ac7da71f72509de3a6fa0aa4a6fde",
+      "byte_identical": true
+    },
+    {
+      "local_path": "domain/agent-comparison/four-arm-ac/conditions-fixture.mjs",
+      "source_branch": "codex/fourarm-a4-a3-devtune-v01",
+      "source_commit": "3ee4462026126a0dd8fc5c99a6d83df510a84058",
+      "source_path": "domain/agent-comparison/four-arm-ac/conditions-fixture.mjs",
+      "source_git_blob_sha": "31acad25f5b4944dc4c07efc3af786e6e3c7c7c1",
+      "local_git_blob_sha": "31acad25f5b4944dc4c07efc3af786e6e3c7c7c1",
+      "byte_identical": true
+    },
+    {
+      "local_path": "domain/agent-comparison/four-arm-ac/four-arm-conditions-to-filter-mapper.mjs",
+      "source_branch": "codex/fourarm-a4-a3-devtune-v01",
+      "source_commit": "3ee4462026126a0dd8fc5c99a6d83df510a84058",
+      "source_path": "domain/agent-comparison/four-arm-ac/four-arm-conditions-to-filter-mapper.mjs",
+      "source_git_blob_sha": "91cb4749d7093b6d6fa4b7a16f6aa1248ac7908e",
+      "local_git_blob_sha": "91cb4749d7093b6d6fa4b7a16f6aa1248ac7908e",
+      "byte_identical": true
+    },
+    {
+      "local_path": "domain/agent-comparison/four-arm-ac/locator-provenance.mjs",
+      "source_branch": "codex/fourarm-a4-a3-devtune-v01",
+      "source_commit": "3ee4462026126a0dd8fc5c99a6d83df510a84058",
+      "source_path": "domain/agent-comparison/four-arm-ac/locator-provenance.mjs",
+      "source_git_blob_sha": "5a313e5932fc934cad182883811ce63c48eeed84",
+      "local_git_blob_sha": "5a313e5932fc934cad182883811ce63c48eeed84",
+      "byte_identical": true
+    },
+    {
+      "local_path": "domain/agent-comparison/retrieval/contracts.mjs",
+      "source_branch": "codex/fourarm-a4-a3-devtune-v01",
+      "source_commit": "3ee4462026126a0dd8fc5c99a6d83df510a84058",
+      "source_path": "domain/agent-comparison/retrieval/contracts.mjs",
+      "source_git_blob_sha": "4d1bc42183307b540e37ca38738914d0600450b4",
+      "local_git_blob_sha": "4d1bc42183307b540e37ca38738914d0600450b4",
+      "byte_identical": true
+    },
+    {
+      "local_path": "domain/agent-comparison/retrieval/embedding-adapter.mjs",
+      "source_branch": "codex/fourarm-a4-a3-devtune-v01",
+      "source_commit": "3ee4462026126a0dd8fc5c99a6d83df510a84058",
+      "source_path": "domain/agent-comparison/retrieval/embedding-adapter.mjs",
+      "source_git_blob_sha": "0131ccda37a7a621b6c70a5ce3e89e7d8d4e9eeb",
+      "local_git_blob_sha": "0131ccda37a7a621b6c70a5ce3e89e7d8d4e9eeb",
+      "byte_identical": true
+    },
+    {
+      "local_path": "domain/agent-comparison/retrieval/fake-deterministic-embedding-adapter.mjs",
+      "source_branch": "codex/fourarm-a4-a3-devtune-v01",
+      "source_commit": "3ee4462026126a0dd8fc5c99a6d83df510a84058",
+      "source_path": "domain/agent-comparison/retrieval/fake-deterministic-embedding-adapter.mjs",
+      "source_git_blob_sha": "7818dbb5047414c6cd396e424fef7efde2bb86bb",
+      "local_git_blob_sha": "7818dbb5047414c6cd396e424fef7efde2bb86bb",
+      "byte_identical": true
+    },
+    {
+      "local_path": "domain/agent-comparison/retrieval/fixed-kure-bm25-index.mjs",
+      "source_branch": "codex/fourarm-a4-a3-devtune-v01",
+      "source_commit": "3ee4462026126a0dd8fc5c99a6d83df510a84058",
+      "source_path": "domain/agent-comparison/retrieval/fixed-kure-bm25-index.mjs",
+      "source_git_blob_sha": "a9dca408fd88b7fe13d0590d82591d4a10d0db83",
+      "local_git_blob_sha": "a9dca408fd88b7fe13d0590d82591d4a10d0db83",
+      "byte_identical": true
+    },
+    {
+      "local_path": "domain/agent-comparison/retrieval/fixed-kure-hybrid-retriever-adapter.mjs",
+      "source_branch": "codex/fourarm-a4-a3-devtune-v01",
+      "source_commit": "3ee4462026126a0dd8fc5c99a6d83df510a84058",
+      "source_path": "domain/agent-comparison/retrieval/fixed-kure-hybrid-retriever-adapter.mjs",
+      "source_git_blob_sha": "24d7c4c31273a6c5f0dc1275a0f9798d87ad9d2c",
+      "local_git_blob_sha": "24d7c4c31273a6c5f0dc1275a0f9798d87ad9d2c",
+      "byte_identical": true
+    },
+    {
+      "local_path": "domain/agent-comparison/retrieval/interfaces/embedding-config.schema.json",
+      "source_branch": "codex/fourarm-a4-a3-devtune-v01",
+      "source_commit": "3ee4462026126a0dd8fc5c99a6d83df510a84058",
+      "source_path": "domain/agent-comparison/retrieval/interfaces/embedding-config.schema.json",
+      "source_git_blob_sha": "f6247c94ce85fb595d123e12d93f5dc0b2f1f5b2",
+      "local_git_blob_sha": "f6247c94ce85fb595d123e12d93f5dc0b2f1f5b2",
+      "byte_identical": true
+    },
+    {
+      "local_path": "domain/chunking/chunker.mjs",
+      "source_branch": "codex/fourarm-a4-a3-devtune-v01",
+      "source_commit": "3ee4462026126a0dd8fc5c99a6d83df510a84058",
+      "source_path": "domain/chunking/chunker.mjs",
+      "source_git_blob_sha": "496fb4d6ad7e743d6e27b1080aabe88d8411a820",
+      "local_git_blob_sha": "496fb4d6ad7e743d6e27b1080aabe88d8411a820",
+      "byte_identical": true
+    },
+    {
+      "local_path": "domain/contracts.mjs",
+      "source_branch": "codex/fourarm-a4-a3-devtune-v01",
+      "source_commit": "3ee4462026126a0dd8fc5c99a6d83df510a84058",
+      "source_path": "domain/contracts.mjs",
+      "source_git_blob_sha": "497484f50b58cb3b0070331f07191ec82165bb79",
+      "local_git_blob_sha": "497484f50b58cb3b0070331f07191ec82165bb79",
+      "byte_identical": true
+    },
+    {
+      "local_path": "domain/postgres/reference-vector-retrieval-repository.mjs",
+      "source_branch": "codex/fourarm-a4-a3-devtune-v01",
+      "source_commit": "3ee4462026126a0dd8fc5c99a6d83df510a84058",
+      "source_path": "domain/postgres/reference-vector-retrieval-repository.mjs",
+      "source_git_blob_sha": "0251d4cea991d76c4d074494579b96c01c00c159",
+      "local_git_blob_sha": "0251d4cea991d76c4d074494579b96c01c00c159",
+      "byte_identical": true
+    },
+    {
+      "local_path": "domain/retrieval/metadata-filter.mjs",
+      "source_branch": "codex/fourarm-a4-a3-devtune-v01",
+      "source_commit": "3ee4462026126a0dd8fc5c99a6d83df510a84058",
+      "source_path": "domain/retrieval/metadata-filter.mjs",
+      "source_git_blob_sha": "41e03bcf482ff1c0bc21bcc548ca75e9a62b02f0",
+      "local_git_blob_sha": "41e03bcf482ff1c0bc21bcc548ca75e9a62b02f0",
+      "byte_identical": true
+    },
+    {
+      "local_path": "domain/runtime/abortable.mjs",
+      "source_branch": "codex/fourarm-a4-a3-devtune-v01",
+      "source_commit": "3ee4462026126a0dd8fc5c99a6d83df510a84058",
+      "source_path": "domain/runtime/abortable.mjs",
+      "source_git_blob_sha": "ae480010b7cfc6da65d3a10b3406ad8f59fd62b8",
+      "local_git_blob_sha": "ae480010b7cfc6da65d3a10b3406ad8f59fd62b8",
+      "byte_identical": true
+    }
+  ],
+  "glue_files_new_this_turn": [
+    {
+      "path": "scripts/arm_a4_a3_live_worker.mjs",
+      "note": "Persistent worker + protocol + wire conversion glue. Not a copy of any single source file; it imports the vendored files above."
+    },
+    {
+      "path": "package.json",
+      "note": "New: declares pg/ajv/ajv-formats as normal npm dependencies (versions pinned to match the source worktree exactly), replacing createRequire(implRoot/package.json)."
+    },
+    {
+      "path": "package-lock.json",
+      "note": "New: npm-generated lockfile for the above."
+    }
+  ],
+  "excluded_by_design": [
+    "No test file (tests/**, *.test.mjs) is part of this vendored set.",
+    "No Gold/DEV_TUNE/DEV_CHECK/HOLDOUT fixture, question set, or result file is part of this vendored set.",
+    "No raw corpus/DocumentIR artifact is part of this vendored set.",
+    "domain/agent-comparison/retrieval/interfaces/examples/ (fixture examples directory, never read at runtime by contracts.mjs) is intentionally NOT copied."
+  ],
+  "all_files_byte_identical": true,
+  "file_count": 23
+}

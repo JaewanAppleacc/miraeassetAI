@@ -66,7 +66,7 @@ traced mechanically (not guessed) starting from `a4-a3-retrieval-pipeline.mjs`,
 `four-arm-conditions-to-filter-mapper.mjs`, `a3-evidence-contradiction-guard.mjs`,
 `arm-retriever-adapter.mjs` (for `KURE_PIN`), `embedding-adapter.mjs`, and
 `fixed-kure-bm25-index.mjs`, resolving every relative (`./`/`../`) `import` recursively. This
-produced 21 production files (listed in `config/a4-a3-runtime-source-manifest.v1.json`), all taken
+produced 22 production files (listed in `config/a4-a3-runtime-source-manifest.v1.json`), all taken
 byte-identical from `codex/fourarm-a4-a3-devtune-v01` @ `3ee4462026126a0dd8fc5c99a6d83df510a84058`.
 No test file, Gold fixture, result file, or raw artifact is part of this graph — confirmed by
 inspecting every traced path (all under `domain/`, none under `tests/`, `work/`, `results/`, or

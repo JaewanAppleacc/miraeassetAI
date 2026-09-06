@@ -6,6 +6,10 @@ data/3.공시/
 # 또는 별도 공유 저장소(Git LFS 아님) 사용.
 data/artifacts/document_ir/
 
+# Node (Turn A4-A3-PLUS-QA-SELF-CONTAINED-AND-JUDGE-V1: package.json/package-lock.json are
+# committed, node_modules is installed via `npm install`, never committed)
+node_modules/
+
 # Python
 __pycache__/
 *.py[cod]

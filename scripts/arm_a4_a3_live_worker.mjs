@@ -1,24 +1,34 @@
 #!/usr/bin/env node
-// Turn A4-A3-PLUS-QA-FINAL-INTEGRATION-V1: persistent stdin/stdout worker for the
-// DEV_TUNE-101-selected ARM_A4_A3_LIVE backend (A4 wide pool -> R4_wide_rrf_centric
-// reranker -> A3 contradiction guard -> stable refill), mirroring
-// scripts/arm_a_live_worker.mjs's own architecture 1:1: no HTTP server, one
-// persistent Postgres client + one loaded BM25 index + one embedding adapter for the
-// process lifetime, stdin/stdout JSONL protocol, all logging on stderr.
+// Turn A4-A3-PLUS-QA-SELF-CONTAINED-AND-JUDGE-V1 (originally A4-A3-PLUS-QA-FINAL-INTEGRATION-V1):
+// persistent stdin/stdout worker for the DEV_TUNE-101-selected ARM_A4_A3_LIVE backend (A4 wide
+// pool -> R4_wide_rrf_centric reranker -> A3 contradiction guard -> stable refill), mirroring
+// scripts/arm_a_live_worker.mjs's own architecture 1:1: no HTTP server, one persistent Postgres
+// client + one loaded BM25 index + one embedding adapter for the process lifetime, stdin/stdout
+// JSONL protocol, all logging on stderr.
 //
-// This file never reimplements BM25/dense/RRF/wide-pool/reranker/A3 logic. It only
-// imports and calls the existing, unmodified four-arm-ac modules from a SEPARATE,
-// read-only worktree (path given by ARM_A4_A3_LIVE_IMPL_ROOT — never hardcoded, never
-// copied into this repo). The only new logic here is: (1) this protocol, (2) mapping
-// the wire's minimal {corp_code, document_group, document_subtype, period} conditions
-// shape into the pipeline's own `question.conditions` shape (a pure reshaping — no new
-// filter semantics; see toFourArmConditions below), and (3) converting each pipeline
-// result item into the final wire item shape (rank renumber, reranker_rank preserved,
-// a3_decision attached, backend tag) per the governing turn's Section E contract.
+// This file never reimplements BM25/dense/RRF/wide-pool/reranker/A3 logic. It imports and calls
+// the existing, unmodified four-arm-ac production modules, now vendored byte-identical into THIS
+// repository under domain/ (see config/a4-a3-runtime-source-manifest.v1.json for each file's exact
+// source commit/blob sha) instead of being dynamically imported from a separate sibling worktree —
+// every import below is resolved relative to this file's own module URL
+// (import.meta.url), so this script runs correctly regardless of the current working directory
+// and regardless of whether any other Codex worktree exists on the machine. `pg` is resolved the
+// same way, from this repository's own package.json/node_modules (see package.json). The only new
+// logic in this file is: (1) this protocol, (2) mapping the wire's minimal
+// {corp_code, document_group, document_subtype, period} conditions shape into the pipeline's own
+// `question.conditions` shape (a pure reshaping — no new filter semantics; see
+// toFourArmConditions below), and (3) converting each pipeline result item into the final wire
+// item shape (rank renumber, reranker_rank preserved, a3_decision attached, backend tag) per the
+// governing turn's Section E contract.
 import { createRequire } from "node:module";
 import path from "node:path";
 import readline from "node:readline";
 import process from "node:process";
+import { fileURLToPath } from "node:url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = path.resolve(__dirname, "..");
+const require_ = createRequire(import.meta.url);
 
 const RERANKER_CONFIG_ID = "R4_wide_rrf_centric";
 const RETRIEVAL_OUTPUT_K = 20;
@@ -82,7 +92,6 @@ function identityCorpCodeIndex(corpCode) {
 }
 
 async function main() {
-  const implRoot = requireEnv("ARM_A4_A3_LIVE_IMPL_ROOT");
   const databaseUrl = requireEnv("ARM_A4_A3_LIVE_DATABASE_URL");
   const retrievalIndexId = requireEnv("ARM_A4_A3_LIVE_RETRIEVAL_INDEX_ID");
   const loadSessionId = requireEnv("ARM_A4_A3_LIVE_LOAD_SESSION_ID");
@@ -91,8 +100,13 @@ async function main() {
   const kureServerUrl = requireEnv("ARM_A4_A3_LIVE_KURE_SERVER_URL");
   const bm25CacheDir = requireEnv("ARM_A4_A3_LIVE_BM25_CACHE_DIR");
 
-  const modulePath = (relative) => path.join(implRoot, relative);
-  const { Client } = createRequire(path.join(implRoot, "package.json"))("pg");
+  // Every module below is vendored byte-identical into THIS repository (see
+  // config/a4-a3-runtime-source-manifest.v1.json) and resolved relative to REPO_ROOT, which is
+  // itself derived from this file's own import.meta.url — never from process.cwd() or any
+  // externally-supplied "impl root" env var, so this works from any working directory and needs
+  // no sibling Codex worktree to exist.
+  const modulePath = (relative) => path.join(REPO_ROOT, relative);
+  const { Client } = require_("pg");
   const { runQuestionPipeline, extractQuestionConditions, extractEvidenceFacts } = await import(
     modulePath("domain/agent-comparison/four-arm-ac/a4-a3-retrieval-pipeline.mjs")
   );

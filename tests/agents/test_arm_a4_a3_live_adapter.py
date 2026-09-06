@@ -363,7 +363,7 @@ def test_backend_registry_is_additive():
 
 def test_worker_client_requires_all_env_vars_never_guesses_a_path(monkeypatch):
     for name in (
-        "ARM_A4_A3_LIVE_IMPL_ROOT", "ARM_A4_A3_LIVE_DATABASE_URL", "ARM_A4_A3_LIVE_RETRIEVAL_INDEX_ID",
+        "ARM_A4_A3_LIVE_DATABASE_URL", "ARM_A4_A3_LIVE_RETRIEVAL_INDEX_ID",
         "ARM_A4_A3_LIVE_LOAD_SESSION_ID", "ARM_A4_A3_LIVE_CORPUS_SNAPSHOT_ID",
         "ARM_A4_A3_LIVE_KURE_SERVER_URL", "ARM_A4_A3_LIVE_BM25_CACHE_DIR",
     ):
@@ -371,3 +371,10 @@ def test_worker_client_requires_all_env_vars_never_guesses_a_path(monkeypatch):
     client = ArmA4A3LiveWorkerClient()
     with pytest.raises(ArmA4A3NotReadyError):
         client.search("아무 새 질문", None, 20)
+
+
+def test_worker_client_no_longer_requires_an_external_impl_root():
+    # Turn A4-A3-PLUS-QA-SELF-CONTAINED-AND-JUDGE-V1: the worker vendors its own dependencies
+    # under domain/ now, so ARM_A4_A3_LIVE_IMPL_ROOT must not appear in the required list at all.
+    from dart_detective import arm_a4_a3_live_worker_client as wc
+    assert "ARM_A4_A3_LIVE_IMPL_ROOT" not in wc.REQUIRED_ENV_VARS

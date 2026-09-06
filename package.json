@@ -1,0 +1,11 @@
+{
+  "name": "dart-detective-qa-node-runtime",
+  "private": true,
+  "type": "module",
+  "description": "Self-contained Node runtime dependencies for scripts/arm_a4_a3_live_worker.mjs and scripts/arm_a_live_worker.mjs (Turn A4-A3-PLUS-QA-SELF-CONTAINED-AND-JUDGE-V1). Pure npm dependency management, not a build system for the Python QA service itself.",
+  "dependencies": {
+    "pg": "8.23.0",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1"
+  }
+}
