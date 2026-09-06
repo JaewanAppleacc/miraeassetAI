@@ -23,7 +23,7 @@ import threading
 import traceback
 from typing import Any
 
-from . import answer_wire, grounded_answer, policy_gate
+from . import answer_wire, arm_a_serving_bridge, grounded_answer, policy_gate
 from .agents import qa_agent
 from .llm import get_llm
 from .retriever_adapter import build_serving_retriever
@@ -39,14 +39,53 @@ _store = None
 _arm: str | None = None        # 실제 서빙 arm — readiness는 env 문자열이 아니라 이 값을 보고한다.
 _arm_pins: dict[str, Any] = {}
 
+# retrieval_backend(Turn A-PLUS-QA-LIVE-WIRING-V1): 기본값 DEFAULT = 기존 build_serving_retriever
+# 경로(동작 불변). ARM_A_FIXED_RRF = arm_a_serving_bridge(호출자가 주입한 text_resolver 필수).
+# 선택은 configure() 인자 > env DART_QA_RETRIEVAL_BACKEND > DEFAULT.
+_retrieval_backend: str | None = None
+_text_resolver: Any = None
+_backend_options: dict[str, Any] = {}
+
+
+def configure(*, retrieval_backend: str | None = None, text_resolver: Any = None,
+              **backend_options: Any) -> None:
+    """서빙 검색 백엔드를 고르고 A 경로의 text_resolver·옵션(results_path 등)을 주입한다.
+
+    인자 없이 부르면 env 기반 기본 상태로 되돌린다. 호출 때마다 retriever 캐시를 버린다
+    (백엔드가 바뀌면 pins가 바뀌고, qa_service의 캐시 키(pins 해시)도 따라 바뀐다).
+    """
+    global _retrieval_backend, _text_resolver, _backend_options
+    with _lock:
+        _retrieval_backend = retrieval_backend
+        _text_resolver = text_resolver
+        _backend_options = dict(backend_options)
+    reset()
+
+
+def _resolve_backend() -> str:
+    backend = (_retrieval_backend or os.environ.get(arm_a_serving_bridge.RETRIEVAL_BACKEND_ENV)
+               or arm_a_serving_bridge.RETRIEVAL_BACKEND_DEFAULT).upper()
+    if backend not in arm_a_serving_bridge.RETRIEVAL_BACKENDS:
+        raise ValueError(f"알 수 없는 retrieval_backend: {backend} "
+                         f"(허용: {', '.join(arm_a_serving_bridge.RETRIEVAL_BACKENDS)})")
+    return backend
+
+
+def _build_retriever() -> tuple[Any, Any, str, dict[str, Any]]:
+    backend = _resolve_backend()
+    if backend == arm_a_serving_bridge.RETRIEVAL_BACKEND_ARM_A:
+        return arm_a_serving_bridge.build_arm_a_serving_retriever(
+            text_resolver=_text_resolver, **_backend_options)
+    # 기존 경로 — 인자·호출 그대로(동작 불변).
+    return build_serving_retriever(os.environ.get("DART_QA_ARM", DEFAULT_ARM))
+
 
 def _get_retriever():
     """지연 로딩 싱글턴. 기동 preload는 qa_service가 readiness()를 불러서 한다."""
     global _retriever, _store, _arm, _arm_pins
     with _lock:
         if _retriever is None:
-            _retriever, _store, _arm, _arm_pins = build_serving_retriever(
-                os.environ.get("DART_QA_ARM", DEFAULT_ARM))
+            _retriever, _store, _arm, _arm_pins = _build_retriever()
     return _retriever
 
 
@@ -102,8 +141,13 @@ def _out_of_scope_wire(question_id: str, question: str,
 
 def _error_wire(question_id: str, question: str, exc: BaseException) -> dict[str, str]:
     """어떤 내부 실패에도 유효한 5필드를 돌려준다(5xx는 재시도만 부른다 — 계약 위반이 더 나쁘다)."""
+    op: dict[str, Any] = {"step": "internal_error", "type": type(exc).__name__}
+    # 브리지 오류(TEXT_RESOLUTION_REQUIRED 등)는 식별자를 trace에 남긴다 — fail-closed 사유가 보이게.
+    code = getattr(exc, "code", "")
+    if isinstance(code, str) and code:
+        op["code"] = code
     trace = {"execution_mode": "EARLY_EXIT",
-             "operations": [{"step": "internal_error", "type": type(exc).__name__}],
+             "operations": [op],
              "calculation": {}, "validation": {"answerability": "", "status": "ERROR", "checks": []}}
     return {
         "question_id": question_id,
@@ -186,9 +230,11 @@ def answer_ex(question_id: str, question: str, *,
         return wire, _meta_of(state, decision, llm_skipped)
     except Exception as exc:  # noqa: BLE001 — 계약: 절대 예외를 밖으로 던지지 않는다
         logger.error("answer_ex failed: %s\n%s", exc, traceback.format_exc())
+        code = getattr(exc, "code", "")
         return _error_wire(question_id, question, exc), {
             "cacheable": False, "fallback_stage": "error", "degraded": True, "llm_used": False,
-            "llm_skipped": "error", "policy": {}, "strategy": None, "validation_status": "ERROR"}
+            "llm_skipped": "error", "policy": {}, "strategy": None, "validation_status": "ERROR",
+            "error_code": code if isinstance(code, str) else ""}
 
 
 def answer(question_id: str, question: str, *, deadline_s: float | None = None) -> dict[str, str]:
@@ -233,10 +279,18 @@ def readiness() -> dict[str, Any]:
                 ready, profile_error = False, f"eval_profile: LLM이 HCX-005가 아니다 ({getattr(llm, 'provider', None)}:{getattr(llm, 'model', None)})"
             elif not _get_code_sha():
                 ready, profile_error = False, "eval_profile: code_sha 없음 (DART_QA_CODE_SHA 설정 필요)"
+        if ready and _arm_pins.get("arm_ready") is False:
+            # A 경로: text_resolver 미주입 등 — 백엔드가 스스로 준비 안 됐다고 하면 ready가 아니다.
+            ready = False
+            profile_error = ("retrieval_backend not ready: "
+                             + (arm_a_serving_bridge.TextResolutionRequired.code
+                                if not _arm_pins.get("text_resolver_configured")
+                                else "arm_ready=False"))
         return {
             "ready": ready,
             **({"error": profile_error} if profile_error else {}),
             "mode": "real",
+            "retrieval_backend": _resolve_backend(),
             # env 문자열이 아니라 실제 구성된 arm(검수 발견 3) — 주입 테스트 등 arm 미구성 시 기본값.
             "arm": _arm or os.environ.get("DART_QA_ARM", DEFAULT_ARM),
             "n_docs": len(store) if store is not None else None,
