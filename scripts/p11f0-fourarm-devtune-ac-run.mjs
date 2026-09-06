@@ -22,13 +22,18 @@
 // only major_labels has no DB-side equivalent and is intentionally left
 // unmapped (see four-arm-conditions-to-filter-mapper.mjs's own header).
 //
-// Checkpoint contract: results are appended one line per question to
-// <outDir>/<ARM>.results.ndjson as each question finishes. Re-running
-// this script skips any question_id already present in that file --
-// resuming after an infra failure NEVER re-issues search() for an
-// already-completed question, and NEVER partially rewrites the file. The
-// <ARM>.run.json summary is only ever written once every question in
-// devtune101_conditions.v2.jsonl has a checkpointed line.
+// Checkpoint contract (review round 3): results are appended one line per
+// question to <outDir>/<ARM>.results[.<policy>].ndjson as each question
+// finishes. Re-running this script resumes ONLY the same run -- every
+// existing row must carry the current arm/batch_id/code_sha256/
+// config_sha256/policy_id (four-arm-run-checkpoint.mjs) -- and skips every
+// question that already has a SUCCESSFUL row; errored rows are retried.
+// A directory holding a completed run (run.json present) is refused
+// unless --overwrite, which removes the results NDJSON and run.json first.
+// The <ARM>.run[.<policy>].json summary is written only once every question
+// in devtune101_conditions.v2.jsonl has a successful row; at that point
+// the results file is rewritten canonically (one row per question, batch
+// order, atomic) and results_sha256 pins that content.
 import { createHash } from "node:crypto";
 import { readFile, appendFile, mkdir } from "node:fs/promises";
 import { existsSync, readFileSync, unlinkSync } from "node:fs";
@@ -47,6 +52,9 @@ import { buildNameToCorpCodeIndex, mapOfficialConditionToFilterInput } from "../
 import { validateOfficialConditionsV2Artifact } from "../domain/agent-comparison/four-arm-ac/official-conditions-v2-importer.mjs";
 import { RETRIEVAL_OUTPUT_K } from "../domain/agent-comparison/four-arm-ac/four-arm-cutoff-contract.mjs";
 import { resolvePolicy, FROZEN_POLICY } from "../domain/agent-comparison/four-arm-ac/four-arm-retrieval-policy.mjs";
+import {
+  parseCheckpointLines, validateCheckpointIdentity, checkpointState, canonicalizeResults, atomicWriteFileSync,
+} from "../domain/agent-comparison/four-arm-ac/four-arm-run-checkpoint.mjs";
 
 const { Client } = pg;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -103,16 +111,16 @@ async function loadCompanyIndex() {
   return buildNameToCorpCodeIndex(resolver);
 }
 
-async function readCheckpoint(resultsPath) {
-  const done = new Map();
-  if (!existsSync(resultsPath)) return done;
-  const raw = readFileSync(resultsPath, "utf8");
-  for (const line of raw.split("\n")) {
-    if (!line.trim()) continue;
-    const row = JSON.parse(line);
-    done.set(row.question_id, row);
-  }
-  return done;
+// Resume only the SAME run (review round 3): every existing row must carry
+// the current arm/batch_id/code_sha256/config_sha256/policy_id, otherwise
+// this refuses instead of stitching two executions into one artefact. A
+// question counts as done only with a successful row; errored rows are
+// retried and superseded, then removed by the canonical rewrite at the end.
+function readCheckpoint(resultsPath, identity) {
+  if (!existsSync(resultsPath)) return checkpointState([]);
+  const rows = parseCheckpointLines(readFileSync(resultsPath, "utf8"));
+  validateCheckpointIdentity(rows, identity);
+  return checkpointState(rows);
 }
 
 async function main() {
@@ -142,18 +150,19 @@ async function main() {
   await mkdir(outDir, { recursive: true });
   const resultsPath = path.join(outDir, `${arm}.results${fileSuffix}.ndjson`);
   const runJsonPath = path.join(outDir, `${arm}.run${fileSuffix}.json`);
-  // A completed run already lives here (e.g. the official results directory
-  // holds the frozen A.run.json). Control and candidate runs each get a
-  // fresh --out-dir; overwriting a finished run is never implicit. With
-  // --overwrite the run starts FRESH: the old results NDJSON and run.json
-  // are removed first, so the checkpoint below cannot resume from stale
-  // rows under a new code SHA / batch id (resume and overwrite are distinct).
-  if (existsSync(runJsonPath)) {
-    if (!process.argv.includes("--overwrite")) {
-      throw new Error(`refusing to overwrite the completed run at ${runJsonPath} -- pass a fresh --out-dir for every control/candidate run (or --overwrite deliberately)`);
-    }
-    for (const stale of [resultsPath, runJsonPath]) if (existsSync(stale)) unlinkSync(stale);
-    console.error(`[fourarm-devtune-${arm}] --overwrite: removed the completed run in ${outDir}; starting fresh`);
+  // --overwrite starts FRESH whether the directory holds a completed run
+  // (run.json present) or an unfinished checkpoint (results NDJSON only):
+  // both files are removed first, so nothing below can resume stale rows
+  // under a new code SHA / batch id. Without --overwrite, a completed run is
+  // refused (control and candidate runs each get a fresh --out-dir) and an
+  // unfinished checkpoint is resumed only after its identity is verified.
+  const overwrite = process.argv.includes("--overwrite");
+  if (overwrite) {
+    const removed = [resultsPath, runJsonPath].filter((p) => existsSync(p));
+    for (const stale of removed) unlinkSync(stale);
+    if (removed.length > 0) console.error(`[fourarm-devtune-${arm}] --overwrite: removed ${removed.map((p) => path.basename(p)).join(", ")} in ${outDir}; starting fresh`);
+  } else if (existsSync(runJsonPath)) {
+    throw new Error(`refusing to overwrite the completed run at ${runJsonPath} -- pass a fresh --out-dir for every control/candidate run (or --overwrite deliberately)`);
   }
 
   const [conditionsRaw, nameToCorpCodeIndex, configRaw] = await Promise.all([
@@ -198,7 +207,11 @@ async function main() {
       throw new Error(`arm ${arm} readiness is not official_experiment_ready: ${JSON.stringify(readiness.reasons)}`);
     }
 
-    const done = await readCheckpoint(resultsPath);
+    const identity = { arm, batch_id: batchId, code_sha256: codeSha256, config_sha256: configSha256, policy_id: fileSuffix ? policy.id : null };
+    const checkpoint = readCheckpoint(resultsPath, identity);
+    const done = checkpoint.done;   // successful rows only, keyed by question_id
+    const resumed = checkpoint.rows > 0;
+    if (resumed) console.error(`[fourarm-devtune-${arm}] resuming ${resultsPath}: ${done.size} done, ${checkpoint.errored.size} errored (will retry), ${checkpoint.rows} rows on disk`);
     const startedAt = done.size === 0 ? new Date().toISOString() : null;
     const latencies = [];
     let errors = 0;
@@ -210,7 +223,7 @@ async function main() {
       // exactly the questions that never produced a real result, never the
       // ones that already succeeded, and never silently accepts a
       // permanently-broken checkpoint as if it were valid progress.
-      if (done.has(row.question_id) && !done.get(row.question_id).error) continue;
+      if (done.has(row.question_id)) continue;
       const mapped = mapOfficialConditionToFilterInput(row.conditions, nameToCorpCodeIndex, { policy, question: row.question });
       const t0 = Date.now();
       let resultLine;
@@ -249,14 +262,20 @@ async function main() {
       }
       // eslint-disable-next-line no-await-in-loop
       await appendFile(resultsPath, `${JSON.stringify(resultLine)}\n`, "utf8");
-      done.set(row.question_id, resultLine);
-      console.error(`[fourarm-devtune-${arm}] ${done.size}/${questions.length} ${row.question_id}`);
+      if (!resultLine.error) done.set(row.question_id, resultLine);
+      console.error(`[fourarm-devtune-${arm}] ${done.size}/${questions.length} done${errors ? ` (${errors} errored)` : ""} ${row.question_id}`);
     }
 
-    if (done.size !== questions.length) throw new Error(`incomplete: ${done.size}/${questions.length} questions checkpointed`);
-    if (errors > 0) throw new Error(`${errors} question(s) errored -- refusing to write run.json for an incomplete/erroring run`);
+    if (errors > 0) throw new Error(`${errors} question(s) errored -- refusing to write run.json for an incomplete/erroring run (re-run to retry them)`);
+    if (done.size !== questions.length) throw new Error(`incomplete: ${done.size}/${questions.length} questions have a successful row`);
 
-    const finalRaw = readFileSync(resultsPath);
+    // Canonical rewrite (review round 3): exactly one successful row per
+    // question, in the batch's own order, error/duplicate history removed,
+    // written atomically -- and THIS content is what results_sha256 pins.
+    // For a clean, unresumed run it is byte-identical to the appended file.
+    const canonical = canonicalizeResults(done, questions.map((q) => q.question_id));
+    atomicWriteFileSync(resultsPath, canonical.text);
+    const finalRaw = Buffer.from(canonical.text, "utf8");
     const sortedLatencies = [...latencies].sort((a, b) => a - b);
     const runJson = {
       arm, batch_id: batchId, started_at: startedAt ?? "RESUMED_RUN_START_TIME_NOT_RECORDED", finished_at: new Date().toISOString(),
@@ -266,6 +285,7 @@ async function main() {
       n_questions: questions.length, n_errors: errors,
       latency_ms: sortedLatencies.length > 0 ? { p50: percentile(sortedLatencies, 50), p95: percentile(sortedLatencies, 95), max: sortedLatencies[sortedLatencies.length - 1] } : null,
       results_sha256: sha256Hex(finalRaw),
+      checkpoint: { resumed, rows_on_disk_before_canonical: checkpoint.rows, canonical_rows: canonical.rows },
       ...(fileSuffix ? { policy } : {}),
     };
     await import("node:fs/promises").then((fs) => fs.writeFile(runJsonPath, JSON.stringify(runJson, null, 2)));

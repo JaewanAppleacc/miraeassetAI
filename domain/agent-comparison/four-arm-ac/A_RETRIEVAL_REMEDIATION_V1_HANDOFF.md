@@ -1,9 +1,10 @@
-# Turn A-RETRIEVAL-REMEDIATION-V1 — handoff (review rounds 1 and 2 applied)
+# Turn A-RETRIEVAL-REMEDIATION-V1 — handoff (review rounds 1–3 applied)
 
 Status: `CODE_AND_OFFLINE_TESTS_READY` · DEV_TUNE re-execution NOT performed (needs the live Postgres/KURE/BM25-cache stack).
 Base: `900d3cc` (`codex/fourarm-a2-integration-v01`). Branch: `feat/fourarm-a-retrieval-remediation-v01`.
 Reviews in the B/D team repo: `docs/reviews/a-remediation-c6b9a19-review.md` (round 1, five findings) and
-`docs/reviews/a-remediation-40686e7-review.md` (round 2, three findings) — all accepted and applied (see below).
+`docs/reviews/a-remediation-40686e7-review.md` (round 2, three findings), `docs/reviews/a-remediation-cf040a4-review.md`
+(round 3, two runner-integrity findings) — all accepted and applied (see below).
 
 ## What this is
 
@@ -51,6 +52,20 @@ date in the question (filing date vs. contract end date is not distinguished —
 3. [P2] `--overwrite` bypassed the guard but resumed from the stale NDJSON → `--overwrite` now deletes the old results
    NDJSON and run.json first and starts fresh; resume (no run.json yet) and overwrite are distinct.
 
+## Review round 3 (cf040a4 → this version) — runner result integrity
+
+1. [P1] `--overwrite` only acted when `run.json` existed, so an unfinished checkpoint (results NDJSON only) was resumed
+   instead of restarted → `--overwrite` is evaluated first and removes results NDJSON + run.json whether or not the run
+   completed; without it a completed run is refused and an unfinished one is resumed.
+2. [P1] resume never checked the run identity and an errored question's retry left both rows in the file while run.json
+   claimed completion → every checkpoint row must match the current `arm/batch_id/code_sha256/config_sha256/policy_id`
+   (refuses otherwise); a question is done only with a successful row; on completion the file is rewritten canonically
+   (exactly one successful row per batch question, batch order, atomic temp+rename) and `results_sha256` pins that
+   content. For a clean run the canonical file is byte-identical to the appended one (tested). `run.json` gains a
+   `checkpoint` block (`resumed`, rows on disk before canonicalisation, canonical rows).
+   The logic lives in `four-arm-run-checkpoint.mjs` (pure, no `pg`) with its own offline tests; the runner is only
+   source-scanned because loading it needs `pg` from node_modules.
+
 ## Files
 
 - `domain/agent-comparison/four-arm-ac/four-arm-retrieval-policy.mjs` (new): `FROZEN_POLICY`, `REMEDIATION_V1_POLICY`,
@@ -70,8 +85,11 @@ date in the question (filing date vs. contract end date is not distinguished —
   unfinished run without run.json). A non-frozen
   policy writes `<ARM>.results.<policy>.ndjson` / `<ARM>.run.<policy>.json` (+ `policy_id`, `retrieval_passes`,
   `receipt_windows`, per-item `retrieval_pass`/`retrieval_group`); the frozen file names and line shape are unchanged.
+- `four-arm-run-checkpoint.mjs` (new): checkpoint parsing, run-identity validation, done/errored state, canonical rewrite,
+  atomic write — pure functions the runner calls.
 - `tests/four-arm-a-retrieval-remediation.test.mjs` (new): offline tests with a fake client that evaluates the real
   prefilter WHERE clause and a fake dense repository that applies the shared `passesMetadataFilters`.
+- `tests/four-arm-run-checkpoint.test.mjs` (new): checkpoint/resume/canonicalisation tests + a source scan of the runner.
 
 ## How to run (owner of the live stack)
 
