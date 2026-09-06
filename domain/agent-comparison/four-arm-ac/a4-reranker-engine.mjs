@@ -1,8 +1,18 @@
-// Turn A4-RERANKER-ENGINE-V1: the generic reranker engine.
+// Turn A4-RERANKER-ENGINE-V1 (+ A4-RERANKER-FULL-RANKING-REFILL-V1): the
+// generic reranker engine.
 //
 // Pipeline (fixed, never reordered by a config):
 //   candidate pool -> feature extraction -> weighted reranker score
-//   -> deterministic sort (fixed global tie-break) -> top-20
+//   -> deterministic sort (fixed global tie-break) -> FULL ranking
+//   (rankCandidatePool) -> optional top-K slice (rerankCandidates)
+//
+// rankCandidatePool() returns every candidate in `pool`, ranked, never
+// truncated -- this is what lets a downstream stage (e.g. A3
+// Contradiction Guard, via selectWithStableRefill() in this same file)
+// reject a candidate inside the eventual top-20 and stable-refill from
+// rank 21 onward without re-scoring or re-sorting anything.
+// rerankCandidates() is an unchanged-meaning, backward-compatible
+// wrapper: the first TOP_K entries of that same full ranking.
 //
 // This module never:
 //   - removes a candidate for being an apparent contradiction (that is
@@ -185,18 +195,21 @@ function assertValidPool(pool) {
 // pool: RerankerCandidate[] (<=200, the pre-registered wide-pool ceiling --
 // BM25 top-100 UNION dense top-100, deduplicated by chunk_id). Every
 // candidate in `pool` is scored, in full, before any truncation -- there
-// is no pre-scoring cut to 100; only the FINAL sort is truncated to
-// TOP_K=20.
+// is no pre-scoring cut of any kind.
 // questionContext: RerankerQuestionContext (never Gold).
 // config: one pre-registered entry from a4-reranker-configs.v1.json.
 //
-// Returns a NEW array (<=20 items) of frozen candidate objects: every
-// original field preserved, plus `features`, `reranker_score`, and the
-// final 1-based `rank`. The output is always a stable subset of the
-// input -- no candidate is ever fabricated, and none is ever dropped for
+// Returns a NEW array, SAME LENGTH as `pool` (0 for an empty pool),
+// ordered by the fixed tie-break chain: every original field preserved,
+// plus `features`, `reranker_score`, and a final 1-based `rank` running
+// 1..pool.length. This is the FULL ranking -- no candidate is ever
+// dropped, truncated, or fabricated here, and none is ever removed for
 // "being a contradiction" (that filtering, if any, happens downstream of
-// this engine, never inside it).
-export function rerankCandidates(pool, questionContext, config) {
+// this engine -- e.g. A3 Contradiction Guard -- consuming this full
+// ranking, never inside it). Callers that need only a top-K slice should
+// take `.slice(0, K)` of this result (see `rerankCandidates` below) --
+// slicing never re-scores or re-sorts anything.
+export function rankCandidatePool(pool, questionContext, config) {
   assertValidConfig(config);
   assertValidPool(pool);
 
@@ -215,5 +228,73 @@ export function rerankCandidates(pool, questionContext, config) {
 
   scored.sort(compareScored);
 
-  return scored.slice(0, TOP_K).map((entry, index) => Object.freeze({ ...entry, rank: index + 1 }));
+  return scored.map((entry, index) => Object.freeze({ ...entry, rank: index + 1 }));
+}
+
+// Backward-compatible wrapper (unchanged public meaning): the top-20 of
+// the SAME full ranking rankCandidatePool() computes -- no separate
+// re-scoring or re-sorting happens here, and TOP_K is unchanged.
+export function rerankCandidates(pool, questionContext, config) {
+  return rankCandidatePool(pool, questionContext, config).slice(0, TOP_K);
+}
+
+// ---------------------------------------------------------------------------
+// Stable refill (Turn A4-RERANKER-FULL-RANKING-REFILL-V1, section E).
+//
+// A generic, pure consumer of an already-made per-candidate decision --
+// this function does NOT reimplement, approximate, or guess at A3
+// Contradiction Guard's own judgement, and it imports no A3 module. It
+// only: keeps `rankedPool`'s own order, drops REJECT, keeps PASS and
+// KEEP_UNKNOWN, and takes the first `outputK` survivors -- so a REJECT
+// inside what would have been the top-K is silently backfilled by
+// whatever the next surviving candidate at a later rank happens to be,
+// with no re-scoring and no re-sorting.
+// ---------------------------------------------------------------------------
+
+export const REFILL_DECISIONS = Object.freeze(["PASS", "REJECT", "KEEP_UNKNOWN"]);
+
+// rankedPool: the output of rankCandidatePool() (or any array of objects
+// with a unique, non-empty `chunk_id`, in the caller's own intended
+// order -- this function never reads or depends on a `rank`/
+// `reranker_score` field, and never reorders by one).
+// decisions: a plain object, chunk_id -> one of REFILL_DECISIONS. Every
+// chunk_id present in `rankedPool` MUST have an entry here (a missing key
+// -- including an explicit `undefined` value -- is a hard TypeError, not
+// a silent PASS/KEEP_UNKNOWN default). An extra decisions key with no
+// matching rankedPool entry is ignored (harmless).
+// options.outputK: max number of survivors to return (default TOP_K).
+//
+// Returns a NEW array (<=outputK, possibly shorter if fewer than outputK
+// candidates survive -- never padded or fabricated), containing the
+// EXACT candidate objects from `rankedPool` (not copies, not mutated),
+// in `rankedPool`'s own relative order.
+export function selectWithStableRefill(rankedPool, decisions, { outputK = TOP_K } = {}) {
+  if (!Array.isArray(rankedPool)) throw new TypeError("rankedPool must be an array");
+  if (!decisions || typeof decisions !== "object" || Array.isArray(decisions)) {
+    throw new TypeError("decisions must be a plain object mapping chunk_id -> decision");
+  }
+  if (!Number.isInteger(outputK) || outputK < 0) throw new RangeError("outputK must be a non-negative integer");
+
+  const seen = new Set();
+  for (const entry of rankedPool) {
+    if (!entry || typeof entry !== "object" || typeof entry.chunk_id !== "string" || entry.chunk_id === "") {
+      throw new TypeError("every rankedPool entry must be an object with a non-empty chunk_id");
+    }
+    if (seen.has(entry.chunk_id)) throw new RangeError(`duplicate chunk_id in rankedPool: ${entry.chunk_id}`);
+    seen.add(entry.chunk_id);
+    if (!Object.hasOwn(decisions, entry.chunk_id) || decisions[entry.chunk_id] === undefined) {
+      throw new RangeError(`missing decision for chunk_id "${entry.chunk_id}"`);
+    }
+    if (!REFILL_DECISIONS.includes(decisions[entry.chunk_id])) {
+      throw new RangeError(`unknown decision "${decisions[entry.chunk_id]}" for chunk_id "${entry.chunk_id}" -- must be one of ${JSON.stringify(REFILL_DECISIONS)}`);
+    }
+  }
+
+  const kept = [];
+  for (const entry of rankedPool) {
+    if (kept.length >= outputK) break;
+    if (decisions[entry.chunk_id] === "REJECT") continue;
+    kept.push(entry);
+  }
+  return kept;
 }

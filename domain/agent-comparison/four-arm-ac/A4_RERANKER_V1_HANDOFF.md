@@ -29,6 +29,30 @@ commits.
    brought into this branch (never modified) so the test suite can import
    the real function and feed its real output straight into
    `rerankCandidates()`.
+3. **Wide-pool module sync to `codex/fourarm-a4-wide-pool-v01`@`c9b4cb0e67cc3a87a7ab250d6c1adacd5723aa56`**
+   (`0568306`): cherry-picked that commit's fix ("preserve frozen A's own
+   node_index instead of the smallest merged node" — `node_index` is now
+   selected by the same `original_a_top20 > bm25_top100 > dense_top100`
+   priority order already used for text/locator/provenance/metadata,
+   with a fail-closed `NODE_INDEX_NOT_IN_NODE_INDICES` invariant) into
+   `a4-wide-candidate-pool.mjs`. Only that production module was kept —
+   the wide-pool branch's own contract/handoff/test files (never adopted
+   by this branch) were resolved as deleted, not reintroduced, to avoid
+   two divergent copies of the same documentation. Verified byte-identical
+   to `c9b4cb0`'s own blob (`ec8ca02cfcb11cc64914ac2d78880697f6396a6c0124d9fff0d147b652cfaeb9`)
+   both before and after this Turn's own commits.
+4. **Full ranking + stable refill** (`A4-RERANKER-FULL-RANKING-REFILL-V1`,
+   this commit): `rankCandidatePool(pool, questionContext, config)` is the
+   new primary entry point — full ranking, every input candidate scored
+   and ordered, never truncated. `rerankCandidates(...)` is now an
+   unchanged-meaning, backward-compatible wrapper:
+   `rankCandidatePool(...).slice(0, TOP_K)`, nothing else. A new, generic,
+   A3-agnostic pure function `selectWithStableRefill(rankedPool,
+   decisions, {outputK})` consumes an already-made per-candidate
+   `PASS`/`REJECT`/`KEEP_UNKNOWN` decision map and stable-refills a
+   rejected top-K slot from the next surviving candidate at a later rank
+   — see `A4_RERANKER_V1_CONTRACT.md` section 7. No config, weight,
+   feature, or tie-break rule changed by this fix.
 
 ## Purpose / acceptance criteria
 
@@ -72,23 +96,24 @@ Completion condition: `A4_RERANKER_ENGINE_IMPLEMENTED` (declared below).
 
 ## Changed files
 
-- `domain/agent-comparison/four-arm-ac/A4_RERANKER_V1_CONTRACT.md` (new, then twice corrected)
-- `domain/agent-comparison/four-arm-ac/A4_RERANKER_V1_HANDOFF.md` (this file, new, then twice corrected)
+- `domain/agent-comparison/four-arm-ac/A4_RERANKER_V1_CONTRACT.md` (new, then three times corrected)
+- `domain/agent-comparison/four-arm-ac/A4_RERANKER_V1_HANDOFF.md` (this file, new, then three times corrected)
 - `domain/agent-comparison/four-arm-ac/a4-reranker-features.mjs` (new, then corrected for the real field shape)
-- `domain/agent-comparison/four-arm-ac/a4-reranker-engine.mjs` (new, then corrected twice — pool ceiling, then field shape)
-- `domain/agent-comparison/four-arm-ac/a4-reranker-configs.v1.json` (new; untouched by either fix)
-- `tests/four-arm-a4-reranker.test.mjs` (new, then corrected twice)
+- `domain/agent-comparison/four-arm-ac/a4-reranker-engine.mjs` (new, then corrected three times — pool ceiling, then field shape, then full-ranking + stable refill)
+- `domain/agent-comparison/four-arm-ac/a4-reranker-configs.v1.json` (new; untouched by every fix)
+- `tests/four-arm-a4-reranker.test.mjs` (new, then corrected three times)
 - `domain/agent-comparison/four-arm-ac/a4-wide-candidate-pool.mjs` — **brought in from
-  `codex/fourarm-a4-wide-pool-v01` @ `defd73302bd2b4fd6007283c968a87b3bbf49d0b`,
-  byte-identical, never modified** (verified by SHA-256 match against that
-  commit's own blob before and after this Turn's commit) — needed so the
-  test suite can import and call the real `buildWideCandidatePool()`.
+  `codex/fourarm-a4-wide-pool-v01`, synced twice, byte-identical to the
+  branch's own blob each time, never modified**: first from
+  `defd73302bd2b4fd6007283c968a87b3bbf49d0b`, then cherry-picked forward to
+  `c9b4cb0e67cc3a87a7ab250d6c1adacd5723aa56` (see changelog item 3) —
+  verified by SHA-256 match against that commit's own blob both times.
   Nothing else from that branch (its own contract/handoff/test files) was
-  copied in.
+  ever copied in.
 
 ## Tests run and results
 
-- `node --test tests/four-arm-a4-reranker.test.mjs`: **31/31 pass**
+- `node --test tests/four-arm-a4-reranker.test.mjs`: **52/52 pass**
   (byte-identical determinism, stable-subset/top-20 invariants, 200-wide
   ceiling with the 100/101/199/200-accepted/201-rejected boundary,
   full-pool scoring before truncation, no-mutation, missing-feature
@@ -99,9 +124,22 @@ Completion condition: `A4_RERANKER_ENGINE_IMPLEMENTED` (declared below).
   no per-question special-casing, fail-closed config/membership/rank-range
   validation, config-count ≤12, source-level isolation from
   Gold/A3-Guard/QA/DB/KURE, byte-invariance of the 4 pre-existing result
-  files this Turn must not touch, and three wide-pool contract-integration
-  tests that import the real `buildWideCandidatePool()` and feed its
-  actual return value into `rerankCandidates()` with no remapping layer).
+  files this Turn must not touch; plus, new this Turn:
+  `rankCandidatePool`'s full-ranking invariants (200-in/200-out, the
+  100/101/199/200/201 boundary, empty-pool → `[]`, no hidden top-100 cut
+  — a planted index-150 candidate reaching overall rank 1 — contiguous
+  1..N ranks, byte-identical repeats, no mutation, `rerankCandidates`
+  proven to be exactly `rankCandidatePool(...).slice(0, TOP_K)`, and all
+  six R0–R5 configs running cleanly); `selectWithStableRefill`'s full
+  contract (single/triple top-20 REJECT backfilling ranks 21/21–23,
+  `KEEP_UNKNOWN`/`PASS` never removed, 25 REJECTs returning only the
+  survivors that exist, all-REJECT → `[]`, fail-closed on a missing
+  decision / an unknown decision value / a duplicate `chunk_id`, no
+  reordering of survivors, no fabrication, no mutation); and five
+  wide-pool contract-integration tests (up from three) that import the
+  real `buildWideCandidatePool()` and feed its actual return value into
+  `rerankCandidates()`, `rankCandidatePool()`, and `selectWithStableRefill()`
+  with no remapping layer anywhere).
 - `npm run schema:validate`: PASS, 36 pairs validated (unchanged — no new
   schema/example pair was added, since neither new JSON file is
   registered in `scripts/validate-interface-schemas.mjs`'s fixed pair
@@ -163,11 +201,15 @@ The four pre-existing result files verified byte-unchanged this Turn:
   integration Turn evaluates all ≤12 pre-registered configs against
   DEV_TUNE-101 in one pass and is the first point at which any
   performance signal touches this engine.
-- No `A3 Contradiction Guard` integration exists here — this engine's
-  output is a plain top-20 ranking; the guard runs downstream, per the
-  pipeline in the Turn's own instructions
-  (`A4 wide pool → pre-registered reranker configs → A3 Contradiction Guard → top-20 → 기존 QA`).
+- No `A3 Contradiction Guard` integration exists here — `selectWithStableRefill`
+  is a generic, A3-agnostic consumer of an externally-supplied decision
+  map; it does not call, import, or reimplement A3's own judgement logic.
+  Wiring the real guard's output into this function is the integration
+  Turn's job, per the pipeline in this Turn's own instructions
+  (`A4 wide pool → A4 full ranking → A3 Contradiction Guard → PASS/KEEP_UNKNOWN order kept → stable refill from rank 21+ → final top-20 → 기존 QA`).
 
 ## Declaration
 
-`A4_RERANKER_ENGINE_IMPLEMENTED`
+`A4_RERANKER_ENGINE_IMPLEMENTED` (initial implementation), superseded by
+`A4_RERANKER_FULL_RANKING_AND_REFILL_READY` (this Turn,
+`A4-RERANKER-FULL-RANKING-REFILL-V1`).

@@ -7,7 +7,8 @@ import { fileURLToPath } from "node:url";
 
 import { extractFeatures, FEATURE_KEYS } from "../domain/agent-comparison/four-arm-ac/a4-reranker-features.mjs";
 import {
-  rerankCandidates, validateConfig, assertValidConfig, TOP_K, MAX_POOL_SIZE,
+  rerankCandidates, rankCandidatePool, selectWithStableRefill, REFILL_DECISIONS,
+  validateConfig, assertValidConfig, TOP_K, MAX_POOL_SIZE,
 } from "../domain/agent-comparison/four-arm-ac/a4-reranker-engine.mjs";
 import { buildWideCandidatePool } from "../domain/agent-comparison/four-arm-ac/a4-wide-candidate-pool.mjs";
 
@@ -464,6 +465,212 @@ test("feature extraction: every feature is finite and in [0,1] across a randomiz
 });
 
 // ---------------------------------------------------------------------------
+// Full ranking (Turn A4-RERANKER-FULL-RANKING-REFILL-V1): rankCandidatePool()
+// returns EVERY candidate, ranked, never truncated; rerankCandidates() is a
+// thin top-K wrapper over the same full ranking.
+// ---------------------------------------------------------------------------
+
+test("rankCandidatePool: a 200-candidate pool returns all 200, ranked", () => {
+  const pool = makePool(200);
+  const full = rankCandidatePool(pool, makeQuestionContext(), R1);
+  assert.equal(full.length, 200);
+});
+
+test("rankCandidatePool: accepts exactly 100/101/199/200 candidates, rejects 201", () => {
+  for (const size of [100, 101, 199, 200]) {
+    const pool = makePool(size);
+    const full = rankCandidatePool(pool, makeQuestionContext(), R1);
+    assert.equal(full.length, size, `pool of size ${size} must return exactly ${size} ranked entries`);
+  }
+  const oversized = makePool(201);
+  assert.throws(() => rankCandidatePool(oversized, makeQuestionContext(), R1), RangeError, "pool of size 201 must be rejected");
+});
+
+test("rankCandidatePool: empty pool returns an empty array", () => {
+  assert.deepEqual(rankCandidatePool([], makeQuestionContext(), R1), []);
+});
+
+test("rankCandidatePool: no hidden top-100 cut before scoring -- a candidate at index 150 can become the overall rank 1", () => {
+  const pool = makePool(200);
+  pool[0] = { ...pool[0], source_ranks: { ...pool[0].source_ranks, dense: 50 }, source_scores: { ...pool[0].source_scores, dense: 0.1 } };
+  pool[150] = makeCandidate({
+    chunk_id: "chunk_tail_winner_000000000000",
+    source_membership: { original_a_top20: false, bm25_top100: false, dense_top100: true },
+    source_ranks: { bm25: null, dense: 1, original_a: null, wide_rrf: 1 },
+    source_scores: { bm25: null, dense: 0.999, original_a_rrf: null, wide_rrf: 0.05 },
+  });
+  const denseHeavy = { config_id: "dense_heavy_test", weights: { dense: 1 } };
+  const full = rankCandidatePool(pool, makeQuestionContext(), denseHeavy);
+  assert.equal(full.length, 200);
+  assert.equal(full[0].chunk_id, "chunk_tail_winner_000000000000");
+  assert.equal(full[0].rank, 1);
+});
+
+test("rankCandidatePool: rank runs 1..pool.length contiguously with no gaps or repeats", () => {
+  const pool = makePool(77);
+  const full = rankCandidatePool(pool, makeQuestionContext(), R1);
+  assert.deepEqual(full.map((c) => c.rank), Array.from({ length: 77 }, (_, i) => i + 1));
+});
+
+test("rankCandidatePool: same input produces byte-identical output across repeated calls", () => {
+  const pool = makePool(55);
+  const qc = makeQuestionContext();
+  const out1 = rankCandidatePool(structuredClone(pool), structuredClone(qc), R1);
+  const out2 = rankCandidatePool(structuredClone(pool), structuredClone(qc), R1);
+  assert.equal(JSON.stringify(out1), JSON.stringify(out2));
+});
+
+test("rankCandidatePool: does not mutate the input pool or its candidates", () => {
+  const pool = makePool(10).map((c) => Object.freeze({
+    ...c,
+    source_membership: Object.freeze({ ...c.source_membership }),
+    source_ranks: Object.freeze({ ...c.source_ranks }),
+    source_scores: Object.freeze({ ...c.source_scores }),
+    metadata: Object.freeze({ ...c.metadata }),
+  }));
+  const before = JSON.parse(JSON.stringify(pool));
+  assert.doesNotThrow(() => rankCandidatePool(pool, makeQuestionContext(), R1));
+  assert.deepEqual(JSON.parse(JSON.stringify(pool)), before);
+});
+
+test("rerankCandidates: is exactly the first TOP_K entries of rankCandidatePool's full ranking, never a separate computation", () => {
+  const pool = makePool(85);
+  const qc = makeQuestionContext();
+  const full = rankCandidatePool(pool, qc, R1);
+  const top = rerankCandidates(pool, qc, R1);
+  assert.deepEqual(top, full.slice(0, TOP_K));
+});
+
+test("rankCandidatePool: all six pre-registered R0-R5 configs run without error on the same pool", async () => {
+  const registry = await loadConfigs();
+  const pool = makePool(120);
+  for (const config of registry.configs) {
+    const full = rankCandidatePool(pool, makeQuestionContext(), config);
+    assert.equal(full.length, 120, `config ${config.config_id} must rank every candidate`);
+    assert.ok(full.every((c) => Number.isFinite(c.reranker_score)), `config ${config.config_id} must produce a finite score for every candidate`);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Stable refill (Turn A4-RERANKER-FULL-RANKING-REFILL-V1, section E): a
+// generic, A3-agnostic pure consumer of an already-made PASS/REJECT/
+// KEEP_UNKNOWN decision map. Imports no A3 module anywhere in this file.
+// ---------------------------------------------------------------------------
+
+function makeRankedPool(n) {
+  return rankCandidatePool(makePool(n), makeQuestionContext(), R1);
+}
+
+function decisionsAllPass(rankedPool) {
+  return Object.fromEntries(rankedPool.map((c) => [c.chunk_id, "PASS"]));
+}
+
+test("selectWithStableRefill: rejecting rank 3 in the top-20 backfills with the original rank 21", () => {
+  const ranked = makeRankedPool(30);
+  const decisions = decisionsAllPass(ranked);
+  decisions[ranked[2].chunk_id] = "REJECT"; // rank 3 (0-indexed 2)
+  const out = selectWithStableRefill(ranked, decisions, { outputK: 20 });
+  assert.equal(out.length, 20);
+  assert.deepEqual(out.map((c) => c.chunk_id), [
+    ...ranked.slice(0, 2).map((c) => c.chunk_id),
+    ...ranked.slice(3, 21).map((c) => c.chunk_id), // rank 21 (index 20) backfills the gap
+  ]);
+});
+
+test("selectWithStableRefill: rejecting 3 candidates in the top-20 backfills ranks 21-23 in order", () => {
+  const ranked = makeRankedPool(30);
+  const decisions = decisionsAllPass(ranked);
+  for (const idx of [1, 5, 10]) decisions[ranked[idx].chunk_id] = "REJECT"; // ranks 2, 6, 11
+  const out = selectWithStableRefill(ranked, decisions, { outputK: 20 });
+  assert.equal(out.length, 20);
+  const expectedIds = ranked.filter((c) => decisions[c.chunk_id] !== "REJECT").slice(0, 20).map((c) => c.chunk_id);
+  assert.deepEqual(out.map((c) => c.chunk_id), expectedIds);
+  // The three backfilled entries must be the original ranks 21, 22, 23.
+  assert.deepEqual(out.slice(-3).map((c) => c.chunk_id), [ranked[20].chunk_id, ranked[21].chunk_id, ranked[22].chunk_id]);
+});
+
+test("selectWithStableRefill: KEEP_UNKNOWN candidates are never removed", () => {
+  const ranked = makeRankedPool(25);
+  const decisions = decisionsAllPass(ranked);
+  decisions[ranked[4].chunk_id] = "KEEP_UNKNOWN";
+  const out = selectWithStableRefill(ranked, decisions, { outputK: 20 });
+  assert.ok(out.some((c) => c.chunk_id === ranked[4].chunk_id));
+});
+
+test("selectWithStableRefill: PASS candidates are never removed", () => {
+  const ranked = makeRankedPool(25);
+  const decisions = decisionsAllPass(ranked);
+  const out = selectWithStableRefill(ranked, decisions, { outputK: 20 });
+  assert.equal(out.length, 20);
+  for (const c of ranked.slice(0, 20)) assert.ok(out.some((o) => o.chunk_id === c.chunk_id));
+});
+
+test("selectWithStableRefill: 25 REJECTs out of a larger pool selects as many survivors as the later ranks allow", () => {
+  const ranked = makeRankedPool(40);
+  const decisions = decisionsAllPass(ranked);
+  for (let i = 0; i < 25; i += 1) decisions[ranked[i].chunk_id] = "REJECT";
+  const out = selectWithStableRefill(ranked, decisions, { outputK: 20 });
+  // 40 - 25 = 15 survivors total, all must be selected (fewer than outputK=20).
+  assert.equal(out.length, 15);
+  assert.deepEqual(out.map((c) => c.chunk_id), ranked.slice(25).map((c) => c.chunk_id));
+});
+
+test("selectWithStableRefill: every candidate REJECTed returns an empty array, never padded or fabricated", () => {
+  const ranked = makeRankedPool(20);
+  const decisions = Object.fromEntries(ranked.map((c) => [c.chunk_id, "REJECT"]));
+  const out = selectWithStableRefill(ranked, decisions, { outputK: 20 });
+  assert.deepEqual(out, []);
+});
+
+test("selectWithStableRefill: a missing decision for any rankedPool chunk_id fails closed", () => {
+  const ranked = makeRankedPool(10);
+  const decisions = decisionsAllPass(ranked);
+  delete decisions[ranked[3].chunk_id];
+  assert.throws(() => selectWithStableRefill(ranked, decisions, { outputK: 20 }), RangeError);
+});
+
+test("selectWithStableRefill: an unknown decision value fails closed", () => {
+  const ranked = makeRankedPool(10);
+  const decisions = decisionsAllPass(ranked);
+  decisions[ranked[3].chunk_id] = "MAYBE";
+  assert.throws(() => selectWithStableRefill(ranked, decisions, { outputK: 20 }), RangeError);
+  for (const bad of ["pass", "reject", "", null, 1, "keep_unknown"]) {
+    const d2 = decisionsAllPass(ranked);
+    d2[ranked[0].chunk_id] = bad;
+    assert.throws(() => selectWithStableRefill(ranked, d2, { outputK: 20 }), RangeError, `decision ${JSON.stringify(bad)} must be rejected`);
+  }
+  assert.deepEqual(REFILL_DECISIONS, ["PASS", "REJECT", "KEEP_UNKNOWN"]);
+});
+
+test("selectWithStableRefill: a duplicate chunk_id in rankedPool fails closed", () => {
+  const ranked = makeRankedPool(5);
+  const duped = [...ranked, ranked[0]];
+  const decisions = decisionsAllPass(ranked);
+  assert.throws(() => selectWithStableRefill(duped, decisions, { outputK: 20 }), RangeError);
+});
+
+test("selectWithStableRefill: never reorders survivors -- relative order after refill is unchanged from rankedPool's own order", () => {
+  const ranked = makeRankedPool(30);
+  const decisions = decisionsAllPass(ranked);
+  for (const idx of [0, 7, 15]) decisions[ranked[idx].chunk_id] = "REJECT";
+  const out = selectWithStableRefill(ranked, decisions, { outputK: 20 });
+  const survivorOrderInRankedPool = ranked.filter((c) => decisions[c.chunk_id] !== "REJECT").map((c) => c.chunk_id);
+  assert.deepEqual(out.map((c) => c.chunk_id), survivorOrderInRankedPool.slice(0, 20));
+});
+
+test("selectWithStableRefill: never fabricates a candidate outside rankedPool, and never mutates its inputs", () => {
+  const ranked = makeRankedPool(25).map((c) => Object.freeze(c));
+  const decisions = Object.freeze(decisionsAllPass(ranked));
+  const rankedBefore = JSON.parse(JSON.stringify(ranked));
+  const decisionsBefore = JSON.parse(JSON.stringify(decisions));
+  const out = selectWithStableRefill(ranked, decisions, { outputK: 20 });
+  const rankedIds = new Set(ranked.map((c) => c.chunk_id));
+  assert.ok(out.every((c) => rankedIds.has(c.chunk_id)));
+  assert.deepEqual(JSON.parse(JSON.stringify(ranked)), rankedBefore);
+  assert.deepEqual(JSON.parse(JSON.stringify(decisions)), decisionsBefore);
+});
+
+// ---------------------------------------------------------------------------
 // Wide-pool contract integration: the real buildWideCandidatePool() output
 // (codex/fourarm-a4-wide-pool-v01 @ defd73302bd2b4fd6007283c968a87b3bbf49d0b,
 // a4-wide-candidate-pool.mjs, brought into this branch byte-identical) fed
@@ -499,6 +706,28 @@ test("wide-pool contract integration: real buildWideCandidatePool() output feeds
   const poolIds = new Set(pool.map((c) => c.chunk_id));
   for (const item of out) assert.ok(poolIds.has(item.chunk_id), `output chunk_id ${item.chunk_id} must come from the real pool`);
   out.forEach((item, index) => assert.equal(item.rank, index + 1));
+});
+
+test("wide-pool contract integration: real buildWideCandidatePool() output feeds rankCandidatePool() and selectWithStableRefill() end-to-end, zero remapping", () => {
+  const bm25List = Array.from({ length: 100 }, (_, i) => ({ ...makeWidePoolBaseRecord(i), rank: i + 1, score: 100 - i }));
+  const denseList = Array.from({ length: 100 }, (_, i) => ({ ...makeWidePoolBaseRecord(100 + i), rank: i + 1, score: 1 - i / 100 }));
+  const { pool } = buildWideCandidatePool({ bm25_top100: bm25List, dense_top100: denseList });
+
+  // rankCandidatePool() consumes the real pool object directly -- full ranking, no truncation.
+  const full = rankCandidatePool(pool, makeQuestionContext(), R1);
+  assert.equal(full.length, pool.length);
+  assert.deepEqual(full.map((c) => c.rank), Array.from({ length: pool.length }, (_, i) => i + 1));
+
+  // A downstream stage rejects the 3rd-ranked candidate; selectWithStableRefill
+  // backfills from the real full ranking with no remapping and no re-scoring.
+  const decisions = Object.fromEntries(full.map((c) => [c.chunk_id, "PASS"]));
+  decisions[full[2].chunk_id] = "REJECT";
+  const finalTop20 = selectWithStableRefill(full, decisions, { outputK: 20 });
+  assert.equal(finalTop20.length, 20);
+  assert.deepEqual(finalTop20.map((c) => c.chunk_id), [
+    full[0].chunk_id, full[1].chunk_id,
+    ...full.slice(3, 21).map((c) => c.chunk_id),
+  ]);
 });
 
 test("wide-pool contract integration: real buildWideCandidatePool() output feeds rerankCandidates() with zero remapping (partial overlap, under 200)", () => {

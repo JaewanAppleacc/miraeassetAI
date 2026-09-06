@@ -33,10 +33,26 @@ values, when needed, live separately in
 correction adds, removes, or reweights any config, and no real
 DEV_TUNE/Gold/A/oracle result was opened to make either.
 
+**Correction 3 (full-ranking + stable refill, `A4-RERANKER-FULL-RANKING-
+REFILL-V1`, pre-results, no real result opened):** the engine previously
+truncated to top-20 *inside* `rerankCandidates()`, with no way for a
+downstream stage to reject a top-20 member and backfill from rank 21+
+without re-scoring/re-sorting. Section 1's pipeline and section 7 below
+are updated: `rankCandidatePool()` is now the primary entry point (full
+ranking, every input candidate, never truncated); `rerankCandidates()` is
+now an unchanged-meaning, backward-compatible wrapper —
+`rankCandidatePool(...).slice(0, TOP_K)`, nothing else — and
+`selectWithStableRefill()` is a new, generic, A3-agnostic pure function
+that turns a full ranking plus a per-candidate PASS/REJECT/KEEP_UNKNOWN
+decision map into a final top-K with rejected top-K members backfilled
+from later ranks. No config, weight, feature, or tie-break rule changed.
+
 ## 1. Role (fixed)
 
 ```
-candidate pool → feature extraction → reranker score → deterministic sort → top-20
+candidate pool → feature extraction → reranker score → deterministic sort
+  → FULL ranking (rankCandidatePool)
+  → optional top-K slice (rerankCandidates) OR external decisions + stable refill (selectWithStableRefill)
 ```
 
 The reranker **only** ranks. It never:
@@ -245,3 +261,44 @@ never a valid "we don't know" state (that is always 0.5, not `NaN`).
 - Input candidate objects are never mutated — every candidate in the
   pipeline is spread into a **new** object; the caller's own array/objects
   are safe to reuse or freeze before calling.
+
+## 7. Full ranking and stable refill API (`A4-RERANKER-FULL-RANKING-REFILL-V1`)
+
+```ts
+function rankCandidatePool(pool, questionContext, config): RankedCandidate[];
+function rerankCandidates(pool, questionContext, config): RankedCandidate[]; // = rankCandidatePool(...).slice(0, TOP_K)
+function selectWithStableRefill(
+  rankedPool: RankedCandidate[],
+  decisions: Record<string /* chunk_id */, "PASS" | "REJECT" | "KEEP_UNKNOWN">,
+  options?: { outputK?: number } // default TOP_K = 20
+): RankedCandidate[];
+```
+
+- `rankCandidatePool` is the primary entry point: same validation and
+  scoring as before, but returns **every** candidate in `pool`, ranked
+  (`rank` 1..`pool.length`), never truncated. An empty `pool` returns `[]`.
+- `rerankCandidates` is unchanged in meaning — a thin wrapper,
+  `rankCandidatePool(...).slice(0, TOP_K)` — no separate re-scoring or
+  re-sorting happens inside it, so `rerankCandidates(...)` is always
+  exactly the first `TOP_K` entries of
+  `rankCandidatePool(...)` for the same three arguments.
+- `selectWithStableRefill` is a **generic, A3-agnostic pure function** —
+  it imports no A3 module and does not reimplement or approximate
+  contradiction judgement. It only consumes an already-made decision per
+  `chunk_id`:
+  - Keeps `rankedPool`'s own order; never re-sorts, never recomputes a
+    score.
+  - Drops `REJECT`; keeps `PASS` and `KEEP_UNKNOWN` unchanged (same
+    object reference, not a copy).
+  - Returns the first `outputK` survivors in that order — so a `REJECT`
+    inside what would have been the top-K is silently backfilled by the
+    next surviving candidate at a later rank (stable refill), with no
+    re-ranking of the survivors themselves.
+  - Fails closed: a `rankedPool` entry with no `chunk_id`, a duplicate
+    `chunk_id`, a missing decision for any `chunk_id` in `rankedPool`, or
+    a decision outside `{PASS, REJECT, KEEP_UNKNOWN}` all throw before
+    any selection happens. An extra `decisions` key with no matching
+    `rankedPool` entry is harmless and ignored.
+  - Never fabricates or pads — if fewer than `outputK` candidates survive,
+    the returned array is simply shorter.
+  - Never mutates `rankedPool`, its entries, or `decisions`.
