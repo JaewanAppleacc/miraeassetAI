@@ -1,5 +1,28 @@
 # FOURARM-A4-WIDE-CANDIDATE-POOL-V1 — handoff
 
+## Amendment (commit following `defd733`)
+
+The original `defd733` implementation picked the singleton `node_index`
+output field as the smallest member of the merged `node_indices` union.
+That silently could replace frozen arm A's own representative node for a
+chunk with a numerically smaller node contributed only by a BM25/dense
+occurrence. This is fixed: `node_index` is now selected by the same fixed
+priority order already used for `text`/`locator`/`provenance`/`metadata`
+(`original_a_top20` > `bm25_top100` > `dense_top100`, first occurrence
+with a non-null `node_index` wins), falling back to the smallest merged
+member only when none of the three occurrences declares one at all.
+`node_indices` itself (the full union) is unchanged. A new fail-closed
+invariant (`NODE_INDEX_NOT_IN_NODE_INDICES`) asserts the selected
+`node_index` is always a member of the item's own `node_indices` — this
+holds by construction and is not normally reachable, but is checked as an
+explicit regression guard. A new test
+(`primary node_index는 original_a_top20 > bm25 > dense 우선순위로 원래
+값을 보존한다`) constructs a fixture where original_a's own node_index is
+deliberately *not* the smallest in the merged set, and verifies it is
+preserved exactly, plus a second case verifying bm25's node wins over
+dense's when no `original_a_top20` occurrence exists. Gold and DEV_TUNE
+were not opened for this fix.
+
 ## Purpose and acceptance criteria
 
 Implements `buildWideCandidatePool({ original_a_top20, bm25_top100,

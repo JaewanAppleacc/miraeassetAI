@@ -166,11 +166,22 @@ rank order          = sort by score DESC, tie-break by chunk_id ASCENDING
 - **Descriptive fields** (`text`, `locator`, `provenance`, `metadata`) are
   merged by priority: `original_a_top20` > `bm25_top100` > `dense_top100`
   — the first non-null value found in that order wins.
-- **`node_indices`** is the one field merged by UNION, not priority: every
+- **`node_indices`** (the array) is merged by UNION, not priority: every
   occurrence's `node_index` (singleton) and `node_indices` (array) are
   combined into one sorted, deduplicated array, so multi-node provenance
-  is never narrowed by which list happened to carry it. The singleton
-  `node_index` output field is the smallest value in that merged set.
+  is never narrowed by which list happened to carry it.
+- **`node_index`** (the singleton) is **not** the smallest member of that
+  union — it is picked by the same priority order as the other
+  descriptive fields (`original_a_top20` > `bm25_top100` > `dense_top100`,
+  first occurrence with a non-null `node_index` wins), so frozen arm A's
+  own representative node for a chunk is preserved exactly even when a
+  BM25/dense occurrence's node happens to sort lower. Only when none of
+  the occurrences declares a `node_index` does this fall back to the
+  smallest member of the merged `node_indices` set. This module asserts
+  (fails closed, `NODE_INDEX_NOT_IN_NODE_INDICES`) that the selected
+  `node_index` is always a member of the item's own `node_indices` — an
+  invariant that holds by construction, checked here as a regression
+  guard rather than a normally-reachable error.
 
 ## Determinism and purity
 

@@ -191,7 +191,45 @@ test("multi-node provenance 보존: node_indices는 세 출처의 합집합이�
   // original_a_top20 declared node_indices [5]; bm25_top100 declared [5,6];
   // dense_top100 declared node_index 7, node_indices []. Union = [5,6,7].
   assert.deepEqual(item.node_indices, [5, 6, 7]);
-  assert.equal(item.node_index, 5); // smallest of the merged set
+  // node_index is 5 here because that is original_a_top20's OWN declared
+  // node_index (priority order), not because 5 happens to be the smallest
+  // member of the union -- see the dedicated priority test below, where
+  // original_a's node is deliberately NOT the smallest.
+  assert.equal(item.node_index, 5);
+});
+
+test("primary node_index는 original_a_top20 > bm25 > dense 우선순위로 원래 값을 보존한다 (최솟값이 아니다)", () => {
+  const fixture = {
+    original_a_top20: [
+      { ...base("chunk_a_node_preserved", { nodeIndex: 9, nodeIndices: [9] }), rank: 1 },
+    ],
+    bm25_top100: [
+      { ...base("chunk_a_node_preserved", { nodeIndex: 2, nodeIndices: [2, 3] }), rank: 1, score: 5.0 },
+      { ...base("chunk_b_bm25_over_dense", { nodeIndex: 4, nodeIndices: [] }), rank: 2, score: 4.0 },
+    ],
+    dense_top100: [
+      { ...base("chunk_a_node_preserved", { nodeIndex: null, nodeIndices: [] }), rank: 1, score: 0.5 },
+      { ...base("chunk_b_bm25_over_dense", { nodeIndex: 1, nodeIndices: [] }), rank: 2, score: 0.3 },
+    ],
+  };
+  const { pool } = buildWideCandidatePool(fixture);
+
+  // original_a_top20 declares node_index=9; bm25 declares 2 (numerically
+  // smaller); dense declares null. The frozen A value (9) must be kept
+  // exactly, even though 2 is smaller and would have won under a
+  // smallest-of-the-union rule.
+  const a = byId(pool, "chunk_a_node_preserved");
+  assert.deepEqual(a.node_indices, [2, 3, 9]);
+  assert.equal(a.node_index, 9);
+  assert.ok(a.node_indices.includes(a.node_index));
+
+  // No original_a_top20 occurrence for this chunk -- bm25's node_index (4)
+  // must win over dense's (1), the next priority tier down, even though 1
+  // is smaller.
+  const b = byId(pool, "chunk_b_bm25_over_dense");
+  assert.deepEqual(b.node_indices, [1, 4]);
+  assert.equal(b.node_index, 4);
+  assert.ok(b.node_indices.includes(b.node_index));
 });
 
 // ---------------------------------------------------------------------------
