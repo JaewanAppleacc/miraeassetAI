@@ -1,25 +1,18 @@
-// Turn A4-A3-INTEGRATION-AND-DEVTUNE-V1: the integration pipeline.
+// A4+A3 통합 검색 파이프라인.
 //
-// Pipeline (fixed, A4_A3_DEVTUNE_V1_AMENDMENT.md section 4):
-//   BM25 top-100 + dense top-100 (one embedQuery call per question)
-//   -> original-A-compatible top-20 (RRF over bm25-100 + dense's own
-//      top-20 subset, cross-checked by buildWideCandidatePool's own
-//      reproducibility guard)
-//   -> buildWideCandidatePool() (<=200, unmodified)
-//   -> hydration + chunk_text_sha256 verification
-//   -> questionContext extraction (non-Gold)
-//   -> rankCandidatePool() for each of R0..R5 (unmodified, full ranking)
-//   -> detectEvidenceContradictions() per candidate (unmodified, cached
-//      once per chunk_id per question, reused across all 6 configs)
-//   -> selectWithStableRefill() per config
-//   -> final top-20 per config, plus each config's pre-A3 "raw" top-20,
-//      plus the same-run original-A-compatible top-20
+// 고정 순서:
+//   BM25 top-100 + dense top-100 (질문당 embedQuery 1회)
+//   -> 원래 A와 호환되는 top-20 (RRF, buildWideCandidatePool의 재현성 가드로 교차검증)
+//   -> buildWideCandidatePool() (<=200, 무수정)
+//   -> 본문 채움 + chunk_text_sha256 검증
+//   -> questionContext 추출
+//   -> R0..R5 각 구성에 rankCandidatePool() (무수정, 전체 순위)
+//   -> 후보별 detectEvidenceContradictions() (질문당 chunk_id별 1회 캐시)
+//   -> 구성별 selectWithStableRefill()
+//   -> 구성별 최종 top-20 (+ A3 이전 raw top-20, 같은 실행의 A 호환 top-20)
 //
-// This module never reads a Gold field, a real failure-packet id, or any
-// DEV_CHECK/HOLDOUT data -- there is no such input anywhere in its code
-// path. It never removes a candidate itself: A3 removal is entirely
-// selectWithStableRefill()'s job, driven by detectEvidenceContradictions()
-// decisions this module only ROUTES, never reimplements.
+// 이 모듈에는 평가 데이터를 읽는 코드 경로가 없다. 후보 제거는 selectWithStableRefill()의
+// 몫이며, 이 모듈은 판정 결과를 전달만 하고 재구현하지 않는다.
 import { createHash } from "node:crypto";
 import { bm25Search } from "../retrieval/fixed-kure-bm25-index.mjs";
 import { createPostgresVectorRetrievalRepository } from "../../postgres/reference-vector-retrieval-repository.mjs";
@@ -112,7 +105,7 @@ function extractRevisionRequirement(text) {
 // resolved, non-Gold filter object (mapOfficialConditionToFilterInput's
 // own output) -- corp_codes[0] becomes the entity requirement (compared by
 // exact corp_code, not by normalized company-name string, for reliability).
-// row_column is intentionally never populated this Turn (see amendment §3).
+// row_column is intentionally never populated here.
 export function extractQuestionConditions(questionText, mappedFilters) {
   const conditions = {};
   const scope = extractScopeRequirement(questionText);

@@ -1,11 +1,8 @@
-# Runtime dependencies only -- derived from an actual import-graph trace of this
-# package's own src/ tree (2026-09-06), not copied from the dev repo's
-# requirements-lock.txt/requirements-serve.txt verbatim. Packages that only appear in
-# that dev repo's test suite (e.g. jsonschema, pytest), in modules this package does not
-# include (e.g. pydantic -- only the excluded legacy qa_service.py used it), or in code
-# paths this package does not include (e.g. tiktoken/beautifulsoup4 for XML parsing,
-# torch/sentence-transformers for the optional dense-rerank arm B) are intentionally not
-# listed here.
+# 런타임 의존성만 — 이 패키지 src/ 트리의 실제 import 그래프 추적(2026-09-06)으로 도출했다.
+# 개발 저장소의 잠금 파일을 그대로 복사하지 않았다. 그 저장소의 테스트에만 쓰이는 패키지
+# (jsonschema, pytest), 이 패키지에 없는 모듈만 쓰던 패키지(pydantic — 제외된 구 서비스
+# 모듈 전용), 이 패키지에 없는 코드 경로용 패키지(tiktoken/beautifulsoup4는 XML 파싱,
+# torch/sentence-transformers는 선택 구성 dense 재정렬)는 의도적으로 뺐다.
 fastapi==0.141.1
 uvicorn==0.52.4
 certifi==2026.7.22

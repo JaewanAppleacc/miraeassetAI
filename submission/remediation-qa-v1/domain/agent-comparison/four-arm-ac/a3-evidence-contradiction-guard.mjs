@@ -1,18 +1,12 @@
-// A3 Contradiction Guard (results/A3_CONTRADICTION_GUARD_V1_CONTRACT.md).
+// A3 모순 가드.
 //
-// Pure function: given a question's explicit dimension requirements and the
-// facts actually observed on a candidate evidence item, decide whether the
-// two contain an obvious, decidable contradiction -- without reading Gold,
-// without branching on packet/question/company identity, and without any
-// search/DB/embedding/LLM call. This module is independent of, and does not
-// import or reuse, the A2 evidence scope validator or its PASS-only
-// candidate-removal logic. It classifies; it never removes anything itself.
+// 순수 함수: 질문의 명시적 차원 요구와 후보 근거에서 실제 관측된 사실을 비교해, 둘 사이에
+// 명백하고 판정 가능한 모순이 있는지 분류한다. 검색/DB/임베딩/LLM 호출이 없고, 문항·회사
+// 식별자로 분기하지 않는다. 분류만 하며 후보를 직접 제거하지 않는다.
 //
-// Fail-closed on ambiguity, but ambiguity is its own outcome
-// (KEEP_UNKNOWN), not a rejection: a dimension this function cannot resolve
-// from the given inputs never contributes to REJECT, and KEEP_UNKNOWN must
-// not be treated by any caller as a reason to drop a search candidate (see
-// the contract doc).
+// 모호하면 fail-closed하되, 모호함은 REJECT가 아니라 별도 결과(KEEP_UNKNOWN)다. 이 함수가
+// 판정할 수 없는 차원은 REJECT에 기여하지 않으며, 호출자는 KEEP_UNKNOWN을 후보 제거 사유로
+// 써서는 안 된다.
 
 export const CONTRADICTION_GUARD_VERSION = "fourarm.a3-evidence-contradiction-guard.v1";
 

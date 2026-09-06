@@ -1,9 +1,9 @@
-"""②/⑨ 서버 경계 — interfaces.md §2-1: 에이전트가 밖에 노출하는 함수는 둘뿐이다.
+"""②/⑨ 서버 경계 — 인터페이스 계약 §2-1: 에이전트가 밖에 노출하는 함수는 둘뿐이다.
 
     answer(question_id, question, *, deadline_s=None) -> dict[str, str]   5필드, 절대 예외 없음
     readiness() -> dict                                                    /ready·vFINAL 19번 pin
 
-qa_service(팀원2 소유)가 이 둘만 부른다. 캐시·세마포어·290초 데드라인·로깅은 그쪽 소유고,
+qa_service(운영 계층)가 이 둘만 부른다. 캐시·세마포어·290초 데드라인·로깅은 그쪽 소유고,
 여기는 파이프라인(⓪ 정책 게이트 → 해석·검색·계산·LLM·검증 → 5-string 직렬화)만 책임진다.
 
 추가로 answer_ex()는 (wire, meta)를 돌려준다 — meta.cacheable이 False면 캐시에 넣지 않는다
@@ -32,7 +32,7 @@ from .retriever_adapter import build_serving_retriever
 logger = logging.getLogger("dart_detective.answer_api")
 
 LLM_MIN_BUDGET_S = 45.0        # LLM 호출 상한 40s + 직렬화 여유. 이보다 적게 남으면 LLM 생략.
-DEFAULT_ARM = "D"              # B·D 판정 잠정 승자(PROVISIONAL_WINNER). 4-arm 확정 시 갱신.
+DEFAULT_ARM = "D"              # 검색 방식 비교의 잠정 기본값. 최종 확정 시 갱신.
 
 _lock = threading.Lock()
 _retriever = None
@@ -40,7 +40,7 @@ _store = None
 _arm: str | None = None        # 실제 서빙 arm — readiness는 env 문자열이 아니라 이 값을 보고한다.
 _arm_pins: dict[str, Any] = {}
 
-# retrieval_backend(Turn A-PLUS-QA-LIVE-WIRING-V1): 기본값 DEFAULT = 기존 build_serving_retriever
+# retrieval_backend: 기본값 DEFAULT = 기존 build_serving_retriever
 # 경로(동작 불변). ARM_A_FIXED_RRF = arm_a_serving_bridge(호출자가 주입한 text_resolver 필수).
 # 선택은 configure() 인자 > env DART_QA_RETRIEVAL_BACKEND > DEFAULT.
 _retrieval_backend: str | None = None

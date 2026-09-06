@@ -1,26 +1,22 @@
 #!/usr/bin/env python3
-"""Start the QA server with ARM_A4_A3_REMEDIATION_LIVE as the active backend.
+"""ARM_A4_A3_REMEDIATION_LIVE를 활성 백엔드로 하여 QA 서버를 기동한다.
 
-Why this script exists instead of `uvicorn dart_detective.ops_service:app` directly:
-at the pinned source commit (b5f9443f, codex/a4-a3-remediation-integration-v01), the new
-ARM_A4_A3_REMEDIATION_LIVE backend is fully implemented but not yet registered in
-answer_api.py's own backend dispatch table (arm_a_serving_bridge.RETRIEVAL_BACKENDS /
-answer_api._build_retriever()) -- that wiring was intentionally out of scope for the turn
-that added the backend. Rather than patch those two files for this submission (which
-would no longer be byte-identical to the pinned commit), this script builds the
-remediation retriever directly via its own public builder and injects it into
-answer_api's existing (public) `reset()` hook, then starts uvicorn in-process so the
-injected state is visible to every request. No source file in this package is modified
-by this script at import time or otherwise -- it only calls already-existing public
-functions.
+`uvicorn dart_detective.ops_service:app`을 직접 쓰지 않고 이 스크립트가 존재하는 이유:
+원본 커밋(b5f9443f) 시점에 ARM_A4_A3_REMEDIATION_LIVE 백엔드는 구현이 끝났지만
+answer_api.py의 백엔드 디스패치 표(arm_a_serving_bridge.RETRIEVAL_BACKENDS /
+answer_api._build_retriever())에는 아직 등록되지 않았다 — 그 배선은 백엔드를 추가한 변경의
+범위 밖이었다. 제출을 위해 그 두 파일의 동작 코드를 패치해 원본과 달라지게 만드는 대신,
+이 스크립트가 공개 빌더 함수로 remediation 검색기를 직접 만들어 answer_api의 기존 공개 훅
+`reset()`으로 주입한 뒤, 주입 상태가 모든 요청에 보이도록 uvicorn을 같은 프로세스에서
+시작한다. 이 스크립트는 패키지의 어떤 소스 파일도 수정하지 않는다 — 이미 존재하는 공개
+함수만 호출한다.
 
-Usage:
-    python scripts/run_server.py                # binds 0.0.0.0:${PORT:-8000}
+사용법:
+    python scripts/run_server.py                # 0.0.0.0:${PORT:-8000} 바인딩
 
-Requires the environment variables documented in .env.example, both the
-ARM_A4_A3_REMEDIATION_LIVE_* ones (consumed by the Node worker this script spawns
-indirectly through the Python client) and the DART_QA_* ones (consumed by the base
-CorpusRetriever used for docs_by_id/conditions/document metadata).
+.env.example에 문서화된 환경변수가 필요하다 — ARM_A4_A3_REMEDIATION_LIVE_*(이 스크립트가
+Python 클라이언트를 통해 간접 기동하는 Node 워커가 소비)와 DART_QA_*(문서 메타데이터·조건
+추출에 쓰는 기반 CorpusRetriever가 소비) 둘 다.
 """
 from __future__ import annotations
 
@@ -40,11 +36,10 @@ def main() -> None:
 
     retriever, store, arm, pins = build_arm_a4_a3_remediation_live_serving_retriever()
     answer_api.reset(retriever)
-    # answer_api.reset() intentionally clears _store/_arm/_arm_pins (it exists for test
-    # doubles that don't carry that bookkeeping) -- set them explicitly here so
-    # readiness()'s "arm"/"pins" fields correctly report ARM_A4_A3_REMEDIATION_LIVE
-    # instead of the unconfigured defaults. These are the same module-level names
-    # answer_api._build_retriever() itself would have assigned.
+    # answer_api.reset()은 의도적으로 _store/_arm/_arm_pins를 비운다(그 훅은 그런 부기가
+    # 없는 테스트 대역용으로 존재한다) — readiness()의 "arm"/"pins" 필드가 미구성 기본값
+    # 대신 ARM_A4_A3_REMEDIATION_LIVE를 정확히 보고하도록 여기서 명시적으로 설정한다.
+    # answer_api._build_retriever() 자신이 할당했을 모듈 수준 이름들과 동일하다.
     answer_api._store = store  # noqa: SLF001 -- see docstring above
     answer_api._arm = arm  # noqa: SLF001
     answer_api._arm_pins = pins  # noqa: SLF001

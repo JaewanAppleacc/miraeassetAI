@@ -1,31 +1,13 @@
-// Turn FOURARM-INTEGRATION-OWNER-DECISION-AND-EXECUTION-GATE: real mapping
-// from the official devtune101_conditions.v2.jsonl artifact's per-question
-// `conditions` object (corps/doc_groups/exchange_subtypes/major_labels/
-// periodic_subtypes/years/year_months/correction) into A/C's own
-// METADATA_FILTER_KEYS shape (conditions-fixture.mjs), so a real per-
-// question metadata filter can finally be built for an official run.
+// 공식 조건 산출물의 문항별 `conditions` 객체(corps/doc_groups/exchange_subtypes/
+// major_labels/periodic_subtypes/years/year_months/correction)를 A/C의
+// METADATA_FILTER_KEYS 모양으로 사상해, 문항별 실제 메타데이터 필터를 만들 수 있게 한다.
+// 회사명 -> corp_code 해석은 이 코퍼스(70개 기업)에 대해 승인된 회사 디렉터리를 쓴다.
 //
-// This module previously did not exist because it needs a corp-NAME ->
-// corp_code resolver, and this repo's CompanyResolver
-// (domain/adapters/seed-company-resolver.mjs) is release-gated behind an
-// Owner-approved decision. That decision turns out to already exist and
-// is already APPROVED for exactly this corpus (corpus_04750795e1a2d5c3,
-// 70 companies, reviewer 최재완, work/domain-seed/seed-company-directory-
-// owner-decision.v0.1.approved.json) -- see tests/seed-company-resolver.
-// test.mjs's own "REAL Company Directory candidate v0.1" test. Using it
-// here is not new production wiring; it is using an already-authorized
-// gate for its documented purpose.
-//
-// doc_subtype taxonomy: verified against the real reference_retrieval_
-// chunks.metadata.doc_subtype values actually persisted for this corpus.
-// exchange_subtypes and periodic_subtypes values match EXACTLY
-// (예: "단일판매공급계약체결", "quarter"/"annual"/"half"). major_labels
-// (e.g. "자기주식") has NO corresponding doc_subtype value in the DB for
-// doc_group="major" (그 그룹은 doc_subtype이 비어 있음, chunker.mjs's
-// document.doc_subtype passthrough was simply never populated for major
-// disclosures) -- so major_labels is intentionally NOT mapped into
-// doc_subtypes here; it is preserved, visible, in `unmapped` instead of
-// being silently dropped or guessed into a made-up doc_subtype value.
+// doc_subtype 분류는 이 코퍼스에 실제 영속된 metadata.doc_subtype 값과 대조해 검증했다.
+// exchange_subtypes·periodic_subtypes 값은 정확히 일치한다(예: "단일판매공급계약체결",
+// "quarter"/"annual"/"half"). major_labels(예: "자기주식")는 doc_group="major"에 대응하는
+// doc_subtype 값이 DB에 없으므로(그 그룹은 doc_subtype이 비어 있음) doc_subtypes로 사상하지
+// 않고, 지어낸 값으로 추측하는 대신 `unmapped`에 보존해 노출한다.
 import { buildMetadataFiltersFromConditions } from "./conditions-fixture.mjs";
 
 export class UnresolvedCompanyNameError extends Error {
@@ -151,7 +133,7 @@ function deriveDocSubtypeFilter(conditions) {
   return [];
 }
 
-// conditions: one row's `conditions` object from devtune101_conditions.v2
+// conditions: one row's `conditions` object from the official conditions artifact
 // (the REAL, verified shape -- corps/doc_groups/exchange_subtypes/
 // major_labels/periodic_subtypes/years/year_months/correction/
 // candidate_terms/wants_latest). nameToCorpCodeIndex: from

@@ -1,9 +1,6 @@
 """LOW / HIGH 세그먼트 — vFINAL 1번 "LOW = 확정 조건 ≤2, HIGH = ≥3".
 
-단일 정의. 사전 계산(scripts/fourarm), B arm의 LOW 재정렬 트리거, 채점기의 세그먼트 분할이
-전부 이 함수를 쓴다. arm별로 다시 계산하지 않는다(vFINAL 1번).
-
-확정 조건 수 계산 규칙(interfaces.md §1-2):
+확정 조건 수 계산 규칙(인터페이스 계약 §1-2):
     len(corps)
   + (years ∪ year_months 가 비면 0, 아니면 1)
   + (doc_groups ∪ periodic_subtypes ∪ exchange_subtypes ∪ major_labels 가 비면 0, 아니면 1)

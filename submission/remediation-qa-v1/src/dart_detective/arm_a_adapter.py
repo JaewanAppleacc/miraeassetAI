@@ -1,9 +1,8 @@
 """arm_a_adapter — frozen Arm A 검색 결과를 retriever_adapter.RetrieverAdapter Protocol로 노출한다.
 
-Turn A-PLUS-QA-ADAPTER-ONLY-V1. Arm A(hybrid BM25+dense+RRF, codex/fourarm-ac-vector-import-v01
-@ 44f0523)의 frozen 결과 파일(A.results.jsonl, codex/fourarm-a2-integration-v01 @ 900d3cc, 별개
-git 히스토리)을 재실행 없이 재생(replay)해 search/fetch_node/readiness 세 함수로 돌려준다
-(retriever_adapter.py 상단 docstring, interfaces.md §3의 "유일한 문" 계약).
+Arm A(하이브리드 BM25+dense+RRF)의 frozen 결과 파일(A.results.jsonl, 별개 git 히스토리)을
+재실행 없이 재생(replay)해 search/fetch_node/readiness 세 함수로 돌려준다
+(retriever_adapter.py 상단 docstring, 인터페이스 계약 §3의 "유일한 문" 계약).
 
 원칙:
   - A의 rank·score를 바꾸지 않는다. 새 검색·임베딩·재정렬을 실행하지 않는다.
@@ -11,14 +10,14 @@ git 히스토리)을 재실행 없이 재생(replay)해 search/fetch_node/readin
   - A에 없는 필드는 추측하지 않는다 — 없으면 명시적으로 비우거나 fail-closed 오류를 낸다.
   - retriever_adapter.py 등 기존 QA 파일은 import만 하고 절대 수정하지 않는다.
 
-범위 밖(다음 작업자 몫 — docs/reports/arm_a_adapter_handoff.md 참고):
+범위 밖(후속 작업 대상):
   - 실제 DocumentIR 기반 TextResolver 구현. 지금은 호출자가 주입해야 하며, 없으면 매 chunk에서
     TextResolutionRequiredError로 멈춘다(빈 문자열을 본문처럼 돌려주지 않는다).
   - build_serving_retriever()/answer_api._get_retriever()가 실제로 이 어댑터를 타도록 배선하는 것.
     build_serving_retriever()는 CorpusRetriever 모양(conditions/retrieve/docs_by_id/
     statement_scopes)의 별도 서빙 전용 경로이고, bind()가 돌려주는 RetrieverAdapter Protocol과
     모양이 다르다 — 이 어댑터는 문서화된 Protocol(bind()의 결과 모양)만 구현한다.
-  - judge34/101문항 실행, 안전성·성능 판정, winner 선언.
+  - 전체 문항 실행, 안전성·성능 판정, 최종 방식 선정.
 """
 from __future__ import annotations
 
@@ -239,7 +238,7 @@ class ArmAFrozenResultsRetriever:
         return chunks[:k]
 
     def fetch_node(self, doc_id: str, node_index: int) -> Node:
-        # 알려진 한계(handoff 참고): 실제 DocumentIR node-store가 아직 배선되지 않아
+        # 알려진 한계: 실제 DocumentIR node-store가 아직 배선되지 않아
         # kind/section_path는 채우지 못한다 — 추측하지 않고 빈 값으로 둔다.
         if self.text_resolver is None:
             raise TextResolutionRequiredError(

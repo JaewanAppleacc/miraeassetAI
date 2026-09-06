@@ -1,20 +1,17 @@
-"""arm_a4_a3_remediation_live_adapter — live A4 wide-pool + R4_wide_rrf_centric reranker +
-A3 contradiction guard search, with the verified retrieval remediation's opt-in policy
-(correction-only-when-asked, always-run subtype-relaxed passes with evidence promotion,
-per-date receipt windows merged round-robin, BM25 zero-score drop) applied to each
-retrieval leg's candidate generation, as a QA retriever.
+"""arm_a4_a3_remediation_live_adapter — 실시간 A4 광역 풀 + R4_wide_rrf_centric 재정렬 + A3
+모순 가드 검색에, 검증된 검색 개선(remediation)의 opt-in 정책(정정 필터는 질문이 요구할 때만,
+근거 기반 승격을 동반한 서브타입 완화 패스 상시 실행, 접수일자별 검색 창 라운드로빈 병합,
+BM25 0점 후보 제거)을 각 검색 leg의 후보 생성에 적용해 QA 검색기로 노출한다.
 
-Turn A4-A3-REMEDIATION-INTEGRATION-V1. Counterpart to arm_a4_a3_live_adapter.py
-(ARM_A4_A3_LIVE), never modified by this turn. The new backend constant
-`RETRIEVAL_BACKEND_ARM_A4_A3_REMEDIATION_LIVE` is defined HERE, not in
-arm_a_serving_bridge.py, per this turn's own scope (retrieval-level integration only --
-answer_api.py / arm_a_serving_bridge.py are not touched; this backend is not registered
-in answer_api._build_retriever()'s dispatch this turn).
+arm_a4_a3_live_adapter.py(ARM_A4_A3_LIVE)와 대응하며, 그 파일은 수정하지 않았다. 새 백엔드
+상수 `RETRIEVAL_BACKEND_ARM_A4_A3_REMEDIATION_LIVE`는 arm_a_serving_bridge.py가 아니라 이
+파일에 정의된다 — 이 변경의 범위는 검색 계층 통합까지이고 answer_api.py /
+arm_a_serving_bridge.py는 건드리지 않으므로, answer_api._build_retriever()의 디스패치에는
+아직 등록되어 있지 않다(README "알려진 제약" 참조).
 
-ARM_A4_A3_REMEDIATION_LIVE never touches A.results.jsonl, DEV_TUNE/DEV_CHECK/HOLDOUT, or
-Gold, and never falls back to ARM_A_LIVE/ARM_A4_A3_LIVE/B/D: any worker-side failure
-surfaces as one of the typed errors in arm_a4_a3_remediation_live_worker_client, never a
-silent retry against another backend.
+ARM_A4_A3_REMEDIATION_LIVE는 frozen 결과 파일과 평가 데이터를 일절 읽지 않으며, 다른
+백엔드로 폴백하지 않는다: 워커 쪽 실패는 arm_a4_a3_remediation_live_worker_client의 typed
+오류로 표면화되고, 조용한 재시도는 없다.
 """
 from __future__ import annotations
 
@@ -97,10 +94,10 @@ def _chunk_from_worker_item(item: Mapping[str, Any]) -> Chunk:
 
 
 class ArmA4A3RemediationLiveRetriever:
-    """RetrieverAdapter-Protocol-shaped (search/readiness), backed by the live worker.
+    """실시간 워커를 배후에 둔 RetrieverAdapter Protocol 모양(search/readiness)의 검색기.
 
-    fetch_node is intentionally NOT implemented: this backend never accesses the
-    DocumentIR node store, same as ARM_A4_A3_LIVE.
+    fetch_node는 의도적으로 구현하지 않는다: 이 백엔드는 ARM_A4_A3_LIVE와 마찬가지로
+    DocumentIR 노드 저장소에 접근하지 않는다.
     """
 
     arm = "A4_A3_REMEDIATION"
@@ -125,7 +122,7 @@ class ArmA4A3RemediationLiveRetriever:
 
 
 class ArmA4A3RemediationLiveServingRetriever:
-    """CorpusRetriever-shaped bridge, mirroring ArmA4A3LiveServingRetriever."""
+    """CorpusRetriever 모양 브리지. ArmA4A3LiveServingRetriever와 같은 구조다."""
 
     arm = "A4_A3_REMEDIATION"
 

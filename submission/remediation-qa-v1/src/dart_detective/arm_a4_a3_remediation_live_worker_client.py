@@ -1,16 +1,13 @@
-"""arm_a4_a3_remediation_live_worker_client — Python <-> persistent Node.js worker
-transport for the new, opt-in ARM_A4_A3_REMEDIATION_LIVE backend (A4 wide pool +
-R4_wide_rrf_centric reranker + A3 contradiction guard, with the verified retrieval
-remediation's correction/subtype/date-window/BM25-zero-score policy applied to each
-retrieval leg's candidate generation).
+"""arm_a4_a3_remediation_live_worker_client — opt-in ARM_A4_A3_REMEDIATION_LIVE 백엔드(A4 광역
+풀 + R4_wide_rrf_centric 재정렬 + A3 모순 가드에, 검증된 검색 개선의
+정정/서브타입/날짜창/BM25-0점 정책을 각 검색 leg의 후보 생성에 적용)를 위한
+Python <-> 상주 Node.js 워커 전송 계층.
 
-Turn A4-A3-REMEDIATION-INTEGRATION-V1. Structurally identical to
-arm_a4_a3_live_worker_client.py (spawns `scripts/arm_a4_a3_remediation_live_worker.mjs`
-**once**, keeps it alive for the process lifetime, one request in flight at a time,
-respawns transparently on crash/timeout) — duplicated rather than parameterized because
-the two backends have different required env vars, a different worker script, and
-different typed error codes, and this turn's own prohibitions forbid touching
-arm_a4_a3_live_worker_client.py itself.
+구조는 arm_a4_a3_live_worker_client.py와 동일하다
+(`scripts/arm_a4_a3_remediation_live_worker.mjs`를 **한 번만** 띄워 프로세스 수명 동안 유지,
+동시 요청 1건, 크래시/타임아웃 시 투명 재기동). 두 백엔드는 필수 env가 다르고 워커 스크립트가
+다르고 typed 오류 코드가 다르므로, 매개변수화 대신 복제를 택했고 기존
+arm_a4_a3_live_worker_client.py는 수정하지 않는다.
 """
 from __future__ import annotations
 
@@ -40,7 +37,7 @@ _ERROR_CLASSES: dict[str, type["ArmA4A3RemediationLiveWorkerError"]] = {}
 
 
 class ArmA4A3RemediationLiveWorkerError(Exception):
-    """Base class for every error this transport raises."""
+    """이 전송 계층이 던지는 모든 오류의 기반 클래스."""
     code = "ARM_A4_A3_REMEDIATION_SEARCH_FAILED"
 
 
@@ -80,11 +77,11 @@ def _error_for(code: str, message: str) -> ArmA4A3RemediationLiveWorkerError:
 
 
 class ArmA4A3RemediationLiveWorkerClient:
-    """Owns one persistent `node scripts/arm_a4_a3_remediation_live_worker.mjs` subprocess.
+    """상주 `node scripts/arm_a4_a3_remediation_live_worker.mjs` 서브프로세스 하나를 소유한다.
 
-    One request in flight at a time, matching QA's existing single-concurrency serving
-    semaphore. On timeout or unexpected process exit, the dead process is torn down and
-    the *next* call transparently respawns a fresh one.
+    동시 요청은 1건 — QA의 기존 단일 동시성 서빙 세마포어와 맞춘 것이다. 타임아웃이나 예기치
+    않은 프로세스 종료 시 죽은 프로세스를 정리하고, *다음* 호출이 투명하게 새 프로세스를
+    띄운다.
     """
 
     def __init__(self, *, env: Mapping[str, str] | None = None,

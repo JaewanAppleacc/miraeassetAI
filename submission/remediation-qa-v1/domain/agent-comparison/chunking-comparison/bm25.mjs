@@ -1,12 +1,6 @@
-// Turn P10: minimal, deterministic Okapi BM25 (k1=1.5, b=0.75) lexical
-// index for the bounded retrieval smoke (E2). This is NOT the "Fixed 512 +
-// Kiwi BM25" production baseline referenced elsewhere in CLAUDE.md (Kiwi is
-// a Korean morphological tokenizer this Turn does not integrate) -- it
-// reuses domain/chunking/chunker.mjs's own tokenizeWithOffsets() (a
-// unicode letter/number-run tokenizer, already tested and used for token
-// budgets) as its default tokenizer, so results are comparable across the
-// 3 chunking strategies on IDENTICAL tokenization, but must not be read as
-// a measurement of the eventual Kiwi-BM25 production baseline.
+// 결정론적 Okapi BM25(k1=1.5, b=0.75) 어휘 색인.
+// domain/chunking/chunker.mjs의 tokenizeWithOffsets(유니코드 문자/숫자 연속 토크나이저)를
+// 기본 토크나이저로 재사용해, 청킹 전략 비교가 동일한 토큰화 위에서 이루어지게 한다.
 import { tokenizeWithOffsets } from "../../chunking/chunker.mjs";
 
 const K1 = 1.5;
@@ -77,7 +71,7 @@ export function bm25Score(index, docId, queryTokens) {
 // tie (matches P10_COMPARISON_CONDITIONS.tie_break) -- never truncated
 // below the full corpus before sorting, so topK is a pure post-sort slice.
 //
-// Turn AC-VFINAL-ALIGNMENT-AND-DISCOVERY, section G: `eligibleIds`
+// `eligibleIds`
 // (optional, additive -- every existing caller that omits it keeps
 // scoring the WHOLE index, byte-for-byte unchanged) restricts the
 // candidate pool to a Set of ids BEFORE scoring/ranking, not after -- a

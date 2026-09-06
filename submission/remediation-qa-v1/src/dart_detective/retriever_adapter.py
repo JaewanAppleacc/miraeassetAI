@@ -1,4 +1,4 @@
-"""④ retriever_adapter — 에이전트와 4-arm 러너가 검색 코어를 부르는 유일한 문 (interfaces.md §3).
+"""④ retriever_adapter — 에이전트와 4-arm 러너가 검색 코어를 부르는 유일한 문 (인터페이스 계약 §3).
 
 승자가 A/B/C/D 중 누구든 에이전트 층은 `bind(arm)`만 바꾼다. 함수는 셋뿐이다.
 
@@ -14,7 +14,7 @@ ChunkIndex)를 **그대로** 호출하고, 문서는 NodeStore가 지연 로딩�
   B = D + LOW 세그먼트(vFINAL 1번, segments.py)일 때만 dense 재정렬. 재정렬기는 주입(inject)한다 —
       이 저장소에는 아직 KURE 구현이 없다(retrieval_experiment_report.md: CPU 환경에서 미실행).
       주입되지 않은 B는 readiness()가 ready=False를 돌려준다. B를 D로 조용히 바꾸지 않는다.
-A/C 바인딩은 팀원1의 pgvector 스택이 이 Protocol을 구현한다.
+A/C 바인딩은 별도의 pgvector 스택이 이 Protocol을 구현한다.
 """
 from __future__ import annotations
 
@@ -183,7 +183,7 @@ def load_corp_dictionary(universe_csv: Path | str,
                          aliases_path: Path | str | None = None) -> CorpDictionary:
     """universe.csv + 채택 별칭(corp_aliases.v1.json: alias→corp_name)으로 기업 사전을 만든다.
 
-    별칭 점검(docs/reports/alias_coverage.md) 실측: 통용 표기(LG엔솔·포스코·현대중공업 등)가
+    별칭 점검 실측: 통용 표기(LG엔솔·포스코·현대중공업 등)가
     미매칭이면 기업 필터가 비어 **엉뚱한 회사** 문서가 상위에 온다(LG엔솔→LG이노텍 실측).
     검색 코어(corp_dictionary.py)는 수정하지 않는다 — 별칭을 listed_name 행으로 주입만 한다.
     별칭 파일의 corp_name이 universe에 없으면 무시한다(오타로 유령 기업을 만들지 않기 위해)."""
@@ -208,7 +208,7 @@ def _default_ir_dir() -> Path:
     """DocumentIR 기본 경로 — env > 저장소 내 산출물 > 코어 기본값(~/Desktop).
 
     코어 기본값이 특정 개발 환경(~/Desktop/document_ir)이라, env 없이 클린 클론에서
-    안전세트·서빙이 죽는 문제(팀원 검수 실측: 다른 환경에서 안전세트 5건이 retriever 빌드
+    안전세트·서빙이 죽는 문제(교차 검수 실측: 다른 환경에서 안전세트 5건이 retriever 빌드
     실패로 오판)를 dart_detective 층에서 흡수한다. 코어는 무수정.
     """
     repo_local = REPO_ROOT / "data" / "artifacts" / "document_ir"
@@ -239,7 +239,7 @@ def build_line_window_retriever(*, doc_index: Path | str | None = None,
 
 def bind(arm: str | None = None, *, dense: DenseReranker | None = None,
          **paths: Any) -> RetrieverAdapter:
-    """DART_QA_ARM(또는 인자)으로 어댑터를 고른다. A/C는 팀원1 구현이 들어올 자리다.
+    """DART_QA_ARM(또는 인자)으로 어댑터를 고른다. A/C는 별도 스택 구현이 들어올 자리다.
 
     B는 dense를 안 주면 KURE 재정렬기를 만든다(dense_rerank.build_kure_reranker). 패키지·모델이
     없으면 거기서 명확히 실패한다 — B를 D로 조용히 바꾸지 않는다.

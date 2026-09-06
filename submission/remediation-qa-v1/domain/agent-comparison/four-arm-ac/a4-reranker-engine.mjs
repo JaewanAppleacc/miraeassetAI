@@ -1,31 +1,17 @@
-// Turn A4-RERANKER-ENGINE-V1 (+ A4-RERANKER-FULL-RANKING-REFILL-V1): the
-// generic reranker engine.
+// 범용 재정렬(reranker) 엔진.
 //
-// Pipeline (fixed, never reordered by a config):
-//   candidate pool -> feature extraction -> weighted reranker score
-//   -> deterministic sort (fixed global tie-break) -> FULL ranking
-//   (rankCandidatePool) -> optional top-K slice (rerankCandidates)
+// 고정 파이프라인(구성이 순서를 바꿀 수 없다): 후보 풀 -> 특징 추출 -> 가중 점수 ->
+// 결정론적 정렬(전역 고정 동률 규칙) -> 전체 순위(rankCandidatePool) -> 선택적 top-K 절단
+// (rerankCandidates).
 //
-// rankCandidatePool() returns every candidate in `pool`, ranked, never
-// truncated -- this is what lets a downstream stage (e.g. A3
-// Contradiction Guard, via selectWithStableRefill() in this same file)
-// reject a candidate inside the eventual top-20 and stable-refill from
-// rank 21 onward without re-scoring or re-sorting anything.
-// rerankCandidates() is an unchanged-meaning, backward-compatible
-// wrapper: the first TOP_K entries of that same full ranking.
+// rankCandidatePool()은 풀 전체를 절단 없이 순위 매겨 돌려준다 — 하류 단계(A3 모순 가드,
+// 이 파일의 selectWithStableRefill())가 top-20 안의 후보를 기각하고 21위 이후에서 재점수
+// 없이 안정 보충할 수 있게 하기 위함이다. rerankCandidates()는 그 전체 순위의 앞 TOP_K를
+// 자르는 하위호환 래퍼다.
 //
-// This module never:
-//   - removes a candidate for being an apparent contradiction (that is
-//     A3 Contradiction Guard's job, run separately, downstream of this
-//     engine -- see A4_RERANKER_V1_CONTRACT.md section 4);
-//   - issues a new search/DB/KURE call (it is pure, synchronous, and
-//     takes its whole candidate pool as an argument);
-//   - reads a Gold field, a real failure-packet id, or any DEV_CHECK/
-//     HOLDOUT data (it has no code path that could -- there is no I/O
-//     here at all);
-//   - mutates an input candidate object (every candidate is spread into
-//     a NEW frozen object; nothing is written back onto the caller's
-//     own objects).
+// 이 모듈이 하지 않는 것: 모순 후보 제거(A3 가드의 몫, 이 엔진의 하류에서 별도 실행), 새
+// 검색/DB/임베딩 호출(순수·동기·후보 풀을 통째로 인자로 받음), 평가 데이터 읽기(I/O 자체가
+// 없음), 입력 후보 객체 변형(항상 새 frozen 객체로 복사하고 호출자 객체에 되쓰지 않음).
 import { extractFeatures, FEATURE_KEYS } from "./a4-reranker-features.mjs";
 
 export const TOP_K = 20;
@@ -123,7 +109,7 @@ function weightedScore(features, weights) {
   return score;
 }
 
-// The ONE fixed, global tie-break chain (Turn A4-RERANKER-ENGINE-V1's own
+// The ONE fixed, global tie-break chain (this module's own
 // spec) -- deliberately NOT part of the per-config JSON, so no config can
 // weaken or reorder it:
 //   reranker_score desc -> original_a_top20 desc -> original_a_rank asc
@@ -239,7 +225,7 @@ export function rerankCandidates(pool, questionContext, config) {
 }
 
 // ---------------------------------------------------------------------------
-// Stable refill (Turn A4-RERANKER-FULL-RANKING-REFILL-V1, section E).
+// Stable refill (안정 보충).
 //
 // A generic, pure consumer of an already-made per-candidate decision --
 // this function does NOT reimplement, approximate, or guess at A3

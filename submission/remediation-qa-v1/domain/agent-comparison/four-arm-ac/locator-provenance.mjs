@@ -1,46 +1,16 @@
-// Turn AC-IMPL, section G: locator provenance for Fixed-512 chunks.
+// Fixed-512 청크의 locator 출처(provenance) 해석.
 //
-// domain/chunking/chunker.mjs's own chunkFixed() already records, per
-// chunk, the FULL ordered list of contributing DocumentIR node-level spans
-// (`chunk.source_spans`, each `{file_id, rel_path, node_id, order_index,
-// row_start, row_end, col_start, col_end, source_locator}` -- see
-// chunker.mjs's makeSpan/mergeSpans) -- never just one arbitrarily-picked
-// "representative" node. scripts/p11f0-corpus-discovery.mjs persists this
-// full array into disclosure_reference.reference_fixed_kure_chunk_staging
-// (006 migration's own `source_spans jsonb` column), and that staging
-// table is never deleted after materialization (see
-// fixed-kure-bm25-index.mjs's own header for why).
+// chunker.mjs의 chunkFixed()는 청크마다 기여한 DocumentIR 노드 span 전체 목록
+// (chunk.source_spans)을 기록한다 — 임의로 고른 대표 노드 하나가 아니다. 반면 각 span의
+// 노드별 본문이나 청크 raw_text 안에서의 문자 오프셋은 영속되지 않으므로, 여러 노드를 합친
+// 청크를 임의 span 하나로 축소하는 것은 금지된 "대표 node 임의 선택"이 된다. 이 모듈은 그
+// 축소를 하지 않는다: 다중 노드 청크는 MULTI_NODE_AMBIGUOUS로 분류하고 후보 목록 전체를
+// 붙여 돌려준다.
 //
-// What is NOT persisted anywhere: each span's own node-local TEXT, or the
-// character offset at which that node's text starts/ends inside the
-// chunk's own `raw_text` ("\n"-joined at chunk-build time, chunker.mjs's
-// concatenateSegments -- see that separator's own note there). Without
-// that offset, a chunk that merges N>1 source nodes cannot be reduced to
-// ONE verified node_index for an arbitrary slot-match span -- doing so
-// would be exactly the "대표 node를 임의 선택" (arbitrarily pick a
-// representative node) vFINAL section G forbids. This module never does
-// that: a multi-node chunk is classified MULTI_NODE_AMBIGUOUS, with the
-// full candidate list attached, instead of silently narrowing to one guess.
-//
-// Measured against the existing 1,144-chunk validation shard
-// (fixed_kure_session_21f4fafafafe8f7c38e8cd94897bc583): only 12/1144
-// (1.05%) chunks are single-span (unambiguously resolvable); 1,132/1144
-// (98.95%) are multi-span (2 to 36 contributing nodes).
-//
-// Turn AC-LOCATOR-READY: that ~99% multi-span figure is NOT provenance
-// loss -- it is the expected shape of Fixed-512 token-window chunking over
-// concatenated DocumentIR segments (chunker.mjs's tokenWindowsFromSegments
-// slides a fixed token window across many rows/nodes at once, by design).
-// The prior Turn's readiness() gated official_experiment_ready on
-// `all_fully_resolved` (100% single-node+row), which conflated legitimate
-// multi-row/multi-node ambiguity with an actual defect. This Turn corrects
-// that: readiness now gates on `provenance_ready` (every chunk has SOME
-// interpretable, non-empty candidate set -- see summarizeLocatorCoverage
-// and buildProvenanceSet below); a chunk's candidate list is exposed in
-// full (buildProvenanceSet/buildDownstreamExpansionInput) so a downstream
-// claim/evidence step can call fetch_node() per candidate rather than this
-// module ever guessing one. `all_fully_resolved` remains available as an
-// observability-only measurement, not a gate. See arm-retriever-adapter.mjs.
+// Fixed-512 토큰 창 청킹에서 다중 span은 결함이 아니라 기대되는 모양이다(실측: 검증 샤드
+// 1,144청크 중 98.95%가 노드 2~36개 기여). readiness는 전 청크가 해석 가능한 비어 있지
+// 않은 후보 집합을 갖는지(provenance_ready)로 판정하고, 하류 단계가 후보별로 fetch_node()
+// 를 호출하게 한다. all_fully_resolved는 관측용 지표로만 남는다.
 
 export const LOCATOR_STATUS = Object.freeze({
   EMPTY_SPANS_INVALID: "EMPTY_SPANS_INVALID",

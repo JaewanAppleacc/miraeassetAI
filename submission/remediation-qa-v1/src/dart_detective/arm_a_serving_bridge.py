@@ -1,7 +1,7 @@
 """arm_a_serving_bridge — Arm A adapter(RetrieverAdapter Protocol)를 answer_api가 소비하는
 CorpusRetriever 모양으로 잇는 최소 브리지.
 
-Turn A-PLUS-QA-LIVE-WIRING-V1. answer_api._get_retriever()는 retriever_adapter.build_serving_retriever()
+answer_api._get_retriever()는 retriever_adapter.build_serving_retriever()
 가 돌려주는 4-tuple `(retriever, store, arm, pins)`를 소비한다. 그 `retriever`는 qa_agent가 쓰는
 CorpusRetriever 인터페이스여야 한다:
 
@@ -41,13 +41,13 @@ from .retriever_adapter import Chunk, build_line_window_retriever
 
 RETRIEVAL_BACKEND_DEFAULT = "DEFAULT"
 RETRIEVAL_BACKEND_ARM_A = "ARM_A_FIXED_RRF"
-# Turn A-PLUS-QA-LIVE-RETRIEVER-V1: same frozen-replay path as RETRIEVAL_BACKEND_ARM_A above
+# Same frozen-replay path as RETRIEVAL_BACKEND_ARM_A above
 # (unchanged), additionally exposed under this more explicit name so it reads as clearly isolated
 # from ARM_A_LIVE (arm_a_live_adapter.py) — "regression-only" is now part of the name itself, not
-# just a comment. The old literal string keeps working (858658e's own tests use it).
+# just a comment. The old literal string keeps working.
 RETRIEVAL_BACKEND_ARM_A_FROZEN_REPLAY = "ARM_A_FROZEN_REPLAY"
 RETRIEVAL_BACKEND_ARM_A_LIVE = "ARM_A_LIVE"
-# Turn A4-A3-PLUS-QA-FINAL-INTEGRATION-V1: the DEV_TUNE-101-selected A4 wide
+# The comparison-selected A4 wide
 # pool + R4_wide_rrf_centric reranker + A3 contradiction guard pipeline, live
 # (arm_a4_a3_live_adapter.py / scripts/arm_a4_a3_live_worker.mjs). Additive
 # only — ARM_A_LIVE above is unmodified and remains the fallback/comparison
@@ -60,7 +60,7 @@ RETRIEVAL_BACKENDS = (
 )
 RETRIEVAL_BACKEND_ENV = "DART_QA_RETRIEVAL_BACKEND"
 
-# A.run.json config.strategy(codex/fourarm-a2-integration-v01 @ 900d3cc). pins에 그대로 적는다 —
+# A.run.json config.strategy 값 그대로. pins에 그대로 적는다 —
 # score.py --final의 config 의미 대조(strategy≠line_window, dense=present)와 같은 어휘.
 ARM_A_STRATEGY = "fixed_512_chunk"
 ARM_A_DENSE = "present"

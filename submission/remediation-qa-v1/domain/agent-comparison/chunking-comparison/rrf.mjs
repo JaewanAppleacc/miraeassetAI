@@ -1,5 +1,5 @@
-// Turn P10: Reciprocal Rank Fusion for combining a BM25 ranked list and a
-// Dense (cosine) ranked list into one, deterministic tie-break included.
+// BM25 순위 목록과 Dense(cosine) 순위 목록을 하나로 결합하는 Reciprocal Rank Fusion.
+// 동률 처리까지 결정론적이다.
 const DEFAULT_K = 60; // standard RRF constant
 
 // rankedLists: array of [{ id, score }] arrays, already sorted desc by

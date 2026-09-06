@@ -1,17 +1,15 @@
-"""arm_a_live_adapter — live Arm A search (via arm_a_live_worker_client) as a QA retriever.
+"""arm_a_live_adapter — 실시간 Arm A 검색(arm_a_live_worker_client 경유)을 QA 검색기로 노출한다.
 
-Turn A-PLUS-QA-LIVE-RETRIEVER-V1. This is the ARM_A_LIVE counterpart to arm_a_adapter.py's frozen
-replay: instead of reading A.results.jsonl, ArmALiveRetriever asks a persistent Node worker
-(scripts/arm_a_live_worker.mjs) to run Arm A's real BM25+dense+RRF search for the caller's own
-question. The worker already hydrates real text and verifies its sha256/document_id against the
-materialized index before ever returning a result (see that file's own docstring) — the checks
-here are a second, pure-Python, defense-in-depth pass, not a replacement for them.
+arm_a_adapter.py의 frozen 재생과 대비되는 실시간(ARM_A_LIVE) 경로다. A.results.jsonl을 읽는
+대신, 상주 Node 워커(scripts/arm_a_live_worker.mjs)에 호출자의 질문 그대로 Arm A의 실제
+BM25+dense+RRF 검색을 요청한다. 워커는 결과를 돌려주기 전에 실제 본문을 채우고 sha256과
+document_id를 적재된 색인과 대조한다(해당 파일 docstring 참조) — 여기의 검사는 이를 대체하는
+것이 아니라 순수 Python 쪽의 이중 방어다.
 
-ARM_A_LIVE never touches A.results.jsonl and never consults the frozen adapter's gold-question
-index — arbitrary question strings are the whole point. It also never falls back to B/D: any
-worker-side failure surfaces as one of the typed errors in arm_a_live_worker_client, which
-answer_api's existing exception handling turns into an explicit error wire (see that module's
-`_error_wire`/`code` handling, unmodified) rather than silently retrying against another backend.
+ARM_A_LIVE는 A.results.jsonl과 frozen 어댑터의 질문 색인을 일절 읽지 않는다 — 임의의 질문
+문자열 처리가 존재 이유다. 다른 백엔드로의 폴백도 없다: 워커 쪽 실패는
+arm_a_live_worker_client의 typed 오류로 표면화되고, answer_api의 기존 예외 처리(무수정)가
+이를 명시적 오류 응답으로 바꾼다. 다른 백엔드로 조용히 재시도하지 않는다.
 """
 from __future__ import annotations
 

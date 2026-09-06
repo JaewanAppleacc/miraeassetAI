@@ -1,18 +1,12 @@
-// A4 Wide Candidate Pool (A4_WIDE_CANDIDATE_POOL_V1_CONTRACT.md).
+// A4 광역 후보 풀.
 //
-// Pure, deterministic union/dedup of three already-computed ranked
-// candidate lists -- arm A's existing official top-20, a BM25 top-100 leg,
-// and a KURE dense top-100 leg -- into one A4 candidate pool, keyed by
-// chunk_id. This module never calls a retriever, a DB, an embedding model,
-// or a reranker; it never re-runs A; it never truncates its own output
-// before returning. Arm A's frozen output is not modified anywhere by this
-// module -- it is only READ (as one of three inputs) to guarantee its
-// candidates are all present in the wider pool.
+// 이미 계산된 순위 목록 셋 — Arm A의 기존 공식 top-20, BM25 top-100 leg, KURE dense top-100
+// leg — 를 chunk_id 기준으로 합집합·중복 제거하는 순수 결정론 모듈. 검색기·DB·임베딩 모델·
+// 재정렬기를 호출하지 않고, A를 재실행하지 않으며, 반환 전에 자체 출력을 절단하지 않는다.
+// Arm A의 frozen 출력은 읽기만 하고(세 입력 중 하나) 어디서도 수정하지 않는다.
 //
-// Each input record's rank is an EXPLICIT `rank` field, never the record's
-// position within its array -- so the pool this module builds does not
-// depend on the order candidates happen to be listed in any input array
-// (only on each record's own declared identity/rank/score).
+// 각 입력 레코드의 순위는 배열 내 위치가 아니라 명시적 `rank` 필드다 — 풀 구성은 입력 배열
+// 나열 순서가 아니라 각 레코드의 선언된 identity/rank/score에만 의존한다.
 
 export const A4_WIDE_POOL_VERSION = "fourarm.a4-wide-candidate-pool.v1";
 

@@ -327,7 +327,7 @@ def report_pair_diffs(question: str, lines: Sequence[str]) -> list[Derived]:
     return out
 
 
-# ---------- 대량보유상황보고서 서식 파서 (docs/plans/2026-09-05-holding-parser.md §3) ----------
+# ---------- 대량보유상황보고서 서식 파서 ----------
 # 실측(judge16): 대량보유 33문항 전부에서 위 report_pair_diffs가 미발동(0건).
 # 실제 서식은 ① 연혁표(라벨 '직전보고서' 붙은 표기, 날짜·보고자 섞인 9칸)와
 # ② 요약표(라벨이 둘째 칸, 첫 칸은 그룹 제목) 둘 다 완전일치 라벨에 걸리지 않는다.

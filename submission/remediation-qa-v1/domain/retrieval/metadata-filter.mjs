@@ -1,37 +1,11 @@
 import { RequestAbortedError, abortReason } from "../runtime/abortable.mjs";
 
-// Turn AC-VFINAL-ALIGNMENT-AND-DISCOVERY, sections F/G: the SINGLE shared
-// metadata-filter implementation for both official candidate arms (A and
-// C). Before this Turn, arm A's BM25 leg (fixed-kure-hybrid-retriever-
-// adapter.mjs's private passesFilters) and arm C
-// (arm-retriever-adapter.mjs's own passesMetadataFilters) were two
-// SEPARATE, DIVERGING functions -- a code comment on the latter claimed
-// they were "the same predicate", but passesMetadataFilters additionally
-// checked doc_subtypes/retrieval_eligible while passesFilters did not, and
-// NEITHER checked base_years/base_months/receipt_date_from/
-// receipt_date_to/is_correction at all. Every ALLOWED metadata_filters
-// field (conditions-fixture.mjs's own METADATA_FILTER_KEYS) is implemented
-// here, once, and both arms import it -- no separate copy exists anywhere
-// else in the four-arm-ac module.
+// 두 후보 arm(A, C)이 공유하는 단일 메타데이터 필터 구현. 종전에는 판정 함수가 두 곳에
+// 갈라져 서로 다른 필드를 검사하면서 "같은 술어"로 주장되고 있었다 — 허용되는 모든
+// metadata_filters 필드를 여기 한 곳에 구현하고 양쪽 arm이 import한다. 별도 사본은
+// 어디에도 없다.
 //
-// Two entry points, both operating on the SAME field set:
-//   - passesMetadataFilters(row, filters): row-level predicate (a defense-
-//     in-depth double-check after DB-level prefiltering, and the only
-//     mechanism available for in-process candidates like BM25-scored rows
-//     hydrated from `reference_retrieval_chunks`).
-//   - buildEligibilityWhereClause(filters, paramOffset): builds the SAME
-//     logical predicate as a parameterized SQL WHERE fragment (JSONB path
-//     expressions for fields stored inside `metadata`, plain columns for
-//     corp_code/source_document_id), for fetchEligibleChunkIds's own
-//     prefilter query AND for the dense leg's SQL (both call this ONE
-//     builder, so a filter field can never behave differently between the
-//     two legs).
-//
-// vFINAL section G's own requirement is enforced at the CALL SITE, not
-// here: the filter must be applied to the candidate pool BEFORE BM25/dense
-// ranking, not as a post-hoc prune of an already-ranked top-K. This module
-// only supplies the predicate/WHERE-fragment; fetchEligibleChunkIds below
-// is what actually restricts the pool before scoring.
+// 진입점들은 같은 필드 집합 위에서 동작한다(행 수준 술어와 SQL WHERE 절 생성).
 
 function asNonEmptyArray(value) {
   return Array.isArray(value) && value.length > 0 ? value : null;
@@ -119,7 +93,7 @@ export function buildEligibilityWhereClause(filters, paramStartIndex, columnPref
   return { conditions, params, nextParamIndex: next };
 }
 
-// Turn AC-VFINAL-ALIGNMENT-AND-DISCOVERY section G: the true PREFILTER --
+// The true PREFILTER --
 // returns the Set of chunk_ids that pass `filters`, queried directly
 // against reference_retrieval_chunks BEFORE any BM25/dense ranking touches
 // them, so the candidate pool ranking runs over is already

@@ -1,16 +1,6 @@
-// Deterministic fake EmbeddingAdapter (Turn P4) -- never makes a network
-// call, never depends on wall-clock time or randomness. The SAME text
-// always produces the SAME vector, so unit/contract tests and the vector
-// smoke script stay reproducible with no provider account. Order is always
-// preserved (embedDocuments maps texts[i] -> result[i] directly).
-//
-// The vector is derived from sha256(text) bytes, mapped into `dimension`
-// floats in [-1, 1] and L2-normalized -- similar texts do NOT produce
-// similar vectors (this is not a real semantic embedding), which is
-// intentional: a test asserting "the exact same text retrieves itself"
-// works with this fake; a test asserting "semantically similar text
-// retrieves a near neighbor" requires a REAL embedding model and is out of
-// scope for a fake adapter.
+// 결정론적 가짜 EmbeddingAdapter — 네트워크 호출을 하지 않고 시계·난수에 의존하지
+// 않는다. 같은 텍스트는 항상 같은 벡터를 만들므로, 제공자 계정 없이도 단위/계약 테스트와
+// 스모크 스크립트가 재현 가능하다. 출력 순서는 입력 순서를 항상 따른다.
 import { createHash } from "node:crypto";
 
 function bytesToUnitVector(bytes, dimension) {

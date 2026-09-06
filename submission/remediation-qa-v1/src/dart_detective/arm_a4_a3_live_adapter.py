@@ -1,20 +1,16 @@
-"""arm_a4_a3_live_adapter — live A4 wide-pool + R4_wide_rrf_centric reranker + A3
-contradiction guard search (via arm_a4_a3_live_worker_client) as a QA retriever.
+"""arm_a4_a3_live_adapter — 실시간 A4 광역 풀 + R4_wide_rrf_centric 재정렬 + A3 모순 가드
+검색(arm_a4_a3_live_worker_client 경유)을 QA 검색기로 노출한다.
 
-Turn A4-A3-PLUS-QA-FINAL-INTEGRATION-V1. This is the DEV_TUNE-101-selected counterpart to
-arm_a_live_adapter.py's ARM_A_LIVE: instead of Arm A's own bare BM25+dense+RRF top-20, the
-persistent Node worker (scripts/arm_a4_a3_live_worker.mjs) runs the full, unmodified
-four-arm-ac pipeline (BM25 top-100 + dense top-100 -> wide pool <=200 ->
-R4_wide_rrf_centric full ranking -> A3 contradiction guard -> stable refill) and returns
-its final top-20. The worker already hydrates real text and verifies its
-sha256/document_id against the materialized index before ever returning a result — the
-checks here are a second, pure-Python, defense-in-depth pass, mirroring
-arm_a_live_adapter.py's own _verify_item exactly.
+검색 방식 비교 실험에서 채택된 구성으로, arm_a_live_adapter.py의 ARM_A_LIVE와 대응한다.
+Arm A의 기본 BM25+dense+RRF top-20 대신, 상주 Node 워커(scripts/arm_a4_a3_live_worker.mjs)가
+four-arm-ac 파이프라인 전체를 무수정으로 실행(BM25 top-100 + dense top-100 -> 광역 풀 <=200 ->
+R4_wide_rrf_centric 전체 순위 -> A3 모순 가드 -> 안정 보충)하고 최종 top-20을 돌려준다.
+워커는 결과를 돌려주기 전에 실제 본문을 채우고 sha256/document_id를 적재된 색인과 대조한다 —
+여기의 검사는 arm_a_live_adapter.py의 _verify_item과 동일한 순수 Python 이중 방어다.
 
-ARM_A4_A3_LIVE never touches A.results.jsonl, DEV_TUNE/DEV_CHECK/HOLDOUT, or Gold, and
-never falls back to ARM_A_LIVE or B/D: any worker-side failure surfaces as one of the typed
-errors in arm_a4_a3_live_worker_client, which answer_api's existing exception handling
-turns into an explicit error wire rather than silently retrying against another backend.
+ARM_A4_A3_LIVE는 frozen 결과 파일과 평가 데이터를 일절 읽지 않으며, ARM_A_LIVE나 다른
+백엔드로 폴백하지 않는다: 워커 쪽 실패는 arm_a4_a3_live_worker_client의 typed 오류로
+표면화되고, answer_api의 기존 예외 처리가 이를 명시적 오류 응답으로 바꾼다.
 """
 from __future__ import annotations
 
@@ -95,11 +91,10 @@ def _chunk_from_worker_item(item: Mapping[str, Any]) -> Chunk:
 
 
 class ArmA4A3LiveRetriever:
-    """RetrieverAdapter-Protocol-shaped (search/readiness), backed by the live worker.
+    """실시간 워커를 배후에 둔 RetrieverAdapter Protocol 모양(search/readiness)의 검색기.
 
-    fetch_node is intentionally NOT implemented: this backend never accesses the
-    DocumentIR node store (Section K: no folding-in of DocumentIR access paths beyond
-    what the worker's own materialized-chunk hydration already does).
+    fetch_node는 의도적으로 구현하지 않는다: 이 백엔드는 DocumentIR 노드 저장소에 접근하지
+    않는다 — 워커 자체의 적재 청크 본문 채움 이상의 DocumentIR 접근 경로를 더하지 않는다.
     """
 
     arm = "A4_A3"
@@ -124,7 +119,7 @@ class ArmA4A3LiveRetriever:
 
 
 class ArmA4A3LiveServingRetriever:
-    """CorpusRetriever-shaped bridge for answer_api, mirroring ArmALiveServingRetriever."""
+    """answer_api용 CorpusRetriever 모양 브리지. ArmALiveServingRetriever와 같은 구조다."""
 
     arm = "A4_A3"
 

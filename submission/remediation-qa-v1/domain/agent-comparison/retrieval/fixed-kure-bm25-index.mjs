@@ -1,27 +1,11 @@
-// Turn P11-F0 section H: builds and (de)serializes a PERSISTED BM25
-// lexical index over one Fixed-512-o64 x KURE-v1 load session's chunks,
-// reusing P10.2's own bm25.mjs (k1=1.5, b=0.75, tokenizeWithOffsets)
-// UNCHANGED -- never re-implemented, never silently swapped for
-// PostgreSQL's ts_rank (CLAUDE.md Turn P11-F0 section H's own explicit
-// warning against exactly that substitution).
+// 한 적재 세션(Fixed-512-o64 x KURE-v1)의 청크들 위에 영속 BM25 어휘 색인을 만들고
+// (역)직렬화한다. bm25.mjs(k1=1.5, b=0.75, tokenizeWithOffsets)를 무수정 재사용하며,
+// PostgreSQL ts_rank로 대체하지 않는다.
 //
-// P10.2's own stage2 script builds its BM25 index over chunk.embed_text
-// (company/document/section-context-prefixed), not raw_text -- this Turn
-// matches that choice exactly for semantic parity
-// (scripts/p10.2-stage2-embedding-grid.mjs's own
-// `buildBm25Index(filtered.map((c) => ({ id: c.chunk_id, text: c.embed_text })))`).
-// embed_text is never persisted in 003's shared reference_retrieval_chunks
-// table (which stores the VERBATIM raw_text instead, for
-// RetrieverResult.raw_text/SOURCE_VERBATIM) -- it is reconstructed here
-// from this loader's OWN, indefinitely-persisted
-// reference_fixed_kure_chunk_staging x reference_fixed_kure_canonical_queue
-// join, which is exactly why those two loader-internal tables are never
-// deleted after materialization.
-//
-// "영속" (persisted): built ONCE per load_session_id and serialized to a
-// task-owned cache file (never git, never work/) -- a later process
-// start loads it back from disk instead of re-querying/re-tokenizing the
-// whole chunk set, and NEVER re-scans the raw 8.6GB corpus.
+// 색인 대상 텍스트는 raw_text가 아니라 embed_text(회사/문서/섹션 문맥 접두)다 — 임베딩
+// 파이프라인과 의미상 동일한 선택을 유지하기 위함이다. embed_text는 공유 청크 테이블에
+// 영속되지 않으므로(그 테이블은 원문 그대로의 raw_text를 저장) 적재기 내부의 staging x
+// canonical_queue 조인에서 재구성한다 — 그 두 적재기 내부 테이블을 지우지 않는 이유다.
 import { mkdir } from "node:fs/promises";
 import { openSync, writeSync, fsyncSync, closeSync, renameSync, createReadStream } from "node:fs";
 import { createInterface } from "node:readline";
@@ -62,7 +46,7 @@ export async function buildFixedKureBm25Index(client, loadSessionId) {
   return { index: buildBm25Index(documents), documentCount: documents.length };
 }
 
-// Turn AC-FULL-LOAD-V3 Section G: real full-corpus measurement (442,549
+// Real full-corpus measurement (442,549
 // chunks) reproduced the EXACT SAME "Invalid string length" failure this
 // whole AC-STREAMING-FIXED-DISCOVERY/AC-VFINAL-ALIGNMENT investigation is
 // about, here in persistFixedKureBm25Index's own single JSON.stringify(...)
