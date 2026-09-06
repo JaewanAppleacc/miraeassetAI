@@ -3,78 +3,127 @@
   "pins": {
     "worktree": "agent-a4-a3-plus-qa-final-v01",
     "branch": "codex/a4-a3-plus-qa-final-v01",
-    "head_local": "bc90bce9fc6505e33ab233755bffba248121bce7",
-    "head_origin": "bc90bce9fc6505e33ab233755bffba248121bce7",
-    "head_demo_ai_festival": "bc90bce9fc6505e33ab233755bffba248121bce7",
+    "head_at_execution": "253ee7c",
     "working_tree_clean": true,
     "amendment_doc": "docs/A4_A3_PLUS_QA_JUDGE_V1_AMENDMENT.md",
     "amendment_doc_sha256": "5606fd79a417cc74fc8c0101946dbcb037b989c028aea21f24c2eaaf7e0a1386",
+    "addendum_question_set_doc": "docs/A4_A3_PLUS_QA_JUDGE_V1_AMENDMENT_ADDENDUM_101.md",
+    "addendum_question_set_commit": "9ace970",
+    "addendum_metric_mapping_doc": "docs/A4_A3_PLUS_QA_JUDGE_V1_METRIC_MAPPING_ADDENDUM.md",
+    "addendum_metric_mapping_commit": "253ee7c",
     "freeze_doc_sha256": "4964997b9bd0e44e94d6c05aa57fd518014153ad0226e7e49e430da8c41a9df0",
-    "runtime_source_manifest_sha256": "a0f837cf2ac496e2a05e68f80874928200703702e568d5469d44da8475d77a7e"
+    "runtime_source_manifest_sha256": "a0f837cf2ac496e2a05e68f80874928200703702e568d5469d44da8475d77a7e",
+    "question_source_file": "data/eval/phase1_devtune_gold.v0.1.jsonl",
+    "question_source_sha256": "7941144c09ce25debeeab6c3fbdfbd4c16761a6be06ab3a844ad159c832f102b",
+    "question_count": 101
   },
-  "preflight": {
-    "branch_head_verified": true,
-    "local_origin_demo_sha_match": true,
-    "working_tree_clean": true,
-    "freeze_amendment_docs_present": true,
-    "index_ready": true,
-    "index_record_count": 442549,
-    "index_status_source": "disclosure_reference.reference_retrieval_indexes (direct query) + COUNT(*) on disclosure_reference.reference_retrieval_chunks",
-    "kure_pin_repository": "nlpai-lab/KURE-v1",
-    "kure_pin_revision": "4ed4540949c70b7da2c74004a915e1f2d5e46e4f",
-    "kure_pin_dimension": 1024,
-    "kure_config_matches_index_metadata": true,
-    "kure_live_server_reachable": false,
-    "kure_readiness_probe": {
-      "database_ready": true,
-      "bm25_index_ready": true,
-      "bm25_document_count": 442549,
-      "kure_ready": false,
-      "kure_revision_match": false,
-      "embedding_dimension": null,
-      "arm_a4_a3_live_ready": false,
-      "error": "KURE server health/info probe failed: fetch failed (connection refused on 127.0.0.1:58411)"
+  "history_blocked_attempt": {
+    "verdict": "BLOCKED_CONTRACT",
+    "reason": "Original amendment claimed question_set = \"results/judge34's own 34 questions\"; actual file has 101 rows (results/judge34 is the 34th sequential judge-iteration directory, not a 34-question artifact). Independently, KURE-v1 embedding server was unreachable at that time (kure_ready=false).",
+    "resolved_by": "Owner confirmed the 101-question reading and restarted the KURE-v1 server with the same pin; both addenda above were committed and pushed before any new result existed."
+  },
+  "preflight_at_execution": {
+    "kure_server": {
+      "url": "http://127.0.0.1:58411",
+      "health": {"status": "ok"},
+      "info": {
+        "repository_id": "nlpai-lab/KURE-v1",
+        "model_revision": "4ed4540949c70b7da2c74004a915e1f2d5e46e4f",
+        "embedding_dimension": 1024,
+        "device": "mps"
+      }
+    },
+    "arm_a4_a3_live_readiness": {
+      "arm_a4_a3_live_ready": true, "database_ready": true, "bm25_index_ready": true,
+      "bm25_document_count": 442549, "kure_ready": true, "kure_revision_match": true,
+      "embedding_dimension": 1024
+    },
+    "arm_a_live_readiness": {
+      "arm_a_live_ready": true, "official_experiment_ready": true,
+      "bm25_document_count": 442549, "materialized_chunk_count": 442549,
+      "locator_provenance_ready": true
     },
     "clova_api_key_present": true,
     "clova_api_key_value_exposed": false,
-    "question_set_claimed_by_amendment": "results/judge34/judge.jsonl (34 questions)",
-    "question_set_actual_row_count": 101,
-    "question_set_contract_mismatch": true,
-    "question_set_mismatch_explanation": "results/judge34 is the 34th sequential judge-quality-iteration directory (judge1..judge34 naming history in CLAUDE.md), each covering the full 101-question DEV_TUNE set, not a distinct 34-question artifact. git log --follow shows results/judge33 -> results/judge34 rename (commit 0c92abb), 101/101 answerability recorded in its own summary.json."
+    "clova_model": "HCX-005 (default, CLOVA_MODEL unset)",
+    "temperature": "0.1 (default, DART_QA_FC_TEMPERATURE unset)",
+    "seed": "42 (default, DART_QA_SEED unset)",
+    "late_expansion_flag": "OFF (default)",
+    "expanded_retrieval_flag": "OFF (default)"
   },
   "execution": {
-    "attempted": false,
-    "reason": "two independent pre-execution blockers found during mandated preflight (contract mismatch on question set; KURE embedding server unreachable)",
-    "questions_run_arm_a_live": 0,
-    "questions_run_arm_a4_a3_live": 0,
-    "questions_failed": null,
-    "citation_validity": null,
-    "answerability": null,
-    "numeric_correctness": null,
-    "groundedness": null,
-    "weighted_score": null,
-    "critical_evidence_errors": null,
-    "latency_p50_ms": null,
-    "latency_p95_ms": null,
+    "attempted": true,
+    "runner": "scripts/judge_devtune.py (unmodified) via uncommitted work/run_judge101_backend.py driver (answer_api.configure(retrieval_backend=<ARM>, base_factory=None) only)",
+    "serial_order": ["ARM_A_LIVE", "ARM_A4_A3_LIVE"],
+    "limit_used": false,
+    "question_subset_used": false,
+    "questions_run_arm_a_live": 101,
+    "questions_run_arm_a4_a3_live": 101,
+    "questions_failed_arm_a_live": 0,
+    "questions_failed_arm_a4_a3_live": 0,
+    "provider_outage_detected": false,
+    "provider_outage_note": "all llm_error values in both runs are JSON-parse-format misses (the pipeline's designed fallback path), not 429/40009/timeout/connection errors",
+    "metrics": {
+      "arm_a_live": {
+        "citation_validity": 1.0,
+        "answerability": 0.9108910891089109,
+        "numeric_correctness": 0.509090909090909,
+        "numeric_correctness_frac": "28/55",
+        "groundedness": 0.45544554455445546,
+        "groundedness_frac": "46/101",
+        "weighted_score": 55.5,
+        "value_full": 39, "value_partial": 33, "value_zero": 20, "value_denominator": 92,
+        "critical_evidence_errors": 0,
+        "latency_ms": {"n": 101, "min": 8605, "p50": 20868, "p95": 36539, "max": 50184, "mean": 20986.1},
+        "llm_used": 60, "fallback_triggered": 2
+      },
+      "arm_a4_a3_live": {
+        "citation_validity": 1.0,
+        "answerability": 0.9207920792079208,
+        "numeric_correctness": 0.5636363636363636,
+        "numeric_correctness_frac": "31/55",
+        "groundedness": 0.4752475247524752,
+        "groundedness_frac": "48/101",
+        "weighted_score": 58.5,
+        "value_full": 42, "value_partial": 33, "value_zero": 17, "value_denominator": 92,
+        "critical_evidence_errors": 0,
+        "latency_ms": {"n": 101, "min": 8124, "p50": 19229, "p95": 36181, "max": 48672, "mean": 19696.6},
+        "llm_used": 62, "fallback_triggered": 3
+      }
+    },
     "a3_reject_count": null,
-    "a3_refill_count": null
+    "a3_refill_count": null,
+    "a3_stats_note": "Not exposed by answer_api's serving contract for this run; only available via the separate scripts/a4_a3_full_index_smoke.mjs debug harness, previously measured on a different 10-question non-Gold sample (reject=79, refill=6 total) -- not re-measured here.",
+    "decision_rule_check": {
+      "execution_errors_zero_both": true,
+      "citation_validity_a4a3_gte_a": true,
+      "answerability_a4a3_gte_a": true,
+      "numeric_correctness_a4a3_gte_a": true,
+      "groundedness_a4a3_gte_a": true,
+      "weighted_score_a4a3_gte_a": true,
+      "critical_evidence_errors_a4a3_zero": true,
+      "all_conditions_pass": true,
+      "exact_tie_on_all_metrics": false
+    }
   },
   "safety": {
     "dev_check_accessed": false,
     "holdout_accessed": false,
-    "gold_accessed": false,
+    "gold_accessed": "data/eval/phase1_devtune_gold.v0.1.jsonl only (DEV_TUNE)",
     "mock_qa_result_fabricated": false,
     "partial_result_used_for_verdict": false,
     "r4_weight_or_config_changed": false,
     "a3_rule_changed": false,
     "extractor_changed": false,
     "prompt_changed": false,
-    "amendment_document_edited": false,
+    "question_subset_or_limit_used": false,
+    "amendment_or_addenda_edited_after_seeing_a_result": false,
     "db_write_count": 0,
     "pr_created": false,
-    "force_amend_rebase_reset_used": false
+    "force_amend_rebase_reset_used": false,
+    "raw_wires_and_judge_rows_location": "work/judge101_arm_a_live/, work/judge101_arm_a4_a3_live/ (gitignored, not committed)"
   },
-  "verdict": "BLOCKED_CONTRACT",
-  "verdict_reason": "Preflight check discovered the amendment's pre-registered question_set (\"results/judge34's own 34 questions\") does not exist -- the file has 101 rows and is the 34th entry in this project's sequential judge-iteration naming history, not a 34-question artifact. Independently, the KURE-v1 embedding server both backends require for dense retrieval is unreachable in this environment (readiness probe: arm_a4_a3_live_ready=false, kure_ready=false), even though CLOVA_API_KEY is present. Neither condition was worked around; zero questions were executed against either backend or HyperCLOVA X.",
+  "verdict": "A4_A3_PLUS_QA_READY_FOR_FINAL_CHECK",
+  "verdict_reason": "ARM_A4_A3_LIVE + QA satisfies all seven decision-rule conditions against the same-run ARM_A_LIVE + QA baseline on the full, real 101-question DEV_TUNE Gold set (serial execution, identical QA code/provider/model/temperature/seed): citation_validity ties at ceiling 1.0, answerability/numeric_correctness/groundedness/weighted_score all strictly improve, critical_evidence_errors=0 and execution_errors=0 for both. Not an exact tie overall, so the amendment's tie-break to ARM_A_LIVE does not apply.",
   "report": "docs/reports/A4_A3_PLUS_QA_JUDGE34_V1.md"
 }
