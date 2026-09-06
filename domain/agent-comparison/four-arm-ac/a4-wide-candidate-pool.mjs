@@ -200,6 +200,18 @@ function mergeNodeIndices(records) {
   return Object.freeze([...set].sort((a, b) => a - b));
 }
 
+// records: already sorted by caller into fixed priority order
+// (original_a_top20 > bm25_top100 > dense_top100 -- see priorityOrder at
+// the call site). node_index is picked by that SAME priority order (the
+// first occurrence that actually declares a non-null node_index wins),
+// never by numeric magnitude -- frozen arm A's own representative
+// node_index for a chunk is not necessarily the smallest node in that
+// chunk's merged node_indices set, and this function must never silently
+// swap it for a different (even if numerically smaller) node just because
+// a BM25/dense occurrence also touched that chunk. node_indices itself is
+// unaffected: it stays the full sorted/deduplicated union of every
+// occurrence's node_index/node_indices, regardless of which one becomes
+// the representative node_index.
 function mergeBaseFields(records) {
   const documentIds = [...new Set(records.map((r) => r.document_id))];
   if (documentIds.length > 1) {
@@ -217,12 +229,25 @@ function mergeBaseFields(records) {
   }
 
   const nodeIndices = mergeNodeIndices(records);
+  // Priority: original_a_top20's own node_index first, then bm25's, then
+  // dense's (the order `records` already arrives in); only when NONE of
+  // the occurrences declares a node_index do we fall back to the smallest
+  // member of the merged set.
+  const preferredNodeIndex = firstNonNull(records.map((r) => (Number.isInteger(r.node_index) ? r.node_index : null)));
+  const nodeIndex = preferredNodeIndex !== null ? preferredNodeIndex : (nodeIndices.length > 0 ? nodeIndices[0] : null);
+  if (nodeIndex !== null && !nodeIndices.includes(nodeIndex)) {
+    fail(
+      `chunk_id "${records[0].chunk_id}" selected node_index ${nodeIndex} is not a member of its own merged node_indices ${JSON.stringify(nodeIndices)}`,
+      "NODE_INDEX_NOT_IN_NODE_INDICES", { chunk_id: records[0].chunk_id, node_index: nodeIndex, node_indices: nodeIndices },
+    );
+  }
+
   return Object.freeze({
     chunk_id: records[0].chunk_id,
     document_id: documentIds[0],
     text: firstNonNull(records.map((r) => r.text)),
     chunk_text_sha256: shas[0],
-    node_index: nodeIndices.length > 0 ? nodeIndices[0] : null,
+    node_index: nodeIndex,
     node_indices: nodeIndices,
     locator: firstNonNull(records.map((r) => r.locator ?? null)) ?? Object.freeze({}),
     provenance: firstNonNull(records.map((r) => r.provenance ?? null)) ?? Object.freeze({}),
