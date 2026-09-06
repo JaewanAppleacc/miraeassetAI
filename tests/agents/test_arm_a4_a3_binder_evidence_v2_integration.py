@@ -459,7 +459,10 @@ def test_new_backend_is_additive_and_opt_in_only():
     assert bridge.RETRIEVAL_BACKEND_ARM_A4_A3_LIVE_BINDER_EVIDENCE_V2 == (
         "ARM_A4_A3_LIVE_BINDER_EVIDENCE_V2")
     assert bridge.RETRIEVAL_BACKEND_ARM_A4_A3_LIVE_BINDER_EVIDENCE_V2 in bridge.RETRIEVAL_BACKENDS
-    assert len(bridge.RETRIEVAL_BACKENDS) == 6
+    # Turn A4-A3-FINAL-COMBINED-BACKEND-PREP-V1이 7번째 opt-in backend
+    # (ARM_A4_A3_REMEDIATION_BINDER_EVIDENCE_V2_LIVE)를 additive하게 추가했다—
+    # tests/agents/test_arm_a4_a3_remediation_binder_evidence_v2_integration.py가 그 배선을 검증한다.
+    assert len(bridge.RETRIEVAL_BACKENDS) == 7
 
 
 # ================== 25) 조건 mapper 101/101 성공 유지 ==================

@@ -59,10 +59,18 @@ RETRIEVAL_BACKEND_ARM_A4_A3_LIVE = "ARM_A4_A3_LIVE"
 # elsewhere (arm_a_document_binder.py / arm_a_evidence.py). Additive: the backend above
 # is unmodified and remains the default live path.
 RETRIEVAL_BACKEND_ARM_A4_A3_LIVE_BINDER_EVIDENCE_V2 = "ARM_A4_A3_LIVE_BINDER_EVIDENCE_V2"
+# Turn A4-A3-FINAL-COMBINED-BACKEND-PREP-V1: opt-in only — wraps
+# ARM_A4_A3_REMEDIATION_LIVE's own top-k (arm_a4_a3_remediation_live_adapter.py,
+# unmodified) with the same DocumentBinder -> Evidence V2 -> <=20 composition the backend
+# above already uses (arm_a4_a3_remediation_binder_evidence_v2_adapter.py). Additive: all
+# five backends above are unmodified and remain reachable/default exactly as before.
+RETRIEVAL_BACKEND_ARM_A4_A3_REMEDIATION_BINDER_EVIDENCE_V2_LIVE = (
+    "ARM_A4_A3_REMEDIATION_BINDER_EVIDENCE_V2_LIVE")
 RETRIEVAL_BACKENDS = (
     RETRIEVAL_BACKEND_DEFAULT, RETRIEVAL_BACKEND_ARM_A,
     RETRIEVAL_BACKEND_ARM_A_FROZEN_REPLAY, RETRIEVAL_BACKEND_ARM_A_LIVE,
     RETRIEVAL_BACKEND_ARM_A4_A3_LIVE, RETRIEVAL_BACKEND_ARM_A4_A3_LIVE_BINDER_EVIDENCE_V2,
+    RETRIEVAL_BACKEND_ARM_A4_A3_REMEDIATION_BINDER_EVIDENCE_V2_LIVE,
 )
 RETRIEVAL_BACKEND_ENV = "DART_QA_RETRIEVAL_BACKEND"
 

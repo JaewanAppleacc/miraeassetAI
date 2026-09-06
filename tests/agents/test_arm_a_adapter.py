@@ -28,7 +28,7 @@ _EXPECTED_UNCHANGED_FILE_SHA256 = {
     # tests/agents/test_arm_a_serving_bridge.py·test_arm_a_live_adapter.py의 회귀 테스트와
     # tests/agents/test_arm_a4_a3_binder_evidence_v2_integration.py의 byte-lock이 잠근다.
     "src/dart_detective/answer_api.py":
-        "226055241c3453438a99271723002710b55fd1648b85dab30f10a4bbeb2814f8",
+        "aaa220d5864fdbcfd61e785daf88d578ea1525f025dec0de8dbec3e0ca24324b",
     "src/dart_detective/agents/qa_agent.py":
         "43e055aafc93c06f346ced4484bb94dc821111abc4c5b8b8c93d9470355d7020",
     "src/dart_detective/agents/validator.py":
