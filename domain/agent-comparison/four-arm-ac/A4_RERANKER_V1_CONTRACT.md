@@ -8,6 +8,16 @@ the exact input/output shapes `a4-reranker-engine.mjs` and
 integration-tested against a real wide-candidate-pool producer later
 without either side guessing at the other's field names.
 
+**Correction (input-pool ceiling, pre-results, no real result opened):**
+the A4 wide pool is BM25 top-100 UNION dense top-100, deduplicated by
+`chunk_id` — up to **200** distinct candidates, not 100. Frozen Arm A's
+original top-20 is itself already a subset of that union (every A top-20
+member appears in the BM25 and/or dense top-100 legs), so it is never
+counted as 20 candidates on top of the 200. This correction only changes
+the pool-size ceiling and adds two membership flags (section 2) and rank
+validation (section 2/5); it does not add, remove, or reweight any
+config, and no real result was opened to make it.
+
 ## 1. Role (fixed)
 
 ```
@@ -25,9 +35,11 @@ The reranker **only** ranks. It never:
   and never removal;
 - issues a new search, DB query, or KURE call — the engine is pure and
   synchronous, and takes its entire candidate pool as a plain argument;
-- looks past the input pool's own top-100 — see `MAX_POOL_SIZE` in
+- looks past the input pool's own ceiling (BM25 top-100 UNION dense
+  top-100, ≤200 candidates) — see `MAX_POOL_SIZE` in
   `a4-reranker-engine.mjs`, enforced as a hard `RangeError`, not a
-  convention;
+  convention; every one of those ≤200 candidates is scored before the
+  final sort — there is no pre-scoring truncation to 100;
 - reads a Gold field, a real failure-packet id, a company-specific
   exception, or DEV_CHECK/HOLDOUT data. No such field exists anywhere in
   the two type shapes below, and no code path in this Turn's two modules
@@ -60,14 +72,18 @@ type RerankerCandidate = {
     is_correction: boolean | null;
   } | null;
   scores: {
+    // rank: an integer in [1, 100], or null (not found by this leg at
+    // all -- a legitimate absence, scored 0 by the corresponding
+    // feature, never a validation failure).
     bm25: { score: number | null; rank: number | null } | null;
     dense: { score: number | null; rank: number | null } | null;
-    // Frozen Arm A's OFFICIAL run (dense_candidate_k=20): null/absent rank
-    // means this candidate was never in A's own frozen top-20/top-100 leg
-    // lists, which is real information (scored 0), not a gap.
+    // Frozen Arm A's OFFICIAL run (dense_candidate_k=20): rank is an
+    // integer in [1, 20], or null if this candidate was never in A's own
+    // frozen top-20, which is real information (scored 0), not a gap.
     original_a_rrf: { score: number | null; rank: number | null } | null;
     // The widened (dense_candidate_k=100) union-RRF pool this candidate
-    // came from.
+    // came from. No fixed rank ceiling is validated on this leg (the
+    // fused pool itself can be up to 200 wide).
     wide_rrf: { score: number | null; rank: number | null } | null;
   };
   // Explicit, first-class protective signal: true iff this exact chunk_id
@@ -76,6 +92,13 @@ type RerankerCandidate = {
   // its own boolean so a config can weight it directly and so the
   // engine's fixed tie-break rule never has to re-derive it).
   in_original_a_top20: boolean;
+  // Membership flags: which source leg(s) this candidate came from. At
+  // least one MUST be true -- the engine rejects (RangeError) any
+  // candidate with both false/absent, since such a candidate could not
+  // have come from the pre-registered BM25-top-100-union-dense-top-100
+  // contract.
+  bm25_top100: boolean;
+  dense_top100: boolean;
 };
 ```
 
@@ -156,9 +179,17 @@ never a valid "we don't know" state (that is always 0.5, not `NaN`).
 - The output is always `output.every(o => pool.some(c => c.chunk_id === o.chunk_id))`
   and has no duplicate `chunk_id`s — a stable subset of the input, never
   a fabricated candidate.
-- `pool.length > 100` is a hard `RangeError`, not a silent truncation —
-  this engine assumes its caller already enforced the top-100 wide-pool
-  ceiling and refuses to guess about anything beyond it.
+- `pool.length > 200` is a hard `RangeError`, not a silent truncation —
+  this engine assumes its caller already enforced the wide-pool ceiling
+  (BM25 top-100 UNION dense top-100) and refuses to guess about anything
+  beyond it. Pools of exactly 100, 101, 199, or 200 are all accepted;
+  201 is rejected.
+- Every candidate must carry `bm25_top100=true` or `dense_top100=true`
+  (or both) — a candidate with neither is a hard `RangeError`.
+- `scores.bm25.rank` and `scores.dense.rank` must each be an integer in
+  `[1, 100]` or `null`; `scores.original_a_rrf.rank` must be an integer
+  in `[1, 20]` or `null` — any other value (0, a float, a rank outside
+  the range, `NaN`) is a hard `RangeError`, checked before any scoring.
 - Input candidate objects are never mutated — every candidate in the
   pipeline is spread into a **new** object; the caller's own array/objects
   are safe to reuse or freeze before calling.

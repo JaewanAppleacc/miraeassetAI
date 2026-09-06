@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { extractFeatures, FEATURE_KEYS } from "../domain/agent-comparison/four-arm-ac/a4-reranker-features.mjs";
 import {
   rerankCandidates, validateConfig, assertValidConfig, TOP_K, MAX_POOL_SIZE,
+  BM25_DENSE_LEG_MAX_RANK, ORIGINAL_A_MAX_RANK,
 } from "../domain/agent-comparison/four-arm-ac/a4-reranker-engine.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -57,6 +58,8 @@ function makeCandidate(overrides = {}) {
       wide_rrf: { score: 0.025, rank: 5 },
     },
     in_original_a_top20: false,
+    bm25_top100: true,
+    dense_top100: true,
     ...overrides,
   };
 }
@@ -74,17 +77,30 @@ function makeQuestionContext(overrides = {}) {
   };
 }
 
+// Models the real A4 wide-pool shape: the first min(n,100) candidates are
+// "found by both legs" (bm25 rank == dense rank == i+1, both <= 100,
+// matching the heavy BM25/dense overlap the A3 ceiling audit measured),
+// and any candidates beyond 100 (up to MAX_POOL_SIZE=200) are dense-only
+// tail entries (dense rank wraps back into [1,100], bm25 absent) -- never
+// out-of-range ranks on either leg.
 function makePool(n, factory = makeCandidate) {
-  return Array.from({ length: n }, (_, i) => factory({
-    chunk_id: `chunk_synthetic_${String(i).padStart(20, "0")}`,
-    scores: {
-      bm25: { score: 100 - i, rank: i + 1 },
-      dense: { score: 1 - i / n, rank: i + 1 },
-      original_a_rrf: i < 20 ? { score: 0.03 - i * 0.001, rank: i + 1 } : null,
-      wide_rrf: { score: 0.03 - i * 0.0005, rank: i + 1 },
-    },
-    in_original_a_top20: i < 20,
-  }));
+  return Array.from({ length: n }, (_, i) => {
+    const inBothLegs = i < 100;
+    return factory({
+      chunk_id: `chunk_synthetic_${String(i).padStart(20, "0")}`,
+      scores: {
+        bm25: inBothLegs ? { score: 100 - i, rank: i + 1 } : null,
+        dense: inBothLegs
+          ? { score: 1 - i / 100, rank: i + 1 }
+          : { score: 0.5 - ((i - 100) / 200), rank: (i - 100) + 1 },
+        original_a_rrf: i < 20 ? { score: 0.03 - i * 0.001, rank: i + 1 } : null,
+        wide_rrf: { score: 0.03 - i * 0.0002, rank: i + 1 },
+      },
+      in_original_a_top20: i < 20,
+      bm25_top100: inBothLegs,
+      dense_top100: true,
+    });
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -155,15 +171,78 @@ test("rerankCandidates: never fabricates a candidate beyond the input pool", () 
   assert.ok(out.every((c) => inputIds.has(c.chunk_id)));
 });
 
-test("rerankCandidates: refuses a pool larger than the top-100 ceiling", () => {
+test("rerankCandidates: refuses a pool larger than the 200-candidate wide-pool ceiling", () => {
   const pool = makePool(MAX_POOL_SIZE + 1);
   assert.throws(() => rerankCandidates(pool, makeQuestionContext(), R1), RangeError);
 });
 
-test("rerankCandidates: exactly top-100 is accepted", () => {
-  const pool = makePool(MAX_POOL_SIZE);
-  const out = rerankCandidates(pool, makeQuestionContext(), R1);
-  assert.equal(out.length, TOP_K);
+test("rerankCandidates: accepts exactly 100/101/199/200 candidates, rejects 201", () => {
+  assert.equal(MAX_POOL_SIZE, 200, "this test assumes the pre-registered 200-candidate ceiling");
+  for (const size of [100, 101, 199, 200]) {
+    const pool = makePool(size);
+    assert.doesNotThrow(() => rerankCandidates(pool, makeQuestionContext(), R1), `pool of size ${size} must be accepted`);
+    const out = rerankCandidates(pool, makeQuestionContext(), R1);
+    assert.equal(out.length, TOP_K);
+  }
+  const oversized = makePool(201);
+  assert.throws(() => rerankCandidates(oversized, makeQuestionContext(), R1), RangeError, "pool of size 201 must be rejected");
+});
+
+test("rerankCandidates: scores every candidate in a 200-wide pool before truncating -- no pre-scoring cut to 100", () => {
+  const pool = makePool(200); // candidates 0..99: both legs; 100..199: dense-only tail
+  // makePool's own index-0 candidate also happens to carry dense rank=1
+  // (the best possible dense feature value) -- neutralize it so the
+  // planted tail winner below is the UNIQUE top dense-rank candidate,
+  // rather than tying with index 0 and being decided by tie-break instead
+  // of by the dense feature this test is actually exercising.
+  pool[0] = { ...pool[0], scores: { ...pool[0].scores, dense: { score: 0.1, rank: 50 } } };
+  // Plant a dense-only tail candidate (index 150, well past any 100-item
+  // pre-truncation) that should win outright under a dense-heavy config.
+  pool[150] = makeCandidate({
+    chunk_id: "chunk_tail_winner_000000000000",
+    scores: { bm25: null, dense: { score: 0.999, rank: 1 }, original_a_rrf: null, wide_rrf: { score: 0.05, rank: 1 } },
+    in_original_a_top20: false,
+    bm25_top100: false,
+    dense_top100: true,
+  });
+  const denseHeavy = { config_id: "dense_heavy_test", weights: { dense: 1 } };
+  const out = rerankCandidates(pool, makeQuestionContext(), denseHeavy);
+  assert.equal(out[0].chunk_id, "chunk_tail_winner_000000000000", "a candidate beyond index 100 must still be reachable for rank 1 -- proves the full 200-candidate pool was scored, not truncated to 100 first");
+});
+
+test("rerankCandidates: rejects a candidate with neither bm25_top100 nor dense_top100 set", () => {
+  const orphan = makeCandidate({ chunk_id: "chunk_orphan_00000000000000000", bm25_top100: false, dense_top100: false });
+  assert.throws(() => rerankCandidates([orphan], makeQuestionContext(), R1), RangeError);
+});
+
+test("rerankCandidates: accepts a candidate found by only one leg (the other flag false)", () => {
+  const bm25OnlyFlagged = makeCandidate({ chunk_id: "chunk_flagbm25_0000000000000000", bm25_top100: true, dense_top100: false });
+  const denseOnlyFlagged = makeCandidate({ chunk_id: "chunk_flagdense_000000000000000", bm25_top100: false, dense_top100: true });
+  assert.doesNotThrow(() => rerankCandidates([bm25OnlyFlagged, denseOnlyFlagged], makeQuestionContext(), R1));
+});
+
+test("rerankCandidates: validates BM25/dense rank range (1-100 or null), fail-closed", () => {
+  for (const badRank of [0, -1, 101, 1.5, "3", NaN, Infinity]) {
+    const bad = makeCandidate({ scores: { bm25: { score: 1, rank: badRank }, dense: null, original_a_rrf: null, wide_rrf: null } });
+    assert.throws(() => rerankCandidates([bad], makeQuestionContext(), R1), RangeError, `bm25 rank ${badRank} must be rejected`);
+    const badDense = makeCandidate({ scores: { bm25: null, dense: { score: 1, rank: badRank }, original_a_rrf: null, wide_rrf: null } });
+    assert.throws(() => rerankCandidates([badDense], makeQuestionContext(), R1), RangeError, `dense rank ${badRank} must be rejected`);
+  }
+  for (const okRank of [1, 50, 100, null]) {
+    const ok = makeCandidate({ scores: { bm25: { score: 1, rank: okRank }, dense: { score: 1, rank: okRank }, original_a_rrf: null, wide_rrf: null } });
+    assert.doesNotThrow(() => rerankCandidates([ok], makeQuestionContext(), R1), `bm25/dense rank ${okRank} must be accepted`);
+  }
+});
+
+test("rerankCandidates: validates original-A rank range (1-20 or null), fail-closed", () => {
+  for (const badRank of [0, -1, 21, 100, 2.5]) {
+    const bad = makeCandidate({ scores: { bm25: null, dense: null, original_a_rrf: { score: 1, rank: badRank }, wide_rrf: null } });
+    assert.throws(() => rerankCandidates([bad], makeQuestionContext(), R1), RangeError, `original_a_rrf rank ${badRank} must be rejected`);
+  }
+  for (const okRank of [1, 10, 20, null]) {
+    const ok = makeCandidate({ scores: { bm25: null, dense: null, original_a_rrf: okRank === null ? null : { score: 1, rank: okRank }, wide_rrf: null } });
+    assert.doesNotThrow(() => rerankCandidates([ok], makeQuestionContext(), R1), `original_a_rrf rank ${okRank} must be accepted`);
+  }
 });
 
 test("rerankCandidates: does not mutate input candidate objects", () => {
@@ -183,6 +262,8 @@ test("rerankCandidates: candidates with missing/sparse fields are scored, never 
     is_table: null,
     locator_status: null,
     scores: { bm25: null, dense: { score: 0.5, rank: 3 }, original_a_rrf: null, wide_rrf: { score: 0.01, rank: 10 } },
+    bm25_top100: false,
+    dense_top100: true,
   });
   const pool = [sparse, ...makePool(3)];
   const out = rerankCandidates(pool, makeQuestionContext(), R1);
@@ -199,10 +280,14 @@ test("rerankCandidates: BM25-only and dense-only candidates are both handled wit
   const bm25Only = makeCandidate({
     chunk_id: "chunk_bm25only_000000000000000",
     scores: { bm25: { score: 40, rank: 1 }, dense: null, original_a_rrf: null, wide_rrf: { score: 0.016, rank: 1 } },
+    bm25_top100: true,
+    dense_top100: false,
   });
   const denseOnly = makeCandidate({
     chunk_id: "chunk_denseonly_00000000000000",
     scores: { bm25: null, dense: { score: 0.9, rank: 1 }, original_a_rrf: null, wide_rrf: { score: 0.016, rank: 2 } },
+    bm25_top100: false,
+    dense_top100: true,
   });
   const out = rerankCandidates([bm25Only, denseOnly], makeQuestionContext(), R1);
   assert.equal(out.length, 2);

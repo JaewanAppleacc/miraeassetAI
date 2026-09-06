@@ -19,10 +19,31 @@
 import { extractFeatures, FEATURE_KEYS } from "./a4-reranker-features.mjs";
 
 export const TOP_K = 20;
-export const MAX_POOL_SIZE = 100;
+// The A4 wide pool is BM25 top-100 UNION dense top-100, deduplicated by
+// chunk_id -- up to 200 distinct candidates, not 100. Frozen Arm A's
+// original top-20 is itself a subset of that same union (every one of
+// its members already appears in the BM25 and/or dense top-100 legs), so
+// it is never counted as 20 additional candidates on top of the 200.
+export const MAX_POOL_SIZE = 200;
+export const BM25_DENSE_LEG_MAX_RANK = 100;
+export const ORIGINAL_A_MAX_RANK = 20;
 
 function isFiniteNumber(value) {
   return typeof value === "number" && Number.isFinite(value);
+}
+
+function isPositiveInteger(value) {
+  return Number.isInteger(value) && value >= 1;
+}
+
+// rank: null/undefined means "not present in this leg" (a legitimate,
+// meaningful absence -- see a4-reranker-features.mjs's own header) and is
+// always allowed. A present rank must be an integer in [1, maxRank].
+function assertRankRange(rank, maxRank, label) {
+  if (rank === null || rank === undefined) return;
+  if (!isPositiveInteger(rank) || rank > maxRank) {
+    throw new RangeError(`${label} must be an integer in [1, ${maxRank}] or null (got ${JSON.stringify(rank)})`);
+  }
 }
 
 // Returns a list of human-readable problems; empty means valid. Never
@@ -90,10 +111,22 @@ function compareScored(a, b) {
   return 0;
 }
 
+// Every candidate in the wide pool must be traceable to at least one of
+// the two source legs (BM25 top-100 or dense top-100) -- a candidate with
+// neither flag set could not have come from the pre-registered union
+// contract and is rejected rather than silently accepted.
+function assertPoolMembership(candidate) {
+  if (candidate.bm25_top100 !== true && candidate.dense_top100 !== true) {
+    throw new RangeError(
+      `candidate ${candidate.chunk_id} has neither bm25_top100=true nor dense_top100=true -- every wide-pool candidate must come from at least one source leg`,
+    );
+  }
+}
+
 function assertValidPool(pool) {
   if (!Array.isArray(pool)) throw new TypeError("pool must be an array");
   if (pool.length > MAX_POOL_SIZE) {
-    throw new RangeError(`pool has ${pool.length} candidates, exceeding the pre-registered top-${MAX_POOL_SIZE} ceiling -- this engine never searches beyond its input`);
+    throw new RangeError(`pool has ${pool.length} candidates, exceeding the pre-registered top-${MAX_POOL_SIZE} (BM25 top-100 UNION dense top-100) ceiling -- this engine never searches beyond its input`);
   }
   const seen = new Set();
   for (const candidate of pool) {
@@ -102,10 +135,19 @@ function assertValidPool(pool) {
     }
     if (seen.has(candidate.chunk_id)) throw new RangeError(`duplicate chunk_id in pool: ${candidate.chunk_id}`);
     seen.add(candidate.chunk_id);
+    assertPoolMembership(candidate);
+    const scores = candidate.scores ?? {};
+    assertRankRange(scores.bm25?.rank, BM25_DENSE_LEG_MAX_RANK, `candidate ${candidate.chunk_id}: scores.bm25.rank`);
+    assertRankRange(scores.dense?.rank, BM25_DENSE_LEG_MAX_RANK, `candidate ${candidate.chunk_id}: scores.dense.rank`);
+    assertRankRange(scores.original_a_rrf?.rank, ORIGINAL_A_MAX_RANK, `candidate ${candidate.chunk_id}: scores.original_a_rrf.rank`);
   }
 }
 
-// pool: RerankerCandidate[] (<=100, the pre-registered wide-pool ceiling).
+// pool: RerankerCandidate[] (<=200, the pre-registered wide-pool ceiling --
+// BM25 top-100 UNION dense top-100, deduplicated by chunk_id). Every
+// candidate in `pool` is scored, in full, before any truncation -- there
+// is no pre-scoring cut to 100; only the FINAL sort is truncated to
+// TOP_K=20.
 // questionContext: RerankerQuestionContext (never Gold).
 // config: one pre-registered entry from a4-reranker-configs.v1.json.
 //
