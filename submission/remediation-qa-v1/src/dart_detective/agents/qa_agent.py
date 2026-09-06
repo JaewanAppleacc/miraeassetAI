@@ -1321,7 +1321,7 @@ def assemble_item_answer(items: Sequence[str],
     return render_item_sentence(items, by)
 
 
-# ---------- 3-1. 대량보유 서식 파서 배선 (docs/plans/2026-09-05-holding-parser.md) ----------
+# ---------- 3-1. 대량보유 서식 파서 배선 ----------
 
 def _holding_parse(question: str, state: AgentState, docs_by_id: Mapping[str, dict],
                    ) -> tuple["calculator.HoldingParseResult | None", frozenset[str]]:
@@ -1637,7 +1637,7 @@ def _llm_answer(llm: Any, user: str,
 
 # ---------- 코퍼스 존재 질문 ----------
 # "X의 주요사항보고서가 현재 코퍼스에 포함되어 있는가?" — 값을 찾는 질문이 아니라
-# 문서 유무를 묻는다. Phase1 DEV_TUNE 실측: 이 유형 5문항 중 4문항에서 같은 회사의
+# 문서 유무를 묻는다. 실측: 이 유형 5문항 중 4문항에서 같은 회사의
 # 다른 공시 발췌를 나열해 버렸다. 문서 인덱스만 세면 결정론으로 답이 난다.
 _EXISTENCE_RE = re.compile(
     r"(?:코퍼스|스냅샷|corpus)[^?？]{0,80}?(?:포함|존재|들어)"
@@ -1908,8 +1908,8 @@ def answer_question(question: str, retriever: CorpusRetriever, *,
                      else frozenset({12}) if annual_only else frozenset()),
         prefer_annual=(not same_period and not period_months(question)),
         bind_days=item_days, prefer_doc=item_doc_resolved)
-    # 요구 슬롯이 다 안 잡혔으면 폭을 한 번 넓혀 재검색·재매칭한다(결정론·1회 한정 — 팀원
-    # 검수 브랜치 review/qa-649d1cd-daeun 반영). 채움이 **늘 때만** 채택한다(잡음 채택 금지).
+    # 요구 슬롯이 다 안 잡혔으면 폭을 한 번 넓혀 재검색·재매칭한다(결정론·1회 한정 — 교차 검수
+    # 반영). 채움이 **늘 때만** 채택한다(잡음 채택 금지).
     # 호출자가 k를 고정했으면 확장하지 않는다(실험 재현성 — 러너가 폭을 통제한다).
     missing = unfilled_slots(state.slots, state.evidence_matches)
     if missing and k is None and state.retrieval_results and expanded_retrieval_enabled():

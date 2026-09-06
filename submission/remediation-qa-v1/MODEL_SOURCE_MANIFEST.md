@@ -15,12 +15,12 @@ A later commit on the same branch, `16289e2a516da98d9badec01a63a2da698157b53`
 model. That file is evaluation output and is intentionally **not** part of this package;
 this manifest pins the runtime source commit that precedes it.
 
-## Runtime files — git blob SHA-1 at b5f9443f
+## 런타임 파일 — 패키지 사본의 git blob SHA-1
 
-Every path below was copied byte-for-byte from the commit above. The hash is
-`git hash-object`'s blob SHA-1 (not this package's own SHA256SUMS, which hashes the
-copies as they sit in this package — both should match; SHA256SUMS is the
-independent, algorithm-different cross-check).
+아래 파일들은 위 커밋에서 복사한 뒤, 제출용 주석 정리(주석 한국어화·내부 작업 흔적
+제거)만 적용했다. 동작 코드는 수정하지 않았다. 해시는 이 패키지에 실제 들어 있는 사본의
+git blob SHA-1(`git hash-object`)이며, SHA256SUMS는 같은 사본에 대한 알고리즘이 다른
+독립 교차검증이다.
 
 ```
 e69de29bb2d1d6434b8b29ae775ad8c2e48c5391  src/dart_corpus/__init__.py
@@ -30,59 +30,59 @@ fa72873b789f61107aa14538f631eddc8bb9230e  src/dart_corpus/retrieval/__init__.py
 3e8591130447ff646faaad6f31b68e7ce8ace0c3  src/dart_corpus/retrieval/corp_dictionary.py
 0f611bdc6109762d0a9d2478369e2ad43275e56d  src/dart_corpus/retrieval/lexical.py
 96fa7ede9a81d3191124ee4f2320a5ce43bebf0e  src/dart_corpus/retrieval/node_store.py
-7f9ffaea654838b178f41dd646d89e98d9037a20  src/dart_corpus/retrieval/segments.py
+70d7eaeffc095fe36869e3a8913a3188fa6c7dd2  src/dart_corpus/retrieval/segments.py
 c541e55facf4c6a17e7b582adf39141869fc82d2  src/dart_detective/__init__.py
 74c28b4933449b45defe92e13760551814401a9e  src/dart_detective/agents/__init__.py
-89c9711e15b0be21860892c0fbb5359265203a76  src/dart_detective/agents/calculator.py
+b8ec0cd4c74524871058a658652b6724820d558d  src/dart_detective/agents/calculator.py
 568c979b00b00efd98cb7a9b366c878c309fe1a6  src/dart_detective/agents/confidence.py
-040f3f1206bfe51fe6babf4f55bb2c87d15fc578  src/dart_detective/agents/qa_agent.py
-e4183cf2ad78ca81258a12bf7b3452c50f9484b7  src/dart_detective/agents/tables.py
+04276ad1d358a56e67004ac1ab72a53e1a6839cf  src/dart_detective/agents/qa_agent.py
+dc4727ed1ba4f3131d9394b157dfe14eb76846bf  src/dart_detective/agents/tables.py
 20509d60cd2586824a884cf904fd9e1ea6d54654  src/dart_detective/agents/validator.py
-8a9c38f1a4d8a08a434577e4859c1cdfa8a27b5e  src/dart_detective/answer_api.py
-8bd202f760668bb96b884464eaa7f34ece3e609c  src/dart_detective/answer_wire.py
-9cabe334c393cbbba0f1cdc805094a25de73ef29  src/dart_detective/arm_a4_a3_live_adapter.py
-86d487766f16095477b38577b1b5ab4c872b9972  src/dart_detective/arm_a4_a3_live_worker_client.py
-e6296591219c2f53130aff715fabdfe2eda4ee64  src/dart_detective/arm_a4_a3_remediation_live_adapter.py
-e7f3312e15a151ac041e99008254a58cead6ac70  src/dart_detective/arm_a4_a3_remediation_live_worker_client.py
-277eb1195f8a98c9d98637316431ce974178c911  src/dart_detective/arm_a_adapter.py
-8fa76b1a4705c93828e92e85eeb52e519053cb12  src/dart_detective/arm_a_live_adapter.py
-877915e7348bd6928b18d65f9f7022c5dd72dfdc  src/dart_detective/arm_a_live_worker_client.py
-9c44ac112612d4b7f849d15e1eb91b44b6eec5e0  src/dart_detective/arm_a_serving_bridge.py
+4bcdbcb94a98b51b9ee68106aa8dc4af2807afa3  src/dart_detective/answer_api.py
+9689bbf8af5c11bc4444b194851aeee67d2ea5b7  src/dart_detective/answer_wire.py
+3b24042b37c744283274c688f8a9d888fc111259  src/dart_detective/arm_a4_a3_live_adapter.py
+2a473e18ed0d8a0b4e4a0f581d22ce8067a33f61  src/dart_detective/arm_a4_a3_live_worker_client.py
+d11d9113271875f6d94d15bc7a88fc939076fd56  src/dart_detective/arm_a4_a3_remediation_live_adapter.py
+91919ef02846b53e5b6bd4b027cbf99032a53bd0  src/dart_detective/arm_a4_a3_remediation_live_worker_client.py
+1b81f37b5eafeb6337877094d69f47235cda8467  src/dart_detective/arm_a_adapter.py
+baaf1787c844f94a38ab1915802ba3b7b9cc473a  src/dart_detective/arm_a_live_adapter.py
+d2348c0be1a8adbc8ee499c12913f7b0534700b0  src/dart_detective/arm_a_live_worker_client.py
+1199d007c22fd8983e8e2b7c6a12d15aeeaa3251  src/dart_detective/arm_a_serving_bridge.py
 a370de16b104c54537a1891f7442b591b4f4aa76  src/dart_detective/corpus_retriever.py
 1471e845b3b5dc7132bf443736bc17c48c28f55c  src/dart_detective/fallback.py
-71bbd063ae94729a2167f52e5c2ae5740466cbf7  src/dart_detective/grounded_answer.py
+e69dcc02c1b45724d114f88c53257fe5050a7599  src/dart_detective/grounded_answer.py
 0e78565a4518f658c4279234d7bb68c99b47683c  src/dart_detective/llm.py
-142f99346a889a6c3113c6719cb960b8cc46dcb0  src/dart_detective/ops_service.py
-9b65ac6a04a6cf1bcba4f997aac3245a9de01e16  src/dart_detective/policy_gate.py
-64ac500e340bc53f44d2c09f710b7ca81e382bec  src/dart_detective/retriever_adapter.py
+8019667d3717e469e06cef9d8d004f80406254f0  src/dart_detective/ops_service.py
+d2d1b69e996803601ecca01618c09d55dc83da17  src/dart_detective/policy_gate.py
+0d213fd78dc72c7a06e08d549c131316380dd08b  src/dart_detective/retriever_adapter.py
 d1a66506523153a1e60ccb2599fbe28d54941f92  src/dart_detective/routing.py
-363f46594f45c964c921b2c04827eba250f44f0b  scripts/arm_a4_a3_remediation_live_worker.mjs
-5921552f20951d0fa22a3f444295dc61387332b0  domain/agent-comparison/chunking-comparison/bm25.mjs
-7e85fba4b801a44f1b6be1520a83989bb6134bc4  domain/agent-comparison/chunking-comparison/rrf.mjs
-7dc7ce510e8c399c2de206870fb479ca1e9a506a  domain/agent-comparison/four-arm-ac/a3-evidence-contradiction-guard.mjs
-eec7643c8792b1706df73c3678b2b0133e5700e1  domain/agent-comparison/four-arm-ac/a4-a3-remediation-candidate-legs.mjs
-8e7d85348b5401623cf7fabd8e812035a56befdb  domain/agent-comparison/four-arm-ac/a4-a3-remediation-retrieval-pipeline.mjs
-a0fa3c8a30321677c6769ef3e9f3aed741cbcf7a  domain/agent-comparison/four-arm-ac/a4-a3-retrieval-pipeline.mjs
+35bcd3d0c8536fa92ad3ead896c4888657aa1023  scripts/arm_a4_a3_remediation_live_worker.mjs
+eabcc82822ec3f6fc74937b2590d6af46f370f57  domain/agent-comparison/chunking-comparison/bm25.mjs
+46d7e7ccb769331fd1b80f15c14c085fabf1d8c4  domain/agent-comparison/chunking-comparison/rrf.mjs
+601c0470b1e40d6e01932c776b13008e75ecb815  domain/agent-comparison/four-arm-ac/a3-evidence-contradiction-guard.mjs
+b96e9a21eaafe6d2efd8e584f04432f2a6ea6ad8  domain/agent-comparison/four-arm-ac/a4-a3-remediation-candidate-legs.mjs
+61c8e204ca5641b2ac4a12b646d14a6fe1f8c6c5  domain/agent-comparison/four-arm-ac/a4-a3-remediation-retrieval-pipeline.mjs
+7e8fc1bc9aba6edd4dd2669ec1fe2809a56788fd  domain/agent-comparison/four-arm-ac/a4-a3-retrieval-pipeline.mjs
 ded8ac0535f2958fb1357b336f0348a32dada03a  domain/agent-comparison/four-arm-ac/a4-reranker-configs.v1.json
-bb7e735d6444fe79fdc22b2e1a6d3ad97684b317  domain/agent-comparison/four-arm-ac/a4-reranker-engine.mjs
-205fda1c2760b79bb408bf169a6dff7d857c45b5  domain/agent-comparison/four-arm-ac/a4-reranker-features.mjs
-fedcfcbbafca5cdc873b5c32ec691419b144d4d7  domain/agent-comparison/four-arm-ac/a4-wide-candidate-pool.mjs
-4b62a723201ac7da71f72509de3a6fa0aa4a6fde  domain/agent-comparison/four-arm-ac/arm-retriever-adapter.mjs
-31acad25f5b4944dc4c07efc3af786e6e3c7c7c1  domain/agent-comparison/four-arm-ac/conditions-fixture.mjs
-91cb4749d7093b6d6fa4b7a16f6aa1248ac7908e  domain/agent-comparison/four-arm-ac/four-arm-conditions-to-filter-mapper.mjs
-8d2eec153a2434851dcde5728f2ed4164a011eee  domain/agent-comparison/four-arm-ac/four-arm-retrieval-policy.mjs
-5a313e5932fc934cad182883811ce63c48eeed84  domain/agent-comparison/four-arm-ac/locator-provenance.mjs
-9fa0fc1d709a8034d5d4621dcb3e2a19d94e5f31  domain/agent-comparison/four-arm-ac/qa-condition-mapper.mjs
-4d1bc42183307b540e37ca38738914d0600450b4  domain/agent-comparison/retrieval/contracts.mjs
-0131ccda37a7a621b6c70a5ce3e89e7d8d4e9eeb  domain/agent-comparison/retrieval/embedding-adapter.mjs
-7818dbb5047414c6cd396e424fef7efde2bb86bb  domain/agent-comparison/retrieval/fake-deterministic-embedding-adapter.mjs
-a9dca408fd88b7fe13d0590d82591d4a10d0db83  domain/agent-comparison/retrieval/fixed-kure-bm25-index.mjs
-24d7c4c31273a6c5f0dc1275a0f9798d87ad9d2c  domain/agent-comparison/retrieval/fixed-kure-hybrid-retriever-adapter.mjs
+1e5fa04e6e34f6cc4ec5d65892d1651e2af186da  domain/agent-comparison/four-arm-ac/a4-reranker-engine.mjs
+fcb5c5e167788e9ef97068b9fe62f0f7061f53e5  domain/agent-comparison/four-arm-ac/a4-reranker-features.mjs
+38d8fbf9163c71e10ebe4faed568dc38b5cd0e10  domain/agent-comparison/four-arm-ac/a4-wide-candidate-pool.mjs
+bd57d2b7d0cca3bd5aa515d012b58c2e3224761f  domain/agent-comparison/four-arm-ac/arm-retriever-adapter.mjs
+6137513a0801d7412dd541fd27923ed00c743424  domain/agent-comparison/four-arm-ac/conditions-fixture.mjs
+c1edb64c7fd2203344595b1244f47327bed86e00  domain/agent-comparison/four-arm-ac/four-arm-conditions-to-filter-mapper.mjs
+109df5350e5cb64ca4605b51121dd15c343d43c1  domain/agent-comparison/four-arm-ac/four-arm-retrieval-policy.mjs
+2e7fc350dd9465cca837b96b12cde8fa5423a407  domain/agent-comparison/four-arm-ac/locator-provenance.mjs
+01dcc328ef845be79519ce883a5c87c4f2975cc6  domain/agent-comparison/four-arm-ac/qa-condition-mapper.mjs
+4ffafcb3534231c0c03f93a5d09be69ce66dadf6  domain/agent-comparison/retrieval/contracts.mjs
+2bea635b57e6f7d6e85c2f2dd063b9b698236168  domain/agent-comparison/retrieval/embedding-adapter.mjs
+65a1d81a988c16587dfac5dda4db4e942241e25f  domain/agent-comparison/retrieval/fake-deterministic-embedding-adapter.mjs
+f6f9c5aeb7dfc074d434d46118b0f6a9ab1bd809  domain/agent-comparison/retrieval/fixed-kure-bm25-index.mjs
+682173ee8af6e1ff79369ff47610fbb7fa140f04  domain/agent-comparison/retrieval/fixed-kure-hybrid-retriever-adapter.mjs
 496fb4d6ad7e743d6e27b1080aabe88d8411a820  domain/chunking/chunker.mjs
-497484f50b58cb3b0070331f07191ec82165bb79  domain/contracts.mjs
-0251d4cea991d76c4d074494579b96c01c00c159  domain/postgres/reference-vector-retrieval-repository.mjs
-41e03bcf482ff1c0bc21bcc548ca75e9a62b02f0  domain/retrieval/metadata-filter.mjs
-ae480010b7cfc6da65d3a10b3406ad8f59fd62b8  domain/runtime/abortable.mjs
+08d111d697b6e87ba5cb0fa66c567a6f0c5fa9cc  domain/contracts.mjs
+b0985ae9182b239e8125c676d289108c8e52cdff  domain/postgres/reference-vector-retrieval-repository.mjs
+79f2f9a8a4aef99def075a9731246fe71ab8d41f  domain/retrieval/metadata-filter.mjs
+052fae8223b5c7199fc86982f5425aa8bae4bdcc  domain/runtime/abortable.mjs
 1d643168e6997580fc8b54fae35bc35505c01428  package.json
 fb9377e22581be42845ad5759f933167e06adac6  package-lock.json
 6ddd97dad040f27dbb2026937cf85b8f9eeb43aa  data/corpus/manifest.jsonl

@@ -1,14 +1,14 @@
-"""arm_a_live_worker_client — Python <-> persistent Node.js worker transport for live Arm A search.
+"""arm_a_live_worker_client — 실시간 Arm A 검색을 위한 Python <-> 상주 Node.js 워커 전송 계층.
 
-Turn A-PLUS-QA-LIVE-RETRIEVER-V1. Spawns `scripts/arm_a_live_worker.mjs` **once** and keeps it
-alive for the process lifetime (no HTTP server, no per-question process/BM25-index restart — the
-worker itself owns one long-lived Postgres client + one loaded BM25 index + one embedding
-adapter, per its own module docstring). Talks to it over stdin/stdout, one JSON object per line
-each way; the worker's stderr is forwarded to this process's logger, never parsed as protocol.
+`scripts/arm_a_live_worker.mjs`를 **한 번만** 띄워 프로세스 수명 동안 유지한다(HTTP 서버 없음,
+질문마다 프로세스나 BM25 색인을 다시 올리지 않음 — 워커가 장수명 Postgres 클라이언트 1개 +
+적재된 BM25 색인 1개 + 임베딩 어댑터 1개를 소유한다. 해당 파일 docstring 참조). 통신은
+stdin/stdout으로 줄당 JSON 객체 하나씩이며, 워커의 stderr는 이 프로세스의 로거로 전달될 뿐
+프로토콜로 해석하지 않는다.
 
-This module does no retrieval logic of its own — it only transports requests/responses and turns
-the worker's own `error.code` into the matching typed exception. All BM25/dense/RRF/metadata-filter
-work happens inside the worker via Arm A's own unmodified code.
+이 모듈은 자체 검색 로직이 없다 — 요청/응답을 전송하고 워커의 `error.code`를 대응하는 typed
+예외로 바꾸는 일만 한다. BM25/dense/RRF/메타데이터 필터는 전부 워커 안에서 Arm A의 무수정
+코드로 수행된다.
 """
 from __future__ import annotations
 

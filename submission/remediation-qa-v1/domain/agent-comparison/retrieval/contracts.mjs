@@ -1,8 +1,6 @@
-// Turn P4: schema validator for EmbeddingConfig, self-contained the same
-// way domain/agent-comparison/contracts.mjs is (its own Ajv instance,
-// Node-only, never imported from app/). Additive and scoped entirely to
-// domain/agent-comparison/retrieval/ -- does not modify or import from the
-// root contracts.mjs.
+// EmbeddingConfig 스키마 검증기. 자체 Ajv 인스턴스를 갖는 자기완결 모듈이며
+// domain/agent-comparison/retrieval/ 범위에만 더해졌다 — 루트 contracts.mjs를 수정하거나
+// import하지 않는다.
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";

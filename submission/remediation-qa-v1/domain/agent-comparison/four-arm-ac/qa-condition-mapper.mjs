@@ -1,44 +1,24 @@
-// Turn A-PLUS-QA-CONDITION-MAPPING-V1: bridges the shape mismatch between what QA actually
-// sends over the wire to the A worker(s) and what those workers' own condition-to-filter
-// mapping expected.
+// QA가 실제로 워커에 보내는 조건 모양과, 워커의 조건->필터 사상이 기대하던 모양의
+// 불일치를 잇는 다리.
 //
-// The bug this fixes: QA's own condition object is `QueryConditions.as_dict()`
-// (src/dart_corpus/retrieval/conditions.py) -- `{corps, doc_groups, year_months, years,
-// periodic_subtypes, exchange_subtypes, major_labels, correction, wants_latest,
-// candidate_terms}`, the SAME shape as the official devtune101_conditions.v2.jsonl artifact's
-// own `conditions` field (data/eval/devtune101_conditions.v2.jsonl). Both scripts/arm_a_live_
-// worker.mjs's own toArmAConditions() and scripts/arm_a4_a3_live_worker.mjs's own
-// toFourArmConditions() instead only ever read a DIFFERENT, minimal wire shape --
-// `{corp_code, document_group, document_subtype, period}` (singular, at most one value each)
-// -- so every field QA actually sends goes unrecognized, every worker-side mapping produces an
-// EMPTY filter object, and metadata filtering silently no-ops into an unconstrained full-corpus
-// search. This module is the fix: a single, pure, format-detecting reshaper used by both
-// workers, so QA's real shape (and the old minimal wire shape, for backward compatibility) both
-// resolve into a real, non-empty metadata filter.
+// 고친 버그: QA의 조건 객체는 QueryConditions.as_dict() 모양({corps, doc_groups,
+// year_months, years, periodic_subtypes, exchange_subtypes, major_labels, correction,
+// wants_latest, candidate_terms})인데, 워커 쪽 사상은 최소 wire 모양({corp_code,
+// document_group, document_subtype, period} — 단수 필드)만 읽어서 QA가 보내는 모든 필드가
+// 무시되고, 메타데이터 필터가 조용히 빈 객체(무제약 전체 검색)로 무력화됐다. 이 모듈은 두
+// 모양을 자동 감지해 하나의 공식 조건 모양으로 정규화하는, 양쪽 워커가 공유하는 순수
+// 재성형기다.
 //
-// Purity contract (see qa-condition-mapper.test.mjs): every exported function here is
-// synchronous, allocates no new state beyond its return value, performs no I/O (the one
-// filesystem read a caller needs -- data/corpus/universe.csv -- is the CALLER's job;
-// buildNameToCorpCodeIndexFromUniverseCsv only ever receives the already-read text), never
-// mutates its input, and is deterministic (same input -> same output, always). No DB, no Gold,
-// no LLM call, no network call happens anywhere in this file.
+// 순수성 계약: 모든 export 함수는 동기이고, I/O가 없으며(universe.csv 읽기는 호출자 몫 —
+// 이미 읽은 텍스트만 받는다), 입력을 변형하지 않고, 결정론적이다. DB·평가 데이터·LLM·
+// 네트워크 호출이 이 파일 어디에도 없다.
 //
-// This file deliberately does NOT reimplement corp-name resolution, doc-group-aware temporal
-// derivation, or doc_subtype derivation -- domain/agent-comparison/four-arm-ac/four-arm-
-// conditions-to-filter-mapper.mjs's own mapOfficialConditionToFilterInput() already does all of
-// that (correctly, with extensive DB-verified rationale in its own comments) for the "official
-// conditions" shape. The only genuinely new logic added here is: (1) detecting/normalizing BOTH
-// the QA shape and the old minimal wire shape into that one official-conditions shape, without
-// losing multi-value company/doc-group/period lists the old minimal shape could never carry in
-// the first place, (2) distinguishing "field absent" from "field present but empty" so a
-// caller's silence is never confused with an explicit empty answer, (3) validating doc_groups
-// against this corpus's actual 4-group taxonomy (periodic/exchange/holding/major -- verified
-// against data/corpus/manifest.jsonl's own doc_group values) and refusing (never silently
-// widening to an unconstrained search) when a value falls outside it, and (4) a from-CSV
-// corp-name index built from this repository's own already-verified data/corpus/universe.csv
-// (the same 70-company, SHA-checked-against-corpus_snapshot.json universe
-// src/dart_corpus/retrieval/corp_dictionary.py already trusts for the reverse direction --
-// question text -> corp_name).
+// 회사명 해석·문서군별 기간 유도·doc_subtype 유도는 재구현하지 않고
+// four-arm-conditions-to-filter-mapper.mjs의 mapOfficialConditionToFilterInput()을 그대로
+// 쓴다. 새 로직은 (1) 두 입력 모양의 감지·정규화(다중 값 목록 보존), (2) "필드 없음"과
+// "필드는 있으나 빈 값"의 구분, (3) doc_groups를 이 코퍼스의 실제 4개 문서군(periodic/
+// exchange/holding/major, manifest.jsonl 대조 검증)으로 검증하고 벗어나면 무제약 확장 대신
+// 거부, (4) 검증된 data/corpus/universe.csv(70개 기업)로 만드는 회사명 색인뿐이다.
 import {
   mapOfficialConditionToFilterInput,
   UnresolvedCompanyNameError,
@@ -292,7 +272,7 @@ export function mapQaOrLegacyConditionsToFourArmConditions(rawConditions, { name
 // one four-arm-conditions-to-filter-mapper.mjs's own comments describe belongs to a *different*
 // sibling repository's release pipeline and is not vendored here -- see
 // config/a4-a3-runtime-source-manifest.v1.json's own file list). What this repo DOES already
-// have, already verified (CLAUDE.md: "SHA가 corpus_snapshot.json 기록값과 일치 검증됨"), and
+// have, already verified (SHA가 corpus_snapshot.json 기록값과 일치 검증됨), and
 // already trusted for the reverse direction (src/dart_corpus/retrieval/corp_dictionary.py's own
 // CorpDictionary, built from this same file, is what produces QA's `corps` NAME values in the
 // first place) is data/corpus/universe.csv -- the 70-company universe for this exact corpus. A

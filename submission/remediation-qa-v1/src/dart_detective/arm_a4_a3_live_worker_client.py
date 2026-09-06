@@ -1,17 +1,12 @@
-"""arm_a4_a3_live_worker_client — Python <-> persistent Node.js worker transport for the
-DEV_TUNE-101-selected ARM_A4_A3_LIVE backend (A4 wide pool + R4_wide_rrf_centric reranker
-+ A3 contradiction guard, live).
+"""arm_a4_a3_live_worker_client — ARM_A4_A3_LIVE 백엔드(A4 광역 풀 + R4_wide_rrf_centric 재정렬
++ A3 모순 가드, 실시간)를 위한 Python <-> 상주 Node.js 워커 전송 계층.
 
-Turn A4-A3-PLUS-QA-FINAL-INTEGRATION-V1, made self-contained in
-A4-A3-PLUS-QA-SELF-CONTAINED-AND-JUDGE-V1 (the worker no longer needs an external
-ARM_A4_A3_LIVE_IMPL_ROOT — every four-arm-ac production module it imports is vendored
-byte-identical into this repository under domain/, see
-config/a4-a3-runtime-source-manifest.v1.json). Structurally identical to
-arm_a_live_worker_client.py (spawns `scripts/arm_a4_a3_live_worker.mjs` **once**, keeps it
-alive for the process lifetime, one request in flight at a time, respawns transparently on
-crash/timeout) — duplicated rather than parameterized because the two backends have
-different required env vars, a different worker script, and different typed error codes,
-and this turn's own prohibitions forbid touching arm_a_live_worker_client.py itself.
+워커는 외부 구현 경로 의존 없이 자기완결적이다 — import하는 four-arm-ac 프로덕션 모듈 전부가
+이 저장소의 domain/ 아래에 byte 동일하게 내장되어 있다. 구조는 arm_a_live_worker_client.py와
+동일하다(`scripts/arm_a4_a3_live_worker.mjs`를 **한 번만** 띄워 프로세스 수명 동안 유지, 동시
+요청 1건, 크래시/타임아웃 시 투명 재기동). 두 백엔드는 필수 env가 다르고 워커 스크립트가
+다르고 typed 오류 코드가 다르므로, 매개변수화 대신 복제를 택했고 기존
+arm_a_live_worker_client.py는 수정하지 않는다.
 """
 from __future__ import annotations
 

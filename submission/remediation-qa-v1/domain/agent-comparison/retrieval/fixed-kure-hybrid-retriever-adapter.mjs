@@ -1,26 +1,12 @@
-// Turn P11-F0 section J: the RetrieverAdapter that connects the P11-F0
-// Fixed-512-o64 x KURE-v1 hybrid index (BM25 + Dense + RRF) to the
-// EXISTING, UNMODIFIED domain/runtime/retriever-store.mjs contract:
-// `{ async retrieve(request, { signal }) -> RetrieverResult }`. Invents no
-// new Retriever contract -- retrieval-request.schema.json/
-// retrieval-result.schema.json (frozen) are followed exactly, and
-// retriever-store.mjs itself independently re-validates every field this
-// adapter returns before any AgentFlow ever sees it.
+// Fixed-512-o64 x KURE-v1 하이브리드 색인(BM25 + Dense + RRF)을 기존 무수정
+// retriever-store.mjs 계약({ async retrieve(request, { signal }) -> RetrieverResult })에
+// 잇는 RetrieverAdapter. 새 Retriever 계약을 발명하지 않고 고정된 요청/결과 스키마를
+// 그대로 따르며, retriever-store.mjs가 이 어댑터의 반환 필드 전부를 독립적으로 재검증한다.
 //
-// REUSED, UNMODIFIED, never copied: domain/postgres/
-// reference-vector-retrieval-repository.mjs's own searchDocumentChunksByVector
-// (the dense leg, already source_kind='DOCUMENT_CHUNK'-scoped, already
-// corp_codes/document_ids-filtered, already READY/pin/dimension-checked),
-// domain/agent-comparison/chunking-comparison/rrf.mjs's reciprocalRankFusion
-// (P10.2's own RRF_K_CONSTANT=60, RETURN_TOP_K=20 pin, threaded in by the
-// caller -- see scripts/p11f0-corpus-discovery.mjs's sibling
-// scripts/p10.2-stage2-embedding-grid.mjs for where those constants come
-// from), and fixed-kure-bm25-index.mjs's persisted BM25 index (itself
-// reusing bm25.mjs unmodified).
-//
-// AgentFlow files never see any of this -- they only ever call
-// services.retriever.resolve(request), which is retriever-store.mjs's own
-// boundary. No provider/SQL code is ever imported by a flows/*.mjs file.
+// 무수정 재사용: reference-vector-retrieval-repository.mjs의 searchDocumentChunksByVector
+// (dense leg — source_kind/필터/준비 상태·차원 검사 포함), rrf.mjs의
+// reciprocalRankFusion(RRF K=60, top-20 pin은 호출자가 주입), fixed-kure-bm25-index.mjs의
+// 영속 BM25 색인.
 import { reciprocalRankFusion } from "../chunking-comparison/rrf.mjs";
 import { bm25Search } from "./fixed-kure-bm25-index.mjs";
 import { passesMetadataFilters, fetchEligibleChunkIds } from "../../retrieval/metadata-filter.mjs";
@@ -33,7 +19,7 @@ const RRF_K_CONSTANT = 60; // P10.2's own pinned RRF constant (ibid:46)
 // follow `${document_id}/${file_id}#node=N`; reused read-only, never
 // fabricated when absent -- mirrors pgvector-retriever-adapter.mjs's own
 // buildSourceSpan exactly, generalized to also read chunk_type/
-// parent_chunk_id back out of `metadata` (this Turn's own materialization
+// parent_chunk_id back out of `metadata` (the materialization
 // choice -- 003's shared reference_retrieval_chunks table has no dedicated
 // columns for either, see reference-fixed-kure-load-session-repository.mjs's
 // materializeChunkBatch).
@@ -109,7 +95,7 @@ export function createFixedKureHybridRetrieverAdapter({
       const filters = request.metadata_filters;
       const isUnion = request.retrieval_method === "HYBRID_UNION_RRF";
 
-      // Turn AC-VFINAL-ALIGNMENT-AND-DISCOVERY, section G: metadata filter
+      // Metadata filter
       // applied to the candidate pool BEFORE ranking, on BOTH legs -- never
       // a post-hoc prune of an already-ranked top-K. fetchEligibleChunkIds
       // restricts BM25's own candidate pool via eligibleIds (bm25Search

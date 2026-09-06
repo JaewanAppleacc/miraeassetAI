@@ -1,17 +1,10 @@
-// Turn P4: read-only repository for the pgvector-backed candidate-search
-// tables added by 003_reference_vector_retrieval.sql. Mirrors
-// reference-repository.mjs's own conventions exactly: every method issues
-// a fresh, parameter-bound SELECT (no construction-time caching), a real
-// DB failure is never reduced to NOT_FOUND, an already-aborted signal
-// (or one that fires mid-query) throws RequestAbortedError, and every
-// returned value is a deep-frozen, independent copy.
+// pgvector 기반 후보 검색 테이블의 읽기 전용 저장소. 모든 메서드는 매번 매개변수
+// 바인딩된 SELECT를 새로 발행하고(생성 시 캐시 없음), 실제 DB 실패를 NOT_FOUND로 축소하지
+// 않으며, 이미 중단됐거나 질의 중 발화한 signal은 RequestAbortedError를 던지고, 반환값은
+// 전부 깊이 동결된 독립 복사본이다.
 //
-// IMPORTANT: this module NEVER claims a search hit is a verified Fact. It
-// only returns candidate rows this project's own loader already wrote
-// (reference-vector-retrieval-loader.mjs) -- whether a hit is trustworthy
-// enough to ground an answer is decided later, by
-// services.validator.validateEvidence (see
-// domain/agent-comparison/retrieval/pgvector-retriever-adapter.mjs).
+// 중요: 이 모듈은 검색 적중을 검증된 사실(Fact)로 주장하지 않는다. 적재기가 이미 써 둔
+// 후보 행을 돌려줄 뿐이며, 답변의 근거로 삼을 만한지는 하류 검증기가 나중에 판정한다.
 import { createHash } from "node:crypto";
 import { RequestAbortedError, abortReason } from "../runtime/abortable.mjs";
 import { buildEligibilityWhereClause } from "../retrieval/metadata-filter.mjs";

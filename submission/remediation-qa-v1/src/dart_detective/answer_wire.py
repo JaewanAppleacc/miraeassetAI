@@ -1,6 +1,6 @@
 """주최측 공식 `GET /answer` 계약으로 우리 AgentState를 변환한다.
 
-팀 공통 기반(최재완)이 정한 wire 계약은 **문자열 5개**뿐이다:
+팀 공통 기반이 정한 wire 계약은 **문자열 5개**뿐이다:
 
     question_id, question, retrieved_context, think_trace, answer
 
@@ -128,7 +128,6 @@ GOLD_FIELD_OF: dict[str, str] = {
 METRIC_EN: dict[str, str] = {"매출액": "revenue", "영업이익": "operating_profit"}
 UNIT_SUFFIX: dict[str, str] = {"백만원": "million_krw", "천원": "thousand_krw", "원": "krw"}
 # 코드가 계산한 값의 이름도 규칙으로 만든다. 문항별 이름을 사전에 박지 않는다 —
-# 그건 정답지를 코드에 넣는 것이다.
 DERIVED_SUFFIX: dict[str, str] = {
     "increase_rate": "change_percent",
     "difference": "diff_krw",
@@ -160,10 +159,9 @@ def _unit_of(line: str) -> str:
 
 
 def field_names_for(slot: str, line: str) -> list[str]:
-    """자리 이름에서 Gold 필드 이름을 규칙으로 만든다.
-
-    문항마다 다른 이름(crane_investment_amount 같은)은 만들지 않는다 — 그건 정답지를
-    코드에 박는 일이다. 여기서 만드는 것은 규칙으로 유도되는 이름뿐이다:
+    """
+    문항마다 다른 이름(crane_investment_amount 같은)은 만들지 않는다 
+    여기서 만드는 것은 규칙으로 유도되는 이름뿐이다:
       계약금액          -> contract_amount
       매출액_2023       -> revenue_2023 (표 단위가 백만원이면 revenue_2023_million_krw도)
     """
@@ -208,7 +206,7 @@ def looked_up_values(state: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def derived_values(state: Mapping[str, Any]) -> dict[str, Any]:
-    """코드가 계산한 값을 Gold 필드 이름으로. 값 자체는 calculator가 만든 그대로다."""
+    """코드가 계산한 값을 필드 이름으로. 값 자체는 calculator가 만든 그대로다."""
     out: dict[str, Any] = {}
     for d in state.get("derived") or []:
         for field in derived_field_names(d["metric"], d["kind"]):

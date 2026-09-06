@@ -1,21 +1,13 @@
-// Turn AC-IMPL: RetrieverAdapter for vFINAL arms A (FIXED+FULL_DENSE) and
-// C (FIXED+DENSE_OFF) -- section B's Fixed common base (corpus snapshot,
-// fixed-token-512-o64.v0.1.0 chunker output, chunk IDs/text/provenance,
-// BM25 tokenizer/index/candidate pool, final top-k) is never rebuilt here:
-// this module only WIRES already-existing, unmodified pieces --
-// domain/agent-comparison/retrieval/fixed-kure-hybrid-retriever-adapter.mjs
-// (arm A's BM25+dense+RRF path, reused as-is) and
-// domain/agent-comparison/retrieval/fixed-kure-bm25-index.mjs's persisted
-// BM25 index (the SAME index object is passed to both arms -- arm C never
-// builds a second index).
+// Arm A(FIXED+FULL_DENSE)와 C(FIXED+DENSE_OFF)의 RetrieverAdapter. 공통 기반(코퍼스
+// 스냅샷, Fixed-512 청커 출력, 청크 ID/본문/출처, BM25 토크나이저·색인·후보 풀, 최종 top-k)
+// 을 여기서 다시 만들지 않는다 — fixed-kure-hybrid-retriever-adapter.mjs(Arm A의
+// BM25+dense+RRF 경로)와 fixed-kure-bm25-index.mjs의 영속 BM25 색인(같은 색인 객체를 두
+// arm이 공유 — C가 두 번째 색인을 만들지 않음)을 무수정으로 배선만 한다.
 //
-// Arm C (DENSE_OFF) is a STRUCTURAL guarantee, not a behavioral one: its
-// constructor refuses a vectorRepository/embeddingAdapter argument, and its
-// only search code path (searchArmC below) never imports or references
-// reciprocalRankFusion, embedQuery, or searchDocumentChunksByVector --
-// there is no line of code in this file through which arm C could reach
-// any of the three, so "0 dense/embedding/RRF calls" holds even if a
-// caller tried to smuggle those dependencies in some other way.
+// Arm C(DENSE_OFF)는 구조적 보장이다: 생성자가 vectorRepository/embeddingAdapter 인자를
+// 거부하고, 유일한 검색 경로(searchArmC)는 reciprocalRankFusion·embedQuery·
+// searchDocumentChunksByVector 어느 것도 import하거나 참조하지 않는다 — 이 파일 안에 arm
+// C가 그 셋에 닿을 수 있는 코드 줄 자체가 없다.
 import { createHash } from "node:crypto";
 import { createFixedKureHybridRetrieverAdapter } from "../retrieval/fixed-kure-hybrid-retriever-adapter.mjs";
 import { bm25Search } from "../retrieval/fixed-kure-bm25-index.mjs";
@@ -49,7 +41,7 @@ function sha256Hex(text) {
   return createHash("sha256").update(text, "utf8").digest("hex");
 }
 
-// Turn AC-VFINAL-ALIGNMENT-AND-DISCOVERY, section F/G: passesMetadataFilters
+// passesMetadataFilters
 // is now the ONE shared predicate (domain/retrieval/metadata-filter.mjs)
 // arm A's BM25 leg (fixed-kure-hybrid-retriever-adapter.mjs) and arm C
 // (below) both import -- no separate copy exists here anymore. Before this
@@ -85,7 +77,7 @@ async function fetchStagingSpans(client, loadSessionId, chunkIds) {
 // RetrieverRequest/RetrieverResult schema arm A's reused hybrid adapter
 // still speaks internally; this function is the only place the two are
 // bridged, and it never mutates the frozen retrieval-result.schema.json.
-// Turn AC-LOCATOR-READY: `provenance` is additive -- every pre-existing
+// `provenance` is additive -- every pre-existing
 // field above it (node_index/row/col/locator/locator_status) keeps its
 // prior meaning and value unchanged, so this is not a breaking change to
 // the frozen Section F result-item contract. `provenance` is the full
@@ -189,7 +181,7 @@ export function createArmRetrieverAdapter({
   // BM25_TOP_K, filtered by the SAME shared passesMetadataFilters
   // predicate/fetchEligibleChunkIds prefilter arm A's BM25 leg uses.
   //
-  // Turn AC-VFINAL-ALIGNMENT-AND-DISCOVERY, section G: the metadata filter
+  // The metadata filter
   // is applied to the candidate pool BEFORE ranking (fetchEligibleChunkIds
   // -> bm25Search's eligibleIds), not as a post-hoc prune of an
   // already-ranked top-100 -- so a filter that excludes many candidates
@@ -222,7 +214,7 @@ export function createArmRetrieverAdapter({
 
     // search(question, conditions, k=20): `conditions` is the pre-computed
     // dict shape section D describes (never Gold-derived -- see
-    // conditions-fixture.mjs). Mirrors the reference interfaces.md's own
+    // conditions-fixture.mjs). Mirrors the reference contract's own
     // `search(self, question, conditions, k=20) -> list[Chunk]` signature.
     async search(question, conditions = {}, k = 20) {
       if (typeof question !== "string" || question.trim() === "") throw new TypeError("question must be a non-empty string");
@@ -237,7 +229,7 @@ export function createArmRetrieverAdapter({
     // by this load session's own persisted chunk spans; never fabricates
     // node-level original text (not persisted independently of chunk-level
     // raw_text by this loader -- see locator-provenance.mjs's header).
-    // `row`/`col` (Turn AC-LOCATOR-READY, optional, additive): when a
+    // `row`/`col` (optional, additive): when a
     // downstream late-expansion step wants to confirm a specific table
     // cell -- not just the node -- rather than only the node, pass them
     // through; verifyNodeIdentity() then fails closed (found:false) unless
@@ -305,7 +297,7 @@ export function createArmRetrieverAdapter({
          WHERE load_session_id = $1`,
         [provenanceLoadSessionId],
       );
-      // Turn AC-LOCATOR-READY: gate on `provenance_ready` (every chunk has
+      // Gate on `provenance_ready` (every chunk has
       // an interpretable, non-empty candidate set), not `all_fully_resolved`
       // (100% single-node+row). A Fixed-512 chunk legitimately spanning
       // multiple rows/nodes of the same table is expected chunker output,

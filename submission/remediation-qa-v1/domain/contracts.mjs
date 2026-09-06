@@ -69,7 +69,7 @@ export const HOLDOUT_LIFECYCLE_STATUSES = Object.freeze([
 
 // A closed vocabulary (not free text) so "does this run have a documented
 // purpose" is a structural, schema-enforceable fact — each value maps to a
-// specific decision rule in CLAUDE.md sections 11-12.
+// specific decision rule in the project design notes.
 export const RUN_PURPOSES = Object.freeze([
   "SANDBOX_EXPLORATION",
   "FLOW_SELECTION",
@@ -123,7 +123,7 @@ export const RETRIEVAL_METHODS = Object.freeze([
   "DENSE",
   "HYBRID_RRF",
   "HYBRID_RRF_RERANKER",
-  // Turn AC-VFINAL-ALIGNMENT-AND-DISCOVERY, section C: vFINAL's official
+  // vFINAL's official
   // candidate A fuses the UNION of BM25 and dense candidates (an absent
   // leg contributes 0 to RRF, never dropped from the result) -- distinct
   // from HYBRID_RRF above, whose contract (RETRIEVAL_METHOD_REQUIRED_COMPONENTS

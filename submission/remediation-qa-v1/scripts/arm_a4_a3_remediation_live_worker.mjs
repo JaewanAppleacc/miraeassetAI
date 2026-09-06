@@ -1,15 +1,11 @@
 #!/usr/bin/env node
-// Turn A4-A3-REMEDIATION-INTEGRATION-V1: persistent stdin/stdout worker for the new,
-// opt-in ARM_A4_A3_REMEDIATION_LIVE backend -- structurally IDENTICAL to
-// scripts/arm_a4_a3_live_worker.mjs (same protocol, same readiness contract, same env
-// var shape under a new ARM_A4_A3_REMEDIATION_LIVE_* prefix so the two backends never
-// share process state or configuration), duplicated rather than parameterized (matching
-// this project's own established precedent for arm_a4_a3_live_worker_client.py vs.
-// arm_a_live_worker_client.py). The ONLY functional difference: it calls
-// runQuestionPipelineRemediationAware(..., REMEDIATION_V1_POLICY) from the new
-// a4-a3-remediation-retrieval-pipeline.mjs instead of runQuestionPipeline() from the
-// original, untouched a4-a3-retrieval-pipeline.mjs. scripts/arm_a4_a3_live_worker.mjs
-// itself is never imported, executed, or modified by this file.
+// opt-in ARM_A4_A3_REMEDIATION_LIVE 백엔드의 상주 stdin/stdout 워커.
+// scripts/arm_a4_a3_live_worker.mjs와 구조 동일(같은 프로토콜, 같은 readiness 계약, 같은
+// env 모양 — 접두만 ARM_A4_A3_REMEDIATION_LIVE_*라 두 백엔드가 프로세스 상태·구성을
+// 공유하지 않는다). 유일한 기능 차이: 원본 무수정 a4-a3-retrieval-pipeline.mjs의
+// runQuestionPipeline() 대신 a4-a3-remediation-retrieval-pipeline.mjs의
+// runQuestionPipelineRemediationAware(..., REMEDIATION_V1_POLICY)를 호출한다.
+// arm_a4_a3_live_worker.mjs 자체는 import·실행·수정되지 않는다.
 import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
 import path from "node:path";

@@ -1,51 +1,24 @@
-// Turn A-RETRIEVAL-REMEDIATION-V1 (+ review round 1): an OPT-IN retrieval
-// policy for arms A/C.
+// A/C arm용 opt-in 검색 정책.
 //
-// The frozen official behaviour (the one that produced the committed
-// results/A.results.jsonl / C.results.jsonl) is `FROZEN_POLICY`, and it is
-// the DEFAULT everywhere a policy can be supplied -- a caller that never
-// mentions a policy gets the byte-identical frozen code path. Every
-// remediation below lives behind `REMEDIATION_V1_POLICY` so the two can be
-// executed side by side on the same input and compared, never overwritten.
+// 공식 frozen 동작은 FROZEN_POLICY이며 기본값이다 — 정책을 지정하지 않은 호출자는 byte
+// 동일한 기존 경로를 탄다. 개선안은 전부 REMEDIATION_V1_POLICY 뒤에 있어, 두 정책을 같은
+// 입력에서 나란히 실행·비교할 수 있고 서로를 덮어쓰지 않는다.
 //
-// What the remediation addresses (all measured on the committed A results
-// against DEV_TUNE-101, see A_RETRIEVAL_REMEDIATION_V1_HANDOFF.md):
-//   1. `correction` semantics -- the official conditions artifact's
-//      `correction` flag means "the question mentions 정정", not "exclude
-//      corrected filings". Mapping it to `is_correction=false` removed every
-//      정정 filing (1,004/4,204 documents, 24% of the corpus) from the pool
-//      on 98/101 questions (A returned 0/1,809 정정 chunks; D 170/1,940).
-//   2. extracted doc_subtype used as a HARD prefilter -- when the extractor's
-//      guess is wrong the correct filing is unreachable by BOTH legs
-//      (2 real questions returned 0 results).
-//   3. no receipt-date binding for exchange/holding/major -- 21/81
-//      date-anchored questions missed all_found@10.
-//   4. BM25 candidates with score 0 still entering RRF with a rank credit.
-//   5. `search(k)` coupling the dense candidate count and the fusion output
-//      to the output k (k=10 was not the prefix of k=20).
+// 개선이 다루는 문제(전부 실측으로 확인):
+//   1. `correction` 플래그의 의미는 "질문이 정정을 언급함"이지 "정정공시 제외"가 아니다 —
+//      이를 is_correction=false로 사상하면 코퍼스의 24%(1,004/4,204건)가 풀에서 빠진다.
+//   2. 추출된 doc_subtype을 하드 프리필터로 쓰면, 추출이 틀렸을 때 정답 공시가 양쪽 leg
+//      모두에서 도달 불가가 된다.
+//   3. 거래소/지분/주요사항 문서군에 접수일 결박이 없어 날짜 앵커 질문이 놓친다.
+//   4. BM25 0점 후보가 순위 크레딧을 갖고 RRF에 들어간다.
+//   5. search(k)가 dense 후보 수·융합 출력을 출력 k에 결합시켜, k=10이 k=20의 접두사가
+//      아니게 된다.
 //
-// Review round 1 (c6b9a19 -> this version) changed:
-//   - candidate collection is independent of the output k: primary passes
-//     run until a FIXED pool is full, relaxed passes ALWAYS run, the whole
-//     pool is ranked once, then cut to k (prefix property for every k <= pool);
-//   - subtype relaxation is no longer "only on shortfall": relaxed-pass
-//     candidates are interleaved into the ranking at a fixed stride, so a
-//     wrong extracted subtype that happens to fill the pool cannot hide the
-//     right filing;
-//   - one receipt window PER question date (merged only when windows
-//     overlap), never one range spanning distant dates;
-//   - the node-set "contained window" dedupe was wrong (different rows of
-//     one table share a node_index) and is replaced by verified text
-//     containment; it is OFF by default.
-// Review round 2 (40686e7 -> this version) changed:
-//   - relaxed-pass candidates are no longer inserted at a fixed stride
-//     regardless of score; they are PROMOTED by evidence, pair-wise against
-//     the primary pass they relax (promoteRelaxed below);
-//   - every receipt-date window pass runs and the windows are merged
-//     round-robin, so one date's document cannot crowd the other date out.
-//
-// Everything here is question-text/conditions-only (vFINAL 20: no Gold-
-// derived input anywhere). No Gold, DEV_CHECK or HOLDOUT is read.
+// 설계: 후보 수집은 출력 k와 독립이다(고정 풀을 채운 뒤 한 번 순위 매겨 k로 절단 — 모든
+// k에 접두사 성질 보장). 완화 패스는 상시 실행하되 고정 간격 삽입이 아니라 자기 패스 안
+// 근거로만 승격한다(promoteRelaxed). 접수일자별 창은 겹칠 때만 병합하고 라운드로빈으로
+// 합쳐, 한 날짜의 문서가 다른 날짜를 밀어내지 못하게 한다. 모든 입력은 질문 텍스트와
+// 조건뿐이며 평가 데이터는 읽지 않는다.
 import { buildMetadataFiltersFromConditions } from "./conditions-fixture.mjs";
 
 export const POLICY_IDS = Object.freeze({ FROZEN: "frozen-a-v1", REMEDIATION_V1: "remediation-v1" });
@@ -83,7 +56,7 @@ export const REMEDIATION_V1_POLICY = Object.freeze({
   doc_subtype_filter: "RELAX_ALWAYS",
   // every full date in the question text (YYYY-MM-DD / YYYY.MM.DD / YYYY년
   // M월 D일) gets its OWN receipt_date window pass; windows are merged only
-  // when they overlap. Measured on DEV_TUNE-101 (rcept_dt minus the date in
+  // when they overlap. Measured on the tuning set (rcept_dt minus the date in
   // the question): exchange 0..3 days, major 0..1, holding 0..30 (보고서
   // 작성기준일 -> 접수일 lag), periodic 42..45 (a period END, never a filing
   // date -- periodic-only conditions get no window at all).

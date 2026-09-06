@@ -1,22 +1,11 @@
-// Turn AC-IMPL, section D (metadata non-leak): the vFINAL spec's own
-// metadata-filter rule is "conditions.py extracts corp/doc-group/period/
-// candidate terms from the question text only". This repository has no
-// `conditions.py` (that name belongs to a DIFFERENT team's separate Python
-// codebase described in the AC-IMPL reference docs -- interfaces.md /
-// team-architecture-v4.txt / team-split.md -- which this repo's own
-// CLAUDE.md section 0 explicitly treats as reference material with "no
-// compatibility obligation"). Per vFINAL section D's own fallback rule
-// ("conditions SHA가 아직 없으면 synthetic fixture로만 테스트한다"), this
-// module supplies SYNTHETIC, hand-authored condition fixtures for A/C
-// testing only -- it is NOT a production question-understanding pipeline
-// and must never be wired to a real DEV_TUNE/DEV_CHECK/HOLDOUT run.
+// A/C 테스트용 합성 조건 픽스처. 메타데이터 필터 규칙은 "질문 텍스트에서 추출한
+// 회사/문서군/기간/후보어만 쓴다"이며, 이 모듈은 그 모양의 손수 만든 합성 픽스처만
+// 공급한다 — 실제 질문 이해 파이프라인이 아니고, 실제 평가 실행에 배선해서는 안 된다.
 //
-// Non-leak invariant (vFINAL 20): every function in this file accepts only
-// plain corp/doc-group/period/term fields a question-text extractor could
-// produce. None of them ever reads or accepts a Gold-shaped field (
-// gold_document_ids, expected_answer, required_slot ids, evidence locator,
-// another arm's results) -- there is no parameter named or shaped like
-// those anywhere below, by construction, not by a runtime filter.
+// 비유출 불변식: 이 파일의 모든 함수는 질문 텍스트 추출기가 만들 수 있는 평범한
+// 회사/문서군/기간/용어 필드만 받는다. 정답 모양 필드(gold_document_ids, expected_answer,
+// required_slot id, 근거 locator, 다른 arm의 결과)를 읽거나 받는 매개변수는 구조적으로
+// 존재하지 않는다 — 런타임 필터가 아니라 구성 자체로 보장한다.
 
 // The exact metadata_filters shape the existing, unmodified
 // fixed-kure-hybrid-retriever-adapter.mjs / RetrieverRequest schema already
@@ -78,7 +67,7 @@ export function computeConditionSegment(conditions = {}) {
 // Hand-authored, question-text-only, never Gold-derived. Each fixture's
 // `conditions` is exactly what a question-text extractor could plausibly
 // produce for its own `question` string -- these are TEST-ONLY inputs for
-// this Turn's scoped tests, not a substitute conditions.py deliverable.
+// scoped tests, not a substitute conditions.py deliverable.
 export const SYNTHETIC_CONDITIONS_FIXTURES = Object.freeze([
   Object.freeze({
     fixture_id: "synthetic_low_01",

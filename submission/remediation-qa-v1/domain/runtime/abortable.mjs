@@ -1,19 +1,11 @@
-// Shared AbortSignal racing utility for the request-scoped Timeout/Abort
-// boundary (GET /answer -> Runtime Host -> SharedServices). A single,
-// careful implementation lives here instead of being duplicated at every
-// layer that needs "race a promise against an AbortSignal without ever
-// producing an unhandledRejection, and without letting a late settlement
-// retroactively change anything the caller already acted on".
+// 요청 범위 Timeout/Abort 경계를 위한 공용 AbortSignal 경쟁 유틸리티. "promise를
+// AbortSignal과 경쟁시키되 unhandledRejection을 만들지 않고, 늦은 확정이 호출자가 이미
+// 행동한 결과를 소급 변경하지 못하게 한다"를 한 곳에서 신중히 구현한다.
 //
-// This is deliberately NOT a bare `Promise.race([promise, timeoutPromise])`
-// — that alone would only make the CALLER stop waiting; the original
-// `promise` would still be running unobserved in the background, able to
-// throw an unhandledRejection later, and any code awaiting IT DIRECTLY
-// elsewhere would still hang. raceAgainstAbort always attaches its own
-// rejection handler to `promise` synchronously (in this same call), so a
-// slow underlying operation that keeps running after losing the race can
-// never produce an unhandled rejection — its eventual result is simply
-// discarded.
+// 의도적으로 단순 Promise.race가 아니다 — race만으로는 호출자만 기다림을 멈출 뿐, 원
+// promise는 계속 돌다 나중에 unhandledRejection을 낼 수 있다. raceAgainstAbort는 같은
+// 호출 안에서 promise에 자체 거부 핸들러를 동기적으로 붙이므로, 경쟁에서 진 뒤 계속 도는
+// 느린 연산이 unhandled rejection을 만들 수 없다 — 그 결과는 그냥 버려진다.
 
 export class RequestAbortedError extends Error {
   constructor(reason) {

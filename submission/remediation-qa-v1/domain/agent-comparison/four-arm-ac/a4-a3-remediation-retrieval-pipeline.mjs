@@ -1,16 +1,11 @@
-// Turn A4-A3-REMEDIATION-INTEGRATION-V1: remediation-aware variant of
-// a4-a3-retrieval-pipeline.mjs's runQuestionPipeline(). Sources bm25_top100/dense_top100
-// from a4-a3-remediation-candidate-legs.mjs's multi-pass generator instead of the
-// single-pass logic; everything downstream of candidate generation (wide pool, R4
-// ranking, A3 guard, stable refill) reuses the SAME already-exported functions from
-// a4-a3-retrieval-pipeline.mjs / a4-wide-candidate-pool.mjs / a4-reranker-engine.mjs /
-// a3-evidence-contradiction-guard.mjs, unmodified -- none of those files is touched by
-// this turn.
+// runQuestionPipeline()의 검색 개선(remediation) 적용 변형. bm25_top100/dense_top100을
+// 단일 패스 대신 a4-a3-remediation-candidate-legs.mjs의 다중 패스 생성기에서 가져오고,
+// 후보 생성 이후 단계(광역 풀, R4 순위, A3 가드, 안정 보충)는 기존 모듈들이 export하는
+// 같은 함수들을 무수정으로 재사용한다.
 //
-// original_a_top20 is passed as [] to buildWideCandidatePool(): read from source
-// (a4-wide-candidate-pool.mjs), its RRF-reproducibility cross-check only runs when this
-// array is non-empty -- appropriate here since the remediation-modified legs are not
-// expected to reproduce plain Arm A's own frozen legs.
+// buildWideCandidatePool()에는 original_a_top20을 []로 넘긴다 — 그 함수의 RRF 재현성
+// 교차검증은 이 배열이 비어 있지 않을 때만 도는데, 개선된 leg는 원래 Arm A의 frozen leg를
+// 재현할 대상이 아니기 때문이다.
 import { buildWideCandidatePool } from "./a4-wide-candidate-pool.mjs";
 import { rankCandidatePool, selectWithStableRefill } from "./a4-reranker-engine.mjs";
 import { detectEvidenceContradictions, CONTRADICTION_STATUS } from "./a3-evidence-contradiction-guard.mjs";

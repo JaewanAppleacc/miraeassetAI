@@ -1,30 +1,17 @@
-// Turn P4: embedding adapter interface for pgvector-backed retrieval.
-// Deliberately mirrors ../model-adapter.mjs's own shape (config-driven
-// kind, fail-closed with no API key, typed EmbeddingCallError, never a
-// hardcoded provider/model name in code, no real network call anywhere in
-// this Turn's tests/scripts) -- this is a SEPARATE contract from
-// ModelAdapter (a chat/completion model is a different capability from an
-// embedding model, even when the same provider happens to offer both), so
-// it is its own file rather than an added method on model-adapter.mjs.
+// pgvector 기반 검색용 임베딩 어댑터 인터페이스. 구성 주도 kind, API 키 없으면
+// fail-closed, typed EmbeddingCallError, 코드에 제공자/모델명 하드코딩 없음.
 //
-// PROTOCOL SCOPE: kind:"HTTP_EMBEDDINGS" is ONE generic embeddings-endpoint
-// protocol adapter (POST {model, input: string[]} -> {data: [{embedding:
-// number[]}, ...]}), the same "one compatible shape, not every provider"
-// framing model-adapter.mjs's own HTTP_CHAT_COMPLETIONS documents. A
-// provider with a materially different embeddings API shape needs its own
-// EMBEDDING_ADAPTER_KIND and construction branch -- never papered over
-// inside this one generic branch.
+// 프로토콜 범위: kind:"HTTP_EMBEDDINGS"는 하나의 범용 임베딩 엔드포인트 프로토콜
+// (POST {model, input: string[]} -> {data:[{embedding: number[]},...]})이다. 응답 모양이
+// 실질적으로 다른 제공자는 자기 kind와 생성 분기가 필요하며, 이 범용 분기 안에서 덮어
+// 가리지 않는다.
 //
-// RESPONSE CONTRACT: embedDocuments(texts, config) resolves to an array of
-// number[] vectors, SAME LENGTH and SAME ORDER as `texts` (index i of the
-// result is the embedding of texts[i] -- never re-sorted or deduplicated).
-// embedQuery(text, config) resolves to a single number[] vector. Every
-// vector has exactly `config.dimension` entries, all finite (no NaN/
-// Infinity), and is never an empty array. A failure ALWAYS throws an
-// EmbeddingCallError with a stable `.code` -- it is never silently reduced
-// to a zero/empty vector, and its `.message` never contains the raw
-// provider response body, the raw underlying exception message, or the API
-// key.
+// 응답 계약: embedDocuments(texts, config)는 `texts`와 같은 길이·같은 순서의 number[]
+// 배열로 확정된다(결과의 i번째가 texts[i]의 임베딩 — 재정렬·중복 제거 없음).
+// embedQuery(text, config)는 단일 number[] 벡터. 모든 벡터는 정확히 config.dimension
+// 길이의 유한 수(NaN/Infinity 없음)이며 빈 배열이 아니다. 실패는 항상 안정된 `.code`를
+// 가진 EmbeddingCallError로 던져진다 — 0/빈 벡터로 조용히 축소되지 않고, 메시지에 원 응답
+// 본문·원 예외 메시지·API 키가 담기지 않는다.
 import { validateEmbeddingConfig } from "./contracts.mjs";
 import { createDeterministicFakeEmbeddingAdapter } from "./fake-deterministic-embedding-adapter.mjs";
 
@@ -67,14 +54,14 @@ function assertVectorsShape(vectors, expectedCount, dimension, label) {
   }
 }
 
-// Turn P9.2: the ONLY hostnames auth_mode=NONE may ever be used against.
+// The ONLY hostnames auth_mode=NONE may ever be used against.
 // Checked against endpoint_url's OWN parsed hostname -- never against a
 // caller-supplied network_scope claim, which is informational only.
 const LOOPBACK_HOSTNAMES = Object.freeze(new Set(["127.0.0.1", "localhost", "::1"]));
 
 function createHttpEmbeddingsAdapter(config, { fetchImpl = fetch } = {}) {
-  // Turn P9.2: absent auth_mode means BEARER_ENV -- identical to every
-  // config this adapter has ever accepted before this Turn. This branch is
+  // Absent auth_mode means BEARER_ENV -- identical to every
+  // config this adapter has ever accepted before. This branch is
   // unreachable for such configs; nothing about their behavior changes.
   const authMode = config.auth_mode ?? "BEARER_ENV";
   let apiKey = null;

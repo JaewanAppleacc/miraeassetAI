@@ -1,31 +1,15 @@
-// Turn A4-A3-REMEDIATION-INTEGRATION-V1: per-leg (BM25, dense) candidate generation under
-// an opt-in retrieval policy (four-arm-retrieval-policy.mjs, vendored verbatim from
-// b30b909 -- pure, arm-agnostic functions, never modified here).
+// 검색 개선(remediation) 정책 하의 leg별(BM25, dense) 후보 생성.
 //
-// a4-a3-retrieval-pipeline.mjs's own runQuestionPipeline() generates each leg with a
-// SINGLE filter pass (one fetchEligibleChunkIds/bm25Search call, one
-// searchDocumentChunksByVector call). This module generalizes that into a MULTI-PASS
-// generator per leg -- one pass per (date window x subtype relaxation) combination,
-// merged round-robin, capped at the SAME existing leg constants the frozen pipeline
-// already uses (BM25_CANDIDATE_K=100, DENSE_CANDIDATE_K=100 -- read from
-// a4-a3-retrieval-pipeline.mjs/a4-wide-candidate-pool.mjs, never re-declared or
-// b30b909's own fusion_pool_k=40).
+// a4-a3-retrieval-pipeline.mjs의 runQuestionPipeline()은 leg당 단일 필터 패스로 후보를
+// 만든다. 이 모듈은 그것을 leg당 다중 패스 생성기로 일반화한다 — (날짜 창 x 서브타입 완화)
+// 조합마다 한 패스씩 실행하고 라운드로빈으로 병합하되, 기존 leg 상수(BM25_CANDIDATE_K=100,
+// DENSE_CANDIDATE_K=100)를 그대로 읽어 상한으로 쓴다.
 //
-// The multi-pass merge/promotion/interleave ORCHESTRATION below (record/admit/
-// mergeWindowsRoundRobin) is a new, small reimplementation of the same pattern
-// arm-retriever-adapter.mjs's searchWithPolicy() uses for plain Arm A/C (b30b909,
-// read-only reference, never imported or modified) -- reimplemented rather than
-// imported because A4/A3 needs it per LEG (BM25-only, dense-only, before RRF/wide-pool
-// fusion), which is a structurally different point in the pipeline than where plain Arm
-// A/C apply it (after a already-fused per-pass search). Every actual POLICY DECISION
-// function (buildRetrievalPlan, buildFilterPasses, rankCandidates, promoteRelaxed,
-// orderCandidates, interleaveRelaxed) is imported and used unmodified from
-// four-arm-retrieval-policy.mjs -- this file only adds the leg-shaped plumbing around them.
-//
-// fetchChunksByIds/fetchStagingSpans/toCandidateMetadata/hydrateCandidateRecord below are
-// duplicated from a4-a3-retrieval-pipeline.mjs (private, unexported there) rather than
-// imported, so that file needs ZERO modification (verified: none of the four are
-// currently exported).
+// 정책 결정 함수(buildRetrievalPlan, buildFilterPasses, rankCandidates, promoteRelaxed,
+// orderCandidates, interleaveRelaxed)는 전부 four-arm-retrieval-policy.mjs에서 무수정
+// import하며, 이 파일은 leg 모양의 배관만 더한다. fetchChunksByIds/fetchStagingSpans/
+// toCandidateMetadata/hydrateCandidateRecord는 a4-a3-retrieval-pipeline.mjs의 비공개
+// 함수라 import 대신 복제했다(그 파일을 수정하지 않기 위함).
 import { createHash } from "node:crypto";
 import { bm25Search } from "../retrieval/fixed-kure-bm25-index.mjs";
 import { createPostgresVectorRetrievalRepository } from "../../postgres/reference-vector-retrieval-repository.mjs";

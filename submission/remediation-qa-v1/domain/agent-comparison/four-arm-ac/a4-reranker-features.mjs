@@ -1,20 +1,12 @@
-// Turn A4-RERANKER-ENGINE-V1: pure feature extraction for the generic
-// reranker engine (a4-reranker-engine.mjs). No Gold, no A/oracle results,
-// no DB/KURE/network access anywhere in this file -- every function here
-// is a deterministic, synchronous transform of one RerankerCandidate (see
-// A4_RERANKER_V1_CONTRACT.md) and one RerankerQuestionContext into a
-// finite number in [0, 1].
+// 재정렬 엔진(a4-reranker-engine.mjs)용 순수 특징 추출. 평가 데이터·DB·네트워크 접근이
+// 없으며, 모든 함수는 RerankerCandidate 하나와 RerankerQuestionContext 하나를 [0,1] 범위의
+// 유한 수로 바꾸는 결정론적 동기 변환이다.
 //
-// Two different reasons a feature can be 0 vs 0.5, kept deliberately
-// distinct throughout this file:
-//   - LEGITIMATE ABSENCE (e.g. a candidate simply was not found by the
-//     BM25 leg at all) is real information, scored 0 -- the same
-//     "absent leg contributes zero" convention rrf.mjs already uses.
-//   - MISSING INPUT (e.g. no chunk text was carried through, or the
-//     caller supplied no question-context expectation for a signal) is
-//     scored 0.5, a neutral midpoint, per this Turn's own rule: a
-//     candidate is never penalized just because one signal could not be
-//     computed for it.
+// 0과 0.5의 구분을 파일 전체에서 유지한다:
+//   - 정당한 부재(예: BM25 leg가 그 후보를 아예 못 찾음)는 실제 정보이므로 0점 — rrf.mjs의
+//     "없는 leg는 0 기여" 관례와 동일.
+//   - 입력 결손(예: 청크 본문 미전달, 신호에 대한 질문 문맥 기대치 미제공)은 중립 0.5점 —
+//     신호 하나를 계산할 수 없다는 이유로 후보를 벌점하지 않는다.
 
 export const FEATURE_KEYS = Object.freeze([
   "bm25",

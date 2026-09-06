@@ -1,4 +1,4 @@
-"""⑧ HCX Native Function Calling 경로 — submit_grounded_answer (v4 §12, interfaces.md §4).
+"""⑧ HCX Native Function Calling 경로 — submit_grounded_answer (v4 §12, 인터페이스 계약 §4).
 
 JSON 프롬프트 경로(qa_agent SYSTEM_PROMPT)와 다른 점: 모델이 자유 문장이 아니라 **claim 단위**로
 답한다. claim마다 (text, value, unit, period, doc_id, quote)가 붙고, 코드가 claim별로 검증한 뒤
