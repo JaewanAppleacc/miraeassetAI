@@ -94,10 +94,10 @@ def _chunk_from_worker_item(item: Mapping[str, Any]) -> Chunk:
 
 
 class ArmA4A3RemediationLiveRetriever:
-    """RetrieverAdapter-Protocol-shaped (search/readiness), backed by the live worker.
+    """실시간 워커를 배후에 둔 RetrieverAdapter Protocol 모양(search/readiness)의 검색기.
 
-    fetch_node is intentionally NOT implemented: this backend never accesses the
-    DocumentIR node store, same as ARM_A4_A3_LIVE.
+    fetch_node는 의도적으로 구현하지 않는다: 이 백엔드는 ARM_A4_A3_LIVE와 마찬가지로
+    DocumentIR 노드 저장소에 접근하지 않는다.
     """
 
     arm = "A4_A3_REMEDIATION"
@@ -122,7 +122,7 @@ class ArmA4A3RemediationLiveRetriever:
 
 
 class ArmA4A3RemediationLiveServingRetriever:
-    """CorpusRetriever-shaped bridge, mirroring ArmA4A3LiveServingRetriever."""
+    """CorpusRetriever 모양 브리지. ArmA4A3LiveServingRetriever와 같은 구조다."""
 
     arm = "A4_A3_REMEDIATION"
 

@@ -36,7 +36,7 @@ _ERROR_CLASSES: dict[str, type["ArmA4A3LiveWorkerError"]] = {}
 
 
 class ArmA4A3LiveWorkerError(Exception):
-    """Base class for every error this transport raises."""
+    """이 전송 계층이 던지는 모든 오류의 기반 클래스."""
     code = "ARM_A4_A3_SEARCH_FAILED"
 
 
@@ -71,11 +71,11 @@ def _error_for(code: str, message: str) -> ArmA4A3LiveWorkerError:
 
 
 class ArmA4A3LiveWorkerClient:
-    """Owns one persistent `node scripts/arm_a4_a3_live_worker.mjs` subprocess.
+    """상주 `node scripts/arm_a4_a3_live_worker.mjs` 서브프로세스 하나를 소유한다.
 
-    One request in flight at a time, matching QA's existing single-concurrency serving
-    semaphore. On timeout or unexpected process exit, the dead process is torn down and
-    the *next* call transparently respawns a fresh one.
+    동시 요청은 1건 — QA의 기존 단일 동시성 서빙 세마포어와 맞춘 것이다. 타임아웃이나 예기치
+    않은 프로세스 종료 시 죽은 프로세스를 정리하고, *다음* 호출이 투명하게 새 프로세스를
+    띄운다.
     """
 
     def __init__(self, *, env: Mapping[str, str] | None = None,
