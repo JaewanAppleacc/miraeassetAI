@@ -15,10 +15,18 @@
 // goes to stderr. Never writes to the database (search/fetch_node/readiness below are read-only,
 // same as the underlying Arm A adapter).
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import readline from "node:readline";
 import process from "node:process";
+import { fileURLToPath } from "node:url";
+
+import { mapQaOrLegacyConditionsToArmAConditions, buildNameToCorpCodeIndexFromUniverseCsv } from
+  "../domain/agent-comparison/four-arm-ac/qa-condition-mapper.mjs";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = path.resolve(__dirname, "..");
 
 function log(...args) {
   console.error("[arm-a-live-worker]", ...args);
@@ -38,30 +46,19 @@ function sha256Hex(text) {
   return createHash("sha256").update(text, "utf8").digest("hex");
 }
 
-// Best-effort mapping from the minimal wire `conditions` shape
-// ({corp_code, document_group, document_subtype, period}) to the richer shape
-// buildMetadataFiltersFromConditions (Arm A's own, unmodified) expects. `period` is only mapped
-// when it unambiguously parses as YYYY or YYYY-MM; anything else is intentionally left unmapped
-// (never guessed) and noted on stderr rather than silently dropped or misapplied.
-function toArmAConditions(conditions) {
-  const c = conditions && typeof conditions === "object" ? conditions : {};
-  const out = {};
-  if (c.corp_code) out.corp_codes = [c.corp_code];
-  if (c.document_group) out.doc_groups = [c.document_group];
-  if (c.document_subtype) out.doc_subtypes = [c.document_subtype];
-  if (c.period) {
-    const yearMonth = /^(\d{4})-(\d{2})$/.exec(c.period);
-    const yearOnly = /^(\d{4})$/.exec(c.period);
-    if (yearMonth) {
-      out.base_years = [Number(yearMonth[1])];
-      out.base_months = [Number(yearMonth[2])];
-    } else if (yearOnly) {
-      out.base_years = [Number(yearOnly[1])];
-    } else {
-      log(`conditions.period="${c.period}" is not YYYY or YYYY-MM — left unmapped (never guessed)`);
-    }
-  }
-  return out;
+// Turn A-PLUS-QA-CONDITION-MAPPING-V1: the wire `conditions` object QA actually sends is
+// QueryConditions.as_dict()'s own shape (corps/doc_groups/year_months/... — see
+// src/dart_corpus/retrieval/conditions.py), the same shape as the official
+// devtune101_conditions.v2.jsonl artifact, NOT the old minimal {corp_code, document_group,
+// document_subtype, period} shape this function used to assume (which meant every field QA
+// actually sent went unrecognized and the metadata filter came back empty). This now delegates
+// to qa-condition-mapper.mjs, which accepts both shapes, preserves multiple companies/doc-groups/
+// periods, and refuses (throws) rather than silently widening on an unresolvable company name or
+// an unknown doc_group.
+let baseNameToCorpCodeIndex; // set once in main() from this repo's own data/corpus/universe.csv
+
+function mapConditionsForSearch(conditions) {
+  return mapQaOrLegacyConditionsToArmAConditions(conditions, { nameToCorpCodeIndex: baseNameToCorpCodeIndex });
 }
 
 async function fetchRealText(client, retrievalIndexId, chunkIds) {
@@ -111,6 +108,13 @@ async function main() {
   const corpusSnapshotId = requireEnv("ARM_A_LIVE_CORPUS_SNAPSHOT_ID");
   const kureServerUrl = requireEnv("ARM_A_LIVE_KURE_SERVER_URL");
   const bm25CacheDir = requireEnv("ARM_A_LIVE_BM25_CACHE_DIR");
+
+  // This repo's own already-verified company universe (CLAUDE.md: SHA-checked against
+  // corpus_snapshot.json) — the same file src/dart_corpus/retrieval/corp_dictionary.py's own
+  // CorpDictionary already trusts to produce QA's `corps` NAME values in the first place.
+  baseNameToCorpCodeIndex = buildNameToCorpCodeIndexFromUniverseCsv(
+    readFileSync(path.join(REPO_ROOT, "data/corpus/universe.csv"), "utf8"),
+  );
 
   const modulePath = (relative) => path.join(implRoot, relative);
   // pg is a CJS dependency of the OTHER worktree (implRoot), not of this worker file's own
@@ -201,7 +205,12 @@ async function main() {
     if (!readiness.arm_a_live_ready) {
       return { error: { code: "ARM_A_NOT_READY", message: "arm_a_live_ready=false — refusing to search", readiness } };
     }
-    const mappedConditions = toArmAConditions(conditions);
+    let mappedConditions;
+    try {
+      mappedConditions = mapConditionsForSearch(conditions);
+    } catch (error) {
+      return { error: { code: "ARM_A_CONDITION_MAPPING_FAILED", message: error.message } };
+    }
     let rawResults;
     try {
       rawResults = await adapter.search(question, mappedConditions, topK);

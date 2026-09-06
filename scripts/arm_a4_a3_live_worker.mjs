@@ -14,21 +14,35 @@
 // (import.meta.url), so this script runs correctly regardless of the current working directory
 // and regardless of whether any other Codex worktree exists on the machine. `pg` is resolved the
 // same way, from this repository's own package.json/node_modules (see package.json). The only new
-// logic in this file is: (1) this protocol, (2) mapping the wire's minimal
-// {corp_code, document_group, document_subtype, period} conditions shape into the pipeline's own
-// `question.conditions` shape (a pure reshaping — no new filter semantics; see
-// toFourArmConditions below), and (3) converting each pipeline result item into the final wire
+// logic in this file is: (1) this protocol, (2) mapping the wire's actual QA conditions shape
+// (QueryConditions.as_dict() — see domain/agent-comparison/four-arm-ac/qa-condition-mapper.mjs's
+// own docstring; the old minimal {corp_code, document_group, document_subtype, period} shape this
+// used to assume is still supported for backward compatibility) into the pipeline's own
+// `question.conditions` shape, and (3) converting each pipeline result item into the final wire
 // item shape (rank renumber, reranker_rank preserved, a3_decision attached, backend tag) per the
 // governing turn's Section E contract.
 import { createRequire } from "node:module";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import readline from "node:readline";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
+import {
+  buildNameToCorpCodeIndexFromUniverseCsv,
+  mapQaOrLegacyConditionsToFourArmConditions,
+} from "../domain/agent-comparison/four-arm-ac/qa-condition-mapper.mjs";
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..");
 const require_ = createRequire(import.meta.url);
+
+// This repo's own already-verified company universe (CLAUDE.md: SHA-checked against
+// corpus_snapshot.json) — the same file src/dart_corpus/retrieval/corp_dictionary.py's own
+// CorpDictionary already trusts to produce QA's `corps` NAME values in the first place.
+const baseNameToCorpCodeIndex = buildNameToCorpCodeIndexFromUniverseCsv(
+  readFileSync(path.join(REPO_ROOT, "data/corpus/universe.csv"), "utf8"),
+);
 
 const RERANKER_CONFIG_ID = "R4_wide_rrf_centric";
 const RETRIEVAL_OUTPUT_K = 20;
@@ -47,48 +61,18 @@ function writeLine(obj) {
   process.stdout.write(JSON.stringify(obj) + "\n");
 }
 
-// Same reshaping arm_a_live_worker.mjs's own toArmAConditions does, targeted at
-// four-arm-conditions-to-filter-mapper.mjs's mapOfficialConditionToFilterInput shape
-// instead (corps/doc_groups/exchange_subtypes/periodic_subtypes/years/year_months).
-// `period` is only mapped when it unambiguously parses as YYYY or YYYY-MM; anything
-// else is left unmapped (never guessed), same discipline as the ARM_A_LIVE worker.
-function toFourArmConditions(conditions) {
-  const c = conditions && typeof conditions === "object" ? conditions : {};
-  const out = {
-    corps: [], doc_groups: [], exchange_subtypes: [], periodic_subtypes: [],
-    years: [], year_months: [],
-  };
-  if (c.corp_code) out.corps = [c.corp_code];
-  if (c.document_group) out.doc_groups = [c.document_group];
-  if (c.document_subtype) {
-    if (c.document_group === "exchange") out.exchange_subtypes = [c.document_subtype];
-    else if (c.document_group === "periodic") out.periodic_subtypes = [c.document_subtype];
-    // holding/major: no per-condition doc_subtype concept in this corpus (see the
-    // mapper's own deriveDocSubtypeFilter docstring) — intentionally left unmapped.
-  }
-  if (c.period) {
-    const yearMonth = /^(\d{4})-(\d{2})$/.exec(c.period);
-    const yearOnly = /^(\d{4})$/.exec(c.period);
-    if (yearMonth) {
-      out.years = [Number(yearMonth[1])];
-      out.year_months = [[Number(yearMonth[1]), Number(yearMonth[2])]];
-    } else if (yearOnly) {
-      out.years = [Number(yearOnly[1])];
-    } else {
-      log(`conditions.period="${c.period}" is not YYYY or YYYY-MM — left unmapped (never guessed)`);
-    }
-  }
-  return out;
-}
-
-// mapOfficialConditionToFilterInput resolves conditions.corps (company NAMES) via a
-// name->corp_code Map. The live wire already carries a resolved corp_code (never a
-// name — QA's own company resolution happens upstream of this worker), so a
-// synthetic single-entry identity map lets the same, unmodified mapper function be
-// reused without inventing a second resolution path or touching the Owner-gated
-// company directory at all.
-function identityCorpCodeIndex(corpCode) {
-  return new Map(corpCode ? [[corpCode, corpCode]] : []);
+// Turn A-PLUS-QA-CONDITION-MAPPING-V1: the wire `conditions` object QA actually sends is
+// QueryConditions.as_dict()'s own shape (corps/doc_groups/year_months/...), not the old minimal
+// {corp_code, document_group, document_subtype, period} shape this file used to assume — which
+// meant every field QA actually sent went unrecognized here (all of `c.corp_code`/
+// `c.document_group`/`c.period` were simply undefined on that shape) and the metadata filter came
+// back empty. qa-condition-mapper.mjs now does this reshaping (still accepting the old minimal
+// shape too, for backward compatibility), AND resolves `corps` company NAMES via this repo's own
+// universe.csv-based index — QA's own company resolution no longer needs to happen "upstream of
+// this worker" (the old identityCorpCodeIndex below only ever worked for an already-resolved
+// corp_code, never a name, which the live wire was never actually sending).
+function mapConditionsForSearch(conditions) {
+  return mapQaOrLegacyConditionsToFourArmConditions(conditions, { nameToCorpCodeIndex: baseNameToCorpCodeIndex });
 }
 
 async function main() {
@@ -197,9 +181,12 @@ async function main() {
     if (!readiness.arm_a4_a3_live_ready) {
       return { error: { code: "ARM_A4_A3_NOT_READY", message: "arm_a4_a3_live_ready=false — refusing to search", readiness } };
     }
-    const corpCode = conditions && typeof conditions === "object" ? conditions.corp_code : null;
-    const mappedConditions = toFourArmConditions(conditions);
-    const nameToCorpCodeIndex = identityCorpCodeIndex(corpCode);
+    let mappedConditions, nameToCorpCodeIndex;
+    try {
+      ({ conditions: mappedConditions, nameToCorpCodeIndex } = mapConditionsForSearch(conditions));
+    } catch (error) {
+      return { error: { code: "ARM_A4_A3_CONDITION_MAPPING_FAILED", message: error.message } };
+    }
     const deps = {
       client, bm25Index, embeddingAdapter, retrievalIndexId, provenanceLoadSessionId,
       expectedPins, nameToCorpCodeIndex,
