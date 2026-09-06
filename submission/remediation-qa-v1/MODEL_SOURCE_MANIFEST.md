@@ -113,4 +113,4 @@ Gold/DEV_TUNE/DEV_CHECK/HOLDOUT data, `results/`, `work/`, `check/`, `config/`
 dependencies (pytest, jsonschema), the legacy `qa_api.py`/`qa_service.py` module pair
 (superseded by `answer_api.py`/`ops_service.py`), the optional dense-rerank arm B code
 (`dense_rerank.py`, unused by this backend), `.env`, any API key, any DB dump, `.git`
-history, `.claude`/Codex configuration, and every other worktree on this machine.
+history, local development-tool configuration, and every other worktree on this machine.

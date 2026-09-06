@@ -24,8 +24,7 @@ A4 wide candidate pool  (BM25 top-100 + dense top-100, KURE-v1)
 model_source_sha=b5f9443f7ca3ec2d57c2d17453070ab23c4a6341
 ```
 
-Branch `codex/a4-a3-remediation-integration-v01`, identical on `origin` and
-`demo-ai-festival` at packaging time. Per-file provenance in `MODEL_SOURCE_MANIFEST.md`;
+Branch `codex/a4-a3-remediation-integration-v01`, identical on both development remotes at packaging time. Per-file provenance in `MODEL_SOURCE_MANIFEST.md`;
 per-file hashes of this package's own contents in `SHA256SUMS`.
 
 ## Install
@@ -73,7 +72,7 @@ state with no network call.
 
 - **Backend dispatch registration.** At `model_source_sha`, `ARM_A4_A3_REMEDIATION_LIVE`
   is implemented but not yet registered in `answer_api.py`'s backend dispatch table
-  (out of scope for the turn that added it). Rather than patch those pinned files (which
+  (out of scope for the change that added it). Rather than patch those pinned files (which
   would break byte-identity with `model_source_sha`), `scripts/run_server.py` builds the
   retriever via its own public builder and injects it through `answer_api.reset()`
   (an existing public hook) before serving. Side effect: `readiness()["retrieval_backend"]`

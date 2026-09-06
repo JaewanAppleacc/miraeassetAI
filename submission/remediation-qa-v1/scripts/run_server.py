@@ -5,7 +5,7 @@ Why this script exists instead of `uvicorn dart_detective.ops_service:app` direc
 at the pinned source commit (b5f9443f, codex/a4-a3-remediation-integration-v01), the new
 ARM_A4_A3_REMEDIATION_LIVE backend is fully implemented but not yet registered in
 answer_api.py's own backend dispatch table (arm_a_serving_bridge.RETRIEVAL_BACKENDS /
-answer_api._build_retriever()) -- that wiring was intentionally out of scope for the turn
+answer_api._build_retriever()) -- that wiring was intentionally out of scope for the change
 that added the backend. Rather than patch those two files for this submission (which
 would no longer be byte-identical to the pinned commit), this script builds the
 remediation retriever directly via its own public builder and injects it into
