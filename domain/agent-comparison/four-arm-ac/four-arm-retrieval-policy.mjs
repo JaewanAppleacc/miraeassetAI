@@ -1,6 +1,7 @@
-// Turn A-RETRIEVAL-REMEDIATION-V1: an OPT-IN retrieval policy for arms A/C.
+// Turn A-RETRIEVAL-REMEDIATION-V1 (+ review round 1): an OPT-IN retrieval
+// policy for arms A/C.
 //
-// The frozen official A/C behaviour (the one that produced the committed
+// The frozen official behaviour (the one that produced the committed
 // results/A.results.jsonl / C.results.jsonl) is `FROZEN_POLICY`, and it is
 // the DEFAULT everywhere a policy can be supplied -- a caller that never
 // mentions a policy gets the byte-identical frozen code path. Every
@@ -18,10 +19,24 @@
 //      guess is wrong the correct filing is unreachable by BOTH legs
 //      (2 real questions returned 0 results).
 //   3. no receipt-date binding for exchange/holding/major -- 21/81
-//      date-anchored questions missed all_found@10 vs 6/19 without a date.
+//      date-anchored questions missed all_found@10.
 //   4. BM25 candidates with score 0 still entering RRF with a rank credit.
-//   5. overlapping Fixed-512 windows of the same document occupying several
-//      top-10 slots (27% same-document repeats, 14% node-overlapping).
+//   5. `search(k)` coupling the dense candidate count and the fusion output
+//      to the output k (k=10 was not the prefix of k=20).
+//
+// Review round 1 (c6b9a19 -> this version) changed:
+//   - candidate collection is independent of the output k: primary passes
+//     run until a FIXED pool is full, relaxed passes ALWAYS run, the whole
+//     pool is ranked once, then cut to k (prefix property for every k <= pool);
+//   - subtype relaxation is no longer "only on shortfall": relaxed-pass
+//     candidates are interleaved into the ranking at a fixed stride, so a
+//     wrong extracted subtype that happens to fill the pool cannot hide the
+//     right filing;
+//   - one receipt window PER question date (merged only when windows
+//     overlap), never one range spanning distant dates;
+//   - the node-set "contained window" dedupe was wrong (different rows of
+//     one table share a node_index) and is replaced by verified text
+//     containment; it is OFF by default.
 //
 // Everything here is question-text/conditions-only (vFINAL 20: no Gold-
 // derived input anywhere). No Gold, DEV_CHECK or HOLDOUT is read.
@@ -37,11 +52,14 @@ export const FROZEN_POLICY = Object.freeze({
   doc_subtype_filter: "HARD",
   receipt_date_window: "OFF",
   receipt_window_days: Object.freeze({ before: 0, holding: 0, default: 0 }),
+  max_receipt_windows: 0,
   bm25_zero_score: "KEEP",
   // null = dense candidate count follows request.top_k (the frozen coupling).
   dense_candidate_k: null,
-  // null = fusion output equals k.
+  // null = fusion output equals k, single pass.
   fusion_pool_k: null,
+  // 0 = relaxed-pass candidates are never interleaved (no relaxed passes exist).
+  relaxed_interleave_every: 0,
   dedupe_contained_windows: false,
   per_doc_cap: 0,
 });
@@ -52,25 +70,35 @@ export const REMEDIATION_V1_POLICY = Object.freeze({
   // otherwise no correction filter at all (both original and corrected
   // filings stay in the pool, ranking decides).
   correction_filter: "ONLY_WHEN_ASKED",
-  // subtype prefilter first; if the pass falls short of k, re-run without
-  // the (extracted, therefore fallible) subtype and fill from that.
-  doc_subtype_filter: "RELAX_ON_SHORTFALL",
-  // a full date in the question text (YYYY-MM-DD / YYYY.MM.DD / YYYY년 M월
-  // D일) binds a receipt_date window pass FIRST, then unfiltered fill.
-  receipt_date_window: "TWO_PASS",
-  // Measured on DEV_TUNE-101 (rcept_dt minus the date written in the
-  // question): exchange 0..3 days, major 0..1, holding 0..30 (보고서작성
-  // 기준일 -> 접수일 lag), periodic 42..45 (period END, never a filing
-  // date -- so periodic-only conditions get no window at all).
+  // subtype prefilter passes are "primary"; passes without the (extracted,
+  // therefore fallible) subtype are "relaxed" and ALWAYS run; their
+  // candidates are interleaved into the ranking (relaxed_interleave_every).
+  doc_subtype_filter: "RELAX_ALWAYS",
+  // every full date in the question text (YYYY-MM-DD / YYYY.MM.DD / YYYY년
+  // M월 D일) gets its OWN receipt_date window pass; windows are merged only
+  // when they overlap. Measured on DEV_TUNE-101 (rcept_dt minus the date in
+  // the question): exchange 0..3 days, major 0..1, holding 0..30 (보고서
+  // 작성기준일 -> 접수일 lag), periodic 42..45 (a period END, never a filing
+  // date -- periodic-only conditions get no window at all).
+  receipt_date_window: "PER_DATE",
   receipt_window_days: Object.freeze({ before: 1, holding: 30, default: 3 }),
+  max_receipt_windows: 3,
   bm25_zero_score: "DROP",
   dense_candidate_k: 20,
+  // the FIXED candidate pool each primary pass fills towards; never k.
   fusion_pool_k: 40,
-  dedupe_contained_windows: true,
-  // 0 = off. A hard per-document cap is deliberately NOT enabled by
-  // default: multi-slot single-document questions (대량보유 표지+요약표+
-  // 연혁표) legitimately need several chunks of one document. Left as a
-  // knob for a measured sweep.
+  // every 4th rank goes to the best not-yet-placed relaxed-pass candidate
+  // (if any): k=20 carries up to 5, k=10 up to 2, and the ranking is the
+  // same list for every k, so the k-prefix property holds.
+  relaxed_interleave_every: 4,
+  // OFF: the only safe containment test is "this chunk's text is entirely
+  // inside an already-kept chunk of the same document" (verified from the
+  // hydrated text); node/row provenance cannot prove containment (different
+  // rows of one table share a node_index, and a row span only records that
+  // the window TOUCHED the row). Left as a knob for a measured sweep.
+  dedupe_contained_windows: false,
+  // 0 = off. Multi-slot single-document questions (대량보유 표지+요약표+
+  // 연혁표) legitimately need several chunks of one document.
   per_doc_cap: 0,
 });
 
@@ -123,33 +151,52 @@ export function questionFullDates(question) {
   return Object.freeze(out);
 }
 
-export function shiftIsoDate(iso, days) {
+function utcOf(iso) {
   const [y, m, d] = iso.split("-").map(Number);
-  const date = new Date(Date.UTC(y, m - 1, d + days));
+  return Date.UTC(y, m - 1, d);
+}
+
+export function shiftIsoDate(iso, days) {
+  const date = new Date(utcOf(iso) + days * 86_400_000);
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
 }
 
-// docGroups: the condition's doc_groups (may be empty = unknown). A
+export function daysBetween(fromIso, toIso) {
+  return Math.round((utcOf(toIso) - utcOf(fromIso)) / 86_400_000);
+}
+
+// One window per question date, [date - before, date + after]; two dates
+// whose windows overlap or touch are merged into one; distant dates stay
+// separate (a 2023-01-01 vs 2025-01-01 comparison never becomes one 2-year
+// range). docGroups: the condition's doc_groups (may be empty = unknown). A
 // periodic-only condition never gets a window (its dates are period ends).
-// An unknown/empty doc_groups gets the widest (holding) window, since a
-// holding filing cannot be excluded.
-export function deriveReceiptWindow(questionDates, docGroups, policy) {
+// An unknown/empty doc_groups gets the widest (holding) width, since a
+// holding filing cannot be excluded. At most `max_receipt_windows` windows
+// (earliest first).
+export function deriveReceiptWindows(questionDates, docGroups, policy) {
   const p = resolvePolicy(policy);
-  if (p.receipt_date_window !== "TWO_PASS") return null;
-  const dates = Array.isArray(questionDates) ? questionDates.filter((d) => typeof d === "string" && d !== "") : [];
-  if (dates.length === 0) return null;
+  if (p.receipt_date_window !== "PER_DATE") return Object.freeze([]);
+  const dates = [...new Set((Array.isArray(questionDates) ? questionDates : []).filter((d) => typeof d === "string" && d !== ""))].sort();
+  if (dates.length === 0) return Object.freeze([]);
   const groups = Array.isArray(docGroups) ? docGroups : [];
-  if (groups.length > 0 && groups.every((g) => g === "periodic")) return null;
-  const days = p.receipt_window_days;
-  const afterDays = (groups.length === 0 || groups.includes("holding")) ? days.holding : days.default;
-  const sorted = [...dates].sort();
-  return Object.freeze({
-    from: shiftIsoDate(sorted[0], -days.before),
-    to: shiftIsoDate(sorted[sorted.length - 1], afterDays),
-    question_dates: Object.freeze(sorted),
-    before_days: days.before,
-    after_days: afterDays,
-  });
+  if (groups.length > 0 && groups.every((g) => g === "periodic")) return Object.freeze([]);
+  const before = p.receipt_window_days.before;
+  const after = (groups.length === 0 || groups.includes("holding")) ? p.receipt_window_days.holding : p.receipt_window_days.default;
+  const clusters = [];
+  for (const d of dates) {
+    const current = clusters[clusters.length - 1];
+    // windows [a-before, a+after] and [b-before, b+after] overlap or touch iff b - a <= before + after
+    if (current && daysBetween(current.dates[current.dates.length - 1], d) <= before + after) current.dates.push(d);
+    else clusters.push({ dates: [d] });
+  }
+  const limit = Number.isInteger(p.max_receipt_windows) && p.max_receipt_windows > 0 ? p.max_receipt_windows : clusters.length;
+  return Object.freeze(clusters.slice(0, limit).map((c) => Object.freeze({
+    from: shiftIsoDate(c.dates[0], -before),
+    to: shiftIsoDate(c.dates[c.dates.length - 1], after),
+    question_dates: Object.freeze([...c.dates]),
+    before_days: before,
+    after_days: after,
+  })));
 }
 
 // ---------------------------------------------------------------------------
@@ -163,83 +210,104 @@ export function buildRetrievalPlan({ question, filters, policy }) {
   const p = resolvePolicy(policy);
   if (p.id === FROZEN_POLICY.id) return null;
   const dates = questionFullDates(question ?? "");
-  const window = deriveReceiptWindow(dates, filters?.doc_groups, p);
-  const subtypeRelaxable = p.doc_subtype_filter === "RELAX_ON_SHORTFALL"
+  const windows = deriveReceiptWindows(dates, filters?.doc_groups, p);
+  const subtypeRelaxable = p.doc_subtype_filter === "RELAX_ALWAYS"
     && Array.isArray(filters?.doc_subtypes) && filters.doc_subtypes.length > 0;
   return Object.freeze({
     policy_id: p.id,
     question_dates: dates,
-    receipt_window: window,
+    receipt_windows: windows,
     subtype_relaxable: subtypeRelaxable,
   });
 }
 
-// Priority order (most specific first; each pass only FILLS what the
-// previous passes left short, never re-ranks them):
-//   window            base filters + receipt window       (if window)
-//   window_relaxed    base - doc_subtypes + receipt window (if window && relaxable)
-//   base              base filters as mapped               (always)
-//   base_relaxed      base - doc_subtypes                  (if relaxable)
-// Passes whose filter object is identical to an earlier one are dropped.
+// Pass order (earlier = higher priority in the merged pool):
+//   window[, window:2, ...]         base filters + one receipt window   group "primary"
+//   window_relaxed[, :2, ...]       same, minus doc_subtypes             group "relaxed"
+//   base                            base filters as mapped               group "primary"
+//   base_relaxed                    base minus doc_subtypes              group "relaxed"
+// "primary" passes run until the fixed pool is full; "relaxed" passes ALWAYS
+// run (they exist only when a subtype was extracted). Passes whose filter
+// object is identical to an earlier one are dropped.
 export function buildFilterPasses(filters, plan) {
   const base = buildMetadataFiltersFromConditions(filters ?? {});
-  if (!plan) return Object.freeze([Object.freeze({ label: "base", filters: base })]);
-  const withWindow = (f) => (plan.receipt_window
-    ? buildMetadataFiltersFromConditions({ ...f, receipt_date_from: plan.receipt_window.from, receipt_date_to: plan.receipt_window.to })
-    : null);
-  const withoutSubtype = (f) => (plan.subtype_relaxable ? buildMetadataFiltersFromConditions({ ...f, doc_subtypes: [] }) : null);
-  const candidates = [
-    ["window", withWindow(base)],
-    ["window_relaxed", plan.receipt_window && plan.subtype_relaxable ? withoutSubtype(withWindow(base)) : null],
-    ["base", base],
-    ["base_relaxed", withoutSubtype(base)],
-  ];
+  if (!plan) return Object.freeze([Object.freeze({ label: "base", group: "primary", filters: base })]);
+  const windows = plan.receipt_windows ?? [];
+  const relax = (f) => buildMetadataFiltersFromConditions({ ...f, doc_subtypes: [] });
+  const withWindow = (f, w) => buildMetadataFiltersFromConditions({ ...f, receipt_date_from: w.from, receipt_date_to: w.to });
+  const suffix = (i) => (i === 0 ? "" : `:${i + 1}`);
+  const candidates = [];
+  windows.forEach((w, i) => candidates.push([`window${suffix(i)}`, "primary", withWindow(base, w)]));
+  if (plan.subtype_relaxable) windows.forEach((w, i) => candidates.push([`window_relaxed${suffix(i)}`, "relaxed", relax(withWindow(base, w))]));
+  candidates.push(["base", "primary", base]);
+  if (plan.subtype_relaxable) candidates.push(["base_relaxed", "relaxed", relax(base)]);
   const seen = new Set();
   const passes = [];
-  for (const [label, f] of candidates) {
-    if (!f) continue;
+  for (const [label, group, f] of candidates) {
     const key = JSON.stringify(f);
     if (seen.has(key)) continue;
     seen.add(key);
-    passes.push(Object.freeze({ label, filters: f }));
+    passes.push(Object.freeze({ label, group, filters: f }));
   }
   return Object.freeze(passes);
 }
 
 // ---------------------------------------------------------------------------
-// Result diversification (post-fusion, order-preserving).
+// Ranking of the merged pool (k-independent; the caller slices to k).
 // ---------------------------------------------------------------------------
 
-export function nodeIndicesOfItem(item) {
-  const nodes = new Set();
-  if (Number.isInteger(item?.node_index)) nodes.add(item.node_index);
-  for (const n of item?.node_indices ?? []) if (Number.isInteger(n)) nodes.add(n);
-  for (const c of item?.provenance?.candidates ?? []) if (Number.isInteger(c?.node_index)) nodes.add(c.node_index);
-  return nodes;
-}
+const normText = (t) => String(t ?? "").normalize("NFC").replace(/\s+/g, "");
 
-// items: ranked result items (doc_id + node provenance), best first.
-// A window whose node set is entirely covered by already-kept windows of
-// the same document adds no new source node -- it is deferred behind
-// everything that does. Deferred items are appended (never discarded) so
-// the caller still receives min(k, items.length) results.
-export function diversifyResults(items, { k, dedupeContainedWindows = false, perDocCap = 0 } = {}) {
-  if (!Number.isInteger(k) || k < 1) throw new TypeError("k must be a positive integer");
+// items: the merged pool in collection order (best first). Two order-
+// preserving deferrals, both OFF by default:
+//   dedupeContainedWindows -- an item whose VERIFIED text (via textOf) is
+//     entirely inside an already-kept chunk of the same document adds
+//     nothing and is deferred behind everything that does. No text -> not
+//     provably contained -> never deferred. Node/row provenance is NOT used
+//     (different rows of one table share a node_index).
+//   perDocCap -- defer beyond N chunks of one document.
+// Deferred items are appended, never discarded.
+export function orderCandidates(items, { dedupeContainedWindows = false, perDocCap = 0, textOf = null } = {}) {
   const kept = [];
   const deferred = [];
-  const coveredByDoc = new Map();
+  const keptTextsByDoc = new Map();
   const countByDoc = new Map();
   for (const item of items) {
-    const nodes = nodeIndicesOfItem(item);
-    const covered = coveredByDoc.get(item.doc_id) ?? new Set();
     const count = countByDoc.get(item.doc_id) ?? 0;
-    const contained = dedupeContainedWindows && nodes.size > 0 && [...nodes].every((n) => covered.has(n));
+    const text = dedupeContainedWindows && typeof textOf === "function" ? normText(textOf(item.chunk_id)) : "";
+    const contained = text.length > 0 && (keptTextsByDoc.get(item.doc_id) ?? []).some((keptText) => keptText.includes(text));
     const capped = perDocCap > 0 && count >= perDocCap;
     if (contained || capped) { deferred.push(item); continue; }
     kept.push(item);
-    for (const n of nodes) covered.add(n);
-    coveredByDoc.set(item.doc_id, covered);
     countByDoc.set(item.doc_id, count + 1);
+    if (text.length > 0) {
+      const texts = keptTextsByDoc.get(item.doc_id) ?? [];
+      texts.push(text);
+      keptTextsByDoc.set(item.doc_id, texts);
+    }
   }
-  return [...kept, ...deferred].slice(0, k);
+  return [...kept, ...deferred];
+}
+
+// Every `every`-th rank (4, 8, 12, ...) goes to the next not-yet-placed
+// relaxed-pass candidate when one exists; all other ranks to the next
+// primary candidate; whichever side runs out, the other fills the rest.
+// A pure function of the input order -> the same list for every k.
+export function interleaveRelaxed(ordered, { every = 0, isRelaxed = () => false } = {}) {
+  if (!(Number.isInteger(every) && every > 0)) return [...ordered];
+  const primary = ordered.filter((x) => !isRelaxed(x));
+  const relaxed = ordered.filter((x) => isRelaxed(x));
+  const out = [];
+  let pi = 0;
+  let ri = 0;
+  while (pi < primary.length || ri < relaxed.length) {
+    const rank = out.length + 1;
+    const takeRelaxed = pi >= primary.length || (rank % every === 0 && ri < relaxed.length);
+    out.push(takeRelaxed ? relaxed[ri++] : primary[pi++]);
+  }
+  return out;
+}
+
+export function rankCandidates(items, { dedupeContainedWindows = false, perDocCap = 0, textOf = null, interleaveEvery = 0, isRelaxed = () => false } = {}) {
+  return interleaveRelaxed(orderCandidates(items, { dedupeContainedWindows, perDocCap, textOf }), { every: interleaveEvery, isRelaxed });
 }

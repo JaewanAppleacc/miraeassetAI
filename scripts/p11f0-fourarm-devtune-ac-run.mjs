@@ -142,6 +142,12 @@ async function main() {
   await mkdir(outDir, { recursive: true });
   const resultsPath = path.join(outDir, `${arm}.results${fileSuffix}.ndjson`);
   const runJsonPath = path.join(outDir, `${arm}.run${fileSuffix}.json`);
+  // A completed run already lives here (e.g. the official results directory
+  // holds the frozen A.run.json). Control and candidate runs each get a
+  // fresh --out-dir; overwriting a finished run is never implicit.
+  if (existsSync(runJsonPath) && !process.argv.includes("--overwrite")) {
+    throw new Error(`refusing to overwrite the completed run at ${runJsonPath} -- pass a fresh --out-dir for every control/candidate run (or --overwrite deliberately)`);
+  }
 
   const [conditionsRaw, nameToCorpCodeIndex, configRaw] = await Promise.all([
     readFile(path.join(OFFICIAL_DIR, "devtune101_conditions.v2.jsonl")),
@@ -220,14 +226,14 @@ async function main() {
             locator: r.locator, row: r.row, col: r.col, locator_status: r.locator_status,
             chunk_text_sha256: r.chunk_text_sha256, score: r.score, score_type: r.score_type,
             provenance: r.provenance,
-            ...(fileSuffix ? { retrieval_pass: r.retrieval_pass ?? null } : {}),
+            ...(fileSuffix ? { retrieval_pass: r.retrieval_pass ?? null, retrieval_group: r.retrieval_group ?? null } : {}),
           })),
           // Remediation diagnostics only on the non-frozen file -- the frozen
           // line shape stays exactly as before.
           ...(fileSuffix ? {
             policy_id: policy.id,
             retrieval_passes: adapter.lastSearch()?.passes ?? null,
-            receipt_window: adapter.lastSearch()?.plan?.receipt_window ?? null,
+            receipt_windows: adapter.lastSearch()?.plan?.receipt_windows ?? null,
           } : {}),
         };
       } catch (error) {

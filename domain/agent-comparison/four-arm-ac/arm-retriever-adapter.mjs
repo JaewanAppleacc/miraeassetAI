@@ -26,7 +26,7 @@ import {
   buildProvenanceSet, buildDownstreamExpansionInput,
 } from "./locator-provenance.mjs";
 import {
-  resolvePolicy, FROZEN_POLICY, buildRetrievalPlan, buildFilterPasses, diversifyResults,
+  resolvePolicy, FROZEN_POLICY, buildRetrievalPlan, buildFilterPasses, rankCandidates,
 } from "./four-arm-retrieval-policy.mjs";
 
 // vFINAL section C's KURE pin, and P10.2's own pinned retrieval constants
@@ -175,28 +175,41 @@ export function createArmRetrieverAdapter({
 
   // ---- Turn A-RETRIEVAL-REMEDIATION-V1: multi-pass search (non-frozen policy only) ----
   //
-  // Passes come from buildFilterPasses(): the most specific filter set
-  // first (receipt-date window + extracted subtype), then progressively
-  // relaxed ones. Each pass only FILLS what earlier passes left short --
-  // an item found by an earlier pass keeps its position, later passes
-  // append new chunk_ids behind it. For arm A the query is embedded ONCE
-  // and reused by every pass; for arm C no embedding exists and none is
-  // called (searchArmC below stays dense-free, see the static test). After
-  // the passes, diversifyResults() defers windows that add no new source
-  // node for an already-represented document (never discards; deferred
-  // items fill the tail), then the list is cut to k and re-numbered.
-  // lastSearch() exposes what happened for the run ledger.
+  // Candidate collection is independent of the output k (review round 1):
+  //   * every pass asks for the FIXED pool size (policy.fusion_pool_k);
+  //   * "primary" passes (with the extracted subtype, window first) run
+  //     until `pool` primary candidates are collected; "relaxed" passes
+  //     (without the subtype) ALWAYS run, so a wrong extracted subtype that
+  //     fills the pool cannot hide the right filing;
+  //   * an item found by an earlier pass keeps its position, later passes
+  //     append new chunk_ids behind it;
+  //   * the merged pool is ranked ONCE (rankCandidates: optional verified-
+  //     text dedupe / per-doc cap, then relaxed candidates interleaved at a
+  //     fixed stride) and only then cut to k -- so k=10 is the prefix of
+  //     k=20 for every k <= pool (k > pool is refused, not silently served).
+  // For arm A the query is embedded ONCE and reused by every pass; arm C
+  // has no embedding and calls none (searchArmC stays dense-free, see the
+  // static test). lastSearch() exposes what happened for the run ledger.
+  const textCache = new Map();   // chunk_id -> hydrated text_content (non-frozen only; for verified dedupe)
   let lastSearch = null;
 
   async function searchWithPolicy(question, filters, k, plan) {
+    const pool = (Number.isInteger(policy.fusion_pool_k) && policy.fusion_pool_k > 0) ? policy.fusion_pool_k : k;
+    if (k > pool) {
+      throw new RangeError(`k=${k} exceeds the policy's fixed candidate pool (${pool}); the pool must not depend on the output k`);
+    }
     const effectivePlan = plan ?? buildRetrievalPlan({ question, filters, policy });
     const passes = buildFilterPasses(filters, effectivePlan);
-    const pool = Math.max(k, Number.isInteger(policy.fusion_pool_k) ? policy.fusion_pool_k : k);
     const queryVector = arm === "A" ? await embeddingAdapter.embedQuery(question) : null;
     const seen = new Set();
     const merged = [];
     const passLog = [];
+    let primaryCount = 0;
     for (const pass of passes) {
+      if (pass.group === "primary" && primaryCount >= pool) {
+        passLog.push(Object.freeze({ label: pass.label, group: pass.group, skipped: true, returned: 0, added: 0 }));
+        continue;
+      }
       const items = arm === "A"
         ? await searchArmA(question, pass.filters, pool, { queryVector })
         : await searchArmC(question, pass.filters, pool);
@@ -204,18 +217,22 @@ export function createArmRetrieverAdapter({
       for (const item of items) {
         if (seen.has(item.chunk_id)) continue;
         seen.add(item.chunk_id);
-        merged.push(Object.freeze({ ...item, retrieval_pass: pass.label }));
+        merged.push(Object.freeze({ ...item, retrieval_pass: pass.label, retrieval_group: pass.group }));
         added += 1;
+        if (pass.group === "primary") primaryCount += 1;
       }
-      passLog.push(Object.freeze({ label: pass.label, returned: items.length, added }));
-      if (merged.length >= k) break;
+      passLog.push(Object.freeze({ label: pass.label, group: pass.group, skipped: false, returned: items.length, added }));
     }
-    const diversified = diversifyResults(merged, {
-      k, dedupeContainedWindows: policy.dedupe_contained_windows === true, perDocCap: policy.per_doc_cap ?? 0,
+    const ranked = rankCandidates(merged, {
+      dedupeContainedWindows: policy.dedupe_contained_windows === true,
+      perDocCap: policy.per_doc_cap ?? 0,
+      textOf: (chunkId) => textCache.get(chunkId),
+      interleaveEvery: policy.relaxed_interleave_every ?? 0,
+      isRelaxed: (item) => item.retrieval_group === "relaxed",
     });
-    const results = diversified.map((item, index) => Object.freeze({ ...item, rank: index + 1 }));
+    const results = ranked.slice(0, k).map((item, index) => Object.freeze({ ...item, rank: index + 1 }));
     lastSearch = Object.freeze({
-      policy_id: policy.id, plan: effectivePlan, passes: Object.freeze(passLog),
+      policy_id: policy.id, plan: effectivePlan, pool, passes: Object.freeze(passLog),
       merged: merged.length, returned: results.length,
     });
     return Object.freeze(results);
@@ -237,6 +254,7 @@ export function createArmRetrieverAdapter({
       fetchChunksByIds(client, retrievalIndexId, chunkIds),
       fetchStagingSpans(client, provenanceLoadSessionId, chunkIds),
     ]);
+    if (policy.id !== FROZEN_POLICY.id) for (const row of rowsById.values()) textCache.set(row.chunk_id, row.text_content);
     return result.results.map((r) => toArmResultItem(
       rowsById.get(r.chunk_id), spansById.get(r.chunk_id),
       { rank: r.rank, score: r.score, scoreType: r.score_type, componentScores: r.component_scores, arm },
@@ -263,6 +281,7 @@ export function createArmRetrieverAdapter({
       fetchChunksByIds(client, retrievalIndexId, chunkIds),
       fetchStagingSpans(client, provenanceLoadSessionId, chunkIds),
     ]);
+    if (policy.id !== FROZEN_POLICY.id) for (const row of rowsById.values()) textCache.set(row.chunk_id, row.text_content);
     // Row-level double-check (defense in depth on top of the SQL-level
     // prefilter above), matching arm A's own BM25 leg exactly.
     const filtered = bm25Ranked.filter((r) => {
