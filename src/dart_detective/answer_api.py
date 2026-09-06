@@ -23,7 +23,8 @@ import threading
 import traceback
 from typing import Any
 
-from . import answer_wire, arm_a_live_adapter, arm_a_serving_bridge, grounded_answer, policy_gate
+from . import (answer_wire, arm_a4_a3_live_adapter, arm_a_live_adapter, arm_a_serving_bridge,
+               grounded_answer, policy_gate)
 from .agents import qa_agent
 from .llm import get_llm
 from .retriever_adapter import build_serving_retriever
@@ -81,6 +82,8 @@ def _build_retriever() -> tuple[Any, Any, str, dict[str, Any]]:
             text_resolver=_text_resolver, **_backend_options)
     if backend == arm_a_serving_bridge.RETRIEVAL_BACKEND_ARM_A_LIVE:
         return arm_a_live_adapter.build_arm_a_live_serving_retriever(**_backend_options)
+    if backend == arm_a_serving_bridge.RETRIEVAL_BACKEND_ARM_A4_A3_LIVE:
+        return arm_a4_a3_live_adapter.build_arm_a4_a3_live_serving_retriever(**_backend_options)
     # 기존 경로 — 인자·호출 그대로(동작 불변).
     return build_serving_retriever(os.environ.get("DART_QA_ARM", DEFAULT_ARM))
 

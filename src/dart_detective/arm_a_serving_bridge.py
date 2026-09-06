@@ -47,9 +47,16 @@ RETRIEVAL_BACKEND_ARM_A = "ARM_A_FIXED_RRF"
 # just a comment. The old literal string keeps working (858658e's own tests use it).
 RETRIEVAL_BACKEND_ARM_A_FROZEN_REPLAY = "ARM_A_FROZEN_REPLAY"
 RETRIEVAL_BACKEND_ARM_A_LIVE = "ARM_A_LIVE"
+# Turn A4-A3-PLUS-QA-FINAL-INTEGRATION-V1: the DEV_TUNE-101-selected A4 wide
+# pool + R4_wide_rrf_centric reranker + A3 contradiction guard pipeline, live
+# (arm_a4_a3_live_adapter.py / scripts/arm_a4_a3_live_worker.mjs). Additive
+# only — ARM_A_LIVE above is unmodified and remains the fallback/comparison
+# path; there is no automatic fallback between the two during evaluation.
+RETRIEVAL_BACKEND_ARM_A4_A3_LIVE = "ARM_A4_A3_LIVE"
 RETRIEVAL_BACKENDS = (
     RETRIEVAL_BACKEND_DEFAULT, RETRIEVAL_BACKEND_ARM_A,
     RETRIEVAL_BACKEND_ARM_A_FROZEN_REPLAY, RETRIEVAL_BACKEND_ARM_A_LIVE,
+    RETRIEVAL_BACKEND_ARM_A4_A3_LIVE,
 )
 RETRIEVAL_BACKEND_ENV = "DART_QA_RETRIEVAL_BACKEND"
 
