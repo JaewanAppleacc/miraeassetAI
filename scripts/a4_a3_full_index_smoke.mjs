@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// Turn A4-A3-PLUS-QA-FINAL-INTEGRATION-V1, Section G/H: real, non-Gold full-index smoke.
+// Turn A4-A3-PLUS-QA-FINAL-INTEGRATION-V1, Section G/H (re-run self-contained in
+// A4-A3-PLUS-QA-SELF-CONTAINED-AND-JUDGE-V1): real, non-Gold full-index smoke.
 // Runs BOTH ARM_A_LIVE and ARM_A4_A3_LIVE (separately, no auto-fallback) against >=10 new,
 // Gold-unrelated questions spanning the required categories, against the real 442,549-chunk
 // READY index. Writes full per-question detail to work/ (gitignored, never committed) and
@@ -8,6 +9,11 @@
 // Each "question" is a real, already-materialized chunk's own text (or a light paraphrase of
 // it) pulled fresh from the full index by category-matching SQL — never from any Gold/
 // DEV_TUNE/DEV_CHECK/HOLDOUT fixture, which this script never opens.
+//
+// ARM_A_LIVE_IMPL_ROOT (external sibling worktree) is still required here ONLY for the
+// ARM_A_LIVE side of the comparison and this script's own probe-text fetch — ARM_A_LIVE itself
+// was intentionally left untouched/out of scope this turn. ARM_A4_A3_LIVE needs no impl-root env
+// var at all (self-contained, see scripts/arm_a4_a3_live_worker.mjs).
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -19,7 +25,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..");
 const OUT_DIR = path.join(REPO_ROOT, "work", "a4-a3-plus-qa-full-index-smoke");
 
-const IMPL_ROOT = process.env.ARM_A4_A3_LIVE_IMPL_ROOT || process.env.ARM_A_LIVE_IMPL_ROOT;
+const ARM_A_LIVE_IMPL_ROOT = process.env.ARM_A_LIVE_IMPL_ROOT;
 const DATABASE_URL = process.env.ARM_A4_A3_LIVE_DATABASE_URL || process.env.ARM_A_LIVE_DATABASE_URL;
 const RETRIEVAL_INDEX_ID = process.env.ARM_A4_A3_LIVE_RETRIEVAL_INDEX_ID || "fixed_kure_index_8fe191342205848d1d6a6123f38a54e7";
 const LOAD_SESSION_ID = process.env.ARM_A4_A3_LIVE_LOAD_SESSION_ID || "fixed_kure_attempt_c7ee3363a0af161c7a0572d024dfbf36";
@@ -27,8 +33,8 @@ const CORPUS_SNAPSHOT_ID = process.env.ARM_A4_A3_LIVE_CORPUS_SNAPSHOT_ID || "cor
 const KURE_SERVER_URL = process.env.ARM_A4_A3_LIVE_KURE_SERVER_URL || "http://127.0.0.1:58411/v1/embeddings";
 const BM25_CACHE_DIR = process.env.ARM_A4_A3_LIVE_BM25_CACHE_DIR;
 
-for (const [name, value] of Object.entries({ IMPL_ROOT, DATABASE_URL, BM25_CACHE_DIR })) {
-  if (!value) throw new Error(`${name} is required (set ARM_A4_A3_LIVE_* or ARM_A_LIVE_* env vars)`);
+for (const [name, value] of Object.entries({ ARM_A_LIVE_IMPL_ROOT, DATABASE_URL, BM25_CACHE_DIR })) {
+  if (!value) throw new Error(`${name} is required`);
 }
 
 // 10 probe chunk_ids selected by category-matching SQL against the real full index (see this
@@ -114,7 +120,9 @@ class WorkerHandle {
 }
 
 async function fetchProbeTexts() {
-  const { Client } = createRequire(path.join(IMPL_ROOT, "package.json"))("pg");
+  // This script's own probe-fetch now uses this repo's own local `pg` (package.json), same as
+  // the self-contained ARM_A4_A3_LIVE worker — no external worktree needed for this either.
+  const { Client } = createRequire(import.meta.url)("pg");
   const client = new Client({ connectionString: DATABASE_URL });
   await client.connect();
   try {
@@ -140,10 +148,13 @@ async function main() {
   const probes = await fetchProbeTexts();
 
   const commonEnv = { ...process.env, NODE_OPTIONS: "--max-old-space-size=8192" };
+  // Proves ARM_A4_A3_LIVE truly needs no impl-root env var, even if one happens to be set in
+  // this shell for ARM_A_LIVE's own sake.
+  delete commonEnv.ARM_A4_A3_LIVE_IMPL_ROOT;
 
   const armALive = new WorkerHandle("ARM_A_LIVE", path.join(REPO_ROOT, "scripts", "arm_a_live_worker.mjs"), {
     ...commonEnv,
-    ARM_A_LIVE_IMPL_ROOT: IMPL_ROOT,
+    ARM_A_LIVE_IMPL_ROOT,
     ARM_A_LIVE_DATABASE_URL: DATABASE_URL,
     ARM_A_LIVE_RETRIEVAL_INDEX_ID: RETRIEVAL_INDEX_ID,
     ARM_A_LIVE_LOAD_SESSION_ID: process.env.ARM_A_LIVE_LOAD_SESSION_ID || "fixed_kure_attempt_23b88aea167c04400bf77a1a58839f2e",
@@ -155,7 +166,6 @@ async function main() {
   });
   const armA4A3Live = new WorkerHandle("ARM_A4_A3_LIVE", path.join(REPO_ROOT, "scripts", "arm_a4_a3_live_worker.mjs"), {
     ...commonEnv,
-    ARM_A4_A3_LIVE_IMPL_ROOT: IMPL_ROOT,
     ARM_A4_A3_LIVE_DATABASE_URL: DATABASE_URL,
     ARM_A4_A3_LIVE_RETRIEVAL_INDEX_ID: RETRIEVAL_INDEX_ID,
     ARM_A4_A3_LIVE_LOAD_SESSION_ID: LOAD_SESSION_ID,
