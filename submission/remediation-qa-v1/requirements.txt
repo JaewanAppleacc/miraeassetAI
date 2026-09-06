@@ -1,0 +1,11 @@
+# Runtime dependencies only -- derived from an actual import-graph trace of this
+# package's own src/ tree (2026-09-06), not copied from the dev repo's
+# requirements-lock.txt/requirements-serve.txt verbatim. Packages that only appear in
+# that dev repo's test suite (e.g. jsonschema, pytest), in modules this package does not
+# include (e.g. pydantic -- only the excluded legacy qa_service.py used it), or in code
+# paths this package does not include (e.g. tiktoken/beautifulsoup4 for XML parsing,
+# torch/sentence-transformers for the optional dense-rerank arm B) are intentionally not
+# listed here.
+fastapi==0.141.1
+uvicorn==0.52.4
+certifi==2026.7.22
