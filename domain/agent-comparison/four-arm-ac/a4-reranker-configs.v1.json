@@ -1,0 +1,79 @@
+{
+  "schema_version": "0.1.0",
+  "turn": "A4-RERANKER-ENGINE-V1",
+  "frozen": true,
+  "frozen_note": "Registered before any real DEV_TUNE/Gold/A/oracle result was opened this Turn. No weight or config may be added or edited after such a result is seen -- a materially different idea goes in a NEW versioned file (v2), never a silent edit here.",
+  "max_configs": 12,
+  "config_count": 6,
+  "tie_break_note": "Informational only -- the engine (a4-reranker-engine.mjs) enforces ONE fixed global tie-break chain for every config, not configurable per-entry: reranker_score desc -> original_a_top20 desc -> original_a_rank asc -> wide_rrf_rank asc -> chunk_id bytewise asc.",
+  "feature_keys_note": "Any weight key not listed in a4-reranker-features.mjs's FEATURE_KEYS is rejected by validateConfig(); any FEATURE_KEYS entry omitted from a config's weights defaults to 0.",
+  "configs": [
+    {
+      "config_id": "R0_original_a_baseline",
+      "family": "R0",
+      "description": "original A rank 우선 baseline -- trusts Frozen Arm A's own frozen RRF order almost entirely, with the explicit original-A-top20 protective feature as the only other input. All other signals weighted 0.",
+      "weights": {
+        "original_rrf": 0.85,
+        "original_a_protect": 0.15
+      }
+    },
+    {
+      "config_id": "R1_bm25_dense_original_rrf",
+      "family": "R1",
+      "description": "BM25 + dense + original RRF, evenly weighted. No lexical/metadata/table signals.",
+      "weights": {
+        "bm25": 0.35,
+        "dense": 0.35,
+        "original_rrf": 0.30
+      }
+    },
+    {
+      "config_id": "R2_plus_lexical_term_coverage",
+      "family": "R2",
+      "description": "R1 plus lexical overlap and required-metric/row-name coverage.",
+      "weights": {
+        "bm25": 0.25,
+        "dense": 0.25,
+        "original_rrf": 0.20,
+        "lexical_overlap": 0.15,
+        "term_coverage": 0.15
+      }
+    },
+    {
+      "config_id": "R3_plus_metadata_consistency",
+      "family": "R3",
+      "description": "R2 plus corp/period/doc-type metadata consistency.",
+      "weights": {
+        "bm25": 0.20,
+        "dense": 0.20,
+        "original_rrf": 0.15,
+        "lexical_overlap": 0.15,
+        "term_coverage": 0.15,
+        "metadata_match": 0.15
+      }
+    },
+    {
+      "config_id": "R4_wide_rrf_centric",
+      "family": "R4",
+      "description": "wide RRF 중심 -- the widened top-100 union-RRF score dominates, with a small blend of the three narrower legs for stability.",
+      "weights": {
+        "wide_rrf": 0.70,
+        "bm25": 0.10,
+        "dense": 0.10,
+        "original_rrf": 0.10
+      }
+    },
+    {
+      "config_id": "R5_reciprocal_fusion_plus_coverage",
+      "family": "R5",
+      "description": "rank 기반 reciprocal fusion (BM25/dense/original RRF/wide RRF evenly) + required-metric/row-name evidence coverage.",
+      "weights": {
+        "bm25": 0.20,
+        "dense": 0.20,
+        "original_rrf": 0.20,
+        "wide_rrf": 0.20,
+        "term_coverage": 0.20
+      }
+    }
+  ]
+}
