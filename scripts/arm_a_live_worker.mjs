@@ -96,6 +96,18 @@ async function main() {
   const databaseUrl = requireEnv("ARM_A_LIVE_DATABASE_URL");
   const retrievalIndexId = requireEnv("ARM_A_LIVE_RETRIEVAL_INDEX_ID");
   const loadSessionId = requireEnv("ARM_A_LIVE_LOAD_SESSION_ID");
+  // Turn A-PLUS-QA-FULL-INDEX-SMOKE-V1: the shard used one plain load_session_id for
+  // everything (discovery + materialization + BM25), per the live-retriever handoff's own note
+  // that the attempt-based v2 scheme is incompatible with that plain lookup. The real full-corpus
+  // index instead has TWO session rows: an immutable DISCOVERY attempt (holds `source_spans` for
+  // provenance/fetch_node AND the canonical_queue rows BM25 is built from) and a separate READY
+  // successor attempt (holds the materialized/dense session status createArmRetrieverAdapter's
+  // own readiness() checks). createArmRetrieverAdapter already has a `provenanceLoadSessionId`
+  // parameter for exactly this split (default: `loadSessionId`, so shard callers are unaffected
+  // if these two new vars are left unset) — this worker just threads it through, and does the
+  // same for which session id builds/loads the persisted BM25 cache. No new ranking/search logic.
+  const provenanceLoadSessionId = process.env.ARM_A_LIVE_PROVENANCE_LOAD_SESSION_ID || loadSessionId;
+  const bm25LoadSessionId = process.env.ARM_A_LIVE_BM25_LOAD_SESSION_ID || loadSessionId;
   const corpusSnapshotId = requireEnv("ARM_A_LIVE_CORPUS_SNAPSHOT_ID");
   const kureServerUrl = requireEnv("ARM_A_LIVE_KURE_SERVER_URL");
   const bm25CacheDir = requireEnv("ARM_A_LIVE_BM25_CACHE_DIR");
@@ -125,11 +137,11 @@ async function main() {
   log("loading BM25 index (or building + persisting if not cached)...");
   let bm25Index;
   try {
-    bm25Index = await loadFixedKureBm25Index(bm25CacheDir, loadSessionId);
+    bm25Index = await loadFixedKureBm25Index(bm25CacheDir, bm25LoadSessionId);
     log("BM25 index loaded from persisted cache");
   } catch {
-    const { index, documentCount } = await buildFixedKureBm25Index(client, loadSessionId);
-    await persistFixedKureBm25Index(bm25CacheDir, loadSessionId, index);
+    const { index, documentCount } = await buildFixedKureBm25Index(client, bm25LoadSessionId);
+    await persistFixedKureBm25Index(bm25CacheDir, bm25LoadSessionId, index);
     log(`BM25 index built (${documentCount} docs) and persisted`);
     bm25Index = index;
   }
@@ -143,7 +155,7 @@ async function main() {
 
   const adapter = createArmRetrieverAdapter({
     arm: "A", client, bm25Index, vectorRepository, embeddingAdapter,
-    retrievalIndexId, loadSessionId, corpusSnapshotId,
+    retrievalIndexId, loadSessionId, provenanceLoadSessionId, corpusSnapshotId,
     expectedPins: { embedding_revision: KURE_PIN.revision, embedding_dimension: KURE_PIN.dimension },
   });
 
