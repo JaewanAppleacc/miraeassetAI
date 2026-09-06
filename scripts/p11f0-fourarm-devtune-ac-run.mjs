@@ -46,6 +46,7 @@ import { createGatedSeedCompanyResolver } from "../domain/adapters/seed-company-
 import { buildNameToCorpCodeIndex, mapOfficialConditionToFilterInput } from "../domain/agent-comparison/four-arm-ac/four-arm-conditions-to-filter-mapper.mjs";
 import { validateOfficialConditionsV2Artifact } from "../domain/agent-comparison/four-arm-ac/official-conditions-v2-importer.mjs";
 import { RETRIEVAL_OUTPUT_K } from "../domain/agent-comparison/four-arm-ac/four-arm-cutoff-contract.mjs";
+import { resolvePolicy, FROZEN_POLICY } from "../domain/agent-comparison/four-arm-ac/four-arm-retrieval-policy.mjs";
 
 const { Client } = pg;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -131,9 +132,16 @@ async function main() {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) throw new Error("DATABASE_URL is required");
 
+  // Turn A-RETRIEVAL-REMEDIATION-V1: --policy frozen-a-v1 (default: the
+  // byte-identical official path) | remediation-v1. A non-frozen policy
+  // writes to its OWN files (`<ARM>.results.<policy>.ndjson`,
+  // `<ARM>.run.<policy>.json`) so the frozen official results are never
+  // overwritten -- the two runs are compared side by side.
+  const policy = resolvePolicy(option("--policy", FROZEN_POLICY.id));
+  const fileSuffix = policy.id === FROZEN_POLICY.id ? "" : `.${policy.id}`;
   await mkdir(outDir, { recursive: true });
-  const resultsPath = path.join(outDir, `${arm}.results.ndjson`);
-  const runJsonPath = path.join(outDir, `${arm}.run.json`);
+  const resultsPath = path.join(outDir, `${arm}.results${fileSuffix}.ndjson`);
+  const runJsonPath = path.join(outDir, `${arm}.run${fileSuffix}.json`);
 
   const [conditionsRaw, nameToCorpCodeIndex, configRaw] = await Promise.all([
     readFile(path.join(OFFICIAL_DIR, "devtune101_conditions.v2.jsonl")),
@@ -163,11 +171,12 @@ async function main() {
       adapter = createArmRetrieverAdapter({
         arm: "A", client, bm25Index, retrievalIndexId: RETRIEVAL_INDEX_ID, loadSessionId: LOAD_SESSION_ID,
         provenanceLoadSessionId: PROVENANCE_LOAD_SESSION_ID, vectorRepository, embeddingAdapter, expectedPins: KURE_EXPECTED_PINS,
+        policy,
       });
     } else {
       adapter = createArmRetrieverAdapter({
         arm: "C", client, bm25Index, retrievalIndexId: RETRIEVAL_INDEX_ID, loadSessionId: LOAD_SESSION_ID,
-        provenanceLoadSessionId: PROVENANCE_LOAD_SESSION_ID,
+        provenanceLoadSessionId: PROVENANCE_LOAD_SESSION_ID, policy,
       });
     }
 
@@ -189,11 +198,11 @@ async function main() {
       // ones that already succeeded, and never silently accepts a
       // permanently-broken checkpoint as if it were valid progress.
       if (done.has(row.question_id) && !done.get(row.question_id).error) continue;
-      const mapped = mapOfficialConditionToFilterInput(row.conditions, nameToCorpCodeIndex);
+      const mapped = mapOfficialConditionToFilterInput(row.conditions, nameToCorpCodeIndex, { policy, question: row.question });
       const t0 = Date.now();
       let resultLine;
       try {
-        const results = await adapter.search(row.question, mapped.filters, RETRIEVAL_OUTPUT_K);
+        const results = await adapter.search(row.question, mapped.filters, RETRIEVAL_OUTPUT_K, { plan: mapped.plan });
         const latencyMs = Date.now() - t0;
         latencies.push(latencyMs);
         resultLine = {
@@ -211,7 +220,15 @@ async function main() {
             locator: r.locator, row: r.row, col: r.col, locator_status: r.locator_status,
             chunk_text_sha256: r.chunk_text_sha256, score: r.score, score_type: r.score_type,
             provenance: r.provenance,
+            ...(fileSuffix ? { retrieval_pass: r.retrieval_pass ?? null } : {}),
           })),
+          // Remediation diagnostics only on the non-frozen file -- the frozen
+          // line shape stays exactly as before.
+          ...(fileSuffix ? {
+            policy_id: policy.id,
+            retrieval_passes: adapter.lastSearch()?.passes ?? null,
+            receipt_window: adapter.lastSearch()?.plan?.receipt_window ?? null,
+          } : {}),
         };
       } catch (error) {
         errors += 1;
@@ -236,6 +253,7 @@ async function main() {
       n_questions: questions.length, n_errors: errors,
       latency_ms: sortedLatencies.length > 0 ? { p50: percentile(sortedLatencies, 50), p95: percentile(sortedLatencies, 95), max: sortedLatencies[sortedLatencies.length - 1] } : null,
       results_sha256: sha256Hex(finalRaw),
+      ...(fileSuffix ? { policy } : {}),
     };
     await import("node:fs/promises").then((fs) => fs.writeFile(runJsonPath, JSON.stringify(runJson, null, 2)));
     console.log(JSON.stringify(runJson, null, 2));

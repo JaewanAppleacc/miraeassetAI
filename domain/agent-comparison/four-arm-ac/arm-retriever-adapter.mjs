@@ -25,6 +25,9 @@ import {
   classifySpans, verifyNodeIdentity, summarizeLocatorCoverage,
   buildProvenanceSet, buildDownstreamExpansionInput,
 } from "./locator-provenance.mjs";
+import {
+  resolvePolicy, FROZEN_POLICY, buildRetrievalPlan, buildFilterPasses, diversifyResults,
+} from "./four-arm-retrieval-policy.mjs";
 
 // vFINAL section C's KURE pin, and P10.2's own pinned retrieval constants
 // (scripts/p10.2-stage2-embedding-grid.mjs:44-46, already reused unchanged
@@ -129,7 +132,12 @@ export function createArmRetrieverAdapter({
   arm, client, bm25Index, retrievalIndexId, loadSessionId, provenanceLoadSessionId = loadSessionId, corpusSnapshotId,
   vectorRepository, embeddingAdapter, expectedPins,
   bm25TopK = BM25_TOP_K, rrfK = RRF_K_CONSTANT,
+  // Turn A-RETRIEVAL-REMEDIATION-V1: opt-in retrieval policy (see
+  // four-arm-retrieval-policy.mjs). Omitted/null = FROZEN_POLICY = the exact
+  // official-run behaviour; the frozen code path below is untouched.
+  policy: policyArg = null,
 }) {
+  const policy = resolvePolicy(policyArg);
   if (arm !== "A" && arm !== "C") throw new TypeError(`arm must be "A" or "C", got ${JSON.stringify(arm)}`);
   if (!client || typeof client.query !== "function") throw new TypeError("client is required");
   if (!bm25Index) throw new TypeError("bm25Index is required");
@@ -159,10 +167,62 @@ export function createArmRetrieverAdapter({
 
   const snapshotId = corpusSnapshotId ?? retrievalIndexId;
   const hybridAdapter = arm === "A"
-    ? createFixedKureHybridRetrieverAdapter({ client, bm25Index, vectorRepository, embeddingAdapter, retrievalIndexId, expectedPins, bm25TopK, rrfK })
+    ? createFixedKureHybridRetrieverAdapter({
+      client, bm25Index, vectorRepository, embeddingAdapter, retrievalIndexId, expectedPins, bm25TopK, rrfK,
+      policy: policy.id === FROZEN_POLICY.id ? null : policy,
+    })
     : null;
 
-  async function searchArmA(question, filters, k) {
+  // ---- Turn A-RETRIEVAL-REMEDIATION-V1: multi-pass search (non-frozen policy only) ----
+  //
+  // Passes come from buildFilterPasses(): the most specific filter set
+  // first (receipt-date window + extracted subtype), then progressively
+  // relaxed ones. Each pass only FILLS what earlier passes left short --
+  // an item found by an earlier pass keeps its position, later passes
+  // append new chunk_ids behind it. For arm A the query is embedded ONCE
+  // and reused by every pass; for arm C no embedding exists and none is
+  // called (searchArmC below stays dense-free, see the static test). After
+  // the passes, diversifyResults() defers windows that add no new source
+  // node for an already-represented document (never discards; deferred
+  // items fill the tail), then the list is cut to k and re-numbered.
+  // lastSearch() exposes what happened for the run ledger.
+  let lastSearch = null;
+
+  async function searchWithPolicy(question, filters, k, plan) {
+    const effectivePlan = plan ?? buildRetrievalPlan({ question, filters, policy });
+    const passes = buildFilterPasses(filters, effectivePlan);
+    const pool = Math.max(k, Number.isInteger(policy.fusion_pool_k) ? policy.fusion_pool_k : k);
+    const queryVector = arm === "A" ? await embeddingAdapter.embedQuery(question) : null;
+    const seen = new Set();
+    const merged = [];
+    const passLog = [];
+    for (const pass of passes) {
+      const items = arm === "A"
+        ? await searchArmA(question, pass.filters, pool, { queryVector })
+        : await searchArmC(question, pass.filters, pool);
+      let added = 0;
+      for (const item of items) {
+        if (seen.has(item.chunk_id)) continue;
+        seen.add(item.chunk_id);
+        merged.push(Object.freeze({ ...item, retrieval_pass: pass.label }));
+        added += 1;
+      }
+      passLog.push(Object.freeze({ label: pass.label, returned: items.length, added }));
+      if (merged.length >= k) break;
+    }
+    const diversified = diversifyResults(merged, {
+      k, dedupeContainedWindows: policy.dedupe_contained_windows === true, perDocCap: policy.per_doc_cap ?? 0,
+    });
+    const results = diversified.map((item, index) => Object.freeze({ ...item, rank: index + 1 }));
+    lastSearch = Object.freeze({
+      policy_id: policy.id, plan: effectivePlan, passes: Object.freeze(passLog),
+      merged: merged.length, returned: results.length,
+    });
+    return Object.freeze(results);
+  }
+
+  // queryVector (remediation multi-pass only): embed once, reuse per pass.
+  async function searchArmA(question, filters, k, { queryVector = null } = {}) {
     const request = {
       schema_version: "0.1.0", query_id: `query_ac_a_${sha256Hex(question).slice(0, 16)}`, question,
       corpus_snapshot_id: snapshotId, chunking_config_id: CHUNKING_POLICY_ID, index_snapshot_id: retrievalIndexId,
@@ -171,7 +231,7 @@ export function createArmRetrieverAdapter({
       // dropped) -- HYBRID_UNION_RRF, not the intersection-only HYBRID_RRF.
       metadata_filters: filters, top_k: k, retrieval_method: "HYBRID_UNION_RRF",
     };
-    const result = await hybridAdapter.retrieve(request, {});
+    const result = await hybridAdapter.retrieve(request, queryVector ? { queryVector } : {});
     const chunkIds = result.results.map((r) => r.chunk_id);
     const [rowsById, spansById] = await Promise.all([
       fetchChunksByIds(client, retrievalIndexId, chunkIds),
@@ -209,7 +269,11 @@ export function createArmRetrieverAdapter({
       const row = rowsById.get(r.id);
       return row !== undefined && passesMetadataFilters(row, filters);
     });
-    const top = filtered.slice(0, k);
+    // Remediation (policy.bm25_zero_score === "DROP"): arm C's only leg is
+    // BM25, so a score-0 candidate is pure id-order padding -- never
+    // returned. Frozen policy ("KEEP"): unchanged.
+    const scored = policy.bm25_zero_score === "DROP" ? filtered.filter((r) => r.score > 0) : filtered;
+    const top = scored.slice(0, k);
     return top.map((r, index) => toArmResultItem(
       rowsById.get(r.id), spansById.get(r.id),
       { rank: index + 1, score: r.score, scoreType: "BM25", componentScores: { bm25: r.score, dense: null, rrf: null, reranker: null }, arm },
@@ -219,18 +283,28 @@ export function createArmRetrieverAdapter({
   return Object.freeze({
     arm_code: ARM_DEFS[arm].arm_code,
     arm_id: ARM_DEFS[arm].arm_id,
+    policy_id: policy.id,
 
     // search(question, conditions, k=20): `conditions` is the pre-computed
     // dict shape section D describes (never Gold-derived -- see
     // conditions-fixture.mjs). Mirrors the reference interfaces.md's own
     // `search(self, question, conditions, k=20) -> list[Chunk]` signature.
-    async search(question, conditions = {}, k = 20) {
+    // options.plan (remediation only): a plan from the mapper; absent ->
+    // derived here from the question text + filters.
+    async search(question, conditions = {}, k = 20, { plan = null } = {}) {
       if (typeof question !== "string" || question.trim() === "") throw new TypeError("question must be a non-empty string");
       if (!Number.isInteger(k) || k < 1) throw new TypeError("k must be a positive integer");
       const filters = buildMetadataFiltersFromConditions(conditions);
-      const results = arm === "A" ? await searchArmA(question, filters, k) : await searchArmC(question, filters, k);
-      return Object.freeze(results);
+      if (policy.id === FROZEN_POLICY.id) {
+        const results = arm === "A" ? await searchArmA(question, filters, k) : await searchArmC(question, filters, k);
+        return Object.freeze(results);
+      }
+      return searchWithPolicy(question, filters, k, plan);
     },
+
+    // Diagnostics of the most recent remediation search (null under the
+    // frozen policy, which records nothing new).
+    lastSearch() { return lastSearch; },
 
     // fetch_node(doc_id, node_index): identity verification only (section
     // G) -- confirms the (doc_id, node_index) pair is actually referenced

@@ -94,17 +94,32 @@ async function fetchChunksByIds(client, retrievalIndexId, chunkIds) {
 export function createFixedKureHybridRetrieverAdapter({
   client, bm25Index, vectorRepository, embeddingAdapter, retrievalIndexId, expectedPins,
   bm25TopK = BM25_TOP_K, rrfK = RRF_K_CONSTANT,
+  // Turn A-RETRIEVAL-REMEDIATION-V1 (opt-in; null = frozen behaviour):
+  //   policy.dense_candidate_k -- dense-leg candidate count DECOUPLED from
+  //     request.top_k. Frozen: the dense leg fetches request.top_k
+  //     candidates, so changing the output k also changes the candidate
+  //     set (and therefore the ranking) -- a caller asking for 10 does not
+  //     get the first 10 of the 20-result answer.
+  //   policy.bm25_zero_score -- "DROP" keeps score-0 BM25 candidates out of
+  //     RRF (frozen "KEEP": bm25Search pads its top-K with zero-score ids
+  //     in id order and each still earns 1/(k+rank) in the fusion).
+  policy = null,
 }) {
   if (!client || typeof client.query !== "function") throw new TypeError("client is required");
   if (!bm25Index) throw new TypeError("bm25Index is required");
   if (!vectorRepository || typeof vectorRepository.searchDocumentChunksByVector !== "function") throw new TypeError("vectorRepository is required");
   if (!embeddingAdapter || typeof embeddingAdapter.embedQuery !== "function") throw new TypeError("embeddingAdapter is required");
   if (typeof retrievalIndexId !== "string" || retrievalIndexId === "") throw new TypeError("retrievalIndexId is required");
+  const denseCandidateK = (Number.isInteger(policy?.dense_candidate_k) && policy.dense_candidate_k > 0) ? policy.dense_candidate_k : null;
+  const dropZeroBm25 = policy?.bm25_zero_score === "DROP";
 
   return Object.freeze({
     // `request` has already been schema-validated and deep-frozen by
     // retriever-store.mjs before this is ever called.
-    async retrieve(request, { signal } = {}) {
+    // options.queryVector (opt-in): an already-computed embedding of
+    // request.question, so a multi-pass caller embeds ONCE instead of once
+    // per pass. Absent -> embedded here exactly as before.
+    async retrieve(request, { signal, queryVector: queryVectorIn } = {}) {
       const startedAt = Date.now();
       const filters = request.metadata_filters;
       const isUnion = request.retrieval_method === "HYBRID_UNION_RRF";
@@ -119,9 +134,11 @@ export function createFixedKureHybridRetrieverAdapter({
       // semantics for every filter field).
       const eligibleIds = await fetchEligibleChunkIds(client, retrievalIndexId, filters, { signal });
       const bm25Ranked = bm25Search(bm25Index, request.question, { topK: bm25TopK, eligibleIds });
-      const queryVector = await embeddingAdapter.embedQuery(request.question);
+      const queryVector = (Array.isArray(queryVectorIn) && queryVectorIn.length > 0)
+        ? queryVectorIn
+        : await embeddingAdapter.embedQuery(request.question);
       const denseRows = await vectorRepository.searchDocumentChunksByVector(
-        { retrievalIndexId, queryVector, topK: request.top_k, filters, expectedPins },
+        { retrievalIndexId, queryVector, topK: denseCandidateK ?? request.top_k, filters, expectedPins },
         { signal },
       );
 
@@ -132,6 +149,9 @@ export function createFixedKureHybridRetrieverAdapter({
       // already excluded, but never trusted blindly either.
       const bm25RankedFiltered = bm25Ranked
         .filter((r) => { const row = bm25RowsById.get(r.id); return row && passesMetadataFilters(row, filters); })
+        // Remediation (policy.bm25_zero_score === "DROP"): a candidate with no
+        // lexical overlap at all must not enter RRF with a rank credit.
+        .filter((r) => !dropZeroBm25 || r.score > 0)
         .map((r) => ({ id: r.id, score: r.score }));
 
       const denseRowsById = new Map(denseRows.map((r) => [r.chunk_id, r]));

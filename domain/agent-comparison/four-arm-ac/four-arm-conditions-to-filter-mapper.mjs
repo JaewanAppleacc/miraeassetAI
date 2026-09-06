@@ -27,6 +27,7 @@
 // doc_subtypes here; it is preserved, visible, in `unmapped` instead of
 // being silently dropped or guessed into a made-up doc_subtype value.
 import { buildMetadataFiltersFromConditions } from "./conditions-fixture.mjs";
+import { resolvePolicy, buildRetrievalPlan } from "./four-arm-retrieval-policy.mjs";
 
 export class UnresolvedCompanyNameError extends Error {
   constructor(name) {
@@ -159,7 +160,32 @@ function deriveDocSubtypeFilter(conditions) {
 // ready for buildMetadataFiltersFromConditions, plus `unmapped` for
 // transparency (never silently discarded from the caller's view, even
 // though it does not participate in the actual filter).
-export function mapOfficialConditionToFilterInput(conditions, nameToCorpCodeIndex) {
+// Turn A-RETRIEVAL-REMEDIATION-V1: the official conditions artifact's
+// `correction` flag is produced by the extractor as "the question text
+// contains 정정/정정공시/기재정정" (conditions.py CORRECTION_WORDS) -- it is a
+// statement about the QUESTION, not an instruction to exclude corrected
+// filings. The frozen mapping (`is_correction := correction`) therefore
+// turned `correction:false` (98/101 official questions) into a hard
+// `is_correction = false` prefilter that removed every 정정 filing
+// (1,004/4,204 documents, 24% of the corpus; 631/1,469 exchange filings)
+// from the candidate pool. The remediation policy applies the filter only
+// when the question actually asks about 정정, and otherwise leaves both
+// original and corrected filings in the pool for ranking to decide.
+function deriveCorrectionFilter(conditions, policy) {
+  if (policy.correction_filter === "ONLY_WHEN_ASKED") {
+    return conditions.correction === true ? true : null;
+  }
+  // FROZEN ("AS_EXTRACTED"): exactly the official-run mapping.
+  return typeof conditions.correction === "boolean" ? conditions.correction : null;
+}
+
+// options.policy (Turn A-RETRIEVAL-REMEDIATION-V1, default FROZEN_POLICY):
+// under the frozen policy every field below is mapped exactly as the
+// official run mapped it. options.question (the question text) is only
+// consulted by the remediation policy's retrieval plan (full-date parsing
+// for the receipt-date window) -- never by the frozen path.
+export function mapOfficialConditionToFilterInput(conditions, nameToCorpCodeIndex, options = {}) {
+  const policy = resolvePolicy(options.policy);
   const corps = Array.isArray(conditions.corps) ? conditions.corps : [];
   const corpCodes = corps.map((name) => {
     const code = nameToCorpCodeIndex.get(name);
@@ -178,14 +204,20 @@ export function mapOfficialConditionToFilterInput(conditions, nameToCorpCodeInde
     base_months: temporal.base_months,
     receipt_date_from: temporal.receipt_date_from,
     receipt_date_to: temporal.receipt_date_to,
-    is_correction: typeof conditions.correction === "boolean" ? conditions.correction : null,
+    is_correction: deriveCorrectionFilter(conditions, policy),
     retrieval_eligible: true,
   };
 
   const docGroupsArr = rawFilterInput.doc_groups;
   const subtypeApplied = docSubtypes.length > 0;
+  const filters = buildMetadataFiltersFromConditions(rawFilterInput);
   return Object.freeze({
-    filters: buildMetadataFiltersFromConditions(rawFilterInput),
+    filters,
+    policy_id: policy.id,
+    // null under the frozen policy (one frozen pass). Otherwise the
+    // receipt-window / subtype-relaxation plan the adapter turns into
+    // ordered filter passes (four-arm-retrieval-policy.mjs).
+    plan: buildRetrievalPlan({ question: options.question ?? "", filters, policy }),
     temporal_filter_applied: temporal.temporal_filter_applied,
     doc_subtype_filter_applied: subtypeApplied,
     unmapped: Object.freeze({
