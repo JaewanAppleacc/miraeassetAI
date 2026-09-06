@@ -53,10 +53,16 @@ RETRIEVAL_BACKEND_ARM_A_LIVE = "ARM_A_LIVE"
 # only — ARM_A_LIVE above is unmodified and remains the fallback/comparison
 # path; there is no automatic fallback between the two during evaluation.
 RETRIEVAL_BACKEND_ARM_A4_A3_LIVE = "ARM_A4_A3_LIVE"
+# Turn A4-A3-QA-BINDER-EVIDENCE-V2-INTEGRATION-V1: opt-in only — wraps
+# RETRIEVAL_BACKEND_ARM_A4_A3_LIVE's own top-20 with DocumentBinder (document boundary)
+# then Evidence V2 (row restore inside that boundary only), both already frozen/tested
+# elsewhere (arm_a_document_binder.py / arm_a_evidence.py). Additive: the backend above
+# is unmodified and remains the default live path.
+RETRIEVAL_BACKEND_ARM_A4_A3_LIVE_BINDER_EVIDENCE_V2 = "ARM_A4_A3_LIVE_BINDER_EVIDENCE_V2"
 RETRIEVAL_BACKENDS = (
     RETRIEVAL_BACKEND_DEFAULT, RETRIEVAL_BACKEND_ARM_A,
     RETRIEVAL_BACKEND_ARM_A_FROZEN_REPLAY, RETRIEVAL_BACKEND_ARM_A_LIVE,
-    RETRIEVAL_BACKEND_ARM_A4_A3_LIVE,
+    RETRIEVAL_BACKEND_ARM_A4_A3_LIVE, RETRIEVAL_BACKEND_ARM_A4_A3_LIVE_BINDER_EVIDENCE_V2,
 )
 RETRIEVAL_BACKEND_ENV = "DART_QA_RETRIEVAL_BACKEND"
 

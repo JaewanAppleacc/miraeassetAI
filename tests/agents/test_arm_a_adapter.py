@@ -21,12 +21,14 @@ _EXPECTED_UNCHANGED_FILE_SHA256 = {
     "src/dart_detective/retriever_adapter.py":
         "642a832fea9b508d8c6a2f377a4b8c91a320faea97f53e7ac5cc2474aa2f7f7d",
     # Turn A-PLUS-QA-LIVE-WIRING-V1, 이어서 A-PLUS-QA-LIVE-RETRIEVER-V1, 이어서
-    # A4-A3-PLUS-QA-FINAL-INTEGRATION-V1이 answer_api.py를 추가로 고쳤다(retrieval_backend
-    # 선택에 ARM_A_LIVE, 다음으로 ARM_A4_A3_LIVE 분기 추가). 기존 DEFAULT·ARM_A_FIXED_RRF·
-    # ARM_A_LIVE 경로 동작 불변은 tests/agents/test_arm_a_serving_bridge.py와
-    # tests/agents/test_arm_a_live_adapter.py의 회귀 테스트가 잠근다.
+    # A4-A3-PLUS-QA-FINAL-INTEGRATION-V1, 이어서 A4-A3-QA-BINDER-EVIDENCE-V2-INTEGRATION-V1이
+    # answer_api.py를 추가로 고쳤다(retrieval_backend 선택에 ARM_A_LIVE, 다음으로
+    # ARM_A4_A3_LIVE, 다음으로 ARM_A4_A3_LIVE_BINDER_EVIDENCE_V2 분기 추가 — 매번 additive만).
+    # 기존 DEFAULT·ARM_A_FIXED_RRF·ARM_A_LIVE·ARM_A4_A3_LIVE 경로 동작 불변은
+    # tests/agents/test_arm_a_serving_bridge.py·test_arm_a_live_adapter.py의 회귀 테스트와
+    # tests/agents/test_arm_a4_a3_binder_evidence_v2_integration.py의 byte-lock이 잠근다.
     "src/dart_detective/answer_api.py":
-        "a7495ffe0c040fe9e788025f0795ebd515103203afed2c83a6e00d5448ba6324",
+        "226055241c3453438a99271723002710b55fd1648b85dab30f10a4bbeb2814f8",
     "src/dart_detective/agents/qa_agent.py":
         "43e055aafc93c06f346ced4484bb94dc821111abc4c5b8b8c93d9470355d7020",
     "src/dart_detective/agents/validator.py":

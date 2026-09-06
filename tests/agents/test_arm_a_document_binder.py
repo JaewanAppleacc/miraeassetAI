@@ -30,10 +30,13 @@ _EXPECTED_UNCHANGED_FILE_SHA256 = {
         "d997a4459c601d09ec2dbc47614aa83ebac47ee9a26e0284db313c64edde551b",
     "src/dart_detective/arm_a4_a3_live_adapter.py":
         "1307b265dae284792a5e38268fab8cb8024fa658d1243fb9b0941d4423e3e7e7",
+    # Turn A4-A3-QA-BINDER-EVIDENCE-V2-INTEGRATION-V1: intentionally updated — additive-only
+    # new backend dispatch (ARM_A4_A3_LIVE_BINDER_EVIDENCE_V2), see
+    # docs/A4_A3_QA_BINDER_EVIDENCE_V2_INTEGRATION_V1_CONTRACT.md §3.
     "src/dart_detective/arm_a_serving_bridge.py":
-        "1f0a9b1a43ee44ae0801c8a89634729696d9afce91f89d12bddde53d7772cf22",
+        "03898eda36ec920dd2f9a5bc9605a6d68d6137b53829b86de14e03cff3d50796",
     "src/dart_detective/answer_api.py":
-        "a7495ffe0c040fe9e788025f0795ebd515103203afed2c83a6e00d5448ba6324",
+        "226055241c3453438a99271723002710b55fd1648b85dab30f10a4bbeb2814f8",
     "src/dart_detective/agents/validator.py":
         "0fbc179e1f9251f8dd2965d33bd292fdd9e1d71bcc35ac6e239338b897ac6423",
 }
