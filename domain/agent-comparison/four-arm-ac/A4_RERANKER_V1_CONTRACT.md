@@ -8,15 +8,30 @@ the exact input/output shapes `a4-reranker-engine.mjs` and
 integration-tested against a real wide-candidate-pool producer later
 without either side guessing at the other's field names.
 
-**Correction (input-pool ceiling, pre-results, no real result opened):**
+**Correction 1 (input-pool ceiling, pre-results, no real result opened):**
 the A4 wide pool is BM25 top-100 UNION dense top-100, deduplicated by
 `chunk_id` — up to **200** distinct candidates, not 100. Frozen Arm A's
 original top-20 is itself already a subset of that union (every A top-20
 member appears in the BM25 and/or dense top-100 legs), so it is never
-counted as 20 candidates on top of the 200. This correction only changes
-the pool-size ceiling and adds two membership flags (section 2) and rank
-validation (section 2/5); it does not add, remove, or reweight any
-config, and no real result was opened to make it.
+counted as 20 candidates on top of the 200.
+
+**Correction 2 (schema compatibility with the real wide-pool producer,
+pre-results, no real result opened):** section 2 below is rewritten to
+match `buildWideCandidatePool()`'s actual return shape
+(`codex/fourarm-a4-wide-pool-v01` @ `defd73302bd2b4fd6007283c968a87b3bbf49d0b`,
+`domain/agent-comparison/four-arm-ac/a4-wide-candidate-pool.mjs`) exactly,
+field-for-field, so the reranker consumes that function's real output
+with **zero** remapping — no adapter/shim layer. Concretely:
+`candidate.bm25_top100`/`candidate.dense_top100`/
+`candidate.in_original_a_top20` are replaced by
+`candidate.source_membership.{bm25_top100,dense_top100,original_a_top20}`,
+and `candidate.scores.{bm25,dense,original_a_rrf,wide_rrf}.rank` are
+replaced by `candidate.source_ranks.{bm25,dense,original_a,wide_rrf}`
+(plain integers/`null`, not `{score,rank}` objects — the actual score
+values, when needed, live separately in
+`candidate.source_scores.{bm25,dense,original_a_rrf,wide_rrf}`). Neither
+correction adds, removes, or reweights any config, and no real
+DEV_TUNE/Gold/A/oracle result was opened to make either.
 
 ## 1. Role (fixed)
 
@@ -47,64 +62,85 @@ The reranker **only** ranks. It never:
 
 ## 2. `RerankerCandidate` (one wide-pool candidate)
 
+This is `buildWideCandidatePool()`'s own real `pool[i]` shape
+(`a4-wide-candidate-pool.mjs`, `codex/fourarm-a4-wide-pool-v01` @
+`defd73302bd2b4fd6007283c968a87b3bbf49d0b`), reproduced field-for-field —
+the engine consumes this exact object with **no** remapping layer:
+
 ```ts
 type RerankerCandidate = {
   chunk_id: string;                 // required, unique within a pool
-  doc_id: string | null;
+  document_id: string;
+  text: string | null;              // raw chunk text -- used ONLY for lexical/coverage features, NEVER compared against a Gold span
+  chunk_text_sha256: string;
   node_index: number | null;
   node_indices: number[];           // [] if unknown -- never used as "missing" (empty is a real, resolved single/zero-node case)
-  locator: string | null;
-  locator_status:                   // same vocabulary as locator-provenance.mjs's LOCATOR_STATUS
-    | "NODE_AND_ROW_RESOLVED" | "NODE_RESOLVED_ROW_AMBIGUOUS"
-    | "MULTI_NODE_AMBIGUOUS" | "EMPTY_SPANS_INVALID" | null;
-  row: number | null;
-  col: number | null;
-  is_table: boolean | null;         // null = unknown, not "false"
-  text: string | null;              // raw chunk text -- used ONLY for lexical/coverage features, NEVER compared against a Gold span
-  chunk_text_sha256: string | null;
-  metadata: {
-    corp_code: string | null;
-    doc_group: "periodic" | "major" | "holding" | "exchange" | null;
-    doc_subtype: string | null;
-    base_year: number | null;
-    base_month: number | null;
-    receipt_date: string | null;    // ISO date, informational only -- no feature currently reads it
-    is_correction: boolean | null;
-  } | null;
-  scores: {
-    // rank: an integer in [1, 100], or null (not found by this leg at
-    // all -- a legitimate absence, scored 0 by the corresponding
-    // feature, never a validation failure).
-    bm25: { score: number | null; rank: number | null } | null;
-    dense: { score: number | null; rank: number | null } | null;
-    // Frozen Arm A's OFFICIAL run (dense_candidate_k=20): rank is an
-    // integer in [1, 20], or null if this candidate was never in A's own
-    // frozen top-20, which is real information (scored 0), not a gap.
-    original_a_rrf: { score: number | null; rank: number | null } | null;
-    // The widened (dense_candidate_k=100) union-RRF pool this candidate
-    // came from. No fixed rank ceiling is validated on this leg (the
-    // fused pool itself can be up to 200 wide).
-    wide_rrf: { score: number | null; rank: number | null } | null;
+  locator: object;                  // producer-defined shape; {} if unknown. No feature currently reads inside it (see section 4 note).
+  provenance: object;                // producer-defined shape; {} if unknown. No feature currently reads inside it (see section 4 note).
+  metadata: object;                  // producer-defined shape; {} if unknown
+
+  // Membership flags: which source leg(s) this candidate came from, and
+  // whether it was part of Frozen Arm A's own OFFICIAL top-20 output (not
+  // merely "would rank in the top 20 under a recomputed formula" -- see
+  // source_ranks.original_a below for that distinction). At least one of
+  // bm25_top100/dense_top100 MUST be true -- the engine rejects
+  // (RangeError) any candidate with both false, since it could not have
+  // come from the pre-registered BM25-top-100-union-dense-top-100 union.
+  source_membership: {
+    original_a_top20: boolean;
+    bm25_top100: boolean;
+    dense_top100: boolean;
   };
-  // Explicit, first-class protective signal: true iff this exact chunk_id
-  // was ranked 1..20 in Frozen Arm A's own official results (independent
-  // of, and redundant with, scores.original_a_rrf.rank <= 20 -- kept as
-  // its own boolean so a config can weight it directly and so the
-  // engine's fixed tie-break rule never has to re-derive it).
-  in_original_a_top20: boolean;
-  // Membership flags: which source leg(s) this candidate came from. At
-  // least one MUST be true -- the engine rejects (RangeError) any
-  // candidate with both false/absent, since such a candidate could not
-  // have come from the pre-registered BM25-top-100-union-dense-top-100
-  // contract.
-  bm25_top100: boolean;
-  dense_top100: boolean;
+
+  // Ranks (plain integers or null -- NOT {score,rank} objects).
+  source_ranks: {
+    // BM25/dense leg rank: an integer in [1,100], or null (not found by
+    // this leg at all -- a legitimate absence, scored 0 by the
+    // corresponding feature, never a validation failure).
+    bm25: number | null;
+    dense: number | null;
+    // Arm A's RRF rank recomputed over the FULL pool via A's own formula
+    // (RRF(k=60) over bm25_top100 + dense_top100's own top-20 subset) --
+    // NOT capped at 20 in general; a candidate outside A's actual
+    // official top-20 still gets a "would-be" rank here as diagnostic
+    // signal. The engine enforces [1,20] ONLY when
+    // source_membership.original_a_top20 is true; otherwise any positive
+    // integer (or null) is accepted.
+    original_a: number | null;
+    // Diagnostic-only RRF rank over bm25_top100 + the FULL dense_top100
+    // (never treated as final). An integer in [1,200], or null.
+    wide_rrf: number | null;
+  };
+
+  // Actual score values, when needed (no current feature reads these --
+  // every feature that uses a leg's standing uses its RANK, not its raw
+  // score, to avoid cross-leg score-scale normalization issues).
+  source_scores: {
+    bm25: number | null;
+    dense: number | null;
+    original_a_rrf: number | null;
+    wide_rrf: number | null;
+  };
 };
 ```
 
 Nothing else is defined on this type. A candidate with additional
 producer-side fields is accepted (the engine only reads the fields
 above), but the engine never depends on any field not listed here.
+
+**Known, disclosed gap (not fixed this Turn — out of the explicit
+required-change list):** `table_context`/`provenance_completeness`
+(section 4) were originally written against an assumed shape with
+top-level `row`/`col`/`is_table`/`locator_status` fields. The real
+producer's output has no such top-level fields (that information, if
+present at all, lives inside the producer-defined `locator`/`provenance`
+objects, whose internal shape is not yet pinned by any contract). Against
+real `buildWideCandidatePool()` output, both features therefore currently
+evaluate to their neutral `0.5` for every candidate — this does not throw
+and does not block a valid top-20 (see the integration test in section
+6), but it does mean these two signals are not yet informative on real
+data. Wiring them to `locator`/`provenance`'s real internal shape is
+follow-up work, not part of this schema-compatibility fix.
 
 ## 3. `RerankerQuestionContext` (per-question, never Gold)
 
@@ -137,16 +173,16 @@ neutral 0.5 for that signal (see `a4-reranker-features.mjs`).
 
 | feature key | signal | absent/missing behavior |
 |---|---|---|
-| `bm25` | BM25 leg rank (reciprocal) | not found by this leg → **0** (real absence) |
-| `dense` | dense leg rank (reciprocal) | not found by this leg → **0** |
-| `original_rrf` | Frozen Arm A's own official RRF rank (reciprocal) | not in A's official pool → **0** |
-| `wide_rrf` | widened union-RRF rank (reciprocal) | not in the wide pool at all → **0** (should not occur if the candidate came from the wide pool itself) |
+| `bm25` | `source_ranks.bm25` (reciprocal) | not found by this leg → **0** (real absence) |
+| `dense` | `source_ranks.dense` (reciprocal) | not found by this leg → **0** |
+| `original_rrf` | `source_ranks.original_a` (reciprocal) — Arm A's recomputed RRF rank, uncapped | no rank at all → **0**; a rank beyond 20 still contributes a smaller-but-nonzero value, by design (diagnostic signal, distinct from the boolean `original_a_protect` below) |
+| `wide_rrf` | `source_ranks.wide_rrf` (reciprocal) | not in the wide pool at all → **0** (should not occur if the candidate came from the wide pool itself) |
 | `lexical_overlap` | question-text token overlap with candidate text | no text on either side → **0.5** (neutral) |
 | `term_coverage` | required metric/row-name presence in candidate text | no text or no required labels → **0.5** |
 | `metadata_match` | corp/period/doc-group agreement with question expectations | no candidate metadata or no expectations given → **0.5** |
-| `table_context` | row/col resolved or `is_table` known | unknown → **0.5** |
-| `provenance_completeness` | `locator_status` quality | unknown/missing → **0.5** |
-| `original_a_protect` | was this chunk in A's frozen top-20 | boolean, no "missing" case (defaults `false` → 0) |
+| `table_context` | row/col resolved or `is_table` known (see section 2's disclosed gap — currently always neutral against real producer output) | unknown → **0.5** |
+| `provenance_completeness` | `locator_status` quality (see section 2's disclosed gap — currently always neutral against real producer output) | unknown/missing → **0.5** |
+| `original_a_protect` | `source_membership.original_a_top20` — was this chunk in A's actual OFFICIAL top-20 (not merely a good `source_ranks.original_a` value) | boolean, no "missing" case (defaults `false` → 0) |
 
 Every feature is a finite number in `[0, 1]`. `extractFeatures()` throws
 if any computed value is not finite — a defect in a feature function,
@@ -165,8 +201,12 @@ never a valid "we don't know" state (that is always 0.5, not `NaN`).
   negative all rejected) — fail-closed, never coerced to 0 silently.
 - The tie-break chain is **not** part of a config — it is one fixed rule
   the engine always applies (see `a4-reranker-engine.mjs`'s
-  `compareScored`): `reranker_score` desc → `in_original_a_top20` desc →
-  `original_a_rank` asc → `wide_rrf_rank` asc → `chunk_id` bytewise asc.
+  `compareScored`): `reranker_score` desc → `source_membership.
+  original_a_top20` desc → `source_ranks.original_a` asc (**only when**
+  `source_membership.original_a_top20` is true — a candidate outside A's
+  actual top-20 never gets this protective rank comparison, even if it
+  carries a numeric `source_ranks.original_a`) → `source_ranks.wide_rrf`
+  asc → `chunk_id` bytewise asc.
 - No config may be added, removed, or reweighted after a real DEV_TUNE/
   Gold/A/oracle result has been opened by any Turn. A materially
   different idea is a new `v2` file, never a silent edit to `v1`.
@@ -184,12 +224,24 @@ never a valid "we don't know" state (that is always 0.5, not `NaN`).
   (BM25 top-100 UNION dense top-100) and refuses to guess about anything
   beyond it. Pools of exactly 100, 101, 199, or 200 are all accepted;
   201 is rejected.
-- Every candidate must carry `bm25_top100=true` or `dense_top100=true`
-  (or both) — a candidate with neither is a hard `RangeError`.
-- `scores.bm25.rank` and `scores.dense.rank` must each be an integer in
-  `[1, 100]` or `null`; `scores.original_a_rrf.rank` must be an integer
-  in `[1, 20]` or `null` — any other value (0, a float, a rank outside
-  the range, `NaN`) is a hard `RangeError`, checked before any scoring.
+- Every candidate must carry `source_membership.bm25_top100=true` or
+  `source_membership.dense_top100=true` (or both) — a candidate with
+  neither is a hard `RangeError`.
+- `source_ranks.bm25` and `source_ranks.dense` must each be an integer in
+  `[1, 100]` or `null`; `source_ranks.wide_rrf` must be an integer in
+  `[1, 200]` or `null`; `source_ranks.original_a` must be a positive
+  integer or `null` in general, but when `source_membership.
+  original_a_top20` is true it must additionally be in `[1, 20]` (and
+  cannot be `null`) — any other value (0, a float, an out-of-range rank,
+  `NaN`) is a hard `RangeError`, checked before any scoring.
+- The **most important integration guarantee**: the real
+  `buildWideCandidatePool()` return value (`{ pool } `) can be passed to
+  `rerankCandidates(pool, questionContext, config)` directly — `pool`
+  itself, no field renamed, no wrapper object, no adapter function in
+  between. See
+  `tests/four-arm-a4-reranker.test.mjs`'s wide-pool contract-integration
+  tests, which import the real `buildWideCandidatePool` and do exactly
+  this.
 - Input candidate objects are never mutated — every candidate in the
   pipeline is spread into a **new** object; the caller's own array/objects
   are safe to reuse or freeze before calling.

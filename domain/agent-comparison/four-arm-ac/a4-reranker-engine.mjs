@@ -26,6 +26,7 @@ export const TOP_K = 20;
 // it is never counted as 20 additional candidates on top of the 200.
 export const MAX_POOL_SIZE = 200;
 export const BM25_DENSE_LEG_MAX_RANK = 100;
+export const WIDE_RRF_MAX_RANK = 200;
 export const ORIGINAL_A_MAX_RANK = 20;
 
 function isFiniteNumber(value) {
@@ -43,6 +44,28 @@ function assertRankRange(rank, maxRank, label) {
   if (rank === null || rank === undefined) return;
   if (!isPositiveInteger(rank) || rank > maxRank) {
     throw new RangeError(`${label} must be an integer in [1, ${maxRank}] or null (got ${JSON.stringify(rank)})`);
+  }
+}
+
+// source_ranks.original_a is arm A's RRF rank recomputed over the FULL
+// candidate pool (buildWideCandidatePool's own "would-be" ranking), so it
+// is NOT capped at 20 in general -- a candidate outside A's actual
+// official top-20 can still carry a large original_a rank as diagnostic
+// information. The [1,20] ceiling applies ONLY when
+// source_membership.original_a_top20 is true (the candidate was actually
+// among A's officially-returned 20); in that case a rank is required and
+// must fall in [1,20].
+function assertOriginalARank(candidate) {
+  const rank = candidate.source_ranks?.original_a;
+  const isTop20 = candidate.source_membership?.original_a_top20 === true;
+  const label = `candidate ${candidate.chunk_id}: source_ranks.original_a`;
+  if (rank === null || rank === undefined) {
+    if (isTop20) throw new RangeError(`${label} must be an integer in [1, ${ORIGINAL_A_MAX_RANK}] when source_membership.original_a_top20 is true (got null)`);
+    return;
+  }
+  if (!isPositiveInteger(rank)) throw new RangeError(`${label} must be a positive integer or null (got ${JSON.stringify(rank)})`);
+  if (isTop20 && rank > ORIGINAL_A_MAX_RANK) {
+    throw new RangeError(`${label} must be an integer in [1, ${ORIGINAL_A_MAX_RANK}] when source_membership.original_a_top20 is true (got ${rank})`);
   }
 }
 
@@ -95,13 +118,27 @@ function weightedScore(features, weights) {
 // weaken or reorder it:
 //   reranker_score desc -> original_a_top20 desc -> original_a_rank asc
 //   -> wide_rrf_rank asc -> chunk_id bytewise asc.
+//
+// The original-A protection (both the boolean step AND the rank
+// sub-step) applies ONLY to candidates with
+// source_membership.original_a_top20 === true. A candidate outside A's
+// actual official top-20 may still carry a numeric source_ranks.
+// original_a ("would-be" rank, see a4-wide-candidate-pool.mjs), but that
+// number is diagnostic only and never used as a protective tie-break
+// signal here -- `originalARankForTieBreak` below deliberately ignores it
+// unless the top20 flag is true.
+function originalARankForTieBreak(entry) {
+  if (entry.in_original_a_top20 !== true) return Number.POSITIVE_INFINITY;
+  return isFiniteNumber(entry.original_a_rank) ? entry.original_a_rank : Number.POSITIVE_INFINITY;
+}
+
 function compareScored(a, b) {
   if (b.reranker_score !== a.reranker_score) return b.reranker_score - a.reranker_score;
   const aTop20 = a.in_original_a_top20 === true ? 1 : 0;
   const bTop20 = b.in_original_a_top20 === true ? 1 : 0;
   if (bTop20 !== aTop20) return bTop20 - aTop20;
-  const aRank = isFiniteNumber(a.original_a_rank) ? a.original_a_rank : Number.POSITIVE_INFINITY;
-  const bRank = isFiniteNumber(b.original_a_rank) ? b.original_a_rank : Number.POSITIVE_INFINITY;
+  const aRank = originalARankForTieBreak(a);
+  const bRank = originalARankForTieBreak(b);
   if (aRank !== bRank) return aRank - bRank;
   const aWide = isFiniteNumber(a.wide_rrf_rank) ? a.wide_rrf_rank : Number.POSITIVE_INFINITY;
   const bWide = isFiniteNumber(b.wide_rrf_rank) ? b.wide_rrf_rank : Number.POSITIVE_INFINITY;
@@ -116,9 +153,10 @@ function compareScored(a, b) {
 // neither flag set could not have come from the pre-registered union
 // contract and is rejected rather than silently accepted.
 function assertPoolMembership(candidate) {
-  if (candidate.bm25_top100 !== true && candidate.dense_top100 !== true) {
+  const membership = candidate.source_membership ?? {};
+  if (membership.bm25_top100 !== true && membership.dense_top100 !== true) {
     throw new RangeError(
-      `candidate ${candidate.chunk_id} has neither bm25_top100=true nor dense_top100=true -- every wide-pool candidate must come from at least one source leg`,
+      `candidate ${candidate.chunk_id} has neither source_membership.bm25_top100=true nor source_membership.dense_top100=true -- every wide-pool candidate must come from at least one source leg`,
     );
   }
 }
@@ -136,10 +174,11 @@ function assertValidPool(pool) {
     if (seen.has(candidate.chunk_id)) throw new RangeError(`duplicate chunk_id in pool: ${candidate.chunk_id}`);
     seen.add(candidate.chunk_id);
     assertPoolMembership(candidate);
-    const scores = candidate.scores ?? {};
-    assertRankRange(scores.bm25?.rank, BM25_DENSE_LEG_MAX_RANK, `candidate ${candidate.chunk_id}: scores.bm25.rank`);
-    assertRankRange(scores.dense?.rank, BM25_DENSE_LEG_MAX_RANK, `candidate ${candidate.chunk_id}: scores.dense.rank`);
-    assertRankRange(scores.original_a_rrf?.rank, ORIGINAL_A_MAX_RANK, `candidate ${candidate.chunk_id}: scores.original_a_rrf.rank`);
+    const ranks = candidate.source_ranks ?? {};
+    assertRankRange(ranks.bm25, BM25_DENSE_LEG_MAX_RANK, `candidate ${candidate.chunk_id}: source_ranks.bm25`);
+    assertRankRange(ranks.dense, BM25_DENSE_LEG_MAX_RANK, `candidate ${candidate.chunk_id}: source_ranks.dense`);
+    assertRankRange(ranks.wide_rrf, WIDE_RRF_MAX_RANK, `candidate ${candidate.chunk_id}: source_ranks.wide_rrf`);
+    assertOriginalARank(candidate);
   }
 }
 
@@ -168,8 +207,9 @@ export function rerankCandidates(pool, questionContext, config) {
       ...candidate,
       features,
       reranker_score,
-      original_a_rank: candidate.scores?.original_a_rrf?.rank ?? null,
-      wide_rrf_rank: candidate.scores?.wide_rrf?.rank ?? null,
+      in_original_a_top20: candidate.source_membership?.original_a_top20 === true,
+      original_a_rank: candidate.source_ranks?.original_a ?? null,
+      wide_rrf_rank: candidate.source_ranks?.wide_rrf ?? null,
     });
   });
 

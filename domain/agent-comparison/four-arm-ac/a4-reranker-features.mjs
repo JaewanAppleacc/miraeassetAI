@@ -44,11 +44,6 @@ function rankFeature(rank) {
   return 1 / (1 + rank);
 }
 
-function scoreFeatureFromRank(scoreEntry) {
-  if (!scoreEntry || typeof scoreEntry !== "object") return 0;
-  return rankFeature(scoreEntry.rank);
-}
-
 // null = "no usable text" (missing input), never an empty array (which
 // would silently read as "computed, zero overlap").
 function tokenize(text) {
@@ -127,22 +122,28 @@ export function provenanceCompletenessFeature(candidate) {
 // The explicit "protective signal" for candidates that were already in
 // Frozen Arm A's own official top-20 -- a first-class feature (in
 // addition to the engine's own fixed tie-break rule) so a config can
-// weight it directly rather than relying on tie-breaking alone.
+// weight it directly rather than relying on tie-breaking alone. Reads
+// ONLY the authoritative source_membership.original_a_top20 flag, never
+// the (unbounded, diagnostic-only) source_ranks.original_a number.
 export function originalAProtectFeature(candidate) {
-  return candidate?.in_original_a_top20 === true ? 1 : 0;
+  return candidate?.source_membership?.original_a_top20 === true ? 1 : 0;
 }
 
-// candidate: a RerankerCandidate (A4_RERANKER_V1_CONTRACT.md).
-// questionContext: a RerankerQuestionContext (same doc) -- never a Gold
-// object; callers must not pass one.
+// candidate: a RerankerCandidate -- the real buildWideCandidatePool()
+// output shape (a4-wide-candidate-pool.mjs / A4_RERANKER_V1_CONTRACT.md),
+// consumed here with no remapping: source_ranks.{bm25,dense,original_a,
+// wide_rrf} and source_membership.{bm25_top100,dense_top100,
+// original_a_top20}.
+// questionContext: a RerankerQuestionContext -- never a Gold object;
+// callers must not pass one.
 export function extractFeatures(candidate, questionContext) {
   if (!candidate || typeof candidate !== "object") throw new TypeError("candidate must be an object");
-  const scores = candidate.scores ?? {};
+  const ranks = candidate.source_ranks ?? {};
   const features = Object.freeze({
-    bm25: scoreFeatureFromRank(scores.bm25),
-    dense: scoreFeatureFromRank(scores.dense),
-    original_rrf: scoreFeatureFromRank(scores.original_a_rrf),
-    wide_rrf: scoreFeatureFromRank(scores.wide_rrf),
+    bm25: rankFeature(ranks.bm25),
+    dense: rankFeature(ranks.dense),
+    original_rrf: rankFeature(ranks.original_a),
+    wide_rrf: rankFeature(ranks.wide_rrf),
     lexical_overlap: lexicalOverlapFeature(candidate.text, questionContext?.question_text),
     term_coverage: termCoverageFeature(candidate.text, questionContext?.required_metric_labels),
     metadata_match: metadataMatchFeature(candidate.metadata, questionContext),

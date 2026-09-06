@@ -2,19 +2,47 @@
 
 Turn: `A4-RERANKER-ENGINE-V1` ("작업자 2"). Implementation + synthetic
 tests only — no real DEV_TUNE result, Gold, A result, or oracle result
-was opened at any point this Turn.
+was opened at any point this Turn or either of its two follow-up fix
+commits.
+
+## Changelog (post-initial-implementation fixes, both pre-results)
+
+1. **Pool-size ceiling fix** (`facbb143e48a5b42b19e326075baac032d8215f3`):
+   the wide pool is BM25 top-100 UNION dense top-100 (≤200 after dedup),
+   not 100 — `MAX_POOL_SIZE` raised to 200, membership-flag and rank-range
+   validation added.
+2. **Schema-compatibility fix with the real wide-pool producer** (this
+   commit): rewrote the engine/features/contract/tests to consume
+   `buildWideCandidatePool()`'s actual return shape
+   (`codex/fourarm-a4-wide-pool-v01` @
+   `defd73302bd2b4fd6007283c968a87b3bbf49d0b`,
+   `a4-wide-candidate-pool.mjs`) with **zero remapping**:
+   `source_membership.{bm25_top100,dense_top100,original_a_top20}` and
+   `source_ranks.{bm25,dense,original_a,wide_rrf}` (plain integers, not
+   `{score,rank}` objects) replace the earlier assumed
+   `candidate.bm25_top100`/`candidate.scores.*.rank` shape. `source_ranks.
+   original_a` is now understood as A's uncapped, recomputed "would-be"
+   RRF rank (can exceed 20) — the `[1,20]` ceiling and the tie-break
+   protection apply only when `source_membership.original_a_top20` is
+   true. `source_ranks.wide_rrf` now has an explicit `[1,200]` validated
+   range. A byte-identical copy of `a4-wide-candidate-pool.mjs` was
+   brought into this branch (never modified) so the test suite can import
+   the real function and feed its real output straight into
+   `rerankCandidates()`.
 
 ## Purpose / acceptance criteria
 
-Build a generic reranker engine that takes a wide (top-100) candidate
-pool plus a per-question context and produces a deterministic top-20,
-using only the signals listed in the Turn's own input contract (BM25/
-dense/original-A-RRF/wide-RRF score+rank, lexical overlap, required
-metric/row-name coverage, metadata consistency, table/header context,
-locator/provenance completeness) — never a Gold field, a real failure
-packet id, a company/question-specific exception, or DEV_CHECK/HOLDOUT
-data. Ship a pre-registered, capped (≤12) family of scoring configs
-(R0–R5) fixed **before** any real result is opened.
+Build a generic reranker engine that takes a wide (BM25 top-100 UNION
+dense top-100, ≤200 after dedup) candidate pool plus a per-question
+context and produces a deterministic top-20, using only the signals
+listed in the Turn's own input contract (BM25/dense/original-A-RRF/
+wide-RRF rank, lexical overlap, required metric/row-name coverage,
+metadata consistency, table/header context, locator/provenance
+completeness) — never a Gold field, a real failure packet id, a
+company/question-specific exception, or DEV_CHECK/HOLDOUT data. Ship a
+pre-registered, capped (≤12) family of scoring configs (R0–R5) fixed
+**before** any real result is opened, and consume the real
+`buildWideCandidatePool()` output with zero remapping.
 
 Completion condition: `A4_RERANKER_ENGINE_IMPLEMENTED` (declared below).
 
@@ -42,29 +70,42 @@ Completion condition: `A4_RERANKER_ENGINE_IMPLEMENTED` (declared below).
    Turn's own required-tests list, using only synthetic fixtures.
 7. Run tests, `schema:validate`, `typecheck`, `git diff --check`.
 
-## Changed files (all new; nothing existing modified)
+## Changed files
 
-- `domain/agent-comparison/four-arm-ac/A4_RERANKER_V1_CONTRACT.md`
-- `domain/agent-comparison/four-arm-ac/A4_RERANKER_V1_HANDOFF.md` (this file)
-- `domain/agent-comparison/four-arm-ac/a4-reranker-features.mjs`
-- `domain/agent-comparison/four-arm-ac/a4-reranker-engine.mjs`
-- `domain/agent-comparison/four-arm-ac/a4-reranker-configs.v1.json`
-- `tests/four-arm-a4-reranker.test.mjs`
+- `domain/agent-comparison/four-arm-ac/A4_RERANKER_V1_CONTRACT.md` (new, then twice corrected)
+- `domain/agent-comparison/four-arm-ac/A4_RERANKER_V1_HANDOFF.md` (this file, new, then twice corrected)
+- `domain/agent-comparison/four-arm-ac/a4-reranker-features.mjs` (new, then corrected for the real field shape)
+- `domain/agent-comparison/four-arm-ac/a4-reranker-engine.mjs` (new, then corrected twice — pool ceiling, then field shape)
+- `domain/agent-comparison/four-arm-ac/a4-reranker-configs.v1.json` (new; untouched by either fix)
+- `tests/four-arm-a4-reranker.test.mjs` (new, then corrected twice)
+- `domain/agent-comparison/four-arm-ac/a4-wide-candidate-pool.mjs` — **brought in from
+  `codex/fourarm-a4-wide-pool-v01` @ `defd73302bd2b4fd6007283c968a87b3bbf49d0b`,
+  byte-identical, never modified** (verified by SHA-256 match against that
+  commit's own blob before and after this Turn's commit) — needed so the
+  test suite can import and call the real `buildWideCandidatePool()`.
+  Nothing else from that branch (its own contract/handoff/test files) was
+  copied in.
 
 ## Tests run and results
 
-- `node --test tests/four-arm-a4-reranker.test.mjs`: **21/21 pass**
-  (byte-identical determinism, stable-subset/top-20 invariants, top-100
-  ceiling refusal, no-mutation, missing-feature neutrality, BM25-only/
-  dense-only handling, original-A protective signal, full tie-break
-  chain, multi-node provenance invariance, no per-question special-
-  casing, fail-closed config validation, config-count ≤12, source-level
-  isolation from Gold/A3-Guard/QA/DB/KURE, and byte-invariance of the 4
-  pre-existing result files this Turn must not touch).
-- `npm run schema:validate`: PASS, 36 pairs validated (unchanged from
-  before this Turn — no new schema/example pair was added, since neither
-  new JSON file is registered in `scripts/validate-interface-schemas.mjs`'s
-  fixed pair list).
+- `node --test tests/four-arm-a4-reranker.test.mjs`: **31/31 pass**
+  (byte-identical determinism, stable-subset/top-20 invariants, 200-wide
+  ceiling with the 100/101/199/200-accepted/201-rejected boundary,
+  full-pool scoring before truncation, no-mutation, missing-feature
+  neutrality, BM25-only/dense-only handling, original-A protective
+  signal — both the boolean-only and full-tie-break-chain cases, and the
+  case proving a non-top-20 candidate's diagnostic `original_a` rank is
+  never used as a protective signal — multi-node provenance invariance,
+  no per-question special-casing, fail-closed config/membership/rank-range
+  validation, config-count ≤12, source-level isolation from
+  Gold/A3-Guard/QA/DB/KURE, byte-invariance of the 4 pre-existing result
+  files this Turn must not touch, and three wide-pool contract-integration
+  tests that import the real `buildWideCandidatePool()` and feed its
+  actual return value into `rerankCandidates()` with no remapping layer).
+- `npm run schema:validate`: PASS, 36 pairs validated (unchanged — no new
+  schema/example pair was added, since neither new JSON file is
+  registered in `scripts/validate-interface-schemas.mjs`'s fixed pair
+  list).
 - `npm run typecheck` (`tsc --noEmit`): PASS — this repo's `tsconfig.json`
   `include` only covers `.ts`/`.tsx`/`.mts`/`.d.ts` plus specific
   `app|build|db|examples|worker` directories, so the new `.mjs`/test files
@@ -93,15 +134,20 @@ The four pre-existing result files verified byte-unchanged this Turn:
 
 ## Known limitations / open items for the integration Turn
 
-- `RerankerCandidate`/`RerankerQuestionContext` are this Turn's own
-  frozen contract, not one negotiated with an already-existing wide-pool
-  producer (none was available to reference this Turn). If a real
-  wide-pool candidate object's field names differ, the integration Turn
-  needs a thin, separately-reviewed adapter to reshape it into
-  `RerankerCandidate` — no change to `a4-reranker-engine.mjs`/
-  `a4-reranker-features.mjs` themselves should be needed if the adapter
-  is honest about "missing" (→ `null`) vs. "legitimately absent"
-  (→ the corresponding `scores.*` entry is `null`/absent rank).
+- **Resolved by this fix** (was previously an open item): `RerankerCandidate`
+  now matches `buildWideCandidatePool()`'s actual return shape
+  field-for-field, verified by three tests that call the real function and
+  feed its real output into `rerankCandidates()` with no adapter layer.
+- **Still open, disclosed, not part of the schema-compatibility fix**:
+  `table_context`/`provenance_completeness` (two of the ten features)
+  read top-level `row`/`col`/`is_table`/`locator_status` fields that the
+  real `buildWideCandidatePool()` output does not carry (that information,
+  if present, lives inside its `locator`/`provenance` objects, whose
+  internal shape is not yet pinned by any contract). Against real pool
+  output these two features currently always evaluate to their neutral
+  `0.5` — this does not throw or block a valid top-20, but the two signals
+  are not yet informative on real data. Wiring them to `locator`/
+  `provenance`'s real internal shape is separate follow-up work.
 - Per the A3 Candidate Ceiling Audit's own finding
   (`A3_CANDIDATE_CEILING_AUDIT_V1_RESULT.md`, verdict
   `NON_COMPARABLE_RETRIEVAL_REPLAY`): a wide (dense_candidate_k=100) pool
@@ -109,9 +155,9 @@ The four pre-existing result files verified byte-unchanged this Turn:
   under plain RRF. This engine's own `original_a_protect` feature and the
   R0 config exist specifically so a reranker *can* recover A's original
   ordering as a strong prior when desired, but the integration Turn
-  should not assume `in_original_a_top20`/`original_a_rrf.rank` alone
-  reproduces A's exact frozen order without the same protective weighting
-  applied.
+  should not assume `source_membership.original_a_top20`/`source_ranks.
+  original_a` alone reproduces A's exact frozen order without the same
+  protective weighting applied.
 - Weights in `a4-reranker-configs.v1.json` are hand-fixed, not tuned —
   by design, since no real result may inform them this Turn. The
   integration Turn evaluates all ≤12 pre-registered configs against

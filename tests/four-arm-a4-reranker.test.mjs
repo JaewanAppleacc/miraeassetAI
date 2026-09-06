@@ -8,8 +8,8 @@ import { fileURLToPath } from "node:url";
 import { extractFeatures, FEATURE_KEYS } from "../domain/agent-comparison/four-arm-ac/a4-reranker-features.mjs";
 import {
   rerankCandidates, validateConfig, assertValidConfig, TOP_K, MAX_POOL_SIZE,
-  BM25_DENSE_LEG_MAX_RANK, ORIGINAL_A_MAX_RANK,
 } from "../domain/agent-comparison/four-arm-ac/a4-reranker-engine.mjs";
+import { buildWideCandidatePool } from "../domain/agent-comparison/four-arm-ac/a4-wide-candidate-pool.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..");
@@ -26,40 +26,47 @@ function sha256Hex(buffer) {
 
 // ---------------------------------------------------------------------------
 // Synthetic fixtures only -- no real DEV_TUNE/Gold/A/oracle data anywhere in
-// this file.
+// this file. Shape matches buildWideCandidatePool()'s REAL output exactly
+// (source_membership / source_ranks / source_scores, plain integer ranks,
+// document_id -- no doc_id/row/col/locator_status/is_table top-level
+// fields, since the real producer does not emit them; see
+// A4_RERANKER_V1_CONTRACT.md section 2's disclosed gap).
 // ---------------------------------------------------------------------------
 
 function makeCandidate(overrides = {}) {
   return {
     chunk_id: "chunk_synthetic_0000000000000000",
-    doc_id: "holding_99999999999999",
-    node_index: 3,
-    node_indices: [3, 4, 5],
-    locator: "holding_99999999999999::99999999999999.xml::n3",
-    locator_status: "NODE_AND_ROW_RESOLVED",
-    row: null,
-    col: null,
-    is_table: false,
+    document_id: "holding_99999999999999",
     text: "합성 테스트 문서 발행주식총수 100000주 관련 내용입니다",
     chunk_text_sha256: "0".repeat(64),
+    node_index: 3,
+    node_indices: [3, 4, 5],
+    locator: {},
+    provenance: {},
     metadata: {
       corp_code: "00999999",
       doc_group: "holding",
       doc_subtype: "대량보유상황보고서",
       base_year: 2024,
       base_month: 3,
-      receipt_date: "2024-03-22",
-      is_correction: false,
     },
-    scores: {
-      bm25: { score: 12.3, rank: 4 },
-      dense: { score: 0.71, rank: 6 },
-      original_a_rrf: { score: 0.02, rank: 9 },
-      wide_rrf: { score: 0.025, rank: 5 },
+    source_membership: {
+      original_a_top20: false,
+      bm25_top100: true,
+      dense_top100: true,
     },
-    in_original_a_top20: false,
-    bm25_top100: true,
-    dense_top100: true,
+    source_ranks: {
+      bm25: 4,
+      dense: 6,
+      original_a: 9,
+      wide_rrf: 5,
+    },
+    source_scores: {
+      bm25: 12.3,
+      dense: 0.71,
+      original_a_rrf: 0.02,
+      wide_rrf: 0.025,
+    },
     ...overrides,
   };
 }
@@ -88,17 +95,23 @@ function makePool(n, factory = makeCandidate) {
     const inBothLegs = i < 100;
     return factory({
       chunk_id: `chunk_synthetic_${String(i).padStart(20, "0")}`,
-      scores: {
-        bm25: inBothLegs ? { score: 100 - i, rank: i + 1 } : null,
-        dense: inBothLegs
-          ? { score: 1 - i / 100, rank: i + 1 }
-          : { score: 0.5 - ((i - 100) / 200), rank: (i - 100) + 1 },
-        original_a_rrf: i < 20 ? { score: 0.03 - i * 0.001, rank: i + 1 } : null,
-        wide_rrf: { score: 0.03 - i * 0.0002, rank: i + 1 },
+      source_membership: {
+        original_a_top20: i < 20,
+        bm25_top100: inBothLegs,
+        dense_top100: true,
       },
-      in_original_a_top20: i < 20,
-      bm25_top100: inBothLegs,
-      dense_top100: true,
+      source_ranks: {
+        bm25: inBothLegs ? i + 1 : null,
+        dense: inBothLegs ? i + 1 : (i - 100) + 1,
+        original_a: i < 20 ? i + 1 : null,
+        wide_rrf: i + 1,
+      },
+      source_scores: {
+        bm25: inBothLegs ? 100 - i : null,
+        dense: inBothLegs ? 1 - i / 100 : 0.5 - ((i - 100) / 200),
+        original_a_rrf: i < 20 ? 0.03 - i * 0.001 : null,
+        wide_rrf: 0.03 - i * 0.0002,
+      },
     });
   });
 }
@@ -195,58 +208,107 @@ test("rerankCandidates: scores every candidate in a 200-wide pool before truncat
   // planted tail winner below is the UNIQUE top dense-rank candidate,
   // rather than tying with index 0 and being decided by tie-break instead
   // of by the dense feature this test is actually exercising.
-  pool[0] = { ...pool[0], scores: { ...pool[0].scores, dense: { score: 0.1, rank: 50 } } };
+  pool[0] = { ...pool[0], source_ranks: { ...pool[0].source_ranks, dense: 50 }, source_scores: { ...pool[0].source_scores, dense: 0.1 } };
   // Plant a dense-only tail candidate (index 150, well past any 100-item
   // pre-truncation) that should win outright under a dense-heavy config.
   pool[150] = makeCandidate({
     chunk_id: "chunk_tail_winner_000000000000",
-    scores: { bm25: null, dense: { score: 0.999, rank: 1 }, original_a_rrf: null, wide_rrf: { score: 0.05, rank: 1 } },
-    in_original_a_top20: false,
-    bm25_top100: false,
-    dense_top100: true,
+    source_membership: { original_a_top20: false, bm25_top100: false, dense_top100: true },
+    source_ranks: { bm25: null, dense: 1, original_a: null, wide_rrf: 1 },
+    source_scores: { bm25: null, dense: 0.999, original_a_rrf: null, wide_rrf: 0.05 },
   });
   const denseHeavy = { config_id: "dense_heavy_test", weights: { dense: 1 } };
   const out = rerankCandidates(pool, makeQuestionContext(), denseHeavy);
   assert.equal(out[0].chunk_id, "chunk_tail_winner_000000000000", "a candidate beyond index 100 must still be reachable for rank 1 -- proves the full 200-candidate pool was scored, not truncated to 100 first");
 });
 
-test("rerankCandidates: rejects a candidate with neither bm25_top100 nor dense_top100 set", () => {
-  const orphan = makeCandidate({ chunk_id: "chunk_orphan_00000000000000000", bm25_top100: false, dense_top100: false });
+test("rerankCandidates: rejects a candidate with neither source_membership.bm25_top100 nor source_membership.dense_top100 set", () => {
+  const orphan = makeCandidate({
+    chunk_id: "chunk_orphan_00000000000000000",
+    source_membership: { original_a_top20: false, bm25_top100: false, dense_top100: false },
+  });
   assert.throws(() => rerankCandidates([orphan], makeQuestionContext(), R1), RangeError);
 });
 
 test("rerankCandidates: accepts a candidate found by only one leg (the other flag false)", () => {
-  const bm25OnlyFlagged = makeCandidate({ chunk_id: "chunk_flagbm25_0000000000000000", bm25_top100: true, dense_top100: false });
-  const denseOnlyFlagged = makeCandidate({ chunk_id: "chunk_flagdense_000000000000000", bm25_top100: false, dense_top100: true });
+  const bm25OnlyFlagged = makeCandidate({
+    chunk_id: "chunk_flagbm25_0000000000000000",
+    source_membership: { original_a_top20: false, bm25_top100: true, dense_top100: false },
+  });
+  const denseOnlyFlagged = makeCandidate({
+    chunk_id: "chunk_flagdense_000000000000000",
+    source_membership: { original_a_top20: false, bm25_top100: false, dense_top100: true },
+  });
   assert.doesNotThrow(() => rerankCandidates([bm25OnlyFlagged, denseOnlyFlagged], makeQuestionContext(), R1));
 });
 
-test("rerankCandidates: validates BM25/dense rank range (1-100 or null), fail-closed", () => {
+test("rerankCandidates: validates source_ranks.bm25/dense range (1-100 or null), fail-closed", () => {
   for (const badRank of [0, -1, 101, 1.5, "3", NaN, Infinity]) {
-    const bad = makeCandidate({ scores: { bm25: { score: 1, rank: badRank }, dense: null, original_a_rrf: null, wide_rrf: null } });
+    const bad = makeCandidate({ source_ranks: { bm25: badRank, dense: null, original_a: null, wide_rrf: null } });
     assert.throws(() => rerankCandidates([bad], makeQuestionContext(), R1), RangeError, `bm25 rank ${badRank} must be rejected`);
-    const badDense = makeCandidate({ scores: { bm25: null, dense: { score: 1, rank: badRank }, original_a_rrf: null, wide_rrf: null } });
+    const badDense = makeCandidate({ source_ranks: { bm25: null, dense: badRank, original_a: null, wide_rrf: null } });
     assert.throws(() => rerankCandidates([badDense], makeQuestionContext(), R1), RangeError, `dense rank ${badRank} must be rejected`);
   }
   for (const okRank of [1, 50, 100, null]) {
-    const ok = makeCandidate({ scores: { bm25: { score: 1, rank: okRank }, dense: { score: 1, rank: okRank }, original_a_rrf: null, wide_rrf: null } });
+    const ok = makeCandidate({ source_ranks: { bm25: okRank, dense: okRank, original_a: null, wide_rrf: null } });
     assert.doesNotThrow(() => rerankCandidates([ok], makeQuestionContext(), R1), `bm25/dense rank ${okRank} must be accepted`);
   }
 });
 
-test("rerankCandidates: validates original-A rank range (1-20 or null), fail-closed", () => {
-  for (const badRank of [0, -1, 21, 100, 2.5]) {
-    const bad = makeCandidate({ scores: { bm25: null, dense: null, original_a_rrf: { score: 1, rank: badRank }, wide_rrf: null } });
-    assert.throws(() => rerankCandidates([bad], makeQuestionContext(), R1), RangeError, `original_a_rrf rank ${badRank} must be rejected`);
+test("rerankCandidates: validates source_ranks.wide_rrf range (1-200 or null), fail-closed", () => {
+  for (const badRank of [0, -1, 201, 2.5, NaN, Infinity]) {
+    const bad = makeCandidate({ source_ranks: { bm25: null, dense: null, original_a: null, wide_rrf: badRank } });
+    assert.throws(() => rerankCandidates([bad], makeQuestionContext(), R1), RangeError, `wide_rrf rank ${badRank} must be rejected`);
   }
-  for (const okRank of [1, 10, 20, null]) {
-    const ok = makeCandidate({ scores: { bm25: null, dense: null, original_a_rrf: okRank === null ? null : { score: 1, rank: okRank }, wide_rrf: null } });
-    assert.doesNotThrow(() => rerankCandidates([ok], makeQuestionContext(), R1), `original_a_rrf rank ${okRank} must be accepted`);
+  for (const okRank of [1, 100, 200, null]) {
+    const ok = makeCandidate({ source_ranks: { bm25: null, dense: null, original_a: null, wide_rrf: okRank } });
+    assert.doesNotThrow(() => rerankCandidates([ok], makeQuestionContext(), R1), `wide_rrf rank ${okRank} must be accepted`);
+  }
+});
+
+test("rerankCandidates: validates source_ranks.original_a -- general positive-integer-or-null, but [1,20] required only when source_membership.original_a_top20=true", () => {
+  // Regardless of the top20 flag, a present rank must be a positive integer.
+  for (const badRank of [0, -1, 2.5, "3", NaN, Infinity]) {
+    const bad = makeCandidate({
+      source_membership: { original_a_top20: false, bm25_top100: true, dense_top100: true },
+      source_ranks: { bm25: null, dense: null, original_a: badRank, wide_rrf: null },
+    });
+    assert.throws(() => rerankCandidates([bad], makeQuestionContext(), R1), RangeError, `original_a rank ${badRank} must always be rejected`);
+  }
+  // When original_a_top20 is NOT true, original_a may exceed 20 (it is the
+  // full, uncapped "would-be" RRF rank -- see A4_RERANKER_V1_CONTRACT.md).
+  for (const okRank of [1, 20, 21, 45, 150, null]) {
+    const ok = makeCandidate({
+      source_membership: { original_a_top20: false, bm25_top100: true, dense_top100: true },
+      source_ranks: { bm25: null, dense: null, original_a: okRank, wide_rrf: null },
+    });
+    assert.doesNotThrow(() => rerankCandidates([ok], makeQuestionContext(), R1), `original_a rank ${okRank} must be accepted when original_a_top20 is not true`);
+  }
+  // When original_a_top20 IS true, a rank is required and must be in [1,20].
+  for (const badTop20Rank of [null, 0, 21, 100]) {
+    const bad = makeCandidate({
+      source_membership: { original_a_top20: true, bm25_top100: true, dense_top100: true },
+      source_ranks: { bm25: null, dense: null, original_a: badTop20Rank, wide_rrf: null },
+    });
+    assert.throws(() => rerankCandidates([bad], makeQuestionContext(), R1), RangeError, `original_a rank ${badTop20Rank} with original_a_top20=true must be rejected`);
+  }
+  for (const okTop20Rank of [1, 10, 20]) {
+    const ok = makeCandidate({
+      source_membership: { original_a_top20: true, bm25_top100: true, dense_top100: true },
+      source_ranks: { bm25: null, dense: null, original_a: okTop20Rank, wide_rrf: null },
+    });
+    assert.doesNotThrow(() => rerankCandidates([ok], makeQuestionContext(), R1), `original_a rank ${okTop20Rank} with original_a_top20=true must be accepted`);
   }
 });
 
 test("rerankCandidates: does not mutate input candidate objects", () => {
-  const pool = makePool(5).map((c) => Object.freeze({ ...c, scores: Object.freeze({ ...c.scores }), metadata: Object.freeze({ ...c.metadata }) }));
+  const pool = makePool(5).map((c) => Object.freeze({
+    ...c,
+    source_membership: Object.freeze({ ...c.source_membership }),
+    source_ranks: Object.freeze({ ...c.source_ranks }),
+    source_scores: Object.freeze({ ...c.source_scores }),
+    metadata: Object.freeze({ ...c.metadata }),
+  }));
   const before = JSON.parse(JSON.stringify(pool));
   assert.doesNotThrow(() => rerankCandidates(pool, makeQuestionContext(), R1));
   assert.deepEqual(JSON.parse(JSON.stringify(pool)), before);
@@ -257,13 +319,9 @@ test("rerankCandidates: candidates with missing/sparse fields are scored, never 
     chunk_id: "chunk_sparse_0000000000000000",
     text: null,
     metadata: null,
-    row: null,
-    col: null,
-    is_table: null,
-    locator_status: null,
-    scores: { bm25: null, dense: { score: 0.5, rank: 3 }, original_a_rrf: null, wide_rrf: { score: 0.01, rank: 10 } },
-    bm25_top100: false,
-    dense_top100: true,
+    source_membership: { original_a_top20: false, bm25_top100: false, dense_top100: true },
+    source_ranks: { bm25: null, dense: 3, original_a: null, wide_rrf: 10 },
+    source_scores: { bm25: null, dense: 0.5, original_a_rrf: null, wide_rrf: 0.01 },
   });
   const pool = [sparse, ...makePool(3)];
   const out = rerankCandidates(pool, makeQuestionContext(), R1);
@@ -272,22 +330,22 @@ test("rerankCandidates: candidates with missing/sparse fields are scored, never 
   assert.equal(features.bm25, 0); // legitimate absence, not neutral
   assert.equal(features.lexical_overlap, 0.5); // missing text -> neutral
   assert.equal(features.metadata_match, 0.5); // missing metadata -> neutral
-  assert.equal(features.table_context, 0.5);
-  assert.equal(features.provenance_completeness, 0.5);
+  assert.equal(features.table_context, 0.5); // no top-level row/col on the real shape -> always neutral (disclosed gap)
+  assert.equal(features.provenance_completeness, 0.5); // no top-level locator_status on the real shape -> always neutral (disclosed gap)
 });
 
 test("rerankCandidates: BM25-only and dense-only candidates are both handled without error", () => {
   const bm25Only = makeCandidate({
     chunk_id: "chunk_bm25only_000000000000000",
-    scores: { bm25: { score: 40, rank: 1 }, dense: null, original_a_rrf: null, wide_rrf: { score: 0.016, rank: 1 } },
-    bm25_top100: true,
-    dense_top100: false,
+    source_membership: { original_a_top20: false, bm25_top100: true, dense_top100: false },
+    source_ranks: { bm25: 1, dense: null, original_a: null, wide_rrf: 1 },
+    source_scores: { bm25: 40, dense: null, original_a_rrf: null, wide_rrf: 0.016 },
   });
   const denseOnly = makeCandidate({
     chunk_id: "chunk_denseonly_00000000000000",
-    scores: { bm25: null, dense: { score: 0.9, rank: 1 }, original_a_rrf: null, wide_rrf: { score: 0.016, rank: 2 } },
-    bm25_top100: false,
-    dense_top100: true,
+    source_membership: { original_a_top20: false, bm25_top100: false, dense_top100: true },
+    source_ranks: { bm25: null, dense: 1, original_a: null, wide_rrf: 2 },
+    source_scores: { bm25: null, dense: 0.9, original_a_rrf: null, wide_rrf: 0.016 },
   });
   const out = rerankCandidates([bm25Only, denseOnly], makeQuestionContext(), R1);
   assert.equal(out.length, 2);
@@ -304,33 +362,69 @@ test("original-A protective signal: R0 config keeps an original-top20 candidate 
   const r0 = registry.configs.find((c) => c.family === "R0");
   const inTop20 = makeCandidate({
     chunk_id: "chunk_intop20_0000000000000000",
-    in_original_a_top20: true,
-    scores: { bm25: { score: 1, rank: 90 }, dense: { score: 0.1, rank: 90 }, original_a_rrf: { score: 0.02, rank: 5 }, wide_rrf: { score: 0.005, rank: 80 } },
+    source_membership: { original_a_top20: true, bm25_top100: true, dense_top100: true },
+    source_ranks: { bm25: 90, dense: 90, original_a: 5, wide_rrf: 80 },
+    source_scores: { bm25: 1, dense: 0.1, original_a_rrf: 0.02, wide_rrf: 0.005 },
   });
   const notInTop20 = makeCandidate({
     chunk_id: "chunk_nottop20_0000000000000000",
-    in_original_a_top20: false,
-    scores: { bm25: { score: 99, rank: 1 }, dense: { score: 0.99, rank: 1 }, original_a_rrf: null, wide_rrf: { score: 0.03, rank: 1 } },
+    source_membership: { original_a_top20: false, bm25_top100: true, dense_top100: true },
+    source_ranks: { bm25: 1, dense: 1, original_a: null, wide_rrf: 1 },
+    source_scores: { bm25: 99, dense: 0.99, original_a_rrf: null, wide_rrf: 0.03 },
   });
   const out = rerankCandidates([inTop20, notInTop20], makeQuestionContext(), r0);
   assert.equal(out[0].chunk_id, inTop20.chunk_id, "R0 (original-A-priority) must rank the original top-20 candidate first despite weaker BM25/dense");
 });
 
-test("tie-break: reranker_score ties fall through to in_original_a_top20, then original_a_rank, then wide_rrf_rank, then chunk_id", () => {
+test("tie-break: reranker_score ties fall through to original_a_top20, then original_a rank (only for top20 members), then wide_rrf rank, then chunk_id", () => {
   const zeroWeights = { config_id: "zero", weights: {} }; // every feature weight 0 -> every candidate scores exactly 0
-  const a = makeCandidate({ chunk_id: "chunk_zzz", in_original_a_top20: false, scores: { bm25: null, dense: null, original_a_rrf: null, wide_rrf: { score: 0, rank: 5 } } });
-  const b = makeCandidate({ chunk_id: "chunk_aaa", in_original_a_top20: true, scores: { bm25: null, dense: null, original_a_rrf: { score: 0, rank: 3 }, wide_rrf: { score: 0, rank: 9 } } });
-  const c = makeCandidate({ chunk_id: "chunk_bbb", in_original_a_top20: true, scores: { bm25: null, dense: null, original_a_rrf: { score: 0, rank: 1 }, wide_rrf: { score: 0, rank: 2 } } });
+  const a = makeCandidate({
+    chunk_id: "chunk_zzz",
+    source_membership: { original_a_top20: false, bm25_top100: true, dense_top100: true },
+    source_ranks: { bm25: null, dense: null, original_a: null, wide_rrf: 5 },
+  });
+  const b = makeCandidate({
+    chunk_id: "chunk_aaa",
+    source_membership: { original_a_top20: true, bm25_top100: true, dense_top100: true },
+    source_ranks: { bm25: null, dense: null, original_a: 3, wide_rrf: 9 },
+  });
+  const c = makeCandidate({
+    chunk_id: "chunk_bbb",
+    source_membership: { original_a_top20: true, bm25_top100: true, dense_top100: true },
+    source_ranks: { bm25: null, dense: null, original_a: 1, wide_rrf: 2 },
+  });
   const out = rerankCandidates([a, b, c], makeQuestionContext(), zeroWeights);
-  // c: top20=true, original_a_rank=1 -- must win over b (top20=true, rank=3) and a (top20=false).
+  // c: top20=true, original_a rank=1 -- must win over b (top20=true, rank=3) and a (top20=false).
   assert.deepEqual(out.map((x) => x.chunk_id), ["chunk_bbb", "chunk_aaa", "chunk_zzz"]);
+});
+
+test("tie-break: a non-top20 candidate's original_a rank is never used as a protective signal, even when numerically better than another non-top20 candidate's", () => {
+  const zeroWeights = { config_id: "zero", weights: {} };
+  // Neither is in A's official top-20. d's original_a rank (1, diagnostic
+  // only) is numerically better than e's (50), but since neither carries
+  // original_a_top20=true, that number must NOT act as a tie-break
+  // protection -- the comparison must fall straight through to wide_rrf
+  // rank instead, where e (wide_rrf=1) beats d (wide_rrf=9).
+  const d = makeCandidate({
+    chunk_id: "chunk_ddd",
+    source_membership: { original_a_top20: false, bm25_top100: true, dense_top100: true },
+    source_ranks: { bm25: null, dense: null, original_a: 1, wide_rrf: 9 },
+  });
+  const e = makeCandidate({
+    chunk_id: "chunk_eee",
+    source_membership: { original_a_top20: false, bm25_top100: true, dense_top100: true },
+    source_ranks: { bm25: null, dense: null, original_a: 50, wide_rrf: 1 },
+  });
+  const out = rerankCandidates([d, e], makeQuestionContext(), zeroWeights);
+  assert.deepEqual(out.map((x) => x.chunk_id), ["chunk_eee", "chunk_ddd"]);
 });
 
 test("tie-break: final tiebreaker is chunk_id bytewise ascending when everything else ties", () => {
   const zeroWeights = { config_id: "zero", weights: {} };
   const candidates = ["chunk_c", "chunk_a", "chunk_b"].map((id) => makeCandidate({
-    chunk_id: id, in_original_a_top20: false,
-    scores: { bm25: null, dense: null, original_a_rrf: null, wide_rrf: null },
+    chunk_id: id,
+    source_membership: { original_a_top20: false, bm25_top100: true, dense_top100: true },
+    source_ranks: { bm25: null, dense: null, original_a: null, wide_rrf: null },
   }));
   const out = rerankCandidates(candidates, makeQuestionContext(), zeroWeights);
   assert.deepEqual(out.map((x) => x.chunk_id), ["chunk_a", "chunk_b", "chunk_c"]);
@@ -341,13 +435,11 @@ test("multi-node provenance is preserved unchanged through reranking", () => {
     chunk_id: "chunk_multinode_00000000000000",
     node_index: 2,
     node_indices: [2, 3, 4, 5, 6, 7],
-    locator_status: "MULTI_NODE_AMBIGUOUS",
   });
   const out = rerankCandidates([candidate, ...makePool(3)], makeQuestionContext(), R1);
   const found = out.find((c) => c.chunk_id === candidate.chunk_id);
   assert.deepEqual(found.node_indices, [2, 3, 4, 5, 6, 7]);
   assert.equal(found.node_index, 2);
-  assert.equal(found.locator_status, "MULTI_NODE_AMBIGUOUS");
 });
 
 test("no per-question special-casing: identical candidates under two different question_ids score identically", () => {
@@ -369,6 +461,115 @@ test("feature extraction: every feature is finite and in [0,1] across a randomiz
       assert.ok(features[key] >= 0 && features[key] <= 1, `${key}=${features[key]} out of [0,1]`);
     }
   }
+});
+
+// ---------------------------------------------------------------------------
+// Wide-pool contract integration: the real buildWideCandidatePool() output
+// (codex/fourarm-a4-wide-pool-v01 @ defd73302bd2b4fd6007283c968a87b3bbf49d0b,
+// a4-wide-candidate-pool.mjs, brought into this branch byte-identical) fed
+// DIRECTLY into rerankCandidates() -- no remapping, no adapter, no field
+// renaming anywhere in this test.
+// ---------------------------------------------------------------------------
+
+function makeWidePoolBaseRecord(i) {
+  return {
+    chunk_id: `chunk_wide_${String(i).padStart(20, "0")}`,
+    document_id: `holding_${9000000000000 + i}`,
+    text: `합성 wide-pool 문서 ${i} 발행주식총수 관련 내용`,
+    chunk_text_sha256: sha256Hex(Buffer.from(`wide-pool-fixture-${i}`)),
+    node_index: i % 5,
+    node_indices: [i % 5],
+    locator: {},
+    provenance: {},
+    metadata: { corp_code: "00999999", doc_group: "holding" },
+  };
+}
+
+test("wide-pool contract integration: real buildWideCandidatePool() output feeds rerankCandidates() with zero remapping (200-wide, disjoint legs)", () => {
+  const bm25List = Array.from({ length: 100 }, (_, i) => ({ ...makeWidePoolBaseRecord(i), rank: i + 1, score: 100 - i }));
+  const denseList = Array.from({ length: 100 }, (_, i) => ({ ...makeWidePoolBaseRecord(100 + i), rank: i + 1, score: 1 - i / 100 }));
+
+  const { pool } = buildWideCandidatePool({ bm25_top100: bm25List, dense_top100: denseList });
+  assert.ok(pool.length <= MAX_POOL_SIZE);
+  assert.equal(pool.length, 200, "fully disjoint bm25/dense legs must union to exactly 200 distinct candidates");
+
+  // The critical step: pool goes into rerankCandidates() completely as-is.
+  const out = rerankCandidates(pool, makeQuestionContext(), R1);
+  assert.ok(out.length > 0 && out.length <= TOP_K);
+  const poolIds = new Set(pool.map((c) => c.chunk_id));
+  for (const item of out) assert.ok(poolIds.has(item.chunk_id), `output chunk_id ${item.chunk_id} must come from the real pool`);
+  out.forEach((item, index) => assert.equal(item.rank, index + 1));
+});
+
+test("wide-pool contract integration: real buildWideCandidatePool() output feeds rerankCandidates() with zero remapping (partial overlap, under 200)", () => {
+  // 60 candidates found by both legs, 40 bm25-only, 40 dense-only -> 140 total.
+  const shared = Array.from({ length: 60 }, (_, i) => makeWidePoolBaseRecord(i));
+  const bm25Only = Array.from({ length: 40 }, (_, i) => makeWidePoolBaseRecord(200 + i));
+  const denseOnly = Array.from({ length: 40 }, (_, i) => makeWidePoolBaseRecord(300 + i));
+  const bm25List = [
+    ...shared.map((r, i) => ({ ...r, rank: i + 1, score: 100 - i })),
+    ...bm25Only.map((r, i) => ({ ...r, rank: 61 + i, score: 40 - i })),
+  ];
+  const denseList = [
+    ...shared.map((r, i) => ({ ...r, rank: i + 1, score: 1 - i / 100 })),
+    ...denseOnly.map((r, i) => ({ ...r, rank: 61 + i, score: 0.4 - i / 200 })),
+  ];
+
+  const { pool } = buildWideCandidatePool({ bm25_top100: bm25List, dense_top100: denseList });
+  assert.equal(pool.length, 140);
+
+  const out = rerankCandidates(pool, makeQuestionContext(), R1);
+  assert.ok(out.length > 0 && out.length <= TOP_K);
+  const poolIds = new Set(pool.map((c) => c.chunk_id));
+  assert.ok(out.every((item) => poolIds.has(item.chunk_id)));
+});
+
+test("wide-pool contract integration: a real, reproducible original_a_top20 survives into source_membership.original_a_top20 and the tie-break protection", async () => {
+  const bm25List = Array.from({ length: 100 }, (_, i) => ({ ...makeWidePoolBaseRecord(i), rank: i + 1, score: 100 - i }));
+  const denseList = Array.from({ length: 100 }, (_, i) => ({ ...makeWidePoolBaseRecord(100 + i), rank: i + 1, score: 1 - i / 100 }));
+
+  // Step 1: compute the pool WITHOUT an original_a_top20 input, to derive
+  // the real, formula-computed original_a ranking (never hand-computed by
+  // this test).
+  const first = buildWideCandidatePool({ bm25_top100: bm25List, dense_top100: denseList });
+  const top20FromFormula = [...first.pool]
+    .filter((c) => c.source_ranks.original_a !== null)
+    .sort((a, b) => a.source_ranks.original_a - b.source_ranks.original_a)
+    .slice(0, 20);
+  assert.equal(top20FromFormula.length, 20);
+
+  // Step 2: rebuild original_a_top20 input records from that real ranking
+  // (base fields copied straight from the pool item; rank = its own
+  // already-computed original_a rank, which for the leading 20 fused
+  // entries is exactly 1..20 by construction of buildWideCandidatePool's
+  // own sequential-rank assignment).
+  const originalATop20Input = top20FromFormula.map((c) => ({
+    chunk_id: c.chunk_id, document_id: c.document_id, text: c.text,
+    chunk_text_sha256: c.chunk_text_sha256, node_index: c.node_index,
+    node_indices: c.node_indices, locator: c.locator, provenance: c.provenance,
+    metadata: c.metadata, rank: c.source_ranks.original_a,
+  }));
+
+  // Step 3: rebuild the pool WITH that reproducible original_a_top20 --
+  // buildWideCandidatePool's own fail-closed reproducibility check must
+  // pass (it throws WideCandidatePoolInputError otherwise).
+  const second = buildWideCandidatePool({ original_a_top20: originalATop20Input, bm25_top100: bm25List, dense_top100: denseList });
+  const flagged = second.pool.filter((c) => c.source_membership.original_a_top20 === true);
+  assert.equal(flagged.length, 20);
+  for (const c of flagged) {
+    assert.ok(c.source_ranks.original_a >= 1 && c.source_ranks.original_a <= 20, `flagged candidate ${c.chunk_id} must have original_a in [1,20], got ${c.source_ranks.original_a}`);
+  }
+
+  // Step 4: feed the real pool directly into rerankCandidates() under R0
+  // (original-A-priority) and confirm every flagged candidate outranks
+  // every non-flagged candidate that made it into the top-20 output.
+  const registry = await loadConfigs();
+  const r0 = registry.configs.find((c) => c.family === "R0");
+  const out = rerankCandidates(second.pool, makeQuestionContext(), r0);
+  const flaggedIds = new Set(flagged.map((c) => c.chunk_id));
+  const lastFlaggedRank = Math.max(...out.filter((c) => flaggedIds.has(c.chunk_id)).map((c) => c.rank));
+  const firstUnflaggedRank = Math.min(...out.filter((c) => !flaggedIds.has(c.chunk_id)).map((c) => c.rank), Infinity);
+  assert.ok(lastFlaggedRank < firstUnflaggedRank, "every original-A top-20 candidate must outrank every non-top-20 candidate under R0");
 });
 
 // ---------------------------------------------------------------------------
