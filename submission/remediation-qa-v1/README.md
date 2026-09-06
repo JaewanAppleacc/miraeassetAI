@@ -33,12 +33,13 @@ per-file hashes of this package's own contents in `SHA256SUMS`.
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-npm install    # pg, ajv, ajv-formats from package-lock.json
+npm ci         # pg, ajv, ajv-formats from the committed package-lock.json
 ```
 
 ## Environment variables
 
-Names only, see `.env.example` — no values, no API keys, no absolute paths included.
+See `.env.example` — it contains variable names and non-secret frozen defaults only;
+no API keys or absolute paths are included.
 
 ## KURE / Postgres / index requirements
 
@@ -60,9 +61,16 @@ Names only, see `.env.example` — no values, no API keys, no absolute paths inc
 
 ```bash
 cp .env.example .env   # fill in real values
-export $(grep -v '^#' .env | xargs)
+set -a
+source .env
+set +a
 PYTHONPATH=src python scripts/run_server.py
 ```
+
+The supplied `.env.example` enables the evaluation profile and pins
+`DART_QA_CODE_SHA` to the packaged runtime source commit. The optional
+`DART_QA_LATE_EXPANSION` experiment remains unset/OFF, matching the selected model's
+101-question validation. Do not replace the code pin with an evaluation-result commit.
 
 Serves on `:${PORT:-8000}` (`GET /health`, `GET /ready`,
 `GET /answer?question_id=...&question=...`). `python scripts/deploy_probe.py http://<host>:<port>`
