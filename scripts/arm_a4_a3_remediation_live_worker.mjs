@@ -204,8 +204,12 @@ async function main() {
         locator: item.locator,
         provenance: item.provenance,
         metadata: item.metadata,
-        retrieval_pass: item.retrieval_pass ?? null,
-        retrieval_group: item.retrieval_group ?? null,
+        // a4-wide-candidate-pool.mjs's own mergeBaseFields() (unmodified) only passes
+        // through a fixed field set for every candidate list entry EXCEPT `metadata`
+        // (via firstNonNull) -- retrieval_pass/retrieval_group are folded into
+        // `metadata` by a4-a3-remediation-candidate-legs.mjs for exactly this reason.
+        retrieval_pass: item.metadata?.retrieval_pass ?? null,
+        retrieval_group: item.metadata?.retrieval_group ?? null,
         reranker_config: RERANKER_CONFIG_ID,
         a3_decision: a3Decision,
         backend: BACKEND_TAG,

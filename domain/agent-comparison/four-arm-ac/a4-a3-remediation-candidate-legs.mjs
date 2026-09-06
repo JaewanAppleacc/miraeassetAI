@@ -79,7 +79,13 @@ function toCandidateMetadata(row) {
   };
 }
 
-function hydrateCandidateRecord(entry, rank, rowsById, spansById) {
+// passInfo (retrieval_pass/retrieval_group), when given, is folded INTO `metadata` --
+// not carried as a top-level field -- because a4-wide-candidate-pool.mjs's own
+// mergeBaseFields() (unmodified) only passes through a fixed field set for every other
+// candidate field, but does pass `metadata` through via firstNonNull(); this is the only
+// way this turn's per-pass provenance survives end-to-end into the final wire result
+// without touching that file.
+function hydrateCandidateRecord(entry, rank, rowsById, spansById, passInfo = null) {
   const row = rowsById.get(entry.id);
   if (!row) throw new Error(`hydrateCandidateRecord: no reference_retrieval_chunks row for chunk_id ${entry.id}`);
   const recomputedSha = sha256Hex(row.text_content ?? "");
@@ -89,6 +95,11 @@ function hydrateCandidateRecord(entry, rank, rowsById, spansById) {
   const spans = spansById.get(entry.id) ?? [];
   const resolution = classifySpans(spans);
   const provenanceSet = buildProvenanceSet(spans);
+  const metadata = toCandidateMetadata(row);
+  if (passInfo) {
+    metadata.retrieval_pass = passInfo.retrieval_pass ?? null;
+    metadata.retrieval_group = passInfo.retrieval_group ?? null;
+  }
   return {
     chunk_id: entry.id,
     document_id: row.source_document_id,
@@ -98,7 +109,7 @@ function hydrateCandidateRecord(entry, rank, rowsById, spansById) {
     node_indices: provenanceSet.candidates.map((c) => c.node_index).filter((n) => n !== null && n !== undefined),
     locator: { source_locator: row.source_locator, status: resolution.status },
     provenance: { status: provenanceSet.status, candidates: provenanceSet.candidates },
-    metadata: toCandidateMetadata(row),
+    metadata,
     rank,
     score: entry.score,
   };
@@ -245,14 +256,8 @@ export async function runRemediationAwareCandidateGeneration(deps, question, pol
   const allIds = [...new Set([...bm25Leg.map((r) => r.id), ...denseLeg.map((r) => r.id)])];
   const rowsById = await fetchChunksByIds(client, retrievalIndexId, allIds);
   const spansById = await fetchStagingSpans(client, provenanceLoadSessionId, allIds);
-  const bm25Records = bm25Leg.map((r, i) => ({
-    ...hydrateCandidateRecord(r, i + 1, rowsById, spansById),
-    retrieval_pass: r.retrieval_pass, retrieval_group: r.retrieval_group,
-  }));
-  const denseRecords = denseLeg.map((r, i) => ({
-    ...hydrateCandidateRecord(r, i + 1, rowsById, spansById),
-    retrieval_pass: r.retrieval_pass, retrieval_group: r.retrieval_group,
-  }));
+  const bm25Records = bm25Leg.map((r, i) => hydrateCandidateRecord(r, i + 1, rowsById, spansById, r));
+  const denseRecords = denseLeg.map((r, i) => hydrateCandidateRecord(r, i + 1, rowsById, spansById, r));
 
   return { bm25_top100: bm25Records, dense_top100: denseRecords };
 }
