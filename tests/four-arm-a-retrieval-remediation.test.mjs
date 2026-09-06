@@ -18,7 +18,7 @@ import { buildMetadataFiltersFromConditions } from "../domain/agent-comparison/f
 import { buildNameToCorpCodeIndex, mapOfficialConditionToFilterInput } from "../domain/agent-comparison/four-arm-ac/four-arm-conditions-to-filter-mapper.mjs";
 import {
   FROZEN_POLICY, REMEDIATION_V1_POLICY, POLICY_IDS, resolvePolicy, questionFullDates, shiftIsoDate, daysBetween,
-  deriveReceiptWindows, buildRetrievalPlan, buildFilterPasses, orderCandidates, interleaveRelaxed, rankCandidates,
+  deriveReceiptWindows, buildRetrievalPlan, buildFilterPasses, orderCandidates, interleaveRelaxed, promoteRelaxed, partnerPassOf, rankCandidates,
 } from "../domain/agent-comparison/four-arm-ac/four-arm-retrieval-policy.mjs";
 
 const RETRIEVAL_INDEX_ID = "fixed_kure_index_test";
@@ -186,7 +186,9 @@ test("resolvePolicy: default frozen, known ids, object override merges over froz
   assert.equal(REMEDIATION_V1_POLICY.per_doc_cap, 0);
   assert.equal(REMEDIATION_V1_POLICY.fusion_pool_k, 40);
   assert.equal(REMEDIATION_V1_POLICY.dense_candidate_k, 20);
-  assert.equal(REMEDIATION_V1_POLICY.relaxed_interleave_every, 4);
+  assert.equal(REMEDIATION_V1_POLICY.relaxed_interleave_every, 0);   // review round 2: fixed-stride insertion is off
+  assert.equal(REMEDIATION_V1_POLICY.relaxed_promote_top, 5);
+  assert.equal(FROZEN_POLICY.relaxed_promote_top, 0);
 });
 
 test("buildFilterPasses: two windows + subtype -> window, window:2, window_relaxed, window_relaxed:2, base, base_relaxed with groups; nothing to relax -> base only; frozen -> base", () => {
@@ -340,7 +342,7 @@ test("adapter: an extracted doc_subtype that is wrong for the real filing yields
   assert.equal(remedied.embeddingAdapter.calls, 1);   // embedded once across both passes
 });
 
-test("adapter: a wrong extracted subtype that FILLS the pool no longer hides the right filing -- the relaxed pass always runs and its best candidate is interleaved near the top", async () => {
+test("adapter: a wrong extracted subtype that FILLS the pool no longer hides the right filing -- the relaxed pass always runs and its best candidate is promoted by evidence", async () => {
   const wrong = Array.from({ length: 40 }, (_, i) => makeRow({
     id: `chunk_w${String(i).padStart(2, "0")}`, doc: `exchange_2024010${String(i).padStart(2, "0")}00`, receipt: "2024-01-05", nodes: [0],
     text: `마일스톤 안내 문서 ${i} 단일판매 공급계약`,
@@ -359,8 +361,8 @@ test("adapter: a wrong extracted subtype that FILLS the pool no longer hides the
   assert.equal(last.passes[0].returned, 40);                 // the wrong subtype saturates the primary pool ...
   assert.equal(last.passes[1].label, "base_relaxed");
   assert.equal(last.passes[1].skipped, false);              // ... and the relaxed pass still runs
-  assert.equal(results[3].chunk_id, target.chunk_id);        // every 4th rank: the relaxed candidate sits at rank 4
-  assert.equal(results[3].retrieval_group, "relaxed");
+  assert.equal(results[0].chunk_id, target.chunk_id);        // rank 1 in base_relaxed (the superset) beats every primary item there -> promoted to the top
+  assert.equal(results[0].retrieval_group, "relaxed");
   assert.equal(results.length, 20);
 });
 
@@ -466,4 +468,93 @@ test("arm C: the remediation passes work on the BM25-only leg and the structural
     arm: "C", client: fakeClient(rows), bm25Index: buildBm25Index([]), retrievalIndexId: RETRIEVAL_INDEX_ID, loadSessionId: LOAD_SESSION_ID,
     vectorRepository: fakeVectorRepo(rows), policy: REMEDIATION_V1_POLICY,
   }), /must not be constructed with a vectorRepository/);
+});
+
+// ---------- review round 2 ----------
+
+test("promoteRelaxed: a relaxed-only candidate moves up only by evidence -- within the top N of its own relaxed pass and only past partner-pass items it outranks there; weak ones stay behind every primary item", () => {
+  const P = (id, pass) => ({ chunk_id: id, g: "primary", pass });
+  const R = (id, pass) => ({ chunk_id: id, g: "relaxed", pass });
+  const isRelaxed = (x) => x.g === "relaxed";
+  const passOf = (x) => x.pass;
+  const primaryOrder = ["window", "base"];
+  assert.equal(partnerPassOf("window_relaxed:2"), "window:2");
+  assert.equal(partnerPassOf("base_relaxed"), "base");
+  assert.equal(partnerPassOf("window"), null);
+  // ranks in the relaxed passes (the superset rankings)
+  const ranks = {
+    base_relaxed: { p1: 1, p2: 2, p3: 4, weak: 30, strong: 3, top: 1 },
+    window_relaxed: { w1: 2, w2: 3, wr: 1 },
+  };
+  const rankIn = (x, label) => ranks[label]?.[x.chunk_id] ?? Infinity;
+  // reviewer's case: correct subtype, strong primary items, a very weak off-subtype relaxed candidate -> stays behind
+  const weak = promoteRelaxed([P("p1", "base"), P("p2", "base"), P("p3", "base"), R("weak", "base_relaxed")], { top: 5, rankIn, passOf, primaryOrder, isRelaxed });
+  assert.deepEqual(ids(weak), ["p1", "p2", "p3", "weak"]);
+  // a relaxed candidate ranked 3rd in base_relaxed goes before the first base item ranked worse there (p3 at 4), never before p1/p2
+  const strong = promoteRelaxed([P("p1", "base"), P("p2", "base"), P("p3", "base"), R("strong", "base_relaxed")], { top: 5, rankIn, passOf, primaryOrder, isRelaxed });
+  assert.deepEqual(ids(strong), ["p1", "p2", "strong", "p3"]);
+  // a base_relaxed candidate can never move above window-block items, however strong (ranks are per pass: one item per rank)
+  const blockRanks = { base_relaxed: { p1: 2, top: 1 }, window_relaxed: { w1: 2, w2: 3, wr: 1 } };
+  const rankInBlocks = (x, label) => blockRanks[label]?.[x.chunk_id] ?? Infinity;
+  const blocks = promoteRelaxed([P("w1", "window"), P("w2", "window"), P("p1", "base"), R("top", "base_relaxed"), R("wr", "window_relaxed")], { top: 5, rankIn: rankInBlocks, passOf, primaryOrder, isRelaxed });
+  assert.deepEqual(ids(blocks), ["wr", "w1", "w2", "top", "p1"]);
+  // a primary item the relaxed pass did not return at all (Infinity) ranks worse than any promotable candidate
+  const missing = promoteRelaxed([P("px", "base"), R("strong", "base_relaxed")], { top: 5, rankIn, passOf, primaryOrder, isRelaxed });
+  assert.deepEqual(ids(missing), ["strong", "px"]);
+  // empty partner block: the candidate fills the block's position (before lower-priority blocks)
+  const empty = promoteRelaxed([P("p1", "base"), R("wr", "window_relaxed")], { top: 5, rankIn, passOf, primaryOrder, isRelaxed });
+  assert.deepEqual(ids(empty), ["wr", "p1"]);
+  // off
+  assert.deepEqual(ids(promoteRelaxed([P("p1", "base"), R("top", "base_relaxed")], { top: 0, rankIn, passOf, primaryOrder, isRelaxed })), ["p1", "top"]);
+});
+
+test("adapter: with a CORRECT extracted subtype, a weak off-subtype relaxed candidate never enters the top-10; a genuinely stronger one is promoted by its own rank, not by a fixed slot", async () => {
+  const strong = Array.from({ length: 10 }, (_, i) => makeRow({
+    id: `chunk_p${String(i).padStart(2, "0")}`, doc: `exchange_2024020${String(i).padStart(2, "0")}00`, receipt: "2024-02-05", nodes: [0],
+    text: `단일판매 공급계약 체결 계약금액 ${100 + i} 계약상대 갑`,
+  }));
+  const weak = makeRow({ id: "chunk_weak", doc: "exchange_20240301900001", receipt: "2024-03-01", nodes: [0], subtype: "투자판단관련주요경영사항", text: "임상시험 계획 승인 안내" });
+  const question = "단일판매 공급계약 계약금액은?";
+  const conditions = { corp_codes: [CORP], doc_groups: ["exchange"], doc_subtypes: ["단일판매공급계약체결"] };
+  const similarity = Object.fromEntries([...strong.map((r, i) => [r.chunk_id, 0.9 - i * 0.01]), ["chunk_weak", 0.01]]);
+  const remedied = makeArm("A", [...strong, weak], { policy: REMEDIATION_V1_POLICY, similarity });
+  const results = await remedied.adapter.search(question, conditions, 20);
+  assert.deepEqual(ids(results).slice(0, 10), strong.map((r) => r.chunk_id));   // the 10 correct-subtype chunks keep the whole top-10
+  assert.equal(results[10].chunk_id, "chunk_weak");                              // the weak off-subtype candidate is last
+  assert.equal(remedied.adapter.lastSearch().passes.find((p) => p.label === "base_relaxed").skipped, false);
+  // the same off-subtype filing, now the best match on both legs -> promoted to rank 1 by its base_relaxed rank, not by a slot
+  const best = makeRow({ id: "chunk_weak", doc: "exchange_20240301900001", receipt: "2024-03-01", nodes: [0], subtype: "투자판단관련주요경영사항", text: "단일판매 공급계약 체결 계약금액 999 계약상대 갑 계약금액 공급계약" });
+  const promoted = await makeArm("A", [...strong, best], { policy: REMEDIATION_V1_POLICY, similarity: { ...similarity, chunk_weak: 0.99 } }).adapter.search(question, conditions, 20);
+  assert.equal(promoted[0].chunk_id, "chunk_weak");
+  assert.equal(promoted[0].retrieval_group, "relaxed");
+  assert.deepEqual(ids(promoted).slice(1, 11), strong.map((r) => r.chunk_id));
+});
+
+test("adapter: every receipt-date window runs and windows merge round-robin -- a first date whose filing fills the pool cannot crowd the second date's filing out", async () => {
+  const first = Array.from({ length: 45 }, (_, i) => makeRow({
+    id: `chunk_a${String(i).padStart(2, "0")}`, doc: "exchange_20230105800001", receipt: "2023-01-05", nodes: [i],
+    text: `계약 조항 ${i} 계약금액 단일판매 공급계약`,
+  }));
+  const second = [
+    makeRow({ id: "chunk_b00", doc: "exchange_20250105800002", receipt: "2025-01-05", nodes: [0], text: "계약금액 500 단일판매 공급계약 계약상대 을" }),
+    makeRow({ id: "chunk_b01", doc: "exchange_20250105800002", receipt: "2025-01-05", nodes: [1], text: "계약기간 2025 단일판매 공급계약 종료일" }),
+  ];
+  const rows = [...first, ...second];
+  const similarity = Object.fromEntries(rows.map((r, i) => [r.chunk_id, 0.9 - i * 0.005]));
+  const question = "한화에어로스페이스의 2023-01-05 공시와 2025-01-05 공시 계약금액 비교";
+  const conditions = { corp_codes: [CORP], doc_groups: ["exchange"], doc_subtypes: ["단일판매공급계약체결"] };
+  const remedied = makeArm("A", rows, { policy: REMEDIATION_V1_POLICY, similarity });
+  const results = await remedied.adapter.search(question, conditions, 20);
+  const last = remedied.adapter.lastSearch();
+  assert.deepEqual(last.plan.receipt_windows.map((w) => w.question_dates[0]), ["2023-01-05", "2025-01-05"]);
+  const w1 = last.passes.find((p) => p.label === "window");
+  const w2 = last.passes.find((p) => p.label === "window:2");
+  assert.equal(w1.returned, 40);                                   // the first date's filing alone fills the pool ...
+  assert.deepEqual([w2.skipped, w2.returned, w2.added], [false, 2, 2]);   // ... yet the second window still runs and both of its chunks are admitted
+  assert.deepEqual([results[1].chunk_id, results[3].chunk_id], ["chunk_b00", "chunk_b01"]);   // round-robin: 2nd and 4th
+  assert.equal(results[0].doc_id, "exchange_20230105800001");
+  assert.equal(last.passes.find((p) => p.label === "base").skipped, true);   // primary pool full after the windows
+  assert.equal(last.passes.find((p) => p.label === "base_relaxed").skipped, false);
+  const ten = await makeArm("A", rows, { policy: REMEDIATION_V1_POLICY, similarity }).adapter.search(question, conditions, 10);
+  assert.deepEqual(ids(ten), ids(results).slice(0, 10));
 });

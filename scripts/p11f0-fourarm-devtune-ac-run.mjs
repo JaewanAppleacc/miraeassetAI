@@ -31,7 +31,7 @@
 // devtune101_conditions.v2.jsonl has a checkpointed line.
 import { createHash } from "node:crypto";
 import { readFile, appendFile, mkdir } from "node:fs/promises";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, unlinkSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
@@ -144,9 +144,16 @@ async function main() {
   const runJsonPath = path.join(outDir, `${arm}.run${fileSuffix}.json`);
   // A completed run already lives here (e.g. the official results directory
   // holds the frozen A.run.json). Control and candidate runs each get a
-  // fresh --out-dir; overwriting a finished run is never implicit.
-  if (existsSync(runJsonPath) && !process.argv.includes("--overwrite")) {
-    throw new Error(`refusing to overwrite the completed run at ${runJsonPath} -- pass a fresh --out-dir for every control/candidate run (or --overwrite deliberately)`);
+  // fresh --out-dir; overwriting a finished run is never implicit. With
+  // --overwrite the run starts FRESH: the old results NDJSON and run.json
+  // are removed first, so the checkpoint below cannot resume from stale
+  // rows under a new code SHA / batch id (resume and overwrite are distinct).
+  if (existsSync(runJsonPath)) {
+    if (!process.argv.includes("--overwrite")) {
+      throw new Error(`refusing to overwrite the completed run at ${runJsonPath} -- pass a fresh --out-dir for every control/candidate run (or --overwrite deliberately)`);
+    }
+    for (const stale of [resultsPath, runJsonPath]) if (existsSync(stale)) unlinkSync(stale);
+    console.error(`[fourarm-devtune-${arm}] --overwrite: removed the completed run in ${outDir}; starting fresh`);
   }
 
   const [conditionsRaw, nameToCorpCodeIndex, configRaw] = await Promise.all([

@@ -37,6 +37,12 @@
 //   - the node-set "contained window" dedupe was wrong (different rows of
 //     one table share a node_index) and is replaced by verified text
 //     containment; it is OFF by default.
+// Review round 2 (40686e7 -> this version) changed:
+//   - relaxed-pass candidates are no longer inserted at a fixed stride
+//     regardless of score; they are PROMOTED by evidence, pair-wise against
+//     the primary pass they relax (promoteRelaxed below);
+//   - every receipt-date window pass runs and the windows are merged
+//     round-robin, so one date's document cannot crowd the other date out.
 //
 // Everything here is question-text/conditions-only (vFINAL 20: no Gold-
 // derived input anywhere). No Gold, DEV_CHECK or HOLDOUT is read.
@@ -58,8 +64,9 @@ export const FROZEN_POLICY = Object.freeze({
   dense_candidate_k: null,
   // null = fusion output equals k, single pass.
   fusion_pool_k: null,
-  // 0 = relaxed-pass candidates are never interleaved (no relaxed passes exist).
+  // 0 = relaxed-pass candidates are never interleaved/promoted (no relaxed passes exist).
   relaxed_interleave_every: 0,
+  relaxed_promote_top: 0,
   dedupe_contained_windows: false,
   per_doc_cap: 0,
 });
@@ -87,10 +94,18 @@ export const REMEDIATION_V1_POLICY = Object.freeze({
   dense_candidate_k: 20,
   // the FIXED candidate pool each primary pass fills towards; never k.
   fusion_pool_k: 40,
-  // every 4th rank goes to the best not-yet-placed relaxed-pass candidate
-  // (if any): k=20 carries up to 5, k=10 up to 2, and the ranking is the
-  // same list for every k, so the k-prefix property holds.
-  relaxed_interleave_every: 4,
+  // 0 = OFF (review round 2: a fixed stride put relaxed candidates at rank
+  // 4/8 regardless of score, taking top-10 slots from a correct subtype).
+  // Kept only as an ablation knob.
+  relaxed_interleave_every: 0,
+  // Relaxed-pass candidates are PROMOTED by evidence, pair-wise against the
+  // primary pass they relax (window:n <-> window_relaxed:n, base <->
+  // base_relaxed). A relaxed pass ranks the SUPERSET of its partner's pool,
+  // so its ranks compare like for like: a relaxed-only candidate that ranks
+  // within the top N of its own relaxed pass is inserted before the first
+  // partner-pass item that ranks worse than it in that same relaxed pass;
+  // every other relaxed candidate stays behind all primary items. 0 = off.
+  relaxed_promote_top: 5,
   // OFF: the only safe containment test is "this chunk's text is entirely
   // inside an already-kept chunk of the same document" (verified from the
   // hydrated text); node/row provenance cannot prove containment (different
@@ -308,6 +323,60 @@ export function interleaveRelaxed(ordered, { every = 0, isRelaxed = () => false 
   return out;
 }
 
-export function rankCandidates(items, { dedupeContainedWindows = false, perDocCap = 0, textOf = null, interleaveEvery = 0, isRelaxed = () => false } = {}) {
-  return interleaveRelaxed(orderCandidates(items, { dedupeContainedWindows, perDocCap, textOf }), { every: interleaveEvery, isRelaxed });
+// The primary pass a relaxed pass relaxes: window_relaxed[:n] -> window[:n],
+// base_relaxed -> base. null for anything else.
+export function partnerPassOf(label) {
+  if (label === "base_relaxed") return "base";
+  const m = /^window_relaxed(:\d+)?$/.exec(String(label ?? ""));
+  return m ? `window${m[1] ?? ""}` : null;
+}
+
+// Evidence-based promotion of relaxed-only candidates (review round 2).
+//   ordered      the pool in priority order (primary items in pass order)
+//   top          a relaxed candidate is promotable only if its rank within
+//                its OWN relaxed pass is <= top
+//   rankIn(item, label)   1-based rank of `item` in pass `label`, Infinity
+//                if the pass did not return it
+//   passOf(item) the pass label the item was first admitted from
+//   primaryOrder primary pass labels in priority order (window, window:2, .., base)
+// A promotable candidate r from relaxed pass L (partner P) is inserted
+// before the first item of block P (primary items of P, plus items already
+// promoted into P) that ranks worse than r in L -- Infinity counts as worse;
+// if none, at the end of block P (i.e. before the next lower-priority
+// block). It can never move above an item of a higher-priority block. All
+// non-promotable relaxed candidates are appended after every primary item,
+// in their original order. Pure function of the input -> the same list for
+// every k.
+export function promoteRelaxed(ordered, { top = 0, rankIn = null, passOf = null, primaryOrder = [], isRelaxed = () => false } = {}) {
+  if (!(Number.isInteger(top) && top > 0) || typeof rankIn !== "function" || typeof passOf !== "function") return [...ordered];
+  const priorityOf = (label) => { const i = primaryOrder.indexOf(label); return i === -1 ? Infinity : i; };
+  const blockOf = (item) => (isRelaxed(item) ? partnerPassOf(passOf(item)) : passOf(item));
+  const out = ordered.filter((x) => !isRelaxed(x));
+  const relaxed = ordered.filter((x) => isRelaxed(x));
+  const promotable = relaxed.filter((r) => rankIn(r, passOf(r)) <= top);
+  const rest = relaxed.filter((r) => !(rankIn(r, passOf(r)) <= top));
+  for (const r of promotable) {
+    const label = passOf(r);
+    const prio = priorityOf(partnerPassOf(label));
+    const rank = rankIn(r, label);
+    let at = out.findIndex((x) => {
+      const xp = priorityOf(blockOf(x));
+      if (xp > prio) return true;
+      if (xp < prio) return false;
+      return rankIn(x, label) > rank;
+    });
+    if (at === -1) at = out.length;
+    out.splice(at, 0, r);
+  }
+  return [...out, ...rest];
+}
+
+export function rankCandidates(items, {
+  dedupeContainedWindows = false, perDocCap = 0, textOf = null,
+  promoteTop = 0, rankIn = null, passOf = null, primaryOrder = [],
+  interleaveEvery = 0, isRelaxed = () => false,
+} = {}) {
+  const ordered = orderCandidates(items, { dedupeContainedWindows, perDocCap, textOf });
+  const promoted = promoteRelaxed(ordered, { top: promoteTop, rankIn, passOf, primaryOrder, isRelaxed });
+  return interleaveRelaxed(promoted, { every: interleaveEvery, isRelaxed });
 }

@@ -192,6 +192,13 @@ export function createArmRetrieverAdapter({
   // static test). lastSearch() exposes what happened for the run ledger.
   const textCache = new Map();   // chunk_id -> hydrated text_content (non-frozen only; for verified dedupe)
   let lastSearch = null;
+  const isWindowPass = (label) => label.startsWith("window");
+
+  function runPass(question, pass, pool, queryVector) {
+    return arm === "A"
+      ? searchArmA(question, pass.filters, pool, { queryVector })
+      : searchArmC(question, pass.filters, pool);
+  }
 
   async function searchWithPolicy(question, filters, k, plan) {
     const pool = (Number.isInteger(policy.fusion_pool_k) && policy.fusion_pool_k > 0) ? policy.fusion_pool_k : k;
@@ -204,29 +211,70 @@ export function createArmRetrieverAdapter({
     const seen = new Set();
     const merged = [];
     const passLog = [];
+    const executed = new Map();      // pass label -> items returned by that pass (rank order)
+    const passRanks = new Map();     // chunk_id -> Map(pass label -> 1-based rank in that pass)
     let primaryCount = 0;
+
+    const record = (pass, items) => {
+      executed.set(pass.label, items);
+      items.forEach((item, index) => {
+        if (!passRanks.has(item.chunk_id)) passRanks.set(item.chunk_id, new Map());
+        passRanks.get(item.chunk_id).set(pass.label, index + 1);
+      });
+    };
+    const admit = (pass, item) => {
+      if (seen.has(item.chunk_id)) return false;
+      if (pass.group === "primary" && primaryCount >= pool) return false;
+      seen.add(item.chunk_id);
+      merged.push(Object.freeze({ ...item, retrieval_pass: pass.label, retrieval_group: pass.group }));
+      if (pass.group === "primary") primaryCount += 1;
+      return true;
+    };
+    // Round-robin over the window passes of one group (review round 2): the
+    // j-th item of every window in turn, so a first date whose document has
+    // 40 chunks cannot crowd the second date's document out of the pool.
+    const mergeWindowsRoundRobin = (group) => {
+      const list = passes.filter((p) => isWindowPass(p.label) && p.group === group);
+      const added = new Map(list.map((p) => [p.label, 0]));
+      const longest = Math.max(0, ...list.map((p) => (executed.get(p.label) ?? []).length));
+      for (let j = 0; j < longest; j += 1) {
+        for (const p of list) {
+          const item = (executed.get(p.label) ?? [])[j];
+          if (item && admit(p, item)) added.set(p.label, added.get(p.label) + 1);
+        }
+      }
+      return added;
+    };
+
+    // 1. every window pass runs (primary and relaxed); merged round-robin.
+    for (const pass of passes) if (isWindowPass(pass.label)) record(pass, await runPass(question, pass, pool, queryVector));
+    const windowAdded = { primary: mergeWindowsRoundRobin("primary"), relaxed: mergeWindowsRoundRobin("relaxed") };
     for (const pass of passes) {
+      if (!isWindowPass(pass.label)) continue;
+      passLog.push(Object.freeze({ label: pass.label, group: pass.group, skipped: false, returned: executed.get(pass.label).length, added: windowAdded[pass.group].get(pass.label) }));
+    }
+    // 2. base (primary) only while the primary pool is not full; base_relaxed always.
+    for (const pass of passes) {
+      if (isWindowPass(pass.label)) continue;
       if (pass.group === "primary" && primaryCount >= pool) {
         passLog.push(Object.freeze({ label: pass.label, group: pass.group, skipped: true, returned: 0, added: 0 }));
         continue;
       }
-      const items = arm === "A"
-        ? await searchArmA(question, pass.filters, pool, { queryVector })
-        : await searchArmC(question, pass.filters, pool);
+      const items = await runPass(question, pass, pool, queryVector);
+      record(pass, items);
       let added = 0;
-      for (const item of items) {
-        if (seen.has(item.chunk_id)) continue;
-        seen.add(item.chunk_id);
-        merged.push(Object.freeze({ ...item, retrieval_pass: pass.label, retrieval_group: pass.group }));
-        added += 1;
-        if (pass.group === "primary") primaryCount += 1;
-      }
+      for (const item of items) if (admit(pass, item)) added += 1;
       passLog.push(Object.freeze({ label: pass.label, group: pass.group, skipped: false, returned: items.length, added }));
     }
+
     const ranked = rankCandidates(merged, {
       dedupeContainedWindows: policy.dedupe_contained_windows === true,
       perDocCap: policy.per_doc_cap ?? 0,
       textOf: (chunkId) => textCache.get(chunkId),
+      promoteTop: policy.relaxed_promote_top ?? 0,
+      rankIn: (item, label) => passRanks.get(item.chunk_id)?.get(label) ?? Infinity,
+      passOf: (item) => item.retrieval_pass,
+      primaryOrder: passes.filter((p) => p.group === "primary").map((p) => p.label),
       interleaveEvery: policy.relaxed_interleave_every ?? 0,
       isRelaxed: (item) => item.retrieval_group === "relaxed",
     });
