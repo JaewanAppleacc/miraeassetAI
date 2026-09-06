@@ -48,28 +48,55 @@ function sha256Hex(text) {
 // SEPARATE_MARKERS/unit tokens/revision markers.
 // ---------------------------------------------------------------------------
 
-const CONSOLIDATED_MARKERS = ["연결"];
-const SEPARATE_MARKERS = ["별도", "개별"];
+// Anchored, not bare-character, markers -- amendment §3 correction
+// (pre-Gold, discovered by the section E/pre-flight smoke check): a bare
+// "연결"/"별도"/"개별" substring collides with ordinary Korean words
+// ("별도로", "개별적으로") that have nothing to do with financial-statement
+// scope, and a bare "원"/"주" character collides with countless unrelated
+// words ("주식", "위원회", "지원"). Both markers are anchored to the actual
+// disclosure vocabulary/number-adjacency pattern that genuinely signals the
+// dimension, instead of a single free-floating token.
+const CONSOLIDATED_PATTERNS = [/연결\s*재무제표/, /연결\s*기준/, /연결\s*재무상태표/, /연결\s*손익계산서/];
+const SEPARATE_PATTERNS = [/별도\s*재무제표/, /별도\s*기준/, /개별\s*재무제표/, /개별\s*기준/];
+// Digit-anchored: a unit token only counts when immediately preceded by a
+// number, exactly like it would appear in an actual disclosed value ("100
+// 억원", "1,234주", "12.3%") -- never a bare character match anywhere in a
+// paragraph. A question asking FOR a value states the unit as a
+// parenthesized label instead ("매출액(억원)은?"), so that pattern is
+// checked too -- still anchored (parens), never a bare floating character.
+// "주" is deliberately EXCLUDED from the parenthesized-label pattern: "(주)"
+// is this corpus's ubiquitous abbreviation for "주식회사" (Corp./Inc.)
+// immediately before almost every company name, never a share-count unit
+// label written that way -- a real share-count unit label would say
+// "(단위: 주)" or a bare "1,234주", both still caught by the other patterns.
+const UNIT_LABEL_PATTERN = /[(（]\s*(억\s*원|백만\s*원|천\s*원|원|%)\s*[)）]/;
+const UNIT_ANCHOR_PATTERN = /\d[\d,]*(?:\.\d+)?\s*(억\s*원|백만\s*원|천\s*원|원|%|주)/;
+// Explicit period-scope vocabulary only -- deliberately excludes the "bare
+// YYYY년" fallback normalizePeriodLabel itself accepts, because a bare year
+// mention in this corpus is overwhelmingly a report/filing REFERENCE DATE
+// ("보고서작성기준일 2024년 03월 22일"), not a stated period-of-interest.
+const PERIOD_SCOPE_MARKERS = ["분기", "반기", "상반기", "하반기", "사업연도", "연간", "연차", "누적"];
 
 function extractScopeRequirement(text) {
   if (typeof text !== "string") return null;
   const t = text.normalize("NFKC");
-  const hasConsolidated = CONSOLIDATED_MARKERS.some((m) => t.includes(m));
-  const hasSeparate = SEPARATE_MARKERS.some((m) => t.includes(m));
+  const hasConsolidated = CONSOLIDATED_PATTERNS.some((p) => p.test(t));
+  const hasSeparate = SEPARATE_PATTERNS.some((p) => p.test(t));
   if (hasConsolidated === hasSeparate) return null; // both or neither -> undetermined
   return hasConsolidated ? "CONSOLIDATED" : "SEPARATE";
 }
 
-function extractUnitRequirement(text) {
+// Returns the short matched substring (e.g. "100억원"), or null -- callers
+// pass this anchored substring (never the surrounding full text) into the
+// guard's own unit-token detection, so a coincidental "원"/"주" elsewhere
+// in a much larger text can never be mistaken for the anchored value.
+function findAnchoredUnitSubstring(text) {
   if (typeof text !== "string") return null;
   const t = text.normalize("NFKC");
-  if (/%/.test(t)) return "PERCENT";
-  if (/억\s*원/.test(t)) return "HUNDRED_MILLION_KRW";
-  if (/백만\s*원/.test(t)) return "MILLION_KRW";
-  if (/천\s*원/.test(t)) return "THOUSAND_KRW";
-  if (/원/.test(t)) return "KRW";
-  if (/주/.test(t)) return "SHARE";
-  return null;
+  const label = t.match(UNIT_LABEL_PATTERN);
+  if (label) return label[0];
+  const numeric = t.match(UNIT_ANCHOR_PATTERN);
+  return numeric ? numeric[0] : null;
 }
 
 function extractRevisionRequirement(text) {
@@ -91,11 +118,28 @@ export function extractQuestionConditions(questionText, mappedFilters) {
   const scope = extractScopeRequirement(questionText);
   if (scope) conditions.scope = scope;
 
-  const period = normalizePeriodLabel(questionText);
+  // A period-COMPARISON question ("2023년 ... 2025년 ... 사이 ... 변동")
+  // mentions two or more distinct years and legitimately needs evidence
+  // from BOTH -- forcing a single required period would systematically
+  // REJECT the correct evidence for whichever year lost. Only a
+  // single-year question with an explicit period-scope marker gets a
+  // period requirement at all.
+  const distinctYears = new Set([...(typeof questionText === "string" ? questionText.matchAll(/(\d{4})\s*년/g) : [])].map((m) => m[1]));
+  const hasPeriodScopeMarker = typeof questionText === "string" && PERIOD_SCOPE_MARKERS.some((m) => questionText.includes(m));
+  const period = (hasPeriodScopeMarker && distinctYears.size <= 1) ? normalizePeriodLabel(questionText) : null;
   if (period) conditions.period = period;
 
-  const unit = extractUnitRequirement(questionText);
-  if (unit) conditions.unit = unit;
+  const unitAnchor = findAnchoredUnitSubstring(questionText);
+  if (unitAnchor) {
+    // Same fixed priority order the guard's own detectUnitToken uses,
+    // applied only to the short anchored substring.
+    if (/%/.test(unitAnchor)) conditions.unit = "PERCENT";
+    else if (/억\s*원/.test(unitAnchor)) conditions.unit = "HUNDRED_MILLION_KRW";
+    else if (/백만\s*원/.test(unitAnchor)) conditions.unit = "MILLION_KRW";
+    else if (/천\s*원/.test(unitAnchor)) conditions.unit = "THOUSAND_KRW";
+    else if (/원/.test(unitAnchor)) conditions.unit = "KRW";
+    else if (/주/.test(unitAnchor)) conditions.unit = "SHARE";
+  }
 
   const revision = extractRevisionRequirement(questionText);
   if (revision) conditions.revision = revision;
@@ -108,17 +152,22 @@ export function extractQuestionConditions(questionText, mappedFilters) {
   return conditions;
 }
 
-// evidenceFacts extraction (non-Gold; amendment §3): full candidate chunk
-// text passed straight into the guard's own *_hint parsers (reused
-// unmodified inside detectEvidenceContradictions -- this function never
-// re-implements period/unit/scope/revision PARSING itself, only routes the
-// raw text and the candidate's own corp_code).
+// evidenceFacts extraction (non-Gold; amendment §3): the candidate chunk's
+// own text, ANCHORED the same way as the question side for unit/scope
+// (see the markers above) before being routed into the guard's own *_hint
+// parsers -- this function never re-implements period/unit/scope/revision
+// PARSING itself, only decides what substring is safe to hand the guard.
+// period_hint and revision_hint still use the full text (lower
+// false-positive risk for a 2-4 character phrase like "정정 전"; the
+// disclosed multi-period-column limitation for period_hint remains, see
+// the amendment).
 export function extractEvidenceFacts(candidate) {
   const text = typeof candidate.text === "string" ? candidate.text : null;
+  const scopeAnchor = text && (CONSOLIDATED_PATTERNS.some((p) => p.test(text)) || SEPARATE_PATTERNS.some((p) => p.test(text))) ? text : null;
   return {
-    scope_hint: text,
+    scope_hint: scopeAnchor,
     period_hint: text,
-    unit_hint: text,
+    unit_hint: findAnchoredUnitSubstring(text),
     revision_hint: text,
     entity: candidate.metadata?.corp_code ?? null,
   };

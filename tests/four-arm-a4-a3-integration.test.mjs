@@ -205,7 +205,12 @@ test("D14: a question requiring scope, against evidence mentioning neither marke
 });
 
 test("D15: period/unit/revision/entity are each checked independently -- a mismatch in one never masks or is masked by the others", () => {
-  const q = extractQuestionConditions("정정 후 2024년 매출액(억원)은?", { corp_codes: ["00126380"] });
+  // A single-year mention with an explicit period-scope marker ("사업연도")
+  // sets a period requirement; a bare year with no such marker (see the
+  // pre-flight fix note above extractQuestionConditions) deliberately does
+  // not, since it is far more often a report-reference date than a stated
+  // period-of-interest in this corpus.
+  const q = extractQuestionConditions("정정 후 2024년 사업연도 매출액(억원)은?", { corp_codes: ["00126380"] });
   assert.equal(q.revision, "POST_REVISION");
   assert.equal(q.unit, "HUNDRED_MILLION_KRW");
   assert.deepEqual(q.period, { fiscal_year: 2024, start_month: 1, end_month: 12 });
@@ -227,6 +232,16 @@ test("D15: period/unit/revision/entity are each checked independently -- a misma
   const r2 = detectEvidenceContradictions({ questionConditions: q, evidenceFacts: evidenceWrongEntity });
   assert.equal(r2.status, CONTRADICTION_STATUS.REJECT);
   assert.deepEqual(r2.reasons, ["ENTITY_CONTRADICTION"]);
+});
+
+test("D15b: a bare year mention with no explicit period-scope marker never sets a period requirement (report-date, not period-of-interest)", () => {
+  const q = extractQuestionConditions("보고서작성기준일 2024년 03월 22일 기준 보유비율은?", {});
+  assert.equal(q.period, undefined);
+});
+
+test("D15c: a period-COMPARISON question (two distinct years) never sets a single period requirement", () => {
+  const q = extractQuestionConditions("매출액은(는) 2023년와(과) 2025년 사이(같은 연간(사업보고서) 기준)에 얼마나 변동했는가?", {});
+  assert.equal(q.period, undefined);
 });
 
 // ---------------------------------------------------------------------------

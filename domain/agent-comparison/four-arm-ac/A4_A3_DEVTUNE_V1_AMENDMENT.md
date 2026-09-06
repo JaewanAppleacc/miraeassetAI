@@ -243,3 +243,55 @@ partial-question re-runs; corpus re-embedding; new chunking; folding the
 81 fallback documents in; BM25 tokenizer changes; DB writes/migrations;
 editing any original result file; declaring a winner outside the rules
 above.
+
+## 8. Addendum — pre-flight extraction fixes (section E smoke phase, before Gold/DEV_TUNE scoring; no rule/weight/config touched)
+
+The non-Gold `questionConditions`/`evidenceFacts` extraction logic in
+`a4-a3-retrieval-pipeline.mjs` (§3 above) is new code with no prior
+track record, so it was smoke-tested against progressively larger
+samples of the real, non-scored DEV_TUNE-101 *questions* (never Gold,
+never a recall/score number) before committing to the single official
+Section F run. Three demonstrated wiring defects were found and fixed
+at this stage — this is exactly what the Section D/E gates exist to
+catch, and none of it touched a config weight, a feature, the tie-break
+rule, or anything Gold-scored:
+
+1. **Bare-year period false-trigger**: a plain report-reference date
+   ("보고서작성기준일 2024년 03월 22일") was being read as a "full fiscal
+   year 2024" period *requirement*, causing ~78% of one test question's
+   118-candidate pool to REJECT on `PERIOD_CONTRADICTION`. Fixed:
+   `questionConditions.period` is now set only when the question also
+   contains an explicit period-scope marker (분기/반기/사업연도/연간/
+   연차/누적) — see `PERIOD_SCOPE_MARKERS`.
+2. **Multi-year comparison false-trigger**: a period-COMPARISON question
+   naming two distinct years ("2023년...2025년...변동") was forced into a
+   single required period, systematically rejecting the correct evidence
+   for whichever year lost. Fixed: two or more distinct year mentions
+   skip period extraction entirely (§3, `extractQuestionConditions`).
+3. **Bare-character unit false-trigger**: `/원/`/`/주/` matched
+   *anywhere* in a sentence, so ordinary words containing those single
+   syllables ("주식", "위원회") spuriously set a unit requirement, and
+   `(주)` — this corpus's routine "Corp./Inc." abbreviation before a
+   company name — was matched as a parenthesized "SHARE" unit *label*.
+   Fixed: unit extraction requires either digit-adjacency ("100억원") or
+   a parenthesized label restricted to the four currency tokens and `%`
+   (never `주` in the parenthesized form) — see `UNIT_ANCHOR_PATTERN`/
+   `UNIT_LABEL_PATTERN`.
+4. Analogous scope tightening (bare "연결"/"별도"/"개별" → anchored
+   "연결재무제표"/"연결 기준"/"별도재무제표"/"별도 기준"/"개별재무제표"/
+   "개별 기준" phrases) applied at the same time for the same reason
+   (bare "별도"/"개별" collide with the ordinary adverbs "별도로"/
+   "개별적으로").
+
+Net effect measured on a 20-question, non-scored sample (pool-wide A3
+counts, not Gold-scored recall): REJECT dropped from a pre-fix rate that
+spiked to 100% of at least one question's pool, to an aggregate ~3%
+across the sample (1430 PASS / 72 REJECT / 708 KEEP_UNKNOWN across 2210
+candidate-slots), with the one remaining double-digit-percent outlier
+(`author_52e6c0ca…`, a two-company revenue-unit-conversion comparison
+question) judged plausible rather than a further extraction bug — its
+wide BM25/dense net legitimately pulls in some share-count-only,
+off-topic candidates that a currency-unit requirement correctly
+distinguishes. No further tuning was done past this point specifically
+to avoid iterating against a de facto result signal; the single Section
+F run uses exactly this fixed extraction logic.
