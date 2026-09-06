@@ -34,12 +34,17 @@ import re
 import sys
 from pathlib import Path
 
-NODE_ID_RE = re.compile(r"^(.*)::[^:]+::n(\d+)$")
+NODE_ID_RE = re.compile(r"^(.*)::([^:]+)::n(\d+)$")
 
 
 def node_id_doc(node_id: str) -> str | None:
     m = NODE_ID_RE.match(node_id or "")
     return m.group(1) if m else None
+
+
+def node_id_doc_file(node_id: str) -> tuple[str, str] | None:
+    m = NODE_ID_RE.match(node_id or "")
+    return (m.group(1), m.group(2)) if m else None
 
 
 def resolve_item(item: dict, question_id: str) -> tuple[dict, str | None]:
@@ -55,13 +60,17 @@ def resolve_item(item: dict, question_id: str) -> tuple[dict, str | None]:
     candidates = provenance.get("candidates") or []
     rowcols: set[tuple] = set()
     had_candidates = bool(candidates)
+    file_component: str | None = None
     for c in candidates:
-        cdoc = node_id_doc(c.get("node_id") or "")
+        doc_file = node_id_doc_file(c.get("node_id") or "")
+        cdoc = doc_file[0] if doc_file else None
         if cdoc is not None and cdoc != doc_id:
             return item, (
                 f"document_id_mismatch: candidate node_id={c.get('node_id')} "
                 f"implies doc={cdoc} but item.doc_id={doc_id}"
             )
+        if doc_file is not None:
+            file_component = doc_file[1]
         if c.get("node_index") is not None:
             union.add(int(c["node_index"]))
         rowcols.add((c.get("row_start"), c.get("col_start"), c.get("row_end"), c.get("col_end")))
@@ -72,7 +81,8 @@ def resolve_item(item: dict, question_id: str) -> tuple[dict, str | None]:
         return item, "empty_node_union_no_provenance_no_node_index"
 
     out = dict(item)
-    out["node_index"] = min(union) if union else item.get("node_index")
+    resolved_node_index = min(union) if union else item.get("node_index")
+    out["node_index"] = resolved_node_index
     out["node_indices"] = sorted(union) if union else (item.get("node_indices") or [])
 
     if had_candidates:
@@ -83,8 +93,21 @@ def resolve_item(item: dict, question_id: str) -> tuple[dict, str | None]:
         else:
             out["row"] = None
             out["col"] = None
+        # The raw runner's own `locator` field uses a NEW string syntax
+        # ("doc/file.xml#node=N;row=R-R;col=C-C") that the existing, unmodified
+        # scorer's parse_locator() regex cannot read at all (it understands
+        # "doc/file.xml#node=N&row=R&col=C" or "doc::file::nN" only) -- regardless
+        # of the node_index/node_indices fix above, check_locators() re-parses this
+        # string independently and would flag every item "locator_unparseable"
+        # (critical) otherwise. Regenerate it in the OLD, parseable "doc::file::nN"
+        # form using the resolved representative node index -- never fabricated,
+        # `file_component` comes directly from the same provenance candidates
+        # already verified to belong to this item's own doc_id above.
+        if file_component is not None and resolved_node_index is not None:
+            out["locator"] = f"{doc_id}::{file_component}::n{resolved_node_index}"
         out["_compat_view_note"] = {
             "original_node_index": item.get("node_index"),
+            "original_locator": item.get("locator"),
             "original_locator_status": item.get("locator_status"),
             "resolved_node_union": sorted(union),
             "candidate_count": len(candidates),

@@ -58,11 +58,16 @@ def main() -> int:
     p.add_argument("--control", type=Path, required=True)
     p.add_argument("--candidate", type=Path, required=True)
     p.add_argument("--chunk-metadata", type=Path, default=None)
+    p.add_argument("--index-dir", type=Path, default=None,
+                    help="if given, use a real NodeStore (byte-verified index) instead of store=None")
     p.add_argument("--out", type=Path, required=True)
     args = p.parse_args()
 
     sys.path.insert(0, str(args.qa_root / "src"))
     from dart_corpus.evaluation import fourarm  # noqa: E402
+    from dart_corpus.retrieval.node_store import NodeStore  # noqa: E402
+
+    store = NodeStore(args.index_dir) if args.index_dir else None
 
     gold = fourarm.load_gold(args.qa_root / "data" / "eval" / "phase1_devtune_gold.v0.1.jsonl")
     conditions_rows = [json.loads(l) for l in args.conditions.open(encoding="utf-8") if l.strip()]
@@ -95,7 +100,7 @@ def main() -> int:
         def found_count(results):
             n = 0
             for slot in gq.slots:
-                ok, *_ = fourarm.slot_found(slot, results, K, frozenset(), None)
+                ok, *_ = fourarm.slot_found(slot, results, K, frozenset(), store)
                 n += int(ok)
             return n
 
