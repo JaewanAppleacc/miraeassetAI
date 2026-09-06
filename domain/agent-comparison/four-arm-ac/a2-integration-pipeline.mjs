@@ -115,10 +115,21 @@ export function mapExpandedEvidenceForValidator(nodeGroundedEvidence) {
 // validationResult: { chunkId, status, reason } } -- the last field is
 // exactly applyStableEvidenceFilter()'s expected validationResults entry
 // shape.
-export async function evaluateFrozenItem({ retrievalItem, questionConditions, fetchNode, limits }) {
+export async function evaluateFrozenItem({ retrievalItem, questionConditions, fetchNode, limits, resolveEntity }) {
   const chunkId = retrievalItem?.chunk_id ?? null;
   const { buildNodeGroundedEvidence } = await import("./a2-node-grounded-evidence.mjs");
   const nodeGroundedEvidence = await buildNodeGroundedEvidence({ retrievalItem, fetchNode, limits });
+
+  // Neither A's own result items nor buildNodeGroundedEvidence's output
+  // carries an `entity` field (there is no such field anywhere upstream) --
+  // an optional, caller-supplied, doc_id-keyed resolver (e.g. the real
+  // documents.jsonl's own `filer_name`, never Gold) is the only way the
+  // entity dimension can ever resolve to anything but permanently
+  // UNRESOLVED. mergeEvidenceContext still prefers expandedEvidence's own
+  // `entity` (there isn't one) before falling back to this.
+  const entityContext = typeof resolveEntity === "function"
+    ? { ...retrievalItem, entity: resolveEntity(retrievalItem?.doc_id ?? null) ?? retrievalItem?.entity ?? null }
+    : retrievalItem;
 
   if (nodeGroundedEvidence.status === NODE_GROUNDED_STATUS.UNRESOLVED) {
     return Object.freeze({
@@ -133,7 +144,7 @@ export async function evaluateFrozenItem({ retrievalItem, questionConditions, fe
   }
 
   const expandedEvidence = mapExpandedEvidenceForValidator(nodeGroundedEvidence);
-  const validation = validateEvidenceDimensions({ questionConditions, retrievalItem, expandedEvidence });
+  const validation = validateEvidenceDimensions({ questionConditions, retrievalItem: entityContext, expandedEvidence });
 
   const status = validation.status === SCOPE_STATUS.PASS
     ? FILTER_STATUS.PASS
@@ -158,7 +169,7 @@ export async function evaluateFrozenItem({ retrievalItem, questionConditions, fe
 // question, so in practice this is usually one shared questionConditions
 // object, but per-chunk lookup is supported for callers that vary it).
 export async function runA2OverFrozenTop20({
-  frozenTop20, questionConditions, questionConditionsByChunkId, fetchNode, finalK, limits,
+  frozenTop20, questionConditions, questionConditionsByChunkId, fetchNode, finalK, limits, resolveEntity,
 }) {
   if (!Array.isArray(frozenTop20)) throw new TypeError("frozenTop20 must be an array");
   if (typeof fetchNode !== "function") throw new TypeError("fetchNode function is required");
@@ -183,6 +194,7 @@ export async function runA2OverFrozenTop20({
       questionConditions: conditionsFor(item?.chunk_id ?? null),
       fetchNode,
       limits,
+      resolveEntity,
     });
     perItem.push(evaluated);
   }

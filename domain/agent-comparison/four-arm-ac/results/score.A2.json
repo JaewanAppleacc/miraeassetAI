@@ -1,0 +1,3642 @@
+{
+ "arm": "A2",
+ "locator_checked": true,
+ "n_questions": 101,
+ "n_common_excluded": 0,
+ "common_excluded_qids": [],
+ "n_arm_specific_invalidated": 0,
+ "n_excluded_zero_slot": 1,
+ "n_missing_or_error": 0,
+ "segments": {
+  "ALL": {
+   "questions": 100,
+   "slots_total": 286,
+   "slots_found@5": 120,
+   "recall@5": 0.4196,
+   "all_found@5": 42,
+   "all_found_rate@5": 0.42,
+   "doc_hit@5": 53,
+   "slots_found@10": 123,
+   "recall@10": 0.4301,
+   "all_found@10": 44,
+   "all_found_rate@10": 0.44,
+   "doc_hit@10": 53,
+   "slots_found@20": 123,
+   "recall@20": 0.4301,
+   "all_found@20": 44,
+   "all_found_rate@20": 0.44,
+   "doc_hit@20": 53
+  },
+  "HIGH": {
+   "questions": 81,
+   "slots_total": 250,
+   "slots_found@5": 105,
+   "recall@5": 0.42,
+   "all_found@5": 32,
+   "all_found_rate@5": 0.3951,
+   "doc_hit@5": 43,
+   "slots_found@10": 108,
+   "recall@10": 0.432,
+   "all_found@10": 34,
+   "all_found_rate@10": 0.4198,
+   "doc_hit@10": 43,
+   "slots_found@20": 108,
+   "recall@20": 0.432,
+   "all_found@20": 34,
+   "all_found_rate@20": 0.4198,
+   "doc_hit@20": 43
+  },
+  "LOW": {
+   "questions": 19,
+   "slots_total": 36,
+   "slots_found@5": 15,
+   "recall@5": 0.4167,
+   "all_found@5": 10,
+   "all_found_rate@5": 0.5263,
+   "doc_hit@5": 10,
+   "slots_found@10": 15,
+   "recall@10": 0.4167,
+   "all_found@10": 10,
+   "all_found_rate@10": 0.5263,
+   "doc_hit@10": 10,
+   "slots_found@20": 15,
+   "recall@20": 0.4167,
+   "all_found@20": 10,
+   "all_found_rate@20": 0.5263,
+   "doc_hit@20": 10
+  }
+ },
+ "violations": {
+  "critical": 0,
+  "minor": 0,
+  "unresolved": 123,
+  "coarse": 0,
+  "items": [
+   {
+    "question_id": "author_050b7f96dd361ac0771755a8",
+    "slot_name": "evidence_1",
+    "doc_id": "major_20231026000201",
+    "node_index": 3,
+    "locator": "major_20231026000201::20231026000201.xml::n3",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "author_050b7f96dd361ac0771755a8",
+    "slot_name": "evidence_2",
+    "doc_id": "major_20231026000201",
+    "node_index": 3,
+    "locator": "major_20231026000201::20231026000201.xml::n3",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "author_0644c80590c4960192ecdd59",
+    "slot_name": "primary_evidence",
+    "doc_id": "exchange_20250626800313",
+    "node_index": 0,
+    "locator": "exchange_20250626800313::20250626800313.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "author_0be4ca52605cfe6d48181d97",
+    "slot_name": "evidence_1",
+    "doc_id": "periodic_20230515001464",
+    "node_index": 249,
+    "locator": "periodic_20230515001464::20230515001464.xml::n249",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "author_0be4ca52605cfe6d48181d97",
+    "slot_name": "evidence_2",
+    "doc_id": "periodic_20250514000385",
+    "node_index": 243,
+    "locator": "periodic_20250514000385::20250514000385.xml::n243",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "author_0dd866177ad6b48052e16a33",
+    "slot_name": "primary_evidence",
+    "doc_id": "exchange_20250701800193",
+    "node_index": 0,
+    "locator": "exchange_20250701800193::20250701800193.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "author_17e55323e3a89766f08ec8fc",
+    "slot_name": "evidence_1",
+    "doc_id": "periodic_20230814002019",
+    "node_index": 246,
+    "locator": "periodic_20230814002019::20230814002019.xml::n246",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "author_17e55323e3a89766f08ec8fc",
+    "slot_name": "evidence_2",
+    "doc_id": "periodic_20250814003089",
+    "node_index": 239,
+    "locator": "periodic_20250814003089::20250814003089.xml::n239",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "author_2b919170b3f420b30f592dbf",
+    "slot_name": "primary_evidence",
+    "doc_id": "exchange_20230914800073",
+    "node_index": 0,
+    "locator": "exchange_20230914800073::20230914800073.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "author_39b7a1a229844d5607de32fb",
+    "slot_name": "primary_evidence",
+    "doc_id": "exchange_20241112800101",
+    "node_index": 0,
+    "locator": "exchange_20241112800101::20241112800101.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "author_50eba48b6e3d77f488421b89",
+    "slot_name": "primary_evidence",
+    "doc_id": "major_20260209000461",
+    "node_index": 0,
+    "locator": "major_20260209000461::20260209000461.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "author_53d266ad714c7b2c4db364b5",
+    "slot_name": "primary_evidence",
+    "doc_id": "exchange_20251209900091",
+    "node_index": 0,
+    "locator": "exchange_20251209900091::20251209900091.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "author_558c9267989c17f3e0aa14ad",
+    "slot_name": "primary_evidence",
+    "doc_id": "exchange_20230926800443",
+    "node_index": 0,
+    "locator": "exchange_20230926800443::20230926800443.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "author_66ddb05e5a3de362ff1c536f",
+    "slot_name": "primary_evidence",
+    "doc_id": "exchange_20240227800274",
+    "node_index": 0,
+    "locator": "exchange_20240227800274::20240227800274.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "author_75966f98e4996bc694606bb2",
+    "slot_name": "primary_evidence",
+    "doc_id": "exchange_20251112800360",
+    "node_index": 0,
+    "locator": "exchange_20251112800360::20251112800360.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "author_a09660efd75391b28724e656",
+    "slot_name": "primary_evidence",
+    "doc_id": "major_20230511000691",
+    "node_index": 0,
+    "locator": "major_20230511000691::20230511000691.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "author_acd4f9e29a7188d84c0f1aaa",
+    "slot_name": "primary_evidence",
+    "doc_id": "exchange_20230927800181",
+    "node_index": 0,
+    "locator": "exchange_20230927800181::20230927800181.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "author_b81eacbe0cad034dfb7b9dd4",
+    "slot_name": "primary_evidence",
+    "doc_id": "exchange_20240705900656",
+    "node_index": 0,
+    "locator": "exchange_20240705900656::20240705900656.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "author_c4d4ef2ce48a57ef54ded4db",
+    "slot_name": "primary_evidence",
+    "doc_id": "major_20230224000002",
+    "node_index": 3,
+    "locator": "major_20230224000002::20230224000002.xml::n3",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "author_ca4ec294ad36b44faa071043",
+    "slot_name": "evidence_1",
+    "doc_id": "major_20230328000605",
+    "node_index": 0,
+    "locator": "major_20230328000605::20230328000605.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "author_cc803e40119274b80d14a65a",
+    "slot_name": "evidence_1",
+    "doc_id": "major_20250430000006",
+    "node_index": 0,
+    "locator": "major_20250430000006::20250430000006.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "author_cc803e40119274b80d14a65a",
+    "slot_name": "evidence_2",
+    "doc_id": "major_20250430000006",
+    "node_index": 3,
+    "locator": "major_20250430000006::20250430000006.xml::n3",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "author_e0416a675c6970a7f064bf74",
+    "slot_name": "primary_evidence",
+    "doc_id": "exchange_20250414800004",
+    "node_index": 0,
+    "locator": "exchange_20250414800004::20250414800004.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "author_ef82c30f267ca92d099c7a62",
+    "slot_name": "primary_evidence",
+    "doc_id": "exchange_20250507800534",
+    "node_index": 0,
+    "locator": "exchange_20250507800534::20250507800534.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "author_f115e4cb0e6b913c663df555",
+    "slot_name": "primary_evidence",
+    "doc_id": "exchange_20230918800156",
+    "node_index": 0,
+    "locator": "exchange_20230918800156::20230918800156.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "author_f55322f4532a9fec91015c34",
+    "slot_name": "evidence_1",
+    "doc_id": "major_20240426000320",
+    "node_index": 3,
+    "locator": "major_20240426000320::20240426000320.xml::n3",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "author_f55322f4532a9fec91015c34",
+    "slot_name": "evidence_2",
+    "doc_id": "major_20240426000320",
+    "node_index": 3,
+    "locator": "major_20240426000320::20240426000320.xml::n3",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "author_f87d43f1663f388ab5a57a3b",
+    "slot_name": "primary_evidence",
+    "doc_id": "major_20240722000046",
+    "node_index": 0,
+    "locator": "major_20240722000046::20240722000046.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_04129a579f785f869644167a",
+    "slot_name": "core_content",
+    "doc_id": "exchange_20250526800002",
+    "node_index": 0,
+    "locator": "exchange_20250526800002::20250526800002.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_04129a579f785f869644167a",
+    "slot_name": "decision_date",
+    "doc_id": "exchange_20250526800002",
+    "node_index": 0,
+    "locator": "exchange_20250526800002::20250526800002.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_04129a579f785f869644167a",
+    "slot_name": "current_status_and_limits",
+    "doc_id": "exchange_20250526800002",
+    "node_index": 0,
+    "locator": "exchange_20250526800002::20250526800002.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_0700d8fa5f0028cb712a533d",
+    "slot_name": "counterparty",
+    "doc_id": "exchange_20250318800145",
+    "node_index": 0,
+    "locator": "exchange_20250318800145::20250318800145.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_0700d8fa5f0028cb712a533d",
+    "slot_name": "contract_amount",
+    "doc_id": "exchange_20250318800145",
+    "node_index": 0,
+    "locator": "exchange_20250318800145::20250318800145.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_0700d8fa5f0028cb712a533d",
+    "slot_name": "period_start",
+    "doc_id": "exchange_20250318800145",
+    "node_index": 0,
+    "locator": "exchange_20250318800145::20250318800145.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_0700d8fa5f0028cb712a533d",
+    "slot_name": "period_end",
+    "doc_id": "exchange_20250318800145",
+    "node_index": 0,
+    "locator": "exchange_20250318800145::20250318800145.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_0700d8fa5f0028cb712a533d",
+    "slot_name": "revenue_ratio",
+    "doc_id": "exchange_20250318800145",
+    "node_index": 0,
+    "locator": "exchange_20250318800145::20250318800145.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_0aa8d3979510d78ea122edda",
+    "slot_name": "counterparty",
+    "doc_id": "exchange_20241231800103",
+    "node_index": 0,
+    "locator": "exchange_20241231800103::20241231800103.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_0aa8d3979510d78ea122edda",
+    "slot_name": "contract_amount",
+    "doc_id": "exchange_20241231800103",
+    "node_index": 0,
+    "locator": "exchange_20241231800103::20241231800103.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_0aa8d3979510d78ea122edda",
+    "slot_name": "period_start",
+    "doc_id": "exchange_20241231800103",
+    "node_index": 0,
+    "locator": "exchange_20241231800103::20241231800103.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_0aa8d3979510d78ea122edda",
+    "slot_name": "period_end",
+    "doc_id": "exchange_20241231800103",
+    "node_index": 0,
+    "locator": "exchange_20241231800103::20241231800103.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_0aa8d3979510d78ea122edda",
+    "slot_name": "revenue_ratio",
+    "doc_id": "exchange_20241231800103",
+    "node_index": 0,
+    "locator": "exchange_20241231800103::20241231800103.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_192fa6ea90c0cdefc2616fc0",
+    "slot_name": "counterparty",
+    "doc_id": "exchange_20251222800814",
+    "node_index": 0,
+    "locator": "exchange_20251222800814::20251222800814.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_192fa6ea90c0cdefc2616fc0",
+    "slot_name": "contract_amount",
+    "doc_id": "exchange_20251222800814",
+    "node_index": 0,
+    "locator": "exchange_20251222800814::20251222800814.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_192fa6ea90c0cdefc2616fc0",
+    "slot_name": "period_start",
+    "doc_id": "exchange_20251222800814",
+    "node_index": 0,
+    "locator": "exchange_20251222800814::20251222800814.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_192fa6ea90c0cdefc2616fc0",
+    "slot_name": "period_end",
+    "doc_id": "exchange_20251222800814",
+    "node_index": 0,
+    "locator": "exchange_20251222800814::20251222800814.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_192fa6ea90c0cdefc2616fc0",
+    "slot_name": "revenue_ratio",
+    "doc_id": "exchange_20251222800814",
+    "node_index": 0,
+    "locator": "exchange_20251222800814::20251222800814.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_23f454a11d52f107c1c7e8a2",
+    "slot_name": "counterparty",
+    "doc_id": "exchange_20251117800179",
+    "node_index": 0,
+    "locator": "exchange_20251117800179::20251117800179.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_23f454a11d52f107c1c7e8a2",
+    "slot_name": "contract_amount",
+    "doc_id": "exchange_20251117800179",
+    "node_index": 0,
+    "locator": "exchange_20251117800179::20251117800179.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_23f454a11d52f107c1c7e8a2",
+    "slot_name": "contract_period_start",
+    "doc_id": "exchange_20251117800179",
+    "node_index": 0,
+    "locator": "exchange_20251117800179::20251117800179.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_23f454a11d52f107c1c7e8a2",
+    "slot_name": "contract_period_end",
+    "doc_id": "exchange_20251117800179",
+    "node_index": 0,
+    "locator": "exchange_20251117800179::20251117800179.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_23f454a11d52f107c1c7e8a2",
+    "slot_name": "revenue_ratio",
+    "doc_id": "exchange_20251117800179",
+    "node_index": 0,
+    "locator": "exchange_20251117800179::20251117800179.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_277f68d0497188039d68f632",
+    "slot_name": "terminated_contract_name",
+    "doc_id": "exchange_20250429800893",
+    "node_index": 0,
+    "locator": "exchange_20250429800893::20250429800893.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_277f68d0497188039d68f632",
+    "slot_name": "counterparty",
+    "doc_id": "exchange_20250429800893",
+    "node_index": 0,
+    "locator": "exchange_20250429800893::20250429800893.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_277f68d0497188039d68f632",
+    "slot_name": "termination_reason",
+    "doc_id": "exchange_20250429800893",
+    "node_index": 0,
+    "locator": "exchange_20250429800893::20250429800893.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_277f68d0497188039d68f632",
+    "slot_name": "termination_date",
+    "doc_id": "exchange_20250429800893",
+    "node_index": 0,
+    "locator": "exchange_20250429800893::20250429800893.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_277f68d0497188039d68f632",
+    "slot_name": "original_disclosure_reference",
+    "doc_id": "exchange_20250429800893",
+    "node_index": 0,
+    "locator": "exchange_20250429800893::20250429800893.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_27ca59a117b25eafd17a5eaa",
+    "slot_name": "investment_amount",
+    "doc_id": "exchange_20251217800832",
+    "node_index": 0,
+    "locator": "exchange_20251217800832::20251217800832.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_27ca59a117b25eafd17a5eaa",
+    "slot_name": "equity_ratio",
+    "doc_id": "exchange_20251217800832",
+    "node_index": 0,
+    "locator": "exchange_20251217800832::20251217800832.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_27ca59a117b25eafd17a5eaa",
+    "slot_name": "purpose",
+    "doc_id": "exchange_20251217800832",
+    "node_index": 0,
+    "locator": "exchange_20251217800832::20251217800832.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_27ca59a117b25eafd17a5eaa",
+    "slot_name": "confirmation_status",
+    "doc_id": "exchange_20251217800832",
+    "node_index": 0,
+    "locator": "exchange_20251217800832::20251217800832.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_2cd479eccfda82d5d6e549bb",
+    "slot_name": "counterparty",
+    "doc_id": "exchange_20250730800046",
+    "node_index": 0,
+    "locator": "exchange_20250730800046::20250730800046.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_2cd479eccfda82d5d6e549bb",
+    "slot_name": "contract_amount",
+    "doc_id": "exchange_20250730800046",
+    "node_index": 0,
+    "locator": "exchange_20250730800046::20250730800046.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_2cd479eccfda82d5d6e549bb",
+    "slot_name": "period_start",
+    "doc_id": "exchange_20250730800046",
+    "node_index": 0,
+    "locator": "exchange_20250730800046::20250730800046.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_2cd479eccfda82d5d6e549bb",
+    "slot_name": "period_end",
+    "doc_id": "exchange_20250730800046",
+    "node_index": 0,
+    "locator": "exchange_20250730800046::20250730800046.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_2cd479eccfda82d5d6e549bb",
+    "slot_name": "revenue_ratio",
+    "doc_id": "exchange_20250730800046",
+    "node_index": 0,
+    "locator": "exchange_20250730800046::20250730800046.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_2ef301d8b4157cd002c79279",
+    "slot_name": "counterparty",
+    "doc_id": "exchange_20230120800061",
+    "node_index": 0,
+    "locator": "exchange_20230120800061::20230120800061.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_2ef301d8b4157cd002c79279",
+    "slot_name": "contract_amount",
+    "doc_id": "exchange_20230120800061",
+    "node_index": 0,
+    "locator": "exchange_20230120800061::20230120800061.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_2ef301d8b4157cd002c79279",
+    "slot_name": "contract_period_start",
+    "doc_id": "exchange_20230120800061",
+    "node_index": 0,
+    "locator": "exchange_20230120800061::20230120800061.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_2ef301d8b4157cd002c79279",
+    "slot_name": "contract_period_end",
+    "doc_id": "exchange_20230120800061",
+    "node_index": 0,
+    "locator": "exchange_20230120800061::20230120800061.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_2ef301d8b4157cd002c79279",
+    "slot_name": "revenue_ratio",
+    "doc_id": "exchange_20230120800061",
+    "node_index": 0,
+    "locator": "exchange_20230120800061::20230120800061.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_34e53426cab01c72ec76bfca",
+    "slot_name": "counterparty",
+    "doc_id": "exchange_20240417800519",
+    "node_index": 0,
+    "locator": "exchange_20240417800519::20240417800519.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_34e53426cab01c72ec76bfca",
+    "slot_name": "contract_amount",
+    "doc_id": "exchange_20240417800519",
+    "node_index": 0,
+    "locator": "exchange_20240417800519::20240417800519.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_34e53426cab01c72ec76bfca",
+    "slot_name": "revenue_ratio",
+    "doc_id": "exchange_20240417800519",
+    "node_index": 0,
+    "locator": "exchange_20240417800519::20240417800519.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_34e53426cab01c72ec76bfca",
+    "slot_name": "contract_period",
+    "doc_id": "exchange_20240417800519",
+    "node_index": 0,
+    "locator": "exchange_20240417800519::20240417800519.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_4dbdfc5d0b451f1d7a207e74",
+    "slot_name": "revenue_2023q3_cum",
+    "doc_id": "periodic_20231114002109",
+    "node_index": 250,
+    "locator": "periodic_20231114002109::20231114002109.xml::n250",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_4dbdfc5d0b451f1d7a207e74",
+    "slot_name": "revenue_2025q3_cum",
+    "doc_id": "periodic_20251114002447",
+    "node_index": 263,
+    "locator": "periodic_20251114002447::20251114002447.xml::n263",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_4dbdfc5d0b451f1d7a207e74",
+    "slot_name": "operating_income_2023q3_cum",
+    "doc_id": "periodic_20231114002109",
+    "node_index": 250,
+    "locator": "periodic_20231114002109::20231114002109.xml::n250",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_4dbdfc5d0b451f1d7a207e74",
+    "slot_name": "operating_income_2025q3_cum",
+    "doc_id": "periodic_20251114002447",
+    "node_index": 263,
+    "locator": "periodic_20251114002447::20251114002447.xml::n263",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_6064d1699deee9470756d9d2",
+    "slot_name": "event_summary",
+    "doc_id": "exchange_20260312800806",
+    "node_index": 0,
+    "locator": "exchange_20260312800806::20260312800806.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_6064d1699deee9470756d9d2",
+    "slot_name": "determination_date",
+    "doc_id": "exchange_20260312800806",
+    "node_index": 0,
+    "locator": "exchange_20260312800806::20260312800806.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_6064d1699deee9470756d9d2",
+    "slot_name": "prior_approval_reference",
+    "doc_id": "exchange_20260312800806",
+    "node_index": 0,
+    "locator": "exchange_20260312800806::20260312800806.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_6064d1699deee9470756d9d2",
+    "slot_name": "uncertainty_note",
+    "doc_id": "exchange_20260312800806",
+    "node_index": 0,
+    "locator": "exchange_20260312800806::20260312800806.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_6af756dd84b32fc13513f0bd",
+    "slot_name": "title",
+    "doc_id": "exchange_20250623800001",
+    "node_index": 0,
+    "locator": "exchange_20250623800001::20250623800001.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_6af756dd84b32fc13513f0bd",
+    "slot_name": "main_content",
+    "doc_id": "exchange_20250623800001",
+    "node_index": 0,
+    "locator": "exchange_20250623800001::20250623800001.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_6af756dd84b32fc13513f0bd",
+    "slot_name": "fact_confirmation_date",
+    "doc_id": "exchange_20250623800001",
+    "node_index": 0,
+    "locator": "exchange_20250623800001::20250623800001.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_6af756dd84b32fc13513f0bd",
+    "slot_name": "certainty_note",
+    "doc_id": "exchange_20250623800001",
+    "node_index": 0,
+    "locator": "exchange_20250623800001::20250623800001.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_75e2226d84ae9c1e8bfad1bd",
+    "slot_name": "counterparty",
+    "doc_id": "exchange_20250110800527",
+    "node_index": 0,
+    "locator": "exchange_20250110800527::20250110800527.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_75e2226d84ae9c1e8bfad1bd",
+    "slot_name": "contract_amount",
+    "doc_id": "exchange_20250110800527",
+    "node_index": 0,
+    "locator": "exchange_20250110800527::20250110800527.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_75e2226d84ae9c1e8bfad1bd",
+    "slot_name": "revenue_ratio",
+    "doc_id": "exchange_20250110800527",
+    "node_index": 0,
+    "locator": "exchange_20250110800527::20250110800527.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_75e2226d84ae9c1e8bfad1bd",
+    "slot_name": "contract_period_note",
+    "doc_id": "exchange_20250110800527",
+    "node_index": 0,
+    "locator": "exchange_20250110800527::20250110800527.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_7c610de1801a78e791b92f60",
+    "slot_name": "counterparty",
+    "doc_id": "exchange_20250313800043",
+    "node_index": 0,
+    "locator": "exchange_20250313800043::20250313800043.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_7c610de1801a78e791b92f60",
+    "slot_name": "contract_amount",
+    "doc_id": "exchange_20250313800043",
+    "node_index": 0,
+    "locator": "exchange_20250313800043::20250313800043.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_7c610de1801a78e791b92f60",
+    "slot_name": "period_start",
+    "doc_id": "exchange_20250313800043",
+    "node_index": 0,
+    "locator": "exchange_20250313800043::20250313800043.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_7c610de1801a78e791b92f60",
+    "slot_name": "period_end",
+    "doc_id": "exchange_20250313800043",
+    "node_index": 0,
+    "locator": "exchange_20250313800043::20250313800043.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_7c610de1801a78e791b92f60",
+    "slot_name": "revenue_ratio",
+    "doc_id": "exchange_20250313800043",
+    "node_index": 0,
+    "locator": "exchange_20250313800043::20250313800043.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_7d494870b3a53946dd2232c8",
+    "slot_name": "event_type",
+    "doc_id": "major_20250818000219",
+    "node_index": 0,
+    "locator": "major_20250818000219::20250818000219.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_7d494870b3a53946dd2232c8",
+    "slot_name": "bond_series",
+    "doc_id": "major_20250818000219",
+    "node_index": 0,
+    "locator": "major_20250818000219::20250818000219.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_7d494870b3a53946dd2232c8",
+    "slot_name": "exercise_details",
+    "doc_id": "major_20250818000219",
+    "node_index": 0,
+    "locator": "major_20250818000219::20250818000219.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_7d494870b3a53946dd2232c8",
+    "slot_name": "conversion_terms",
+    "doc_id": "major_20250818000219",
+    "node_index": 0,
+    "locator": "major_20250818000219::20250818000219.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_8440e15f1cb9f79c66a6b787",
+    "slot_name": "counterparty",
+    "doc_id": "exchange_20250110800218",
+    "node_index": 0,
+    "locator": "exchange_20250110800218::20250110800218.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_8440e15f1cb9f79c66a6b787",
+    "slot_name": "contract_amount",
+    "doc_id": "exchange_20250110800218",
+    "node_index": 0,
+    "locator": "exchange_20250110800218::20250110800218.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_8440e15f1cb9f79c66a6b787",
+    "slot_name": "contract_period_start",
+    "doc_id": "exchange_20250110800218",
+    "node_index": 0,
+    "locator": "exchange_20250110800218::20250110800218.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_8440e15f1cb9f79c66a6b787",
+    "slot_name": "contract_period_end",
+    "doc_id": "exchange_20250110800218",
+    "node_index": 0,
+    "locator": "exchange_20250110800218::20250110800218.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_8440e15f1cb9f79c66a6b787",
+    "slot_name": "revenue_ratio_percent",
+    "doc_id": "exchange_20250110800218",
+    "node_index": 0,
+    "locator": "exchange_20250110800218::20250110800218.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_8440e15f1cb9f79c66a6b787",
+    "slot_name": "withholding_status",
+    "doc_id": "exchange_20250110800218",
+    "node_index": 0,
+    "locator": "exchange_20250110800218::20250110800218.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_8e8c9c7e2994614110d072bf",
+    "slot_name": "counterparty",
+    "doc_id": "exchange_20230612800469",
+    "node_index": 0,
+    "locator": "exchange_20230612800469::20230612800469.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_8e8c9c7e2994614110d072bf",
+    "slot_name": "contract_amount",
+    "doc_id": "exchange_20230612800469",
+    "node_index": 0,
+    "locator": "exchange_20230612800469::20230612800469.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_8e8c9c7e2994614110d072bf",
+    "slot_name": "period_start",
+    "doc_id": "exchange_20230612800469",
+    "node_index": 0,
+    "locator": "exchange_20230612800469::20230612800469.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_8e8c9c7e2994614110d072bf",
+    "slot_name": "period_end",
+    "doc_id": "exchange_20230612800469",
+    "node_index": 0,
+    "locator": "exchange_20230612800469::20230612800469.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_8e8c9c7e2994614110d072bf",
+    "slot_name": "revenue_ratio",
+    "doc_id": "exchange_20230612800469",
+    "node_index": 0,
+    "locator": "exchange_20230612800469::20230612800469.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_ad6f430084e4c5312283ab1a",
+    "slot_name": "event_type",
+    "doc_id": "major_20250205000509",
+    "node_index": 0,
+    "locator": "major_20250205000509::20250205000509.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_ad6f430084e4c5312283ab1a",
+    "slot_name": "decision_content",
+    "doc_id": "major_20250205000509",
+    "node_index": 0,
+    "locator": "major_20250205000509::20250205000509.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_ad6f430084e4c5312283ab1a",
+    "slot_name": "decision_date",
+    "doc_id": "major_20250205000509",
+    "node_index": 0,
+    "locator": "major_20250205000509::20250205000509.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_b6f4714fd3c652594f5d82c1",
+    "slot_name": "bond_series",
+    "doc_id": "major_20241205000527",
+    "node_index": 3,
+    "locator": "major_20241205000527::20241205000527.xml::n3",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_b6f4714fd3c652594f5d82c1",
+    "slot_name": "bond_amount",
+    "doc_id": "major_20241205000527",
+    "node_index": 3,
+    "locator": "major_20241205000527::20241205000527.xml::n3",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_b6f4714fd3c652594f5d82c1",
+    "slot_name": "resolution_date",
+    "doc_id": "major_20241205000527",
+    "node_index": 3,
+    "locator": "major_20241205000527::20241205000527.xml::n3",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_c6076b4bb1e65e4bf8f3efeb",
+    "slot_name": "counterparty",
+    "doc_id": "exchange_20251229800114",
+    "node_index": 0,
+    "locator": "exchange_20251229800114::20251229800114.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_c6076b4bb1e65e4bf8f3efeb",
+    "slot_name": "contract_amount_withheld",
+    "doc_id": "exchange_20251229800114",
+    "node_index": 0,
+    "locator": "exchange_20251229800114::20251229800114.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_c6076b4bb1e65e4bf8f3efeb",
+    "slot_name": "withholding_reason",
+    "doc_id": "exchange_20251229800114",
+    "node_index": 0,
+    "locator": "exchange_20251229800114::20251229800114.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_c6076b4bb1e65e4bf8f3efeb",
+    "slot_name": "withholding_deadline",
+    "doc_id": "exchange_20251229800114",
+    "node_index": 0,
+    "locator": "exchange_20251229800114::20251229800114.xml::n0",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_e2808b0ce73a5ddd72f7508b",
+    "slot_name": "split_method",
+    "doc_id": "major_20241021000037",
+    "node_index": 3,
+    "locator": "major_20241021000037::20241021000037.xml::n3",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_e2808b0ce73a5ddd72f7508b",
+    "slot_name": "board_resolution_date",
+    "doc_id": "major_20241021000037",
+    "node_index": 3,
+    "locator": "major_20241021000037::20241021000037.xml::n3",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   },
+   {
+    "question_id": "gold_b_e2808b0ce73a5ddd72f7508b",
+    "slot_name": "split_effective_date",
+    "doc_id": "major_20241021000037",
+    "node_index": 3,
+    "locator": "major_20241021000037::20241021000037.xml::n3",
+    "severity": "unresolved",
+    "reason": "no_text_to_verify",
+    "chunk_text": ""
+   }
+  ]
+ },
+ "latency_ms": {},
+ "peak_rss_mb": null,
+ "external_services": [],
+ "pins": {
+  "conditions_sha_matches": true,
+  "run_conditions_sha": "83d5b8a02de2e3e79e388ec417ed104c81b08eb0a8dc8a8366b020df36b5e527",
+  "gold_sha256": "7941144c09ce25debeeab6c3fbdfbd4c16761a6be06ab3a844ad159c832f102b",
+  "config_sha256": null,
+  "code_sha256": null
+ },
+ "questions": [
+  {
+   "question_id": "author_0459b5f8f37b0192316cd77c",
+   "segment": "HIGH",
+   "n_slots": 2,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "author_050b7f96dd361ac0771755a8",
+   "segment": "HIGH",
+   "n_slots": 2,
+   "excluded": false,
+   "found_at": {
+    "5": 2,
+    "10": 2,
+    "20": 2
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 2,
+   "error": ""
+  },
+  {
+   "question_id": "author_0644c80590c4960192ecdd59",
+   "segment": "HIGH",
+   "n_slots": 1,
+   "excluded": false,
+   "found_at": {
+    "5": 1,
+    "10": 1,
+    "20": 1
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 1,
+   "error": ""
+  },
+  {
+   "question_id": "author_087a90f5918d4e0b3e00959c",
+   "segment": "HIGH",
+   "n_slots": 2,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "author_0be4ca52605cfe6d48181d97",
+   "segment": "HIGH",
+   "n_slots": 2,
+   "excluded": false,
+   "found_at": {
+    "5": 2,
+    "10": 2,
+    "20": 2
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 2,
+   "error": ""
+  },
+  {
+   "question_id": "author_0dd866177ad6b48052e16a33",
+   "segment": "HIGH",
+   "n_slots": 1,
+   "excluded": false,
+   "found_at": {
+    "5": 1,
+    "10": 1,
+    "20": 1
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 1,
+   "error": ""
+  },
+  {
+   "question_id": "author_14dfddbe1d41275533ae3945",
+   "segment": "HIGH",
+   "n_slots": 2,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "author_17e55323e3a89766f08ec8fc",
+   "segment": "HIGH",
+   "n_slots": 2,
+   "excluded": false,
+   "found_at": {
+    "5": 2,
+    "10": 2,
+    "20": 2
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 2,
+   "error": ""
+  },
+  {
+   "question_id": "author_1bf4c4ba5b261b12bcc01cde",
+   "segment": "HIGH",
+   "n_slots": 2,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "author_2b919170b3f420b30f592dbf",
+   "segment": "LOW",
+   "n_slots": 1,
+   "excluded": false,
+   "found_at": {
+    "5": 1,
+    "10": 1,
+    "20": 1
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 1,
+   "error": ""
+  },
+  {
+   "question_id": "author_33e6a824ee8b5027f2ab7806",
+   "segment": "HIGH",
+   "n_slots": 2,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "author_39b7a1a229844d5607de32fb",
+   "segment": "LOW",
+   "n_slots": 1,
+   "excluded": false,
+   "found_at": {
+    "5": 1,
+    "10": 1,
+    "20": 1
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 1,
+   "error": ""
+  },
+  {
+   "question_id": "author_3f205e961b4c70adc216d67e",
+   "segment": "HIGH",
+   "n_slots": 2,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "author_40f76302294d317d0c588b5d",
+   "segment": "HIGH",
+   "n_slots": 2,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "author_41f346723847e84a051e614a",
+   "segment": "LOW",
+   "n_slots": 1,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "author_4b8df2cacd43755b56e3c71e",
+   "segment": "HIGH",
+   "n_slots": 2,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "author_4dae7a49dd14e226926c4edf",
+   "segment": "LOW",
+   "n_slots": 2,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "author_50eba48b6e3d77f488421b89",
+   "segment": "HIGH",
+   "n_slots": 1,
+   "excluded": false,
+   "found_at": {
+    "5": 1,
+    "10": 1,
+    "20": 1
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 1,
+   "error": ""
+  },
+  {
+   "question_id": "author_52e6c0ca8915c4a28c802e4c",
+   "segment": "HIGH",
+   "n_slots": 2,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "author_53d266ad714c7b2c4db364b5",
+   "segment": "HIGH",
+   "n_slots": 1,
+   "excluded": false,
+   "found_at": {
+    "5": 1,
+    "10": 1,
+    "20": 1
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 1,
+   "error": ""
+  },
+  {
+   "question_id": "author_558c9267989c17f3e0aa14ad",
+   "segment": "HIGH",
+   "n_slots": 1,
+   "excluded": false,
+   "found_at": {
+    "5": 1,
+    "10": 1,
+    "20": 1
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 1,
+   "error": ""
+  },
+  {
+   "question_id": "author_642b260aa50968143920281b",
+   "segment": "LOW",
+   "n_slots": 1,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "author_66ddb05e5a3de362ff1c536f",
+   "segment": "LOW",
+   "n_slots": 1,
+   "excluded": false,
+   "found_at": {
+    "5": 1,
+    "10": 1,
+    "20": 1
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 1,
+   "error": ""
+  },
+  {
+   "question_id": "author_75966f98e4996bc694606bb2",
+   "segment": "LOW",
+   "n_slots": 1,
+   "excluded": false,
+   "found_at": {
+    "5": 1,
+    "10": 1,
+    "20": 1
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 1,
+   "error": ""
+  },
+  {
+   "question_id": "author_833ea1a29f055ec369947a98",
+   "segment": "HIGH",
+   "n_slots": 2,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "author_8db33a880c09102d4903e280",
+   "segment": "HIGH",
+   "n_slots": 2,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "author_95a89db78ffe266ced4d7ea6",
+   "segment": "HIGH",
+   "n_slots": 2,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "author_a09660efd75391b28724e656",
+   "segment": "LOW",
+   "n_slots": 1,
+   "excluded": false,
+   "found_at": {
+    "5": 1,
+    "10": 1,
+    "20": 1
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 1,
+   "error": ""
+  },
+  {
+   "question_id": "author_a24879dc628ff582fdeba8b5",
+   "segment": "LOW",
+   "n_slots": 1,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "author_a3a6ade04e8f72004e2df4f1",
+   "segment": "HIGH",
+   "n_slots": 2,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "author_a538b0e2240fe01d1a71ebb7",
+   "segment": "HIGH",
+   "n_slots": 2,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "author_a7d2486c24a01dace51cdbe0",
+   "segment": "HIGH",
+   "n_slots": 1,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "author_a9f44253b3de69062e704c83",
+   "segment": "HIGH",
+   "n_slots": 2,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "author_acd4f9e29a7188d84c0f1aaa",
+   "segment": "LOW",
+   "n_slots": 1,
+   "excluded": false,
+   "found_at": {
+    "5": 1,
+    "10": 1,
+    "20": 1
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 1,
+   "error": ""
+  },
+  {
+   "question_id": "author_ad711c9d1d96ebc8950814f0",
+   "segment": "HIGH",
+   "n_slots": 2,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "author_b81eacbe0cad034dfb7b9dd4",
+   "segment": "HIGH",
+   "n_slots": 1,
+   "excluded": false,
+   "found_at": {
+    "5": 1,
+    "10": 1,
+    "20": 1
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 1,
+   "error": ""
+  },
+  {
+   "question_id": "author_be87975b478c1685b1170e80",
+   "segment": "HIGH",
+   "n_slots": 2,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "author_bfc0f3bb801bc9eab3faaa3c",
+   "segment": "LOW",
+   "n_slots": 2,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "author_c4d4ef2ce48a57ef54ded4db",
+   "segment": "HIGH",
+   "n_slots": 1,
+   "excluded": false,
+   "found_at": {
+    "5": 1,
+    "10": 1,
+    "20": 1
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 1,
+   "error": ""
+  },
+  {
+   "question_id": "author_c8225552d5982882a3157819",
+   "segment": "HIGH",
+   "n_slots": 2,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "author_ca4ec294ad36b44faa071043",
+   "segment": "HIGH",
+   "n_slots": 2,
+   "excluded": false,
+   "found_at": {
+    "5": 1,
+    "10": 1,
+    "20": 1
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 1,
+   "error": ""
+  },
+  {
+   "question_id": "author_cc803e40119274b80d14a65a",
+   "segment": "HIGH",
+   "n_slots": 2,
+   "excluded": false,
+   "found_at": {
+    "5": 1,
+    "10": 2,
+    "20": 2
+   },
+   "all_found_at": {
+    "5": false,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 2,
+   "error": ""
+  },
+  {
+   "question_id": "author_d640cbedd7330f4b9bcfeeb7",
+   "segment": "HIGH",
+   "n_slots": 2,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "author_e0416a675c6970a7f064bf74",
+   "segment": "HIGH",
+   "n_slots": 1,
+   "excluded": false,
+   "found_at": {
+    "5": 1,
+    "10": 1,
+    "20": 1
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 1,
+   "error": ""
+  },
+  {
+   "question_id": "author_ed4a7d77528a8c5751e9a348",
+   "segment": "HIGH",
+   "n_slots": 2,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "author_ef82c30f267ca92d099c7a62",
+   "segment": "LOW",
+   "n_slots": 1,
+   "excluded": false,
+   "found_at": {
+    "5": 1,
+    "10": 1,
+    "20": 1
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 1,
+   "error": ""
+  },
+  {
+   "question_id": "author_f115e4cb0e6b913c663df555",
+   "segment": "LOW",
+   "n_slots": 1,
+   "excluded": false,
+   "found_at": {
+    "5": 1,
+    "10": 1,
+    "20": 1
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 1,
+   "error": ""
+  },
+  {
+   "question_id": "author_f119c5d79a4e52a359a84caa",
+   "segment": "HIGH",
+   "n_slots": 1,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "author_f1f0a9f6462da34342fd2cc4",
+   "segment": "LOW",
+   "n_slots": 2,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "author_f55322f4532a9fec91015c34",
+   "segment": "HIGH",
+   "n_slots": 2,
+   "excluded": false,
+   "found_at": {
+    "5": 2,
+    "10": 2,
+    "20": 2
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 2,
+   "error": ""
+  },
+  {
+   "question_id": "author_f61f83f3af47bd86817b5358",
+   "segment": "LOW",
+   "n_slots": 2,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "author_f87d43f1663f388ab5a57a3b",
+   "segment": "HIGH",
+   "n_slots": 1,
+   "excluded": false,
+   "found_at": {
+    "5": 1,
+    "10": 1,
+    "20": 1
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 1,
+   "error": ""
+  },
+  {
+   "question_id": "author_ffcc4093fb37a87f1a40322d",
+   "segment": "HIGH",
+   "n_slots": 1,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_034334dce8cb5eaaa6589096",
+   "segment": "HIGH",
+   "n_slots": 4,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_04129a579f785f869644167a",
+   "segment": "HIGH",
+   "n_slots": 3,
+   "excluded": false,
+   "found_at": {
+    "5": 3,
+    "10": 3,
+    "20": 3
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 3,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_0700d8fa5f0028cb712a533d",
+   "segment": "HIGH",
+   "n_slots": 5,
+   "excluded": false,
+   "found_at": {
+    "5": 5,
+    "10": 5,
+    "20": 5
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 5,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_0aa8d3979510d78ea122edda",
+   "segment": "HIGH",
+   "n_slots": 5,
+   "excluded": false,
+   "found_at": {
+    "5": 5,
+    "10": 5,
+    "20": 5
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 5,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_0e97c60a0d12c067d46a6f84",
+   "segment": "HIGH",
+   "n_slots": 4,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_137f1bfd5c69987d009ae50c",
+   "segment": "LOW",
+   "n_slots": 4,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_192fa6ea90c0cdefc2616fc0",
+   "segment": "HIGH",
+   "n_slots": 5,
+   "excluded": false,
+   "found_at": {
+    "5": 5,
+    "10": 5,
+    "20": 5
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 5,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_23f454a11d52f107c1c7e8a2",
+   "segment": "HIGH",
+   "n_slots": 5,
+   "excluded": false,
+   "found_at": {
+    "5": 5,
+    "10": 5,
+    "20": 5
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 5,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_277f68d0497188039d68f632",
+   "segment": "HIGH",
+   "n_slots": 5,
+   "excluded": false,
+   "found_at": {
+    "5": 5,
+    "10": 5,
+    "20": 5
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 5,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_27ca59a117b25eafd17a5eaa",
+   "segment": "HIGH",
+   "n_slots": 4,
+   "excluded": false,
+   "found_at": {
+    "5": 4,
+    "10": 4,
+    "20": 4
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 4,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_2cd479eccfda82d5d6e549bb",
+   "segment": "HIGH",
+   "n_slots": 5,
+   "excluded": false,
+   "found_at": {
+    "5": 5,
+    "10": 5,
+    "20": 5
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 5,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_2ef301d8b4157cd002c79279",
+   "segment": "HIGH",
+   "n_slots": 5,
+   "excluded": false,
+   "found_at": {
+    "5": 5,
+    "10": 5,
+    "20": 5
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 5,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_30089ee2275a48721e228ae2",
+   "segment": "HIGH",
+   "n_slots": 4,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_3054ffad4d0cb92473806459",
+   "segment": "HIGH",
+   "n_slots": 6,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_34e53426cab01c72ec76bfca",
+   "segment": "HIGH",
+   "n_slots": 4,
+   "excluded": false,
+   "found_at": {
+    "5": 4,
+    "10": 4,
+    "20": 4
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 4,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_446afacf23798f1091ca19df",
+   "segment": "HIGH",
+   "n_slots": 5,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_4dbdfc5d0b451f1d7a207e74",
+   "segment": "HIGH",
+   "n_slots": 4,
+   "excluded": false,
+   "found_at": {
+    "5": 2,
+    "10": 4,
+    "20": 4
+   },
+   "all_found_at": {
+    "5": false,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 4,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_4e766ea7213345a7d5bbb527",
+   "segment": "HIGH",
+   "n_slots": 4,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_5271576ebada8221bcc3056a",
+   "segment": "HIGH",
+   "n_slots": 4,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_5335116f30b3102f5ce22cbb",
+   "segment": "HIGH",
+   "n_slots": 5,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_60268d8a3d15da2a26a59fd6",
+   "segment": "HIGH",
+   "n_slots": 4,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_6064d1699deee9470756d9d2",
+   "segment": "HIGH",
+   "n_slots": 4,
+   "excluded": false,
+   "found_at": {
+    "5": 4,
+    "10": 4,
+    "20": 4
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 4,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_649e0385533d6ed2ad3bd978",
+   "segment": "HIGH",
+   "n_slots": 4,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_6af756dd84b32fc13513f0bd",
+   "segment": "HIGH",
+   "n_slots": 4,
+   "excluded": false,
+   "found_at": {
+    "5": 4,
+    "10": 4,
+    "20": 4
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 4,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_75e2226d84ae9c1e8bfad1bd",
+   "segment": "HIGH",
+   "n_slots": 4,
+   "excluded": false,
+   "found_at": {
+    "5": 4,
+    "10": 4,
+    "20": 4
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 4,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_7c610de1801a78e791b92f60",
+   "segment": "HIGH",
+   "n_slots": 5,
+   "excluded": false,
+   "found_at": {
+    "5": 5,
+    "10": 5,
+    "20": 5
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 5,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_7d494870b3a53946dd2232c8",
+   "segment": "LOW",
+   "n_slots": 4,
+   "excluded": false,
+   "found_at": {
+    "5": 4,
+    "10": 4,
+    "20": 4
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 4,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_8440e15f1cb9f79c66a6b787",
+   "segment": "HIGH",
+   "n_slots": 6,
+   "excluded": false,
+   "found_at": {
+    "5": 6,
+    "10": 6,
+    "20": 6
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 6,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_8e8c9c7e2994614110d072bf",
+   "segment": "HIGH",
+   "n_slots": 5,
+   "excluded": false,
+   "found_at": {
+    "5": 5,
+    "10": 5,
+    "20": 5
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 5,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_926d98d28ea51ea8bb8e6ea1",
+   "segment": "HIGH",
+   "n_slots": 4,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_9498154347fd9a2ceef8aa63",
+   "segment": "HIGH",
+   "n_slots": 5,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_94c41243826898e3879b933e",
+   "segment": "HIGH",
+   "n_slots": 4,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_9d2e358034ea16bcee7d8edf",
+   "segment": "HIGH",
+   "n_slots": 4,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_a534bc30d3414f2d094e7461",
+   "segment": "LOW",
+   "n_slots": 6,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_ab2d46f2496fe203c8405cad",
+   "segment": "HIGH",
+   "n_slots": 4,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_ad6f430084e4c5312283ab1a",
+   "segment": "HIGH",
+   "n_slots": 3,
+   "excluded": false,
+   "found_at": {
+    "5": 3,
+    "10": 3,
+    "20": 3
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 3,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_b6f4714fd3c652594f5d82c1",
+   "segment": "HIGH",
+   "n_slots": 3,
+   "excluded": false,
+   "found_at": {
+    "5": 3,
+    "10": 3,
+    "20": 3
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 3,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_bbde1cf7dec999a7915f4b4a",
+   "segment": "HIGH",
+   "n_slots": 4,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_c6076b4bb1e65e4bf8f3efeb",
+   "segment": "HIGH",
+   "n_slots": 4,
+   "excluded": false,
+   "found_at": {
+    "5": 4,
+    "10": 4,
+    "20": 4
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 4,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_da1f1a3f66383d37ae6bd524",
+   "segment": "HIGH",
+   "n_slots": 2,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_e2808b0ce73a5ddd72f7508b",
+   "segment": "LOW",
+   "n_slots": 3,
+   "excluded": false,
+   "found_at": {
+    "5": 3,
+    "10": 3,
+    "20": 3
+   },
+   "all_found_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "doc_hit_at": {
+    "5": true,
+    "10": true,
+    "20": true
+   },
+   "n_slot_matches": 3,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_e5cc91d1b8a8bef8695cb6cd",
+   "segment": "HIGH",
+   "n_slots": 4,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_e95de359f794df64ffab5044",
+   "segment": "LOW",
+   "n_slots": 0,
+   "excluded": true,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_ebc8414ef6c306d4ead0cbe0",
+   "segment": "HIGH",
+   "n_slots": 5,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_ec84639c43268bb42cc60c83",
+   "segment": "HIGH",
+   "n_slots": 4,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_f23bcdcee714d7436867d683",
+   "segment": "HIGH",
+   "n_slots": 5,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_f9b84c1e14bca2d1befcce62",
+   "segment": "HIGH",
+   "n_slots": 4,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  },
+  {
+   "question_id": "gold_b_faeb66b34981643d354f6655",
+   "segment": "HIGH",
+   "n_slots": 5,
+   "excluded": false,
+   "found_at": {
+    "5": 0,
+    "10": 0,
+    "20": 0
+   },
+   "all_found_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "doc_hit_at": {
+    "5": false,
+    "10": false,
+    "20": false
+   },
+   "n_slot_matches": 0,
+   "error": ""
+  }
+ ]
+}

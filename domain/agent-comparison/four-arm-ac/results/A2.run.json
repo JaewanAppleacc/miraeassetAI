@@ -1,0 +1,31 @@
+{
+  "arm": "A2",
+  "label": "A2_LATE_EXPANSION_SCOPE_VALIDATOR_STABLE_REFILL",
+  "base_arm": "A",
+  "base_arm_input_sha256": "1132226193290fda5e007c417982a005b3381ac11b07a22d2c388d133d6ce156",
+  "started_at": "2026-09-06T03:11:14.323Z",
+  "finished_at": "2026-09-06T03:11:17.641Z",
+  "host": "choejaewan-ui-MacBookAir.local",
+  "platform": "darwin",
+  "runtime": "v26.0.0",
+  "input_sha256": {
+    "conditions": "83d5b8a02de2e3e79e388ec417ed104c81b08eb0a8dc8a8366b020df36b5e527",
+    "frozen_a_results": "1132226193290fda5e007c417982a005b3381ac11b07a22d2c388d133d6ce156",
+    "document_ir": {
+      "exchange.jsonl": "80000c1c12f09bb59ce5bea41f62c5a70a39bdc965859c8436c261e9bde02c2a",
+      "holding.jsonl": "fd88d83c53a4c465ec1cbedce0a41046cfa7819822e2d7df046fccf42b8cbc09",
+      "major.jsonl": "5c58da7ad32fe31603f59bdea6829c29e6cb00b823c336b6e90b71f41d25d3ba",
+      "periodic.jsonl": "0aee546312b93797cf35f946144e044d8f43a947c38bb49b0766b623076be852"
+    }
+  },
+  "n_questions": 101,
+  "n_errors": 0,
+  "evidence_summary": {
+    "n_questions": 101,
+    "pass": 1010,
+    "reject": 5,
+    "unresolved": 854,
+    "shortfall_questions": 49
+  },
+  "external_services": []
+}
