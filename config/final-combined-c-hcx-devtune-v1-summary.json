@@ -1,0 +1,110 @@
+{
+  "turn": "FINAL-COMBINED-CANDIDATE-C-HCX-DEVTUNE-V1",
+  "pins": {
+    "worktree": "agent-final-combined-c-hcx-devtune-v01",
+    "branch": "codex/final-combined-c-hcx-devtune-v01",
+    "checked_out_from": "codex/a4-a3-final-candidate-comparison-v01@a12c38853e80d3850ab028e833010216f53ae6e8",
+    "baseline_runtime_source": "codex/a4-a3-remediation-integration-v01@b5f9443f7ca3ec2d57c2d17453070ab23c4a6341",
+    "binder_evidence_source": "codex/a4-a3-qa-binder-evidence-v2-integration-v01@5ff49b6d128b5fafd2a922691eb5820a4f9a293a",
+    "freeze_commit": "99ff9a0",
+    "baseline_backend": "ARM_A4_A3_REMEDIATION_LIVE",
+    "candidate_backend": "ARM_A4_A3_REMEDIATION_BINDER_EVIDENCE_V2_LIVE",
+    "gold_sha256": "7941144c09ce25debeeab6c3fbdfbd4c16761a6be06ab3a844ad159c832f102b",
+    "kure_pin": {"repository": "nlpai-lab/KURE-v1", "revision": "4ed4540949c70b7da2c74004a915e1f2d5e46e4f", "dimension": 1024},
+    "retrieval_index_id": "fixed_kure_index_8fe191342205848d1d6a6123f38a54e7",
+    "index_record_count": 442549
+  },
+  "execution": {
+    "attempted": true,
+    "order": ["ARM_A4_A3_REMEDIATION_LIVE", "ARM_A4_A3_REMEDIATION_BINDER_EVIDENCE_V2_LIVE"],
+    "questions_run_each": 101,
+    "execution_errors_baseline": 0,
+    "execution_errors_candidate": 0,
+    "provider_outage_detected": false
+  },
+  "metrics": {
+    "baseline": {
+      "full": 46, "partial": 31, "zero": 15, "unanswerable": 9,
+      "value_denominator": 92,
+      "weighted_score": 61.5,
+      "numeric_full_frac": "34/55", "numeric_full_rate": 0.6181818181818182,
+      "slots_full_in_context": 54, "slots_full_in_context_rate": 0.5346534653465347,
+      "answerability_ok": 92, "answerability_rate": 0.9108910891089109,
+      "citation_ok": 101, "citation_validity": 1.0,
+      "groundedness": 0.5346534653465347,
+      "critical_evidence_errors": 0,
+      "execution_errors": 0,
+      "fallbacks": 1,
+      "latency_ms": {"p50": 13458, "p95": 31269, "max": 42083, "mean": 13048.4}
+    },
+    "candidate_c": {
+      "full": 43, "partial": 32, "zero": 17, "unanswerable": 6,
+      "value_denominator": 92,
+      "weighted_score": 59.0,
+      "numeric_full_frac": "33/55", "numeric_full_rate": 0.6,
+      "slots_full_in_context": 58, "slots_full_in_context_rate": 0.5742574257425742,
+      "answerability_ok": 95, "answerability_rate": 0.9405940594059405,
+      "citation_ok": 100, "citation_validity": 0.9900990099009901,
+      "groundedness": 0.5742574257425742,
+      "critical_evidence_errors": 1,
+      "critical_evidence_error_question_ids": ["author_52e6c0ca8915c4a28c802e4c"],
+      "execution_errors": 0,
+      "fallbacks": 0,
+      "latency_ms": {"p50": 11108, "p95": 26698, "max": 35242, "mean": 11794.6}
+    },
+    "per_question": {
+      "improved_count": 4,
+      "regressed_count": 6,
+      "unchanged_count": 91,
+      "regressed_question_ids": [
+        "author_52e6c0ca8915c4a28c802e4c",
+        "author_66ddb05e5a3de362ff1c536f",
+        "author_ef82c30f267ca92d099c7a62",
+        "author_f55322f4532a9fec91015c34",
+        "gold_b_3054ffad4d0cb92473806459",
+        "gold_b_7c610de1801a78e791b92f60"
+      ]
+    },
+    "binder_evidence_diagnostic": {
+      "methodology": "separate non-LLM retrieval-only pass, same 101 Gold questions, k=20",
+      "status_distribution_questions": {"BOUND": 42, "AMBIGUOUS": 59, "MULTI_DOCUMENT_BOUND": 0, "UNRESOLVED": 0},
+      "evidence_input_n_base": {"min": 20, "max": 20, "mean": 20.0},
+      "evidence_output_n_out": {"min": 1, "max": 20, "mean": 12.66},
+      "total_evidence_cap": 20,
+      "cap_overflow_count": 0,
+      "document_id_mix_violation_count": 0
+    }
+  },
+  "decision_rule_check": {
+    "critical_evidence_errors_increased": true,
+    "citation_validity_lower_than_baseline": true,
+    "answerability_lower_than_baseline": false,
+    "numeric_full_below_baseline": true,
+    "slots_full_in_context_below_baseline": false,
+    "weighted_score_strictly_higher": false,
+    "execution_errors_increased": false,
+    "reject_triggers_fired": [
+      "critical_evidence_errors_increased",
+      "citation_validity_lower_than_baseline",
+      "numeric_full_below_baseline",
+      "weighted_score_not_strictly_higher"
+    ]
+  },
+  "safety": {
+    "dev_check_accessed": false,
+    "holdout_accessed": false,
+    "original_files_modified": false,
+    "existing_backend_code_modified": false,
+    "binder_evidence_rule_budget_prompt_changed_after_seeing_result": false,
+    "partial_question_reruns": false,
+    "pr_created": false,
+    "force_amend_rebase_used": false,
+    "db_write_count": 0,
+    "clova_api_key_value_exposed_in_commit": false,
+    "clova_api_key_value_incidentally_printed_in_test_output": true,
+    "clova_api_key_incident_note": "A pre-existing, unrelated test (test_arm_a_live_full_index_smoke.py, commit 61aad16) asserts CLOVA_API_KEY is unset; with the key present this turn, pytest's own assertion-diff printed the key value once during a broad test sweep. Disclosed to the user immediately; value never re-printed or committed. Recommend excluding that test (or unsetting the key) in any future run where the key is configured."
+  },
+  "verdict": "KEEP_REMEDIATION_BASELINE",
+  "verdict_reason": "Four independent pre-registered rejection triggers fired simultaneously: critical evidence errors increased (0->1), citation validity decreased (1.0000->0.9901), numeric-full rate fell below baseline (0.6182->0.6000), and weighted score did not strictly improve (61.5->59.0, regressed). Per the freeze document, a single trigger alone is sufficient to keep the baseline; a mixed result (answerability and groundedness did improve) is explicitly not rounded up to selecting C. DEV_CHECK not run this turn regardless.",
+  "report": "docs/reports/FINAL_COMBINED_C_HCX_DEVTUNE_V1.md"
+}
