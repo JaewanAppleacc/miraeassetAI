@@ -41,7 +41,16 @@ from .retriever_adapter import Chunk, build_line_window_retriever
 
 RETRIEVAL_BACKEND_DEFAULT = "DEFAULT"
 RETRIEVAL_BACKEND_ARM_A = "ARM_A_FIXED_RRF"
-RETRIEVAL_BACKENDS = (RETRIEVAL_BACKEND_DEFAULT, RETRIEVAL_BACKEND_ARM_A)
+# Turn A-PLUS-QA-LIVE-RETRIEVER-V1: same frozen-replay path as RETRIEVAL_BACKEND_ARM_A above
+# (unchanged), additionally exposed under this more explicit name so it reads as clearly isolated
+# from ARM_A_LIVE (arm_a_live_adapter.py) — "regression-only" is now part of the name itself, not
+# just a comment. The old literal string keeps working (858658e's own tests use it).
+RETRIEVAL_BACKEND_ARM_A_FROZEN_REPLAY = "ARM_A_FROZEN_REPLAY"
+RETRIEVAL_BACKEND_ARM_A_LIVE = "ARM_A_LIVE"
+RETRIEVAL_BACKENDS = (
+    RETRIEVAL_BACKEND_DEFAULT, RETRIEVAL_BACKEND_ARM_A,
+    RETRIEVAL_BACKEND_ARM_A_FROZEN_REPLAY, RETRIEVAL_BACKEND_ARM_A_LIVE,
+)
 RETRIEVAL_BACKEND_ENV = "DART_QA_RETRIEVAL_BACKEND"
 
 # A.run.json config.strategy(codex/fourarm-a2-integration-v01 @ 900d3cc). pins에 그대로 적는다 —

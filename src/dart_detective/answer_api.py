@@ -23,7 +23,7 @@ import threading
 import traceback
 from typing import Any
 
-from . import answer_wire, arm_a_serving_bridge, grounded_answer, policy_gate
+from . import answer_wire, arm_a_live_adapter, arm_a_serving_bridge, grounded_answer, policy_gate
 from .agents import qa_agent
 from .llm import get_llm
 from .retriever_adapter import build_serving_retriever
@@ -73,9 +73,14 @@ def _resolve_backend() -> str:
 
 def _build_retriever() -> tuple[Any, Any, str, dict[str, Any]]:
     backend = _resolve_backend()
-    if backend == arm_a_serving_bridge.RETRIEVAL_BACKEND_ARM_A:
+    # ARM_A_FIXED_RRF와 ARM_A_FROZEN_REPLAY는 같은 frozen-replay 경로다(Turn
+    # A-PLUS-QA-LIVE-RETRIEVER-V1 — 이름만 명시적으로 분리, 858658e의 기존 동작은 그대로).
+    if backend in (arm_a_serving_bridge.RETRIEVAL_BACKEND_ARM_A,
+                   arm_a_serving_bridge.RETRIEVAL_BACKEND_ARM_A_FROZEN_REPLAY):
         return arm_a_serving_bridge.build_arm_a_serving_retriever(
             text_resolver=_text_resolver, **_backend_options)
+    if backend == arm_a_serving_bridge.RETRIEVAL_BACKEND_ARM_A_LIVE:
+        return arm_a_live_adapter.build_arm_a_live_serving_retriever(**_backend_options)
     # 기존 경로 — 인자·호출 그대로(동작 불변).
     return build_serving_retriever(os.environ.get("DART_QA_ARM", DEFAULT_ARM))
 

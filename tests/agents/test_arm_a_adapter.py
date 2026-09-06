@@ -20,10 +20,11 @@ from dart_detective.retriever_adapter import RetrieverAdapter
 _EXPECTED_UNCHANGED_FILE_SHA256 = {
     "src/dart_detective/retriever_adapter.py":
         "642a832fea9b508d8c6a2f377a4b8c91a320faea97f53e7ac5cc2474aa2f7f7d",
-    # Turn A-PLUS-QA-LIVE-WIRING-V1이 answer_api.py만 고쳤다(retrieval_backend 선택·A 브리지 배선).
-    # 기본 경로(DEFAULT) 동작 불변은 tests/agents/test_arm_a_serving_bridge.py의 회귀 테스트가 잠근다.
+    # Turn A-PLUS-QA-LIVE-WIRING-V1, 이어서 A-PLUS-QA-LIVE-RETRIEVER-V1이 answer_api.py를 추가로
+    # 고쳤다(retrieval_backend 선택에 ARM_A_LIVE 분기 추가). 기본 경로(DEFAULT)·ARM_A_FIXED_RRF
+    # 동작 불변은 tests/agents/test_arm_a_serving_bridge.py의 회귀 테스트가 잠근다.
     "src/dart_detective/answer_api.py":
-        "f9f12921662d4c9eef34d2b17553c45e549cf59340aac6a1ce30de7e992ba4a3",
+        "8397720528bf2375b6bed29322cc7db3098a1141141d97e4b03b185fed145228",
     "src/dart_detective/agents/qa_agent.py":
         "43e055aafc93c06f346ced4484bb94dc821111abc4c5b8b8c93d9470355d7020",
     "src/dart_detective/agents/validator.py":
